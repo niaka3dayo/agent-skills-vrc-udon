@@ -50,24 +50,26 @@ UdonSharp compiles C# to Udon Assembly but blocks many standard C# features (`Li
 
 > Zenn 記事 URL は記事公開後に追記予定です。
 
-**このリポジトリは...**
-- Zenn 記事のサンプルリポジトリです
+**このリポジトリは、つまり何？**
+- 記事用のサンプルリポジトリです
 - 個人プロジェクトとして公開しています
 - **フォーク・改変は MIT License の範囲で自由** にどうぞ
 
-**このリポジトリは... ではありません**
+**注意点**
 - VRChat SDK や UdonSharp の配布物ではありません
-- Unity プロジェクトではありません（実行可能なコードは含みません）
+- Unity プロジェクトではありません
 - [公式 VRChat ドキュメント](https://creators.vrchat.com/) の代替ではありません
+- すべてのAIの動作を完全に保証するものではありません。
 
 > **Issue / PR について**: 本リポジトリでは **Issue・Pull Request は受け付けていません**。
-> 誤りを見つけた場合は、フォークして修正するか、Zenn 記事のコメント欄でお知らせください。
+> 誤りを見つけた場合は、フォークして修正するか、記事のコメント欄でお知らせください。
 
 ---
 
 ## 概要
 
-VRChat のワールド開発で使われる **UdonSharp** (C# &rarr; Udon Assembly) は、標準 C# と大きく異なる制約があります。通常の C# では問題ない `List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などが **コンパイルエラー** になります。
+VRChat のワールド開発で使われる **UdonSharp** (C# &rarr; Udon Assembly) は、標準 C# と大きく異なる制約があります。
+通常の C# では問題ない `List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などが **コンパイルエラー** になります。
 
 このリポジトリは、AI コーディングエージェントがこれらの制約を理解し、**最初から正しいコードを生成する** ためのスキル・ルール・バリデーションフックを提供します。
 
