@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Symlink integrity checker for CI
-# Verifies that all AI tool directories correctly link to agent-docs/
+# Verifies that all AI tool directories correctly link to skills/
 
 ERRORS=0
 CHECKED=0
@@ -42,16 +42,16 @@ echo ""
 
 # Skills symlinks
 for dir in .claude .agents .codex .gemini; do
-  check_symlink "$dir/skills/unity-vrc-udon-sharp" "../../agent-docs/skills/unity-vrc-udon-sharp"
-  check_symlink "$dir/skills/unity-vrc-world-sdk-3" "../../agent-docs/skills/unity-vrc-world-sdk-3"
-  check_symlink "$dir/skills/unity-vrc-skills-renovator" "../../agent-docs/skills/unity-vrc-skills-renovator"
+  check_symlink "$dir/skills/unity-vrc-udon-sharp" "../../skills/unity-vrc-udon-sharp"
+  check_symlink "$dir/skills/unity-vrc-world-sdk-3" "../../skills/unity-vrc-world-sdk-3"
+  check_symlink "$dir/skills/unity-vrc-skills-renovator" "../../skills/unity-vrc-skills-renovator"
 done
 
 # Rules symlinks
 for dir in .claude .agents .codex .gemini; do
-  check_symlink "$dir/rules/udonsharp-constraints.md" "../../agent-docs/skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md"
-  check_symlink "$dir/rules/udonsharp-networking.md" "../../agent-docs/skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md"
-  check_symlink "$dir/rules/udonsharp-sync-selection.md" "../../agent-docs/skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md"
+  check_symlink "$dir/rules/udonsharp-constraints.md" "../../skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md"
+  check_symlink "$dir/rules/udonsharp-networking.md" "../../skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md"
+  check_symlink "$dir/rules/udonsharp-sync-selection.md" "../../skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md"
 done
 
 echo ""

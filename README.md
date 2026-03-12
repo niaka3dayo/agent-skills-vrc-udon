@@ -41,7 +41,7 @@ UdonSharp compiles C# to Udon Assembly but blocks many standard C# features (`Li
 - 3 auto-loaded rule files: compile constraints, networking patterns, sync selection
 - PostToolUse validation hooks (Bash + PowerShell)
 - SDK 3.7.1 - 3.10.2 coverage
-- Single source of truth in `agent-docs/`, symlinked to each AI tool directory
+- Single source of truth in `skills/`, symlinked to each AI tool directory
 
 **Install:**
 ```bash
@@ -116,7 +116,7 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git .agent-skills
 git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 ```
 
-`agent-docs/` is the single source of truth. AI tool directories (`.claude/`, `.agents/`, `.gemini/`, `.codex/`) are symlinks to `agent-docs/`.
+`skills/` is the single source of truth. AI tool directories (`.claude/`, `.agents/`, `.gemini/`, `.codex/`) are symlinks to `skills/`.
 
 ---
 
@@ -134,26 +134,25 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 <h2 id="structure">Structure</h2>
 
 ```
-agent-docs/                              # Single Source of Truth
-  skills/
-    unity-vrc-udon-sharp/               # UdonSharp core skill
-      SKILL.md                            # Skill definition
-      CHEATSHEET.md                       # Quick reference (1 page)
-      rules/                             # Auto-loaded rules
-        udonsharp-constraints.md
-        udonsharp-networking.md
-        udonsharp-sync-selection.md
-      hooks/                             # PostToolUse validation
-        validate-udonsharp.sh
-        validate-udonsharp.ps1
-      assets/templates/                  # Code templates
-      references/                        # Detailed documentation (11 files)
-    unity-vrc-world-sdk-3/              # VRC World SDK skill
-      SKILL.md, CHEATSHEET.md, references/ (7 files)
-    unity-vrc-skills-renovator/         # Self-maintenance meta-skill
-      SKILL.md, references/ (4 files)
+skills/                                  # Single Source of Truth
+  unity-vrc-udon-sharp/                 # UdonSharp core skill
+    SKILL.md                              # Skill definition
+    CHEATSHEET.md                         # Quick reference (1 page)
+    rules/                               # Auto-loaded rules
+      udonsharp-constraints.md
+      udonsharp-networking.md
+      udonsharp-sync-selection.md
+    hooks/                               # PostToolUse validation
+      validate-udonsharp.sh
+      validate-udonsharp.ps1
+    assets/templates/                    # Code templates
+    references/                          # Detailed documentation (11 files)
+  unity-vrc-world-sdk-3/                # VRC World SDK skill
+    SKILL.md, CHEATSHEET.md, references/ (7 files)
+  unity-vrc-skills-renovator/           # Self-maintenance meta-skill
+    SKILL.md, references/ (4 files)
 
-.claude/  .agents/  .codex/  .gemini/   # Symlinks -> agent-docs/
+.claude/  .agents/  .codex/  .gemini/   # Symlinks -> skills/
 CLAUDE.md  AGENTS.md  GEMINI.md         # Per-tool project config
 ```
 

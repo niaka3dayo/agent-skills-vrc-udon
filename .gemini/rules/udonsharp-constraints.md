@@ -1,1 +1,1 @@
-../../agent-docs/skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md
+../../skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md

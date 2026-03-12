@@ -23,7 +23,7 @@ jobs:
 
       - name: Check execute permission
         run: |
-          HOOK="agent-docs/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh"
+          HOOK="skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh"
           if [ ! -x "$HOOK" ]; then
             echo "ERROR: $HOOK is not executable"
             exit 1
@@ -31,7 +31,7 @@ jobs:
           echo "OK: $HOOK is executable"
 
       - name: Bash syntax check
-        run: bash -n agent-docs/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh
+        run: bash -n skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh
 
   markdown:
     name: Markdown Links
@@ -71,7 +71,7 @@ jobs:
           npm pack --dry-run 2>&1 | tee pack-output.txt
           echo ""
           echo "--- Verifying required files ---"
-          for f in "bin/install.mjs" "agent-docs/" "CLAUDE.md" "AGENTS.md" "GEMINI.md" "LICENSE" "README.md"; do
+          for f in "bin/install.mjs" "skills/" "CLAUDE.md" "AGENTS.md" "GEMINI.md" "LICENSE" "README.md"; do
             if grep -q "$f" pack-output.txt; then
               echo "OK: $f"
             else

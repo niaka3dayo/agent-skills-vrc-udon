@@ -2,7 +2,7 @@
 
 更新対象スキルのファイル構造と各ファイルの役割。
 
-> **パス表記について**: 本ドキュメント内の `skills/` は `agent-docs/skills/` を指す。
+> **パス表記について**: 本ドキュメント内の `skills/` はリポジトリルートの `skills/` ディレクトリを指す。
 > `rules/` は `skills/unity-vrc-udon-sharp/rules/` 配下に統合されている。
 > エージェントからは `.claude/skills/`、`.claude/rules/` (シンボリックリンク) 経由でもアクセス可能。
 

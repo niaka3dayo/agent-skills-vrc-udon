@@ -5,7 +5,7 @@ UdonSharp (C# → Udon Assembly) を使った VRChat ワールド開発リポジ
 
 ## Rules (自動読み込み)
 
-`.claude/rules/*.md` → `agent-docs/skills/unity-vrc-udon-sharp/rules/` への個別シンボリックリンクにより自動読み込み:
+`.claude/rules/*.md` → `skills/unity-vrc-udon-sharp/rules/` への個別シンボリックリンクにより自動読み込み:
 
 - **udonsharp-constraints.md** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
 - **udonsharp-networking.md** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
@@ -48,5 +48,5 @@ UdonSharp (C# → Udon Assembly) を使った VRChat ワールド開発リポジ
 
 PostToolUse で `.cs` ファイル編集時に自動バリデーション:
 
-- Windows: `hooks/validate-udonsharp.ps1`
-- Linux/macOS: `hooks/validate-udonsharp.sh`
+- Windows: `skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1`
+- Linux/macOS: `skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh`

@@ -103,9 +103,9 @@ function listFiles(dir, base) {
   return files;
 }
 
-const AGENT_DOCS_SRC = join(PKG_ROOT, 'agent-docs');
+const AGENT_DOCS_SRC = join(PKG_ROOT, 'skills');
 const DEST_DIR = join(TARGET, '.agent-skills');
-const AGENT_DOCS_DEST = join(DEST_DIR, 'agent-docs');
+const AGENT_DOCS_DEST = join(DEST_DIR, 'skills');
 
 const CONFIG_FILES = ['CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
 const AI_TOOL_DIRS = ['.claude', '.agents', '.codex', '.gemini'];
@@ -127,8 +127,8 @@ if (listOnly) {
   if (useSymlinks) {
     console.log('');
     for (const dir of AI_TOOL_DIRS) {
-      console.log(`  ${dir}/skills/ ${dim('-> .agent-skills/agent-docs/skills/')}`);
-      console.log(`  ${dir}/rules/  ${dim('-> .agent-skills/agent-docs/skills/unity-vrc-udon-sharp/rules/')}`);
+      console.log(`  ${dir}/skills/ ${dim('-> .agent-skills/skills/')}`);
+      console.log(`  ${dir}/rules/  ${dim('-> .agent-skills/skills/unity-vrc-udon-sharp/rules/')}`);
     }
   }
 
@@ -145,16 +145,16 @@ console.log(dim('Installing VRChat UdonSharp skills for AI agents...\n'));
 let copied = 0;
 let skipped = 0;
 
-// 1. Copy agent-docs/
+// 1. Copy skills/
 if (existsSync(AGENT_DOCS_DEST) && !force) {
-  console.log(yellow('  SKIP') + ` .agent-skills/agent-docs/ ${dim('(already exists, use --force to overwrite)')}`);
+  console.log(yellow('  SKIP') + ` .agent-skills/skills/ ${dim('(already exists, use --force to overwrite)')}`);
   skipped += countFiles(AGENT_DOCS_SRC);
 } else {
   mkdirSync(AGENT_DOCS_DEST, { recursive: true });
   cpSync(AGENT_DOCS_SRC, AGENT_DOCS_DEST, { recursive: true, force: true });
   const count = countFiles(AGENT_DOCS_SRC);
   copied += count;
-  console.log(green('  COPY') + ` agent-docs/ -> .agent-skills/agent-docs/ ${dim(`(${count} files)`)}`);
+  console.log(green('  COPY') + ` skills/ -> .agent-skills/skills/ ${dim(`(${count} files)`)}`);
 }
 
 // 2. Copy config reference files
@@ -179,8 +179,8 @@ for (const cf of CONFIG_FILES) {
 if (useSymlinks) {
   console.log('');
 
-  const skillsTarget = join(DEST_DIR, 'agent-docs', 'skills');
-  const rulesTarget = join(DEST_DIR, 'agent-docs', 'skills', 'unity-vrc-udon-sharp', 'rules');
+  const skillsTarget = join(DEST_DIR, 'skills');
+  const rulesTarget = join(DEST_DIR, 'skills', 'unity-vrc-udon-sharp', 'rules');
 
   for (const dir of AI_TOOL_DIRS) {
     const toolDir = join(TARGET, dir);
@@ -237,7 +237,7 @@ if (!useSymlinks) {
 }
 
 console.log(`  ${cyan(useSymlinks ? '2.' : '3.')} For validation hooks, add to your AI tool settings:`);
-console.log(`     ${dim('PostToolUse: .agent-skills/agent-docs/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh')}`);
+console.log(`     ${dim('PostToolUse: .agent-skills/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh')}`);
 console.log('');
 console.log(`  ${dim('Documentation: https://github.com/niaka3dayo/agent-skills-vrc-udon')}`);
 console.log('');

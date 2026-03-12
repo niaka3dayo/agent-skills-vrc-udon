@@ -24,7 +24,7 @@ description: |
 
 ## Target Skills
 
-> **パス表記**: `skills/` は `agent-docs/skills/` 配下を指す。
+> **パス表記**: `skills/` はリポジトリルートの `skills/` ディレクトリを指す。
 > `rules/` は `skills/unity-vrc-udon-sharp/rules/` 配下を指す。
 > エージェントからは `.claude/skills/`、`.claude/rules/` (シンボリックリンク) 経由でもアクセス可能。
 
