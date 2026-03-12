@@ -21,7 +21,7 @@ UdonSharp / VRC ワールド関連の作業時に、該当スキルの SKILL.md 
 | `unity-vrc-world-sdk-3` | VRC コンポーネント配置、レイヤー設定、ワールド最適化 | `.agents/skills/unity-vrc-world-sdk-3/SKILL.md` |
 | `unity-vrc-skills-renovator` | スキルのリノベーション（知識充填・刷新・品質向上） | `.agents/skills/unity-vrc-skills-renovator/SKILL.md` |
 
-## SDK (3.7.1 - 3.10.1)
+## SDK (3.7.1 - 3.10.2)
 
 | Version | Key Features |
 |---------|--------------|
@@ -29,7 +29,8 @@ UdonSharp / VRC ワールド関連の作業時に、該当スキルの SKILL.md 
 | 3.7.4 | Persistence API (PlayerData/PlayerObject) |
 | 3.8.1 | `[NetworkCallable]` パラメータ付きネットワークイベント |
 | 3.10.0 | VRChat Dynamics for Worlds (PhysBones, Contacts) |
-| 3.10.1 | バグ修正・安定性改善 (最新安定版) |
+| 3.10.1 | バグ修正・安定性改善 |
+| 3.10.2 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル |
 
 ## Docs Reference
 

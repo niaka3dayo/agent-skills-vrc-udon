@@ -2,7 +2,7 @@
 
 UdonSharp におけるネットワーキングと同期の包括的ガイド。
 
-**対応SDKバージョン**: 3.7.1 - 3.10.1 (2026年2月時点)
+**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
 
 > **Warning**: Networking in Udon is a work in progress and can be fragile. Keep implementations simple and test thoroughly with multiple players.
 >

@@ -1,6 +1,6 @@
 # UdonSharp チートシート
 
-**SDK 3.7.1 - 3.10.1 対応** (2026年2月時点)
+**SDK 3.7.1 - 3.10.2 対応** (2026年3月時点)
 
 ## ブロック機能と代替手段
 
@@ -160,6 +160,10 @@ player.Immobilize(true/false)
 // Instead of coroutines
 SendCustomEventDelayedSeconds(nameof(MyMethod), 2.0f);
 SendCustomEventDelayedFrames(nameof(MyMethod), 1);
+
+// EventTiming (SDK 3.10.2+): FixedUpdate / PostLateUpdate
+SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
+SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
 
 // Repeating
 public void StartLoop() {

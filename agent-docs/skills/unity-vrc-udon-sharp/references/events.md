@@ -2,7 +2,7 @@
 
 Complete reference of all events available in UdonSharp. Override these methods to respond to events.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.1 (2026年2月時点)
+**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
 
 ## 重要: override と Non-override
 
@@ -52,6 +52,32 @@ void FixedUpdate()
     rb.AddForce(Vector3.up * force);
 }
 ```
+
+### SendCustomEventDelayed と EventTiming (SDK 3.10.2+)
+
+`SendCustomEventDelayedSeconds` / `SendCustomEventDelayedFrames` の第3引数で実行タイミングを指定できる。
+
+| EventTiming | 説明 | 追加バージョン |
+|-------------|------|--------------|
+| `EventTiming.Update` | Update ループ内 (デフォルト) | 3.7.1+ |
+| `EventTiming.LateUpdate` | LateUpdate 内 | 3.7.1+ |
+| `EventTiming.FixedUpdate` | 物理ティック内 | **3.10.2** |
+| `EventTiming.PostLateUpdate` | LateUpdate の後 | **3.10.2** |
+
+```csharp
+// デフォルト (Update タイミング)
+SendCustomEventDelayedSeconds(nameof(MyMethod), 2.0f);
+
+// FixedUpdate タイミングで実行 (SDK 3.10.2+)
+SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
+
+// フレーム遅延 + PostLateUpdate タイミング (SDK 3.10.2+)
+SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
+```
+
+> **Note**: `EventTiming.FixedUpdate` は物理演算と同期が必要な処理に、`EventTiming.PostLateUpdate` はカメラ追従やIK後の補正に適している。
+
+---
 
 ## Input イベント
 

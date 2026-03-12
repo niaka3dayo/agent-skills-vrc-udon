@@ -40,7 +40,7 @@ body:
     attributes:
       label: VRChat SDK Version
       description: Which SDK version are you using? (optional)
-      placeholder: "3.10.1"
+      placeholder: "3.10.2"
     validations:
       required: false
 

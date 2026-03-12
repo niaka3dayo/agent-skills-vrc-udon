@@ -65,7 +65,8 @@ minor: バグ修正、小さな変更
 | 3.8.1 | 2025 | NetworkCallable, パラメータ付きイベント, Others/Self ターゲット |
 | 3.9.0 | 2025 | Camera Dolly API, Auto Hold 簡素化 |
 | 3.10.0 | 2025 | Dynamics for Worlds |
-| 3.10.1 | 2025 | バグ修正・安定性改善 (最新安定版) |
+| 3.10.1 | 2025 | バグ修正・安定性改善 |
+| 3.10.2 | 2026 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル |
 
 ### 次回更新時の確認ポイント
 

@@ -1,6 +1,6 @@
 # Web Loading (String / Image ダウンロード)
 
-**対応SDKバージョン**: 3.7.1 - 3.10.1 (2026年2月時点)
+**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
 
 UdonSharp では `System.Net` が使用不可のため、Web からデータを取得するには VRChat 専用の API を使用する。
 
@@ -69,7 +69,7 @@ Udon VM がセキュリティ上の理由で意図的にブロックしている
 | `VRCUrlInputField.GetUrl()` | ✅ | **ユーザーが手動入力/ペースト**した URL を VRCUrl として取得 |
 | `VRCUrlInputField.SetUrl(vrcUrl)` | ✅ | 既存の VRCUrl を InputField に表示 (新規 URL の生成ではない) |
 
-> **2026年2月時点**: Canny で 158+ 票の Feature Request が open のまま。
+> **2026年3月時点**: Canny で 158+ 票の Feature Request が open のまま。
 > VRChat は trusted domain 限定の部分的解決を検討中だが、完全な動的生成は未実装。
 
 #### なぜ VRCUrlInputField を使う人が多いのか

@@ -18,6 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - CI/CD: symlink integrity, markdown link validation, npm pack test, Release Drafter, npm publish
 - GitHub Issue templates (Bug Report, Knowledge Request)
 - Support for Claude Code, Codex CLI, Gemini CLI
-- SDK 3.7.1 - 3.10.1 coverage
+- SDK 3.7.1 - 3.10.2 coverage
 
 [1.0.0]: https://github.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/v1.0.0

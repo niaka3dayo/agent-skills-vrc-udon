@@ -1,7 +1,7 @@
 ---
 name: unity-vrc-world-sdk-3
 description: |
-    VRChat World SDK 3 world setup & optimization guide (SDK 3.7.1 - 3.10.1).
+    VRChat World SDK 3 world setup & optimization guide (SDK 3.7.1 - 3.10.2).
     Covers scene setup, component placement, layers, performance optimization,
     lighting, and upload workflow.
     Keywords: VRChat world, VRC SDK, VRC_SceneDescriptor, spawn point,
@@ -30,7 +30,7 @@ description: |
 
 ## SDK Versions
 
-**対応バージョン**: SDK 3.7.1 - 3.10.1 (2026年2月時点)
+**対応バージョン**: SDK 3.7.1 - 3.10.2 (2026年3月時点)
 
 | SDK    | 新機能                                                                  | 状態        |
 | ------ | ----------------------------------------------------------------------- | ----------- |
@@ -41,7 +41,8 @@ description: |
 | 3.8.1  | **[NetworkCallable]** パラメータ付きイベント, `Others`/`Self` ターゲット | ✅          |
 | 3.9.0  | **Camera Dolly API**, Auto Hold 簡素化, VRCCameraSettings               | ✅          |
 | 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)          | ✅          |
-| 3.10.1 | バグ修正・安定性改善                                                    | ✅ 最新安定 |
+| 3.10.1 | バグ修正・安定性改善                                                    | ✅          |
+| 3.10.2 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル              | ✅ 最新安定 |
 
 > **重要**: SDK 3.9.0 未満は **2025年12月2日をもって非推奨**。新規ワールドのアップロードができません。
 

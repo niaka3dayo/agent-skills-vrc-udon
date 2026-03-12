@@ -1,7 +1,7 @@
 ---
 name: unity-vrc-udon-sharp
 description: |
-    UdonSharp (C# → Udon) scripting skill (SDK 3.7.1 - 3.10.1).
+    UdonSharp (C# → Udon) scripting skill (SDK 3.7.1 - 3.10.2).
     Covers network sync, persistence, Dynamics, Web Loading, compile constraints.
     Keywords: UdonSharp, Udon, VRC SDK, UdonSynced, NetworkCallable,
     FieldChangeCallback, VRCPlayerApi, SendCustomEvent, PlayerData,
@@ -15,7 +15,7 @@ description: |
 
 UdonSharp は C# を Udon Assembly にコンパイルするトランスレータ。標準 C# と大きく異なる制約がある。
 
-**SDK対応**: 3.7.1 - 3.10.1 (2026年2月時点)
+**SDK対応**: 3.7.1 - 3.10.2 (2026年3月時点)
 
 ## Rules (Constraints & Networking)
 
@@ -40,7 +40,8 @@ UdonSharp は C# を Udon Assembly にコンパイルするトランスレータ
 | 3.8.1 | **`[NetworkCallable]`** 属性、パラメータ付きネットワークイベント、`NetworkEventTarget.Others`/`.Self` |
 | 3.9.0 | Camera Dolly API, Auto Hold ピックアップ簡素化 |
 | 3.10.0 | **VRChat Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
-| 3.10.1 | バグ修正・安定性改善 (最新安定版) |
+| 3.10.1 | バグ修正・安定性改善 |
+| 3.10.2 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル |
 
 > **注意**: SDK 3.9.0 未満は **2025年12月2日をもって非推奨**。新規ワールドアップロード不可。
 

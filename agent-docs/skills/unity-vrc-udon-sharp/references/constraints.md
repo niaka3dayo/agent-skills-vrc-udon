@@ -2,7 +2,7 @@
 
 Complete reference of C# features and their availability in UdonSharp.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.1 (2026年2月時点)
+**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
 
 ## サポートされている機能
 
