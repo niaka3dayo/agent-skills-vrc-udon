@@ -1,0 +1,40 @@
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+template: |
+  ## Changes
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+categories:
+  - title: "Breaking Changes"
+    labels:
+      - "release: breaking"
+  - title: "New Features"
+    labels:
+      - "release: feature"
+  - title: "Bug Fixes"
+    labels:
+      - "release: fix"
+  - title: "Documentation"
+    labels:
+      - "release: docs"
+  - title: "Maintenance"
+    labels:
+      - "release: maintenance"
+version-resolver:
+  major:
+    labels:
+      - "release: breaking"
+  minor:
+    labels:
+      - "release: feature"
+  patch:
+    labels:
+      - "release: fix"
+      - "release: docs"
+      - "release: maintenance"
+  default: patch
+exclude-labels:
+  - "status: duplicate"
+  - "status: wontfix"
