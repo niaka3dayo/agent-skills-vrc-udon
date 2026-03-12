@@ -1,11 +1,17 @@
 ---
 name: unity-vrc-skills-renovator
-description: |
-    VRChat skill renovator (knowledge fill, refresh, quality improvement).
-    Used for SDK update support, knowledge completion, and fixing outdated info.
-    Targets: unity-vrc-udon-sharp, unity-vrc-world-sdk-3
-    Keywords: update, SDK latest, knowledge fill, skill maintenance,
-    information audit, catch-up, renovate, refresh, improve
+description: >
+    VRChat skill renovator for knowledge fill, refresh, and quality improvement.
+    Use this skill when updating VRChat skills to new SDK versions, filling
+    missing knowledge, fixing outdated information, or improving skill quality.
+    Targets unity-vrc-udon-sharp and unity-vrc-world-sdk-3 skills.
+    Triggers on: update skills, SDK latest, knowledge fill, skill maintenance,
+    information audit, catch-up, renovate, refresh, improve skills, SDK update.
+license: MIT
+metadata:
+    author: niaka3dayo
+    version: "1.0.0"
+    tags: skill-maintenance, sdk-update, knowledge-management
 ---
 
 # VRC Skills Renovator
@@ -26,7 +32,6 @@ description: |
 
 > **パス表記**: `skills/` はリポジトリルートの `skills/` ディレクトリを指す。
 > `rules/` は `skills/unity-vrc-udon-sharp/rules/` 配下を指す。
-> エージェントからは `.claude/skills/`、`.claude/rules/` (シンボリックリンク) 経由でもアクセス可能。
 
 | スキル | ディレクトリ | 内容 |
 |--------|-------------|------|

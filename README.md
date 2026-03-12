@@ -91,7 +91,13 @@ npx skills add niaka3dayo/agent-skills-vrc-udon
 
 This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project.
 
-### Method 2: npx direct install
+### Method 2: Claude Code plugin
+
+```bash
+claude plugin add niaka3dayo/agent-skills-vrc-udon
+```
+
+### Method 3: npx direct install
 
 ```bash
 npx agent-skills-vrc-udon
@@ -103,7 +109,7 @@ npx agent-skills-vrc-udon --force    # Overwrite existing files
 npx agent-skills-vrc-udon --list     # Preview files to install (dry run)
 ```
 
-### Method 3: git clone
+### Method 4: git clone
 
 ```bash
 git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -116,7 +122,8 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 ```
 skills/                                  # All skills
   unity-vrc-udon-sharp/                 # UdonSharp core skill
-    SKILL.md                              # Skill definition
+    SKILL.md                              # Skill definition + frontmatter
+    LICENSE.txt                           # MIT License
     CHEATSHEET.md                         # Quick reference (1 page)
     rules/                               # Constraint rules
       udonsharp-constraints.md
@@ -125,13 +132,14 @@ skills/                                  # All skills
     hooks/                               # PostToolUse validation
       validate-udonsharp.sh
       validate-udonsharp.ps1
-    assets/templates/                    # Code templates
+    assets/templates/                    # Code templates (4 files)
     references/                          # Detailed documentation (11 files)
   unity-vrc-world-sdk-3/                # VRC World SDK skill
-    SKILL.md, CHEATSHEET.md, references/ (7 files)
+    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
   unity-vrc-skills-renovator/           # Self-maintenance meta-skill
-    SKILL.md, references/ (4 files)
+    SKILL.md, LICENSE.txt, references/ (4 files)
 
+.claude-plugin/marketplace.json         # Claude Code plugin registration
 CLAUDE.md  AGENTS.md  GEMINI.md         # Per-tool config references
 ```
 

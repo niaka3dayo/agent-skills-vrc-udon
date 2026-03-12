@@ -1,0 +1,23 @@
+{
+  "name": "agent-skills-vrc-udon",
+  "owner": {
+    "name": "niaka3dayo"
+  },
+  "metadata": {
+    "description": "AI Agent Skills for VRChat UdonSharp world development",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "vrc-udon-skills",
+      "description": "VRChat UdonSharp skills, rules, and validation hooks for correct code generation",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/unity-vrc-udon-sharp",
+        "./skills/unity-vrc-world-sdk-3",
+        "./skills/unity-vrc-skills-renovator"
+      ]
+    }
+  ]
+}

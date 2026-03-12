@@ -1,13 +1,22 @@
 ---
 name: unity-vrc-world-sdk-3
-description: |
-    VRChat World SDK 3 world setup & optimization guide (SDK 3.7.1 - 3.10.2).
-    Covers scene setup, component placement, layers, performance optimization,
-    lighting, and upload workflow.
-    Keywords: VRChat world, VRC SDK, VRC_SceneDescriptor, spawn point,
-    VRC_Pickup, VRC_Station, VRC_Mirror, VRC_ObjectSync, layer setup,
-    optimization, Quest support, light baking, upload, FPS improvement
-    Related: Use unity-vrc-udon-sharp for UdonSharp coding.
+description: >
+    VRChat World SDK 3 scene setup and optimization guide.
+    Use this skill when configuring VRChat world scenes, placing SDK components,
+    setting up layers, optimizing performance, or uploading worlds.
+    Covers VRC_SceneDescriptor, spawn points, VRC_Pickup, VRC_Station,
+    VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, layer/collision matrix,
+    baked lighting, Quest/Android limits, and upload workflow.
+    SDK 3.7.1 - 3.10.2 coverage.
+    Triggers on: VRChat world, VRC SDK, scene setup, VRC_SceneDescriptor,
+    spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
+    optimization, Quest support, light baking, upload, FPS improvement.
+    Related: Use unity-vrc-udon-sharp for UdonSharp C# coding.
+license: MIT
+metadata:
+    author: niaka3dayo
+    version: "1.0.0"
+    tags: vrchat, world-sdk, scene-setup, optimization, components, upload
 ---
 
 # VRChat World SDK 3 Guide

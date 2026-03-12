@@ -1,12 +1,20 @@
 ---
 name: unity-vrc-udon-sharp
-description: |
-    UdonSharp (C# → Udon) scripting skill (SDK 3.7.1 - 3.10.2).
-    Covers network sync, persistence, Dynamics, Web Loading, compile constraints.
-    Keywords: UdonSharp, Udon, VRC SDK, UdonSynced, NetworkCallable,
-    FieldChangeCallback, VRCPlayerApi, SendCustomEvent, PlayerData,
-    PhysBones, VRC, world development, synced variables, C# scripting
-    Constraints: List<T>/async/await/try/catch blocked.
+description: >
+    UdonSharp (C# to Udon Assembly) scripting skill for VRChat world development.
+    Use this skill when writing, reviewing, or debugging UdonSharp C# code.
+    Covers compile constraints (List<T>/async/await/try/catch/LINQ blocked),
+    network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
+    persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts),
+    Web Loading, and event handling. SDK 3.7.1 - 3.10.2 coverage.
+    Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
+    NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
+    synced variables, VRChat world scripting, C# to Udon.
+license: MIT
+metadata:
+    author: niaka3dayo
+    version: "1.0.0"
+    tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
 ---
 
 # UdonSharp Skill
@@ -27,7 +35,7 @@ UdonSharp は C# を Udon Assembly にコンパイルするトランスレータ
 | `rules/udonsharp-networking.md` | オーナーシップ、同期モード、RequestSerialization、NetworkCallable |
 | `rules/udonsharp-sync-selection.md` | 同期パターン選択、データバジェット、最小化原則 |
 
-> エージェントからは `.claude/rules/`、`.agents/rules/` 等のシンボリックリンク経由で自動ロードされる。
+> インストール後、エージェントの rules ディレクトリに配置すると自動ロードされる。
 
 ## SDK Versions
 
