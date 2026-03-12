@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  hooks:
+    name: Hook Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check execute permission
+        run: |
+          HOOK="skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh"
+          if [ ! -x "$HOOK" ]; then
+            echo "ERROR: $HOOK is not executable"
+            exit 1
+          fi
+          echo "OK: $HOOK is executable"
+
+      - name: Bash syntax check
+        run: bash -n skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh
+
+  markdown:
+    name: Markdown Links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check markdown links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --exclude "^https://creators\.vrchat\.com"
+            --exclude "^https://udonsharp\.docs\.vrchat\.com"
+            --exclude "^https://ask\.vrchat\.com"
+            --exclude "^https://feedback\.vrchat\.com"
+            --exclude "^https://wiki\.vrchat\.com"
+            --exclude "^https://github\.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/"
+            --timeout 30
+            --no-progress
+            "**/*.md"
+          fail: true
+
+  npm-pack:
+    name: npm Pack Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test npm pack
+        run: |
+          npm pack --dry-run 2>&1 | tee pack-output.txt
+          echo ""
+          echo "--- Verifying required files ---"
+          for f in "bin/install.mjs" "skills/" "CLAUDE.md" "AGENTS.md" "GEMINI.md" "LICENSE" "README.md"; do
+            if grep -q "$f" pack-output.txt; then
+              echo "OK: $f"
+            else
+              echo "ERROR: $f not found in package"
+              exit 1
+            fi
+          done
+
+      - name: Test installer help
+        run: node bin/install.mjs --help
+
+      - name: Test installer version
+        run: |
+          VERSION=$(node bin/install.mjs --version)
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "$PKG_VERSION" ]; then
+            echo "ERROR: Version mismatch: $VERSION != $PKG_VERSION"
+            exit 1
+          fi
+          echo "OK: Version $VERSION"
+
+      - name: Test installer list
+        run: node bin/install.mjs --list

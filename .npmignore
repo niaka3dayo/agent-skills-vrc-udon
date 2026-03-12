@@ -1,0 +1,7 @@
+.github/
+.claude-plugin/
+.git/
+node_modules/
+*.tgz
+*.log
+.npm/

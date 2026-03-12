@@ -1,1 +1,0 @@
-../../agent-docs/skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md

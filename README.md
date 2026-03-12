@@ -1,320 +1,277 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.1-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.2-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/npm/v/agent-skills-vrc-udon?style=flat-square&label=npm" alt="npm version" />
+  <img src="https://img.shields.io/npm/dm/agent-skills-vrc-udon?style=flat-square&label=downloads" alt="npm downloads" />
+  <img src="https://img.shields.io/github/actions/workflow/status/niaka3dayo/agent-skills-vrc-udon/ci.yml?branch=dev&style=flat-square&label=CI" alt="CI" />
+</p>
+
 <h1 align="center">Agent Skills for VRChat UdonSharp</h1>
 
 <p align="center">
-  <b>AI エージェントが UdonSharp コードを正しく生成するためのスキル・ルール・バリデーションフック集</b>
+  <b>Skills, rules, and validation hooks that teach AI coding agents to generate correct UdonSharp code</b>
 </p>
 
 <p align="center">
-  <a href="#このリポジトリについて">About</a> &bull;
-  <a href="#概要">概要</a> &bull;
-  <a href="#対応-ai-ツール">対応ツール</a> &bull;
-  <a href="#リポジトリ構成">構成</a> &bull;
-  <a href="#スキル一覧">スキル</a> &bull;
-  <a href="#ルール自動ロード">ルール</a> &bull;
-  <a href="#バリデーションフック">フック</a> &bull;
-  <a href="#免責事項">免責</a>
+  <a href="#about">About</a> &bull;
+  <a href="#install">Install</a> &bull;
+  <a href="#structure">Structure</a> &bull;
+  <a href="#skills">Skills</a> &bull;
+  <a href="#rules">Rules</a> &bull;
+  <a href="#hooks">Hooks</a> &bull;
+  <a href="#contributing">Contributing</a> &bull;
+  <a href="#disclaimer">Disclaimer</a>
 </p>
 
-<details>
-<summary><b>English Summary</b> (click to expand)</summary>
+---
 
-This repository provides **skills, rules, and validation hooks** for AI coding agents (Claude Code, Codex CLI, Gemini CLI, etc.) to generate correct **UdonSharp** code for VRChat world development.
+<h2 id="about">About</h2>
 
-UdonSharp compiles C# to Udon Assembly but blocks many standard C# features (`List<T>`, `async/await`, `try/catch`, LINQ, lambdas, etc.). The included rules and hooks automatically detect these violations and guide the AI toward correct alternatives.
+VRChat world development with **UdonSharp** (C# &rarr; Udon Assembly) has strict compile constraints that differ significantly from standard C#. Features like `List<T>`, `async/await`, `try/catch`, LINQ, and lambdas cause **compile errors**.
 
-**Key features:**
-- 3 skills: UdonSharp coding, VRC World SDK setup, skill self-maintenance
-- 3 auto-loaded rule files: compile constraints, networking patterns, sync selection
-- PostToolUse validation hooks (Bash + PowerShell)
-- SDK 3.7.1 - 3.10.1 coverage
-- Single source of truth in `agent-docs/`, symlinked to each AI tool directory
+This repository provides AI coding agents with the knowledge to generate correct UdonSharp code from the start.
 
-**License:** MIT -- free to fork and modify. This is a personal project; Issues and PRs are not accepted.
+| Problem | Solution |
+|---------|----------|
+| AI generates `List<T>`, `async/await`, etc. | Rules + hooks auto-detect and warn |
+| Sync variable bloat | Decision tree + data budget |
+| Incorrect networking patterns | Pattern library + anti-patterns |
+| SDK version feature differences | Version table with feature mapping |
+| Late Joiner state inconsistency | Sync pattern selection framework |
 
-**Disclaimer:** Not affiliated with VRChat Inc. Content is provided "AS IS" and may contain errors. Always verify against official VRChat documentation.
+**This is NOT:**
+- A VRChat SDK or UdonSharp distribution
+- A Unity project (no executable code)
+- A replacement for [official VRChat documentation](https://creators.vrchat.com/)
+- A guarantee of all AI behaviors
 
-</details>
+> **Issues**: Bug reports and knowledge requests are welcome via [GitHub Issues](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues).
+> **PRs**: Pull Requests are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-## このリポジトリについて
+<h2 id="install">Install</h2>
 
-本リポジトリは **Zenn 記事の補助資料** として公開している個人プロジェクトです。
-
-> Zenn 記事 URL は記事公開後に追記予定です。
-
-**このリポジトリは、つまり何？**
-- 記事用のサンプルリポジトリです
-- 個人プロジェクトとして公開しています
-- **フォーク・改変は MIT License の範囲で自由** にどうぞ
-
-**注意点**
-- VRChat SDK や UdonSharp の配布物ではありません
-- Unity プロジェクトではありません
-- [公式 VRChat ドキュメント](https://creators.vrchat.com/) の代替ではありません
-- すべてのAIの動作を完全に保証するものではありません。
-
-> **Issue / PR について**: 本リポジトリでは **Issue・Pull Request は受け付けていません**。
-> 誤りを見つけた場合は、フォークして修正するか、記事のコメント欄でお知らせください。
-
----
-
-## 概要
-
-VRChat のワールド開発で使われる **UdonSharp** (C# &rarr; Udon Assembly) は、標準 C# と大きく異なる制約があります。
-通常の C# では問題ない `List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などが **コンパイルエラー** になります。
-
-このリポジトリは、AI コーディングエージェントがこれらの制約を理解し、**最初から正しいコードを生成する** ためのスキル・ルール・バリデーションフックを提供します。
-
-### 解決する課題
-
-| 課題 | 解決策 |
-|------|--------|
-| AI が `List<T>`, `async/await` 等を生成してしまう | ルール + フックで自動検出・警告 |
-| 同期変数の肥大化 (Sync Bloat) | デシジョンツリー + データバジェット |
-| 不適切なネットワークパターン | パターンライブラリとアンチパターン集 |
-| SDK バージョンごとの機能差 | バージョンテーブルで機能対応を明示 |
-| Late Joiner の状態不整合 | 同期パターン選択フレームワーク |
-
----
-
-## 使い方
-
-### 1. VRChat Unity プロジェクトに clone する (推奨)
+### Method 1: skills CLI (recommended)
 
 ```bash
-# Unity プロジェクトのルートで実行
-git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git .agent-skills
+npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-AI ツールの設定ディレクトリをシンボリックリンクで配置するか、必要なファイルをコピーしてください。
+This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project.
 
-### 2. 単体リファレンスとして使う
+### Method 2: Claude Code plugin
+
+```bash
+claude plugin add niaka3dayo/agent-skills-vrc-udon
+```
+
+### Method 3: npx direct install
+
+```bash
+npx agent-skills-vrc-udon
+```
+
+Options:
+```bash
+npx agent-skills-vrc-udon --force    # Overwrite existing files
+npx agent-skills-vrc-udon --list     # Preview files to install (dry run)
+```
+
+### Method 4: git clone
 
 ```bash
 git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
-cd agent-skills-vrc-udon
-```
-
-`agent-docs/` が唯一の正本です。各 AI ツールのディレクトリ (`.claude/`, `.agents/`, `.gemini/`, `.codex/`) はすべて `agent-docs/` へのシンボリックリンクです。
-
----
-
-## 対応 AI ツール
-
-`agent-docs/` を唯一の正本とし、各ツールへシンボリックリンクで配信しています。
-
-| AI ツール | 設定ファイル | ルール | スキル |
-|-----------|-------------|--------|--------|
-| **Claude Code** | `CLAUDE.md` | `.claude/rules/` | `.claude/skills/` |
-| **Codex CLI** | `AGENTS.md` | `.agents/rules/` | `.agents/skills/` |
-| **Gemini CLI** | `GEMINI.md` | `.gemini/rules/` | `.gemini/skills/` |
-| **その他** | `AGENTS.md` | `.codex/rules/` | `.codex/skills/` |
-
----
-
-## リポジトリ構成
-
-```
-agent-docs/                              # 正本 (Single Source of Truth)
-  skills/
-    unity-vrc-udon-sharp/               # UdonSharp コアスキル
-      SKILL.md                            # スキル定義・エントリーポイント
-      CHEATSHEET.md                       # クイックリファレンス (1ページ)
-      rules/                             # 自動ロードルール
-        udonsharp-constraints.md           # ブロック機能、属性、同期可能な型
-        udonsharp-networking.md            # オーナーシップ、同期モード、NetworkCallable
-        udonsharp-sync-selection.md        # 同期パターンデシジョンツリー、データバジェット
-      hooks/                             # PostToolUse バリデーション
-        validate-udonsharp.sh              # Linux / macOS
-        validate-udonsharp.ps1             # Windows (PowerShell)
-      assets/templates/                  # コードテンプレート
-        BasicInteraction.cs
-        SyncedObject.cs
-        PlayerSettings.cs
-        CustomInspector.cs
-      references/                        # 詳細リファレンス
-        constraints.md                     # C# 機能の互換性リスト
-        networking.md                      # ネットワーキングパターン (NetworkCallable 含む)
-        persistence.md                     # PlayerData / PlayerObject (SDK 3.7.4+)
-        dynamics.md                        # PhysBones, Contacts (SDK 3.10.0+)
-        web-loading.md                     # String/Image ダウンロード、VRCJson、VRCUrl
-        events.md                          # 全 Udon イベント
-        api.md                             # VRCPlayerApi, Networking, enums
-        patterns.md                        # コードパターン集
-        sync-examples.md                   # 同期パターン例
-        editor-scripting.md                # エディタスクリプティング
-        troubleshooting.md                 # よくあるエラーと解決策
-    unity-vrc-world-sdk-3/              # VRC World SDK スキル
-      SKILL.md
-      CHEATSHEET.md
-      references/
-        components.md, layers.md, performance.md,
-        lighting.md, audio-video.md, upload.md, troubleshooting.md
-    unity-vrc-skills-renovator/         # スキル自己メンテナンス用メタスキル
-      SKILL.md
-      references/
-        changelog-sources.md, search-queries.md,
-        skill-structure.md, update-checklist.md
-
-.claude/  .agents/  .codex/  .gemini/   # agent-docs/ へのシンボリックリンク
-  rules/   -> agent-docs/skills/unity-vrc-udon-sharp/rules/
-  skills/  -> agent-docs/skills/
-
-CLAUDE.md   AGENTS.md   GEMINI.md        # 各ツール用プロジェクト設定
 ```
 
 ---
 
-## スキル一覧
+<h2 id="structure">Structure</h2>
+
+```
+skills/                                  # All skills
+  unity-vrc-udon-sharp/                 # UdonSharp core skill
+    SKILL.md                              # Skill definition + frontmatter
+    LICENSE.txt                           # MIT License
+    CHEATSHEET.md                         # Quick reference (1 page)
+    rules/                               # Constraint rules
+      udonsharp-constraints.md
+      udonsharp-networking.md
+      udonsharp-sync-selection.md
+    hooks/                               # PostToolUse validation
+      validate-udonsharp.sh
+      validate-udonsharp.ps1
+    assets/templates/                    # Code templates (4 files)
+    references/                          # Detailed documentation (11 files)
+  unity-vrc-world-sdk-3/                # VRC World SDK skill
+    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
+  unity-vrc-skills-renovator/           # Self-maintenance meta-skill
+    SKILL.md, LICENSE.txt, references/ (4 files)
+
+.claude-plugin/marketplace.json         # Claude Code plugin registration
+CLAUDE.md  AGENTS.md  GEMINI.md         # Per-tool config references
+```
+
+---
+
+<h2 id="skills">Skills</h2>
 
 ### unity-vrc-udon-sharp
 
-UdonSharp スクリプティングのコアスキル。コンパイル制約、ネットワーキング、イベント、テンプレートを網羅。
+UdonSharp scripting core skill. Covers compile constraints, networking, events, and templates.
 
-| 領域 | 内容 |
-|------|------|
-| **制約** | ブロックされる C# 機能と代替手段 (`List<T>` &rarr; `DataList`, `async` &rarr; `SendCustomEventDelayedSeconds` 等) |
-| **ネットワーキング** | オーナーシップモデル、Manual / Continuous 同期、FieldChangeCallback、アンチパターン |
-| **NetworkCallable** | SDK 3.8.1+ パラメータ付きネットワークイベント (最大 8 引数) |
-| **永続化** | SDK 3.7.4+ PlayerData / PlayerObject API |
+| Area | Content |
+|------|---------|
+| **Constraints** | Blocked C# features and alternatives (`List<T>` &rarr; `DataList`, `async` &rarr; `SendCustomEventDelayedSeconds`) |
+| **Networking** | Ownership model, Manual/Continuous sync, FieldChangeCallback, anti-patterns |
+| **NetworkCallable** | SDK 3.8.1+ parameterized network events (up to 8 args) |
+| **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
 | **Dynamics** | SDK 3.10.0+ PhysBones, Contacts, VRC Constraints for Worlds |
-| **Web Loading** | String / Image ダウンロード、VRCJson、VRCUrl の制約 |
-| **テンプレート** | 4 種のスターターテンプレート (BasicInteraction, SyncedObject, PlayerSettings, CustomInspector) |
+| **Web Loading** | String/Image download, VRCJson, VRCUrl constraints |
+| **Templates** | 4 starter templates (BasicInteraction, SyncedObject, PlayerSettings, CustomInspector) |
 
 ### unity-vrc-world-sdk-3
 
-ワールドレベルのシーン設定、コンポーネント配置、最適化。
+World-level scene setup, component placement, and optimization.
 
-| 領域 | 内容 |
-|------|------|
-| **シーン設定** | VRC_SceneDescriptor、スポーン地点、Reference Camera |
-| **コンポーネント** | VRC_Pickup, Station, ObjectSync, Mirror, Portal, CameraDolly |
-| **レイヤー** | VRChat 予約レイヤーとコリジョンマトリックス |
-| **パフォーマンス** | FPS 目標、Quest/Android 制限、最適化チェックリスト |
-| **ライティング** | ベイクドライティングのベストプラクティス |
-| **オーディオ/ビデオ** | 空間オーディオ、ビデオプレイヤー選択 (AVPro vs Unity) |
-| **アップロード** | ビルド・アップロード手順、事前チェックリスト |
+| Area | Content |
+|------|---------|
+| **Scene Setup** | VRC_SceneDescriptor, spawn points, Reference Camera |
+| **Components** | VRC_Pickup, Station, ObjectSync, Mirror, Portal, CameraDolly |
+| **Layers** | VRChat reserved layers and collision matrix |
+| **Performance** | FPS targets, Quest/Android limits, optimization checklist |
+| **Lighting** | Baked lighting best practices |
+| **Audio/Video** | Spatial audio, video player selection (AVPro vs Unity) |
+| **Upload** | Build and upload workflow, pre-upload checklist |
 
 ### unity-vrc-skills-renovator
 
-スキル自体をメンテナンスするためのメタスキル。3 つの柱で知識を最新に保つ。
+Meta-skill for maintaining skills. Three pillars to keep knowledge current.
 
-| 柱 | 目的 |
-|----|------|
-| **充填** | 不足している知識の追加 (新 SDK の API、パターン、Tips) |
-| **刷新** | 古くなった情報の更新 (バージョン表記、非推奨 API の除去) |
-| **品質向上** | 既存の記述の改善 (コード例の追加、説明の明確化) |
+| Pillar | Purpose |
+|--------|---------|
+| **Fill** | Add missing knowledge (new SDK APIs, patterns, tips) |
+| **Refresh** | Update outdated information (version tables, deprecated APIs) |
+| **Improve** | Enhance existing content (code examples, clarity) |
 
 ---
 
-## ルール（自動ロード）
+<h2 id="rules">Rules</h2>
 
-ルールは AI エージェントのコンテキストに**自動的にロード**され、コード生成前のガードレールとして機能します。
+Rules are constraint files that guide AI agents before code generation.
 
-| ルールファイル | 内容 |
-|---------------|------|
-| `udonsharp-constraints` | ブロックされる C# 機能、コード生成ルール、属性、同期可能な型 |
-| `udonsharp-networking` | オーナーシップモデル、同期モード、アンチパターン、NetworkCallable の制約 |
-| `udonsharp-sync-selection` | 同期デシジョンツリー、データバジェット目標、6 つの最小化原則 |
+| Rule File | Content |
+|-----------|---------|
+| `udonsharp-constraints` | Blocked C# features, code generation rules, attributes, syncable types |
+| `udonsharp-networking` | Ownership model, sync modes, anti-patterns, NetworkCallable constraints |
+| `udonsharp-sync-selection` | Sync decision tree, data budget targets, 6 minimization principles |
 
-### 同期デシジョンツリー
+### Sync Decision Tree
 
 ```
-Q1: 他プレイヤーに見える?
-    No  --> 同期なし (0 bytes)
+Q1: Visible to other players?
+    No  --> No sync (0 bytes)
     Yes --> Q2
 
-Q2: Late Joiner に現在の状態が必要?
-    No  --> イベントのみ (0 bytes)
+Q2: Late Joiner needs current state?
+    No  --> Events only (0 bytes)
     Yes --> Q3
 
-Q3: 連続的に変化する? (位置・回転)
+Q3: Continuous change? (position/rotation)
     Yes --> Continuous sync
-    No  --> Manual sync (最小限の [UdonSynced])
+    No  --> Manual sync (minimal [UdonSynced])
 ```
 
-**目標**: 1 behaviour あたり 50 bytes 未満。小〜中規模ワールドの合計: 100 bytes 未満が一般的。
+**Target**: < 50 bytes per behaviour. Small-medium worlds: < 100 bytes total.
 
 ---
 
-## バリデーションフック
+<h2 id="hooks">Validation Hooks</h2>
 
-`.cs` ファイル編集時に自動実行される PostToolUse バリデーションフック。
+PostToolUse hooks that auto-run when `.cs` files are edited.
 
-| カテゴリ | チェック内容 | 深刻度 |
-|----------|-------------|--------|
-| ブロック機能 | `List<T>`, `async/await`, `try/catch`, LINQ, コルーチン, ラムダ | ERROR |
-| ブロックパターン | `AddListener()`, `StartCoroutine()` | ERROR |
-| ネットワーキング | `[UdonSynced]` に `RequestSerialization()` がない | WARNING |
-| ネットワーキング | `[UdonSynced]` に `Networking.SetOwner()` がない | WARNING |
-| 同期肥大化 | 1 behaviour に 6 個以上の synced 変数 | WARNING |
-| 同期肥大化 | `int[]`/`float[]` の同期 (より小さい型を推奨) | WARNING |
-| 設定矛盾 | `NoVariableSync` モードで `[UdonSynced]` フィールドを使用 | ERROR |
+| Category | Check | Severity |
+|----------|-------|----------|
+| Blocked Features | `List<T>`, `async/await`, `try/catch`, LINQ, coroutines, lambdas | ERROR |
+| Blocked Patterns | `AddListener()`, `StartCoroutine()` | ERROR |
+| Networking | `[UdonSynced]` without `RequestSerialization()` | WARNING |
+| Networking | `[UdonSynced]` without `Networking.SetOwner()` | WARNING |
+| Sync Bloat | 6+ synced variables per behaviour | WARNING |
+| Sync Bloat | `int[]`/`float[]` sync (recommend smaller types) | WARNING |
+| Config Mismatch | `NoVariableSync` mode with `[UdonSynced]` fields | ERROR |
 
-**Bash** (`validate-udonsharp.sh`) と **PowerShell** (`validate-udonsharp.ps1`) の両方に対応。
-
----
-
-## SDK 対応バージョン
-
-| SDK バージョン | 主な機能 | 状態 |
-|:-------------:|:---------|:----:|
-| **3.7.1** | `StringBuilder`, `Regex`, `System.Random` | 対応 |
-| **3.7.4** | Persistence API (PlayerData / PlayerObject) | 対応 |
-| **3.7.6** | マルチプラットフォーム Build & Publish (PC + Android) | 対応 |
-| **3.8.0** | PhysBone 依存関係ソート、Force Kinematic On Remote | 対応 |
-| **3.8.1** | `[NetworkCallable]` パラメータ付きイベント、`Others`/`Self` ターゲット | 対応 |
-| **3.9.0** | Camera Dolly API、Auto Hold ピックアップ | 対応 |
-| **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | 対応 |
-| **3.10.1** | バグ修正・安定性改善 | 最新安定 |
-
-> **注意**: SDK 3.9.0 未満は **2025 年 12 月 2 日をもって非推奨** になりました。新規ワールドのアップロードには 3.9.0 以上が必要です。
+Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-udonsharp.ps1`).
 
 ---
 
-## 公式リソース
+## SDK Versions
 
-| リソース | URL |
+| SDK Version | Key Features | Status |
+|:-----------:|:-------------|:------:|
+| **3.7.1** | `StringBuilder`, `Regex`, `System.Random` | Supported |
+| **3.7.4** | Persistence API (PlayerData / PlayerObject) | Supported |
+| **3.7.6** | Multi-platform Build & Publish (PC + Android) | Supported |
+| **3.8.0** | PhysBone dependency sorting, Force Kinematic On Remote | Supported |
+| **3.8.1** | `[NetworkCallable]` parameterized events, `Others`/`Self` targets | Supported |
+| **3.9.0** | Camera Dolly API, Auto Hold pickup | Supported |
+| **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | Supported |
+| **3.10.1** | Bug fixes, stability improvements | Supported |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones fixes, shader time globals | Latest Stable |
+
+> **Note**: SDK < 3.9.0 was deprecated on December 2, 2025. New world uploads require 3.9.0+.
+
+---
+
+## Official Resources
+
+| Resource | URL |
 |----------|-----|
 | VRChat Creators Docs | https://creators.vrchat.com/ |
 | UdonSharp API Reference | https://udonsharp.docs.vrchat.com/ |
 | VRChat Forums (Q&A) | https://ask.vrchat.com/ |
-| VRChat Canny (バグ/機能リクエスト) | https://feedback.vrchat.com/ |
+| VRChat Canny (Bugs/Features) | https://feedback.vrchat.com/ |
 | VRChat Community GitHub | https://github.com/vrchat-community |
 
 ---
 
-## 免責事項
+<h2 id="contributing">Contributing</h2>
 
-> **本プロジェクトは VRChat Inc. とは一切関係ありません。公式の承認・提携・関連はありません。**
->
-> 「VRChat」「UdonSharp」「Udon」およびその関連名称・ロゴは VRChat Inc. の商標または登録商標です。すべての商標はそれぞれの所有者に帰属します。
->
-> 本リポジトリは、AI コーディングエージェントが正しい UdonSharp コードを生成するための **個人制作のナレッジベース** です。VRChat SDK や UdonSharp コンパイラの一部を配布するものではありません。
+**Issues are welcome** -- bug reports and knowledge requests help improve this project.
 
-### 正確性について
+**Pull Requests are not accepted** -- all fixes and updates are made by the maintainer.
 
-- 本リポジトリの情報は **「現状のまま (AS IS)」** 提供されており、いかなる保証もありません。[LICENSE](LICENSE) を参照してください。
-- 個人プロジェクトのため、**誤り・古い情報・不完全な記述が含まれる可能性があります**。必ず [公式 VRChat ドキュメント](https://creators.vrchat.com/) で確認してください。
-- 本リポジトリの利用に起因する問題（ビルドエラー、ワールドアップロードの拒否、ワールド内での想定外の挙動など）について、著者は一切の責任を負いません。
-- SDK 対応バージョン (3.7.1 - 3.10.1) は最終更新時点の情報です。VRChat が新バージョンをリリースした場合、挙動が変わる可能性があります。
-
-### AI による作成支援について
-
-本ナレッジベースは AI ツール (Claude, Gemini, Codex) の支援を受けて作成・メンテナンスしています。すべての内容をレビューしていますが、AI が生成した部分に微細な誤りが含まれる可能性があります。ご利用は自己責任でお願いします。
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-## ライセンス
+<h2 id="disclaimer">Disclaimer</h2>
 
-本プロジェクトは **MIT License** で公開しています。詳細は [LICENSE](LICENSE) を参照してください。
+> **This project is not affiliated with VRChat Inc. No official endorsement, partnership, or association is implied.**
+>
+> "VRChat", "UdonSharp", "Udon" and related names/logos are trademarks of VRChat Inc. All trademarks belong to their respective owners.
+>
+> This repository is a **personal knowledge base** for AI coding agents to generate correct UdonSharp code. It does not distribute any part of the VRChat SDK or UdonSharp compiler.
 
-フォーク・改変・再配布は MIT License の条件の下で自由です。このライセンスは本リポジトリ内のドキュメント・ルール・テンプレート・フックに適用されます。VRChat の SDK、UdonSharp コンパイラ、その他 VRChat の知的財産に対する権利を付与するものでは **ありません**。
+### Accuracy
+
+- Content is provided **"AS IS"** without warranty. See [LICENSE](LICENSE).
+- This is a personal project. **Errors, outdated information, or incomplete content may exist.** Always verify against [official VRChat documentation](https://creators.vrchat.com/).
+- The author assumes no liability for issues caused by this repository (build errors, upload rejections, unexpected world behavior, etc.).
+- SDK coverage (3.7.1 - 3.10.2) reflects the last update. Behavior may change with new VRChat releases.
+
+### AI-Assisted Creation
+
+This knowledge base was created and maintained with AI tool assistance (Claude, Gemini, Codex). All content has been reviewed, but AI-generated portions may contain subtle errors. Use at your own risk.
+
+---
+
+## License
+
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+Fork, modify, and redistribute freely under MIT License terms. This license applies to the documentation, rules, templates, and hooks in this repository. It does **not** grant any rights to VRChat's SDK, UdonSharp compiler, or other VRChat intellectual property.

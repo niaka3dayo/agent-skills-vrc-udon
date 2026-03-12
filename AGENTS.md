@@ -1,51 +1,50 @@
 # UdonSharp / VRChat World Development
 
-UdonSharp (C# → Udon Assembly) を使った VRChat ワールド開発リポジトリ。
-**標準 C# と大きく異なる制約がある。コード生成前に必ず Rules を読むこと。**
+Agent Skills for VRChat world development using UdonSharp (C# → Udon Assembly).
+**UdonSharp has significant constraints compared to standard C#. Always read the Rules before generating code.**
 
-## Rules (必読)
+## Rules (Required Reading)
 
-UdonSharp コードを書く前に、以下の Rules を必ず参照:
+Read the following Rules before writing any UdonSharp code:
 
-- **`.agents/rules/udonsharp-constraints.md`** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
-- **`.agents/rules/udonsharp-networking.md`** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
-- **`.agents/rules/udonsharp-sync-selection.md`** — Sync Pattern Decision Tree, Data Budget, Minimization
+- **`skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md`** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
+- **`skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md`** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
+- **`skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md`** — Sync Pattern Decision Tree, Data Budget, Minimization
 
 ## Skills
 
-UdonSharp / VRC ワールド関連の作業時に、該当スキルの SKILL.md を読み込んでから着手すること。
+| Skill | Purpose | Path |
+|-------|---------|------|
+| `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
+| `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
+| `unity-vrc-skills-renovator` | Skill renovation (knowledge updates, quality improvements) | `skills/unity-vrc-skills-renovator/SKILL.md` |
 
-| Skill | 用途 | 参照パス |
-|-------|------|----------|
-| `unity-vrc-udon-sharp` | UdonSharp コーディング、ネットワーキング、イベント、テンプレート | `.agents/skills/unity-vrc-udon-sharp/SKILL.md` |
-| `unity-vrc-world-sdk-3` | VRC コンポーネント配置、レイヤー設定、ワールド最適化 | `.agents/skills/unity-vrc-world-sdk-3/SKILL.md` |
-| `unity-vrc-skills-renovator` | スキルのリノベーション（知識充填・刷新・品質向上） | `.agents/skills/unity-vrc-skills-renovator/SKILL.md` |
-
-## SDK (3.7.1 - 3.10.1)
+## SDK (3.7.1 - 3.10.2)
 
 | Version | Key Features |
 |---------|--------------|
 | 3.7.1 | StringBuilder, Regex, System.Random |
 | 3.7.4 | Persistence API (PlayerData/PlayerObject) |
-| 3.8.1 | `[NetworkCallable]` パラメータ付きネットワークイベント |
+| 3.8.1 | `[NetworkCallable]` network events with parameters |
 | 3.10.0 | VRChat Dynamics for Worlds (PhysBones, Contacts) |
-| 3.10.1 | バグ修正・安定性改善 (最新安定版) |
+| 3.10.1 | Bug fixes and stability improvements |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
 
 ## Docs Reference
 
-公式ドキュメント・コミュニティを Web 検索で参照:
+Use web search to reference official documentation and community resources:
 
-| サイト | 用途 | 検索例 |
-|--------|------|--------|
-| `site:creators.vrchat.com` | 公式 Udon / SDK ドキュメント | `site:creators.vrchat.com UdonSharp networking` |
-| `site:udonsharp.docs.vrchat.com` | UdonSharp API リファレンス | `site:udonsharp.docs.vrchat.com synced variables` |
-| `site:ask.vrchat.com` | コミュニティ Q&A・トラブルシュート | `site:ask.vrchat.com PlayerData persistence` |
-| `site:feedback.vrchat.com` | 既知バグ・機能リクエスト | `site:feedback.vrchat.com PhysBones worlds` |
-| `site:github.com/vrchat-community` | サンプル・ライブラリ | `site:github.com/vrchat-community ClientSim` |
+| Site | Purpose | Search Example |
+|------|---------|----------------|
+| `site:creators.vrchat.com` | Official Udon / SDK documentation | `site:creators.vrchat.com UdonSharp networking` |
+| `site:udonsharp.docs.vrchat.com` | UdonSharp API reference | `site:udonsharp.docs.vrchat.com synced variables` |
+| `site:ask.vrchat.com` | Community Q&A and troubleshooting | `site:ask.vrchat.com PlayerData persistence` |
+| `site:feedback.vrchat.com` | Known bugs and feature requests | `site:feedback.vrchat.com PhysBones worlds` |
+| `site:github.com/vrchat-community` | Samples and libraries | `site:github.com/vrchat-community ClientSim` |
 
 ## Hooks
 
-PostToolUse で `.cs` ファイル編集時に自動バリデーション:
+PostToolUse auto-validation when editing `.cs` files:
 
-- Windows: `hooks/validate-udonsharp.ps1`
-- Linux/macOS: `hooks/validate-udonsharp.sh`
+- Windows: `skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1`
+- Linux/macOS: `skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh`

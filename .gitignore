@@ -1,1 +1,7 @@
-/plans
+.DS_Store
+__pycache__/
+.idea/
+.vscode/
+node_modules/
+*.tgz
+.npm/
