@@ -1,1 +1,4 @@
-/plans
+plans/
+node_modules/
+*.tgz
+.npm/

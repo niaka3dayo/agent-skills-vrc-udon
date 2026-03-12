@@ -1,0 +1,12 @@
+.github/
+.claude/
+.agents/
+.codex/
+.gemini/
+.git/
+plans/
+scripts/
+node_modules/
+*.tgz
+*.log
+.npm/
