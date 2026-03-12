@@ -20,7 +20,6 @@
 <p align="center">
   <a href="#about">About</a> &bull;
   <a href="#install">Install</a> &bull;
-  <a href="#ai-tools">AI Tools</a> &bull;
   <a href="#structure">Structure</a> &bull;
   <a href="#skills">Skills</a> &bull;
   <a href="#rules">Rules</a> &bull;
@@ -41,7 +40,6 @@ UdonSharp compiles C# to Udon Assembly but blocks many standard C# features (`Li
 - 3 auto-loaded rule files: compile constraints, networking patterns, sync selection
 - PostToolUse validation hooks (Bash + PowerShell)
 - SDK 3.7.1 - 3.10.2 coverage
-- Single source of truth in `skills/`, symlinked to each AI tool directory
 
 **Install:**
 ```bash
@@ -101,7 +99,6 @@ npx agent-skills-vrc-udon
 
 Options:
 ```bash
-npx agent-skills-vrc-udon --symlink  # Create AI tool directory symlinks
 npx agent-skills-vrc-udon --force    # Overwrite existing files
 npx agent-skills-vrc-udon --list     # Preview files to install (dry run)
 ```
@@ -109,36 +106,19 @@ npx agent-skills-vrc-udon --list     # Preview files to install (dry run)
 ### Method 3: git clone
 
 ```bash
-# Clone into your Unity project
-git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git .agent-skills
-
-# Or as standalone reference
 git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 ```
-
-`skills/` is the single source of truth. AI tool directories (`.claude/`, `.agents/`, `.gemini/`, `.codex/`) are symlinks to `skills/`.
-
----
-
-<h2 id="ai-tools">AI Tools</h2>
-
-| AI Tool | Config | Rules | Skills |
-|---------|--------|-------|--------|
-| **Claude Code** | `CLAUDE.md` | `.claude/rules/` | `.claude/skills/` |
-| **Codex CLI** | `AGENTS.md` | `.agents/rules/` | `.agents/skills/` |
-| **Gemini CLI** | `GEMINI.md` | `.gemini/rules/` | `.gemini/skills/` |
-| **Other** | `AGENTS.md` | `.codex/rules/` | `.codex/skills/` |
 
 ---
 
 <h2 id="structure">Structure</h2>
 
 ```
-skills/                                  # Single Source of Truth
+skills/                                  # All skills
   unity-vrc-udon-sharp/                 # UdonSharp core skill
     SKILL.md                              # Skill definition
     CHEATSHEET.md                         # Quick reference (1 page)
-    rules/                               # Auto-loaded rules
+    rules/                               # Constraint rules
       udonsharp-constraints.md
       udonsharp-networking.md
       udonsharp-sync-selection.md
@@ -152,8 +132,7 @@ skills/                                  # Single Source of Truth
   unity-vrc-skills-renovator/           # Self-maintenance meta-skill
     SKILL.md, references/ (4 files)
 
-.claude/  .agents/  .codex/  .gemini/   # Symlinks -> skills/
-CLAUDE.md  AGENTS.md  GEMINI.md         # Per-tool project config
+CLAUDE.md  AGENTS.md  GEMINI.md         # Per-tool config references
 ```
 
 ---
@@ -200,9 +179,9 @@ Meta-skill for maintaining skills. Three pillars to keep knowledge current.
 
 ---
 
-<h2 id="rules">Rules (Auto-loaded)</h2>
+<h2 id="rules">Rules</h2>
 
-Rules are **automatically loaded** into AI agent context as guardrails before code generation.
+Rules are constraint files that guide AI agents before code generation.
 
 | Rule File | Content |
 |-----------|---------|

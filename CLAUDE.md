@@ -1,25 +1,23 @@
 # UdonSharp / VRChat World Development
 
-UdonSharp (C# → Udon Assembly) を使った VRChat ワールド開発リポジトリ。
+UdonSharp (C# → Udon Assembly) を使った VRChat ワールド開発用 Agent Skills。
 **標準 C# と大きく異なる制約がある。コード生成前に必ず Rules を読むこと。**
 
-## Rules (自動読み込み)
+## Skills
 
-`.claude/rules/*.md` → `skills/unity-vrc-udon-sharp/rules/` への個別シンボリックリンクにより自動読み込み:
+| Skill | 用途 | 参照パス |
+|-------|------|----------|
+| `unity-vrc-udon-sharp` | UdonSharp コーディング、ネットワーキング、イベント、テンプレート | `skills/unity-vrc-udon-sharp/SKILL.md` |
+| `unity-vrc-world-sdk-3` | VRC コンポーネント配置、レイヤー設定、ワールド最適化 | `skills/unity-vrc-world-sdk-3/SKILL.md` |
+| `unity-vrc-skills-renovator` | スキルのリノベーション（知識充填・刷新・品質向上） | `skills/unity-vrc-skills-renovator/SKILL.md` |
+
+## Rules
+
+`skills/unity-vrc-udon-sharp/rules/` に格納:
 
 - **udonsharp-constraints.md** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
 - **udonsharp-networking.md** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
 - **udonsharp-sync-selection.md** — Sync Pattern Decision Tree, Data Budget, Minimization
-
-## Skills
-
-`.claude/skills/` から自動検出される。UdonSharp コードを書く前に該当スキルを参照すること。
-
-| Skill | 用途 | 参照パス |
-|-------|------|----------|
-| `unity-vrc-udon-sharp` | UdonSharp コーディング、ネットワーキング、イベント、テンプレート | `.claude/skills/unity-vrc-udon-sharp/SKILL.md` |
-| `unity-vrc-world-sdk-3` | VRC コンポーネント配置、レイヤー設定、ワールド最適化 | `.claude/skills/unity-vrc-world-sdk-3/SKILL.md` |
-| `unity-vrc-skills-renovator` | スキルのリノベーション（知識充填・刷新・品質向上） | `.claude/skills/unity-vrc-skills-renovator/SKILL.md` |
 
 ## SDK (3.7.1 - 3.10.2)
 

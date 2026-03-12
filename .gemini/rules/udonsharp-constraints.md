@@ -1,1 +1,0 @@
-../../skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md
