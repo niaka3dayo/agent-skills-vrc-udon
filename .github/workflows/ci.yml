@@ -39,6 +39,8 @@ jobs:
             --exclude "^https://udonsharp\.docs\.vrchat\.com"
             --exclude "^https://ask\.vrchat\.com"
             --exclude "^https://feedback\.vrchat\.com"
+            --exclude "^https://wiki\.vrchat\.com"
+            --exclude "^https://github\.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/"
             --timeout 30
             --no-progress
             "**/*.md"
