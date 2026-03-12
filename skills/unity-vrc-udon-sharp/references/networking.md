@@ -1,18 +1,18 @@
-# UdonSharp ネットワーキングリファレンス
+# UdonSharp Networking Reference
 
-UdonSharp におけるネットワーキングと同期の包括的ガイド。
+Comprehensive guide to networking and synchronization in UdonSharp.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
+**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
 
 > **Warning**: Networking in Udon is a work in progress and can be fragile. Keep implementations simple and test thoroughly with multiple players.
 >
-> **Best Practice**: 「同期のコツは、同期しないこと」— The key to sync is NOT to sync. Minimize synced data and use local calculation where possible.
+> **Best Practice**: "The key to sync is NOT to sync." Minimize synced data and use local calculation where possible.
 >
-> **SDK 3.8.1+ New Feature**: `[NetworkCallable]` 属性により、**パラメータ付きネットワークイベント**が利用可能になりました。詳細は [Network Events with Parameters](#network-events-with-parameters-sdk-381) を参照。
+> **SDK 3.8.1+ New Feature**: The `[NetworkCallable]` attribute enables **network events with parameters**. See [Network Events with Parameters](#network-events-with-parameters-sdk-381) for details.
 
-## 同期メソッド (BehaviourSyncMode)
+## Sync Methods (BehaviourSyncMode)
 
-VRChat が提供する3つの同期モード。`UdonBehaviourSyncMode` 属性で指定する:
+Three sync modes provided by VRChat. Specified using the `UdonBehaviourSyncMode` attribute:
 
 ```csharp
 using UdonSharp;
@@ -26,11 +26,11 @@ public class MySyncedScript : UdonSharpBehaviour
 }
 ```
 
-### Continuous (連続同期)
+### Continuous
 
-約 **10Hz** (毎秒10回) での自動同期。
+Automatic synchronization at approximately **10Hz** (10 times per second).
 
-**特徴:**
+**Characteristics:**
 - Auto-transmits synced variables without calling `RequestSerialization()`
 - Data limit: approximately **200 bytes** per UdonBehaviour
 - Best for: Positions, rotations, continuously changing values
@@ -62,18 +62,18 @@ public class ContinuousSyncExample : UdonSharpBehaviour
 }
 ```
 
-**制限事項:**
-- データ容量が限定的 (~200 bytes)
-- 常時送信によるネットワークオーバーヘッドが高い
-- 大規模データや低頻度更新には不向き
+**Limitations:**
+- Limited data capacity (~200 bytes)
+- High network overhead due to constant transmission
+- Not suitable for large data or infrequent updates
 
-### Manual (手動同期)
+### Manual
 
-`RequestSerialization()` 呼び出しによる明示的同期。
+Explicit synchronization via `RequestSerialization()` calls.
 
-**特徴:**
+**Characteristics:**
 - Only syncs when `RequestSerialization()` is called
-- Data limit: **65KB → 280KB** (see release notes for details)
+- Data limit: **65KB -> 280KB** (see release notes for details)
 - Best for: Game state, scores, settings, infrequent updates
 
 ```csharp
@@ -97,16 +97,16 @@ public class ManualSyncExample : UdonSharpBehaviour
 }
 ```
 
-**利点:**
-- 同期タイミングの完全な制御
-- はるかに大きいデータ容量
-- 低頻度更新でのネットワークオーバーヘッドが低い
+**Advantages:**
+- Full control over sync timing
+- Much larger data capacity
+- Low network overhead for infrequent updates
 
-### None (変数同期なし)
+### None (No Variable Sync)
 
-変数同期を完全に無効化。通信にはネットワークイベントを使用。
+Completely disables variable synchronization. Uses network events for communication.
 
-**特徴:**
+**Characteristics:**
 - No synced variables supported (`[UdonSynced]` will error)
 - Must use `SendCustomNetworkEvent()` for communication
 - Best for: Local-only logic, event-driven communication, reducing network overhead
@@ -134,27 +134,27 @@ public class NoSyncExample : UdonSharpBehaviour
 }
 ```
 
-**NoVariableSync の使いどころ:**
-- 純粋なイベントベースのシステム (ボタン、トリガー)
-- 状態同期ではなく通知のみが必要なオブジェクト
-- 複雑なワールドでのネットワークオーバーヘッド削減
+**When to use NoVariableSync:**
+- Purely event-based systems (buttons, triggers)
+- Objects that only need notifications, not state synchronization
+- Reducing network overhead in complex worlds
 
-### モード選択ガイド
+### Mode Selection Guide
 
-| モード | データサイズ | 頻度 | ユースケース |
+| Mode | Data size | Frequency | Use case |
 |--------|-------------|------|-------------|
-| Continuous | ~200 bytes | 高 (10Hz) | 位置/回転の追跡 |
-| Manual | 280KB | オンデマンド | ゲーム状態、スコア、設定 |
-| None | N/A | N/A | イベントのみの通信 |
+| Continuous | ~200 bytes | High (10Hz) | Position/rotation tracking |
+| Manual | 280KB | On-demand | Game state, scores, settings |
+| None | N/A | N/A | Event-only communication |
 
-## VRC_ObjectSync に関する警告
+## VRC_ObjectSync Warning
 
 > **Critical**: When using `VRC_ObjectSync` component alongside `UdonBehaviour`, be aware of sync freezing!
 
 When a physics object with `VRC_ObjectSync` stops moving (becomes stationary), the sync system stops transmitting. **This also affects coexisting UdonBehaviour synced variables!**
 
 ```csharp
-// PROBLEM: Object stops → Udon sync also freezes
+// PROBLEM: Object stops -> Udon sync also freezes
 public class ProblematicPickup : UdonSharpBehaviour
 {
     [UdonSynced] public int useCount; // May stop syncing when object is stationary!
@@ -167,10 +167,10 @@ public class ProblematicPickup : UdonSharpBehaviour
 }
 ```
 
-**回避策:**
-1. **UdonBehaviour を分離**: VRC_ObjectSync のない別の GameObject に同期ロジックを配置
-2. **ネットワークイベントを使用**: 重要な更新には `SendCustomNetworkEvent()` を使用
-3. **強制的な移動**: 同期を維持するために微小な速度を適用 (非推奨)
+**Workarounds:**
+1. **Separate UdonBehaviour**: Place sync logic on a separate GameObject without VRC_ObjectSync
+2. **Use network events**: Use `SendCustomNetworkEvent()` for critical updates
+3. **Force movement**: Apply minimal velocity to maintain sync (not recommended)
 
 ```csharp
 // SOLUTION: Separate synced logic from physics object
@@ -191,17 +191,17 @@ public class SeparatedSyncLogic : UdonSharpBehaviour
 }
 ```
 
-## 途中参加者 (Late Joiner) への考慮
+## Late Joiner Considerations
 
-セッション途中でプレイヤーが参加した場合、同期データの挙動が異なる:
+When a player joins mid-session, synced data behaves differently:
 
-### 同期変数 (自動)
+### Synced Variables (Automatic)
 
-同期変数は途中参加者に**自動的に送信**される:
+Synced variables are **automatically sent** to late joiners:
 
 ```csharp
-[UdonSynced] private int gameScore;     // ✅ Auto-synced to late joiners
-[UdonSynced] private bool isGameActive; // ✅ Auto-synced to late joiners
+[UdonSynced] private int gameScore;     // Auto-synced to late joiners
+[UdonSynced] private bool isGameActive; // Auto-synced to late joiners
 
 // Late joiners receive current values via OnDeserialization
 public override void OnDeserialization()
@@ -210,9 +210,9 @@ public override void OnDeserialization()
 }
 ```
 
-### ネットワークイベント (手動対応が必要)
+### Network Events (Manual Handling Required)
 
-ネットワークイベントは途中参加者に**再送されない**:
+Network events are **not re-sent** to late joiners:
 
 ```csharp
 // PROBLEM: Late joiners miss this event
@@ -228,7 +228,7 @@ public void OnGameStarted()
 }
 ```
 
-**解決策: 状態には同期変数を使用する**
+**Solution: Use synced variables for state**
 
 ```csharp
 [UdonSynced, FieldChangeCallback(nameof(GamePhase))]
@@ -262,11 +262,11 @@ public void StartGame()
 }
 ```
 
-## 最適化のヒント
+## Optimization Tips
 
-### 複数フラグには整数/Enum を使用
+### Use Integers/Enums for Multiple Flags
 
-複数の bool を同期する代わりに、単一の整数にパックする:
+Instead of syncing multiple bools, pack them into a single integer:
 
 ```csharp
 // BAD: Multiple synced bools
@@ -293,9 +293,9 @@ public void AddItem(int flag)
 }
 ```
 
-### 同期よりローカル計算を優先
+### Prefer Local Calculation Over Sync
 
-可能な場合はローカルで計算する:
+Calculate locally when possible:
 
 ```csharp
 // BAD: Syncing calculated value
@@ -323,15 +323,15 @@ void Update()
 }
 ```
 
-## 基本概念
+## Core Concepts
 
-### オーナーシップモデル
+### Ownership Model
 
-UdonBehaviour を持つすべての GameObject にはネットワークオーナーが存在する:
+Every GameObject with an UdonBehaviour has a network owner:
 
-- **デフォルトオーナー**: インスタンスマスター (最初に参加したプレイヤー)
-- **オブジェクトごとに1オーナー**: オーナーシップはコンポーネント単位ではなく GameObject 単位
-- **オーナーのみ変更可能**: 同期変数を変更できるのはオーナーのみ
+- **Default owner**: Instance master (first player to join)
+- **One owner per object**: Ownership is per-GameObject, not per-component
+- **Only owner can modify**: Only the owner can change synced variables
 
 ```csharp
 // Check if local player is owner
@@ -345,7 +345,7 @@ VRCPlayerApi owner = Networking.GetOwner(gameObject);
 Debug.Log($"Owner: {owner.displayName}");
 ```
 
-### オーナーシップの移譲
+### Ownership Transfer
 
 ```csharp
 // Request ownership for local player
@@ -355,7 +355,7 @@ Networking.SetOwner(Networking.LocalPlayer, gameObject);
 // The previous owner must acknowledge the transfer
 ```
 
-**重要なタイミング問題**: `SetOwner` の後、新しいオーナーはすぐには同期変数を変更できない。旧オーナーの確認応答を待つ必要がある:
+**Important timing issue**: After `SetOwner`, the new owner cannot immediately modify synced variables. It must wait for the previous owner's acknowledgment:
 
 ```csharp
 // WRONG - May fail due to timing
@@ -381,7 +381,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 }
 ```
 
-### オーナーシップ移譲タイミング図
+### Ownership Transfer Timing Diagram
 
 ```text
 Player A (current owner) | Player B (requesting)
@@ -395,13 +395,13 @@ Acknowledges transfer   |
                         | RequestSerialization()
 ```
 
-**競合状態の警告**: 複数のプレイヤーが同時に `SetOwner` を呼び出した場合、最後に処理されたものが優先される。組み込みの競合解決機能はない。
+**Race condition warning**: If multiple players call `SetOwner` simultaneously, the last one processed wins. There is no built-in conflict resolution.
 
-## 同期変数
+## Synced Variables
 
-### 基本的な同期
+### Basic Synchronization
 
-`[UdonSynced]` 属性を使用してフィールドを同期する:
+Use the `[UdonSynced]` attribute to synchronize fields:
 
 ```csharp
 [UdonSynced] private int score;
@@ -411,7 +411,7 @@ Acknowledges transfer   |
 [UdonSynced] private string playerName; // Max ~50 characters!
 ```
 
-### 同期モード
+### Sync Modes
 
 ```csharp
 // Default: Sync when changed (no interpolation)
@@ -440,19 +440,19 @@ public Vector3 SmoothPosition
 }
 ```
 
-**UdonSyncMode の値:**
+**UdonSyncMode values:**
 
-| モード | 説明 | 最適な用途 |
+| Mode | Description | Best for |
 |--------|------|-----------|
-| `UdonSyncMode.None` | 補間なし (デフォルト) | 離散値、フラグ、状態 |
-| `UdonSyncMode.Linear` | 更新間の線形補間 | 位置、回転、連続値 |
-| `UdonSyncMode.Smooth` | スムーズな減衰補間 | カメラ、低速移動、UI要素 |
+| `UdonSyncMode.None` | No interpolation (default) | Discrete values, flags, state |
+| `UdonSyncMode.Linear` | Linear interpolation between updates | Position, rotation, continuous values |
+| `UdonSyncMode.Smooth` | Smooth damped interpolation | Cameras, slow movement, UI elements |
 
-**重要:** 補間モードは受信側クライアントがネットワーク更新間で値を適用する方法にのみ影響する。同期頻度は BehaviourSyncMode (Continuous ~10Hz、Manual オンデマンド) で決定される。
+**Important:** Interpolation modes only affect how the receiving client applies values between network updates. Sync frequency is determined by BehaviourSyncMode (Continuous ~10Hz, Manual on-demand).
 
-### シリアライゼーションの要求
+### Requesting Serialization
 
-同期変数を変更した後、`RequestSerialization()` を呼び出す:
+After changing synced variables, call `RequestSerialization()`:
 
 ```csharp
 public void IncrementScore()
@@ -468,9 +468,9 @@ public void IncrementScore()
 }
 ```
 
-### 変更の検知
+### Detecting Changes
 
-`OnDeserialization` または `FieldChangeCallback` を使用:
+Use `OnDeserialization` or `FieldChangeCallback`:
 
 ```csharp
 // Method 1: OnDeserialization
@@ -502,11 +502,11 @@ private void OnHealthChanged()
 }
 ```
 
-## ネットワークイベント
+## Network Events
 
-### SendCustomNetworkEvent (レガシー)
+### SendCustomNetworkEvent (Legacy)
 
-全プレイヤーまたはオーナーのみにイベントを送信 (パラメータなし):
+Send events to all players or owner only (no parameters):
 
 ```csharp
 // Send to ALL players (including self)
@@ -522,32 +522,32 @@ public void OnButtonPressed()
 }
 ```
 
-**NetworkEventTarget の選択肢**:
+**NetworkEventTarget options**:
 
-| ターゲット | SDK | 説明 |
+| Target | SDK | Description |
 |-----------|-----|------|
-| `NetworkEventTarget.All` | 全バージョン | 自分を含む全プレイヤー |
-| `NetworkEventTarget.Owner` | 全バージョン | オブジェクトオーナーのみ |
-| `NetworkEventTarget.Others` | **3.8.1+** | 自分以外の全プレイヤー |
-| `NetworkEventTarget.Self` | **3.8.1+** | 自分自身のみ（ローカル実行と同等） |
+| `NetworkEventTarget.All` | All versions | All players including self |
+| `NetworkEventTarget.Owner` | All versions | Object owner only |
+| `NetworkEventTarget.Others` | **3.8.1+** | All players except self |
+| `NetworkEventTarget.Self` | **3.8.1+** | Self only (equivalent to local execution) |
 
-> **SDK 3.8.1+ 新ターゲット**: `NetworkEventTarget.Others` は「送信者以外全員」に送信でき、エフェクトやサウンドの重複再生を防止できます。`NetworkEventTarget.Self` はローカルのみの処理に使えます。
+> **SDK 3.8.1+ new targets**: `NetworkEventTarget.Others` sends to "everyone except the sender", preventing duplicate effect/sound playback. `NetworkEventTarget.Self` can be used for local-only processing.
 
-**制限事項 (レガシー)**:
-- ネットワークイベントでパラメータを送信できない
-- 特定のプレイヤーを直接ターゲットできない (Others/Self は SDK 3.8.1+ で追加)
-- イベントが同期変数の更新より先に到着する場合がある (race condition!)
-- イベントはキューイングされず、到着順序も保証されない
+**Limitations (Legacy)**:
+- Cannot send parameters with network events
+- Cannot directly target specific players (Others/Self added in SDK 3.8.1+)
+- Events may arrive before synced variable updates (race condition!)
+- Events are not queued and arrival order is not guaranteed
 
 ---
 
-## パラメータ付きネットワークイベント (SDK 3.8.1+)
+## Network Events with Parameters (SDK 3.8.1+)
 
-**SDK 3.8.1** で追加された `[NetworkCallable]` 属性により、**最大8個のパラメータ**をネットワークイベントで送信できるようになりました。
+The `[NetworkCallable]` attribute added in **SDK 3.8.1** enables sending **up to 8 parameters** with network events.
 
-### [NetworkCallable] 属性
+### [NetworkCallable] Attribute
 
-ネットワーク経由で呼び出し可能なメソッドには `[NetworkCallable]` 属性が必要です:
+Methods callable over the network require the `[NetworkCallable]` attribute:
 
 ```csharp
 using UdonSharp;
@@ -566,7 +566,7 @@ public class NetworkCallableExample : UdonSharpBehaviour
 
     public void Attack(VRCPlayerApi target, int damage)
     {
-        // パラメータ付きでネットワークイベントを送信
+        // Send network event with parameters
         SendCustomNetworkEvent(
             NetworkEventTarget.All,
             nameof(TakeDamage),
@@ -577,43 +577,43 @@ public class NetworkCallableExample : UdonSharpBehaviour
 }
 ```
 
-### [NetworkCallable] の制約
+### [NetworkCallable] Constraints
 
-| 制約 | 詳細 |
+| Constraint | Details |
 |------|------|
-| `public` 必須 | メソッドは public である必要がある |
-| `[NetworkCallable]` 必須 | 属性がないとパラメータを受け取れない |
-| `static` 禁止 | 静的メソッドは使用不可 |
-| `virtual`/`override` 禁止 | 仮想メソッドは使用不可 |
-| オーバーロード禁止 | 同名メソッドの複数定義は不可 |
-| 最大8パラメータ | 9個以上のパラメータは不可 |
-| Syncable型のみ | パラメータは同期可能な型に限定 |
+| `public` required | Method must be public |
+| `[NetworkCallable]` required | Without the attribute, parameters cannot be received |
+| `static` not allowed | Static methods cannot be used |
+| `virtual`/`override` not allowed | Virtual methods cannot be used |
+| No overloading | Multiple methods with the same name not allowed |
+| Maximum 8 parameters | More than 8 parameters not allowed |
+| Syncable types only | Parameters limited to syncable types |
 
-### レート制限 (Rate Limiting)
+### Rate Limiting
 
-`[NetworkCallable]` にはレート制限オプションがあります:
+`[NetworkCallable]` has rate limiting options:
 
 ```csharp
-// デフォルト: 5回/秒/イベント
+// Default: 5 times/sec/event
 [NetworkCallable]
 public void NormalEvent(int value) { }
 
-// カスタムレート: 100回/秒（最大）
+// Custom rate: 100 times/sec (maximum)
 [NetworkCallable(100)]
 public void HighFrequencyEvent(float value) { }
 
-// 低レート: 1回/秒
+// Low rate: 1 time/sec
 [NetworkCallable(1)]
 public void RareBroadcast(string message) { }
 ```
 
-**注意**: レート制限を超えるとイベントはドロップされます。レート制限は**イベントごと・プレイヤーごと**に適用されます。デフォルトは **5回/秒**、最大 **100回/秒** まで設定可能です。
+**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per player**. Default is **5 times/sec**, configurable up to **100 times/sec**.
 
-### パラメータとして使用可能な型
+### Types Usable as Parameters
 
-`[UdonSynced]` で同期可能な型のみパラメータとして使用可能:
+Only types syncable with `[UdonSynced]` can be used as parameters:
 
-| 型 | サイズ | 備考 |
+| Type | Size | Notes |
 |------|------|-------|
 | `bool` | 1 byte | |
 | `byte`, `sbyte` | 1 byte | |
@@ -628,9 +628,9 @@ public void RareBroadcast(string message) { }
 | `Color`, `Color32` | 16/4 bytes | |
 | Arrays of above | variable | |
 
-**使用不可**: `GameObject`, `Transform`, `VRCPlayerApi`, カスタムクラス
+**Not usable**: `GameObject`, `Transform`, `VRCPlayerApi`, custom classes
 
-### 実用パターン: ダメージシステム
+### Practical Pattern: Damage System
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -643,7 +643,7 @@ public class DamageSystem : UdonSharpBehaviour
     {
         if (!Networking.IsOwner(gameObject))
         {
-            // オーナーでない場合、オーナーに転送
+            // Not owner, forward to owner
             SendCustomNetworkEvent(
                 NetworkEventTarget.Owner,
                 nameof(ApplyDamage),
@@ -652,11 +652,11 @@ public class DamageSystem : UdonSharpBehaviour
             return;
         }
 
-        // オーナーのみが実際のダメージ処理
+        // Only owner processes actual damage
         health -= damage;
         RequestSerialization();
 
-        // 全員にエフェクト表示
+        // Show effect to all players
         SendCustomNetworkEvent(
             NetworkEventTarget.All,
             nameof(ShowDamageEffect),
@@ -667,22 +667,22 @@ public class DamageSystem : UdonSharpBehaviour
     [NetworkCallable]
     public void ShowDamageEffect(Vector3 position)
     {
-        // パーティクルやサウンドを再生
+        // Play particles and sounds
         SpawnDamageParticle(position);
     }
 }
 ```
 
-### レガシー vs NetworkCallable 比較
+### Legacy vs NetworkCallable Comparison
 
-| 機能 | レガシー | NetworkCallable (3.8.1+) |
+| Feature | Legacy | NetworkCallable (3.8.1+) |
 |------|--------|--------------------------|
-| パラメータ送信 | ❌ 不可 | ✅ 最大8個 |
-| 属性 | 不要 | `[NetworkCallable]` 必須 |
-| レート制限 | なし | 設定可能 (1-100/秒) |
-| 後方互換性 | ✅ 全バージョン | SDK 3.8.1+ のみ |
+| Sending parameters | Not possible | Up to 8 |
+| Attribute | Not required | `[NetworkCallable]` required |
+| Rate limiting | None | Configurable (1-100/sec) |
+| Backward compatibility | All versions | SDK 3.8.1+ only |
 
-### マイグレーションガイド
+### Migration Guide
 
 **Before (Legacy):**
 
@@ -701,7 +701,7 @@ public void Attack(int damage, int attackerId)
 
 public void OnAttack()
 {
-    // pendingDamage がまだ古い値の可能性あり（race condition）
+    // pendingDamage may still be the old value (race condition)
     ProcessDamage(pendingDamage, pendingAttackerId);
 }
 ```
@@ -712,7 +712,7 @@ public void OnAttack()
 [NetworkCallable]
 public void Attack(int damage, int attackerId)
 {
-    // パラメータが確実に渡される（race condition なし）
+    // Parameters are reliably delivered (no race condition)
     ProcessDamage(damage, attackerId);
 }
 
@@ -727,9 +727,9 @@ public void TriggerAttack(int damage)
 }
 ```
 
-### ネットワークイベントと同期変数の競合状態
+### Race Condition Between Network Events and Synced Variables
 
-**重大な問題**: ネットワークイベントの送信と同期変数の更新を同時に行うと、イベントが同期変数の更新より先に到着する場合がある:
+**Critical issue**: When sending a network event and updating synced variables simultaneously, the event may arrive before the synced variable update on remote clients:
 
 ```csharp
 // PROBLEM: Event may arrive before syncedData is updated on remote clients
@@ -747,7 +747,7 @@ public void ProcessData()
 }
 ```
 
-**解決策: イベントの代わりに FieldChangeCallback を使用する**
+**Solution: Use FieldChangeCallback instead of events**
 
 ```csharp
 [UdonSynced, FieldChangeCallback(nameof(SyncedData))]
@@ -777,9 +777,9 @@ private void ProcessData()
 }
 ```
 
-### 回避策: 特定プレイヤーへのターゲティング
+### Workaround: Targeting Specific Players
 
-直接的なプレイヤーターゲティングが利用できないため、同期変数を使用する:
+Since direct player targeting is not available, use synced variables:
 
 ```csharp
 [UdonSynced] private int targetPlayerId;
@@ -808,11 +808,11 @@ public void CheckMessage()
 }
 ```
 
-## データ制限
+## Data Limits
 
-### 文字列長
+### String Length
 
-同期文字列には固定の文字数制限はない。実用上の制限は同期バッファサイズと UTF-16 エンコーディング (1文字あたり2バイト) に依存する:
+Synced strings have no fixed character limit. The practical limit depends on sync buffer size and UTF-16 encoding (2 bytes per character):
 - **Continuous**: ~200 bytes per serialization
 - **Manual**: ~280KB per serialization
 
@@ -826,9 +826,9 @@ public void CheckMessage()
 [UdonSynced] private string data3;
 ```
 
-### 帯域幅制限
+### Bandwidth Limits
 
-VRChat はネットワークデータレートを制限している。過度な同期は "Death Runs" (データ損失) を引き起こす:
+VRChat limits network data rate. Excessive synchronization causes "Death Runs" (data loss):
 
 ```csharp
 // WRONG - Too frequent updates
@@ -856,9 +856,9 @@ void Update()
 }
 ```
 
-## オブジェクトプーリング
+## Object Pooling
 
-動的インスタンス化はネットワーク対応していない。オブジェクトプーリングを使用する:
+Dynamic instantiation is not network-supported. Use object pooling:
 
 ```csharp
 public class ObjectPool : UdonSharpBehaviour
@@ -921,7 +921,7 @@ public class ObjectPool : UdonSharpBehaviour
 }
 ```
 
-## プレイヤーイベント
+## Player Events
 
 ```csharp
 public override void OnPlayerJoined(VRCPlayerApi player)
@@ -960,9 +960,9 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 }
 ```
 
-## 共通パターン
+## Common Patterns
 
-### マスター限定アクション
+### Master-Only Actions
 
 ```csharp
 public void DoMasterAction()
@@ -976,7 +976,7 @@ public void DoMasterAction()
 }
 ```
 
-### ローカルプレイヤーの検出
+### Local Player Detection
 
 ```csharp
 public void OnInteract()
@@ -992,7 +992,7 @@ public void OnInteract()
 }
 ```
 
-### 同期タイマー
+### Synced Timer
 
 ```csharp
 [UdonSynced] private float gameStartTime;
@@ -1016,21 +1016,21 @@ void Update()
 }
 ```
 
-## ネットワーク帯域幅とスロットリング
+## Network Bandwidth and Throttling
 
-### 帯域幅制限
+### Bandwidth Limits
 
 > Udon scripts can send out about **11 kilobytes** per second.
 > — [VRChat Creator Docs](https://creators.vrchat.com/worlds/udon/networking/network-details)
 
-この制限を超えると "Death Runs" と呼ばれる同期遅延が発生する。特に以下の場合に問題になる:
-- 複数のUI要素が高速に操作される場合
-- 多数の同期変数が同時に更新される場合
-- プレイヤーが操作を連打する場合
+Exceeding this limit causes sync delays known as "Death Runs." This is particularly problematic when:
+- Multiple UI elements are operated rapidly
+- Many synced variables are updated simultaneously
+- Players spam operations repeatedly
 
-### ネットワーク混雑の検出
+### Detecting Network Congestion
 
-`Networking.IsClogged` を使用してネットワークキューのバックアップを確認する:
+Use `Networking.IsClogged` to check for network queue backup:
 
 ```csharp
 if (Networking.IsClogged)
@@ -1042,15 +1042,15 @@ if (Networking.IsClogged)
 RequestSerialization();
 ```
 
-### RequestSerialization スロットリングパターン
+### RequestSerialization Throttling Pattern
 
-高頻度更新の場合、`RequestSerialization()` をインターバル制御でラップする:
+For high-frequency updates, wrap `RequestSerialization()` with interval control:
 
-**主要原則:**
-1. 同期間の最小間隔を強制 (例: 1秒)
-2. ネットワーク混雑時に自動リトライ
-3. 重複する遅延イベントのスケジューリングを防止
-4. 常に最新の状態を同期 (中間状態ではなく)
+**Key principles:**
+1. Enforce minimum interval between syncs (e.g., 1 second)
+2. Auto-retry during network congestion
+3. Prevent scheduling duplicate delayed events
+4. Always sync the latest state (not intermediate states)
 
 ```csharp
 private const float SyncInterval = 1.0f;
@@ -1097,21 +1097,21 @@ public void ExecuteSync()
 }
 ```
 
-**利点:**
-- 高速な操作によるネットワーク過負荷を防止
-- 混雑時に自動リトライ
-- 常に最新の状態を同期
-- 遅延イベントの重複なし
+**Advantages:**
+- Prevents network overload from rapid operations
+- Auto-retries during congestion
+- Always syncs the latest state
+- No duplicate delayed events
 
-**トレードオフ:**
-- 最大 `SyncInterval` 秒のレイテンシ
-- 個々の同期リクエストがマージされる可能性あり (状態の同期であり、イベントではない)
+**Trade-offs:**
+- Up to `SyncInterval` seconds of latency
+- Individual sync requests may be merged (syncing state, not events)
 
 Reference template: `assets/templates/ThrottledSync.cs`
 
-### 定期同期パターン
+### Periodic Sync Pattern
 
-制御されたインターバルでの連続同期:
+Continuous synchronization at controlled intervals:
 
 ```csharp
 private const float PeriodicSyncInterval = 10.0f;
@@ -1153,35 +1153,35 @@ public void ExecutePeriodicSync()
 }
 ```
 
-## データサイズ最適化
+## Data Size Optimization
 
-### 同期オーバーヘッド
+### Sync Overhead
 
-各同期変数にはヘッダーオーバーヘッド (変数を識別するメタデータ) がかかる。つまり:
+Each synced variable has header overhead (metadata to identify the variable). This means:
 
-| アプローチ | 変数数 | 同期データ |
+| Approach | Variable count | Sync data |
 |-----------|--------|-----------|
 | 8 separate `byte` | 8 | ~16 bytes (8 data + 8 overhead) |
 | 1 packed `ulong` | 1 | ~9 bytes (8 data + 1 overhead) |
 
-**ポイント**: 変数数を減らすことは、データサイズを減らすよりも効果的な場合が多い。
+**Key point**: Reducing the number of variables is often more effective than reducing data size.
 
-### ビットパッキング
+### Bit Packing
 
-複数の小さな値をより少ない変数にパックする:
+Pack multiple small values into fewer variables:
 
-**ビット数と最大値の参考:**
+**Bit count and max value reference:**
 
-| ビット数 | 最大値 | 一般的な用途 |
+| Bits | Max value | Common uses |
 |---------|--------|-------------|
-| 1 | 1 | ブールフラグ |
-| 2 | 3 | 4状態 enum |
-| 3 | 7 | サイコロ (d6)、小さなインデックス |
-| 4 | 15 | 16進数字、小さなカウンター |
-| 5 | 31 | 日 (月の中の) |
-| 6 | 63 | 分、秒 |
-| 7 | 127 | ASCII 文字 |
-| 8 | 255 | フルバイト |
+| 1 | 1 | Boolean flags |
+| 2 | 3 | 4-state enum |
+| 3 | 7 | Dice (d6), small indices |
+| 4 | 15 | Hex digits, small counters |
+| 5 | 31 | Days (of month) |
+| 6 | 63 | Minutes, seconds |
+| 7 | 127 | ASCII characters |
+| 8 | 255 | Full byte |
 
 **Example: Pack 8 bools into 1 byte (87.5% reduction)**
 
@@ -1230,9 +1230,9 @@ public void UnpackValues(ulong packed, byte[] values)
 
 Reference template: `assets/templates/BitPacking.cs`
 
-### レンジシフト
+### Range Shifting
 
-限定的な範囲の値の場合、シフトしてビット数を最小化する:
+For values with a limited range, shift to minimize bit count:
 
 ```csharp
 // Value range: 200-210 (requires 8 bits as-is)
@@ -1245,7 +1245,7 @@ byte packed = (byte)(value - 200);
 int value = packed + 200;
 ```
 
-**符号付き値**: パッキング前にオフセットを加えて符号なしに変換する:
+**Signed values**: Add an offset before packing to convert to unsigned:
 
 ```csharp
 // Range: -50 to +50 (requires signed handling)
@@ -1255,22 +1255,22 @@ byte packed = (byte)(signedValue + 50);
 int signedValue = packed - 50;
 ```
 
-### ビットパッキングの使いどころ
+### When to Use Bit Packing
 
-| シナリオ | 推奨 |
+| Scenario | Recommendation |
 |---------|------|
-| 変数が少なく、フルレンジ使用 | パッキング不要 - オーバーヘッドに見合わない |
-| 多数の bool | bytes/ints にパック |
-| 小さな整数の配列 | ulong 配列にパック |
-| 帯域幅が重要 | 積極的にパック |
-| Late Joiner の大きな状態同期 | パッキングを検討 |
+| Few variables, full range used | No packing needed - not worth the overhead |
+| Many bools | Pack into bytes/ints |
+| Array of small integers | Pack into ulong arrays |
+| Bandwidth is critical | Pack aggressively |
+| Large state sync for late joiners | Consider packing |
 
-**注意事項:**
+**Caveats:**
 - `FieldChangeCallback` doesn't work directly with packed variables
 - Adds complexity - only use when bandwidth is a concern
 - Call pack before `RequestSerialization()`, unpack in `OnDeserialization()`
 
-## ネットワーク問題のデバッグ
+## Debugging Network Issues
 
 1. **Check Ownership**: `Debug.Log($"Owner: {Networking.GetOwner(gameObject).displayName}")`
 2. **Verify Sync**: Log before and after `RequestSerialization()`
@@ -1280,18 +1280,18 @@ int signedValue = packed - 50;
 6. **Check Congestion**: Log `Networking.IsClogged` to detect network issues
 7. **Measure Data Size**: Use `OnPostSerialization(SerializationResult result)` to check `result.byteCount`
 
-## Owner-Centric Architecture (推奨設計)
+## Owner-Centric Architecture (Recommended Design)
 
-マルチプレイヤーゲームでは**「Owner のみが状態を変更し、他は結果を受信する」**設計を推奨。
+For multiplayer games, the recommended design is **"only the owner modifies state, others receive the results."**
 
-### 設計原則
+### Design Principles
 
-1. **1つの GameManager** が全ゲーム状態の synced 変数を持つ (Manual sync)
-2. **Owner のみ** が `Update()` でゲームロジック実行
-3. **非 Owner** は `OnDeserialization()` で表示更新のみ
-4. **UI 操作**は `SendCustomNetworkEvent(Owner)` で Owner に通知
+1. **One GameManager** holds all game state synced variables (Manual sync)
+2. **Only the owner** runs game logic in `Update()`
+3. **Non-owners** only update display in `OnDeserialization()`
+4. **UI operations** notify the owner via `SendCustomNetworkEvent(Owner)`
 
-### コード例: Owner-Centric GameManager
+### Code Example: Owner-Centric GameManager
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -1301,10 +1301,10 @@ public class GameManager : UdonSharpBehaviour
     [UdonSynced] private int currentTurn;
     [UdonSynced] private int gamePhase; // 0=Lobby, 1=Playing, 2=Result
 
-    // --- UI からの入力 (全クライアントで発火) ---
+    // --- Input from UI (fires on all clients) ---
     public void OnCellClicked(int cellIndex)
     {
-        // Owner に委譲 (自分が Owner でも動く)
+        // Delegate to owner (works even if self is owner)
         SendCustomNetworkEvent(
             NetworkEventTarget.Owner,
             nameof(OwnerProcessMove),
@@ -1313,20 +1313,20 @@ public class GameManager : UdonSharpBehaviour
         );
     }
 
-    // --- Owner のみ実行 ---
+    // --- Owner only ---
     [NetworkCallable]
     public void OwnerProcessMove(int cellIndex, int playerId)
     {
-        if (gamePhase != 1) return;           // ゲーム中でなければ無視
-        if (playerId != GetCurrentPlayerId()) return; // 手番でなければ無視
-        if (boardState[cellIndex] != 0) return;       // 既に埋まっている
+        if (gamePhase != 1) return;           // Ignore if not in game
+        if (playerId != GetCurrentPlayerId()) return; // Ignore if not their turn
+        if (boardState[cellIndex] != 0) return;       // Already occupied
 
         boardState[cellIndex] = currentTurn;
         currentTurn = (currentTurn % 2) + 1;
         RequestSerialization();
     }
 
-    // --- 全クライアント: 表示更新 ---
+    // --- All clients: update display ---
     public override void OnDeserialization()
     {
         UpdateBoardDisplay();
@@ -1334,48 +1334,48 @@ public class GameManager : UdonSharpBehaviour
     }
 
     private int GetCurrentPlayerId() { /* ... */ return 0; }
-    private void UpdateBoardDisplay() { /* boardState を UI に反映 */ }
-    private void UpdateTurnIndicator() { /* currentTurn を表示 */ }
+    private void UpdateBoardDisplay() { /* Reflect boardState in UI */ }
+    private void UpdateTurnIndicator() { /* Display currentTurn */ }
 }
 ```
 
-**ポイント:**
-- UI コールバック → `SendCustomNetworkEvent(Owner)` → Owner が検証・変更 → `RequestSerialization()` → 全員 `OnDeserialization()`
-- 非 Owner がボタンを押しても動作する（Owner に委譲されるため）
-- 不正な操作は Owner 側で弾ける（サーバー権限に近い設計）
+**Key points:**
+- UI callback -> `SendCustomNetworkEvent(Owner)` -> Owner validates and modifies -> `RequestSerialization()` -> Everyone receives via `OnDeserialization()`
+- Non-owners can still press buttons (delegated to owner)
+- Invalid operations can be rejected by the owner (design similar to server authority)
 
-## 同期データサイズ最適化
+## Synced Data Size Optimization
 
-VRChat の送信帯域は約 **11KB/sec**。大きな同期データは深刻なラグを引き起こす。
+VRChat's transmission bandwidth is approximately **11KB/sec**. Large synced data causes severe lag.
 
-### データサイズ見積もり
+### Data Size Estimation
 
-| データ | サイズ | 同期遅延 (11KB/sec) |
+| Data | Size | Sync delay (11KB/sec) |
 |--------|--------|---------------------|
-| `int[40]` | 160 bytes | 即時 |
+| `int[40]` | 160 bytes | Instant |
 | `int[400]` | 1,600 bytes | ~0.15 sec |
 | `int[4000]` | 16,000 bytes | ~1.5 sec (NG) |
-| `byte[100]` | 100 bytes | 即時 |
+| `byte[100]` | 100 bytes | Instant |
 
-### 最適化テクニック
+### Optimization Techniques
 
-#### 1. 小さい型を使う
+#### 1. Use Smaller Types
 
 ```csharp
-// NG: 値が 0-255 なのに int (4 bytes) を使用
-[UdonSynced] private int[] bottleColors; // 40要素 = 160 bytes
+// NG: Using int (4 bytes) when values are 0-255
+[UdonSynced] private int[] bottleColors; // 40 elements = 160 bytes
 
-// OK: byte (1 byte) で十分
-[UdonSynced] private byte[] bottleColors; // 40要素 = 40 bytes (75%削減)
+// OK: byte (1 byte) is sufficient
+[UdonSynced] private byte[] bottleColors; // 40 elements = 40 bytes (75% reduction)
 ```
 
-#### 2. ビットパッキング (大量の小さな値)
+#### 2. Bit Packing (Many Small Values)
 
-色ID (0-7) は 3bit。1 byte に 2色格納可能。詳細は Data Size Optimization セクション参照。
+Color IDs (0-7) are 3 bits. 2 colors can be stored in 1 byte. See the Data Size Optimization section for details.
 
 ```csharp
-// 40色 × 3bit = 120bit = 15 bytes (int[40] の 160 bytes → 93%削減)
-[UdonSynced] private byte[] packedColors; // 15 bytes で40色格納
+// 40 colors x 3 bits = 120 bits = 15 bytes (160 bytes from int[40] -> 93% reduction)
+[UdonSynced] private byte[] packedColors; // 15 bytes stores 40 colors
 
 private byte GetColor(int index)
 {
@@ -1386,21 +1386,21 @@ private byte GetColor(int index)
 }
 ```
 
-#### 3. 差分同期 (変更部分のみ送信)
+#### 3. Delta Sync (Send Only Changes)
 
-全状態ではなく変更部分のみ同期。初回は全状態、以降は差分のみ。
+Sync only changes instead of the full state. Send full state initially, then only deltas.
 
 ```csharp
-// 全状態を毎回同期する代わりに、最新の操作のみ同期
+// Instead of syncing full state every time, sync only the latest operation
 [UdonSynced] private int lastMoveFrom;
 [UdonSynced] private int lastMoveTo;
-[UdonSynced] private int moveCounter; // 変更検知用
+[UdonSynced] private int moveCounter; // For change detection
 
 public override void OnDeserialization()
 {
-    // 受信側でローカルに操作を再適用
+    // Re-apply the operation locally on the receiving side
     ApplyMove(lastMoveFrom, lastMoveTo);
 }
 ```
 
-**注意:** 差分同期は Late Joiner に対応できない。初回接続時の全状態復元が必要な場合は、synced 配列で全状態も持つ。
+**Note:** Delta sync does not handle late joiners. If full state restoration is needed for initial connections, maintain full state in a synced array as well.

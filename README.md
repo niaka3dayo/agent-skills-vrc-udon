@@ -14,7 +14,7 @@
 <h1 align="center">Agent Skills for VRChat UdonSharp</h1>
 
 <p align="center">
-  <b>AI agent skills, rules, and validation hooks for correct UdonSharp code generation</b>
+  <b>Skills, rules, and validation hooks that teach AI coding agents to generate correct UdonSharp code</b>
 </p>
 
 <p align="center">
@@ -27,32 +27,6 @@
   <a href="#contributing">Contributing</a> &bull;
   <a href="#disclaimer">Disclaimer</a>
 </p>
-
-<details>
-<summary><b>English Summary</b> (click to expand)</summary>
-
-This repository provides **skills, rules, and validation hooks** for AI coding agents (Claude Code, Codex CLI, Gemini CLI, etc.) to generate correct **UdonSharp** code for VRChat world development.
-
-UdonSharp compiles C# to Udon Assembly but blocks many standard C# features (`List<T>`, `async/await`, `try/catch`, LINQ, lambdas, etc.). The included rules and hooks automatically detect these violations and guide the AI toward correct alternatives.
-
-**Key features:**
-- 3 skills: UdonSharp coding, VRC World SDK setup, skill self-maintenance
-- 3 auto-loaded rule files: compile constraints, networking patterns, sync selection
-- PostToolUse validation hooks (Bash + PowerShell)
-- SDK 3.7.1 - 3.10.2 coverage
-
-**Install:**
-```bash
-npx skills add niaka3dayo/agent-skills-vrc-udon
-# or
-npx agent-skills-vrc-udon
-```
-
-**License:** MIT -- free to fork and modify. Issues are welcome; PRs are not accepted.
-
-**Disclaimer:** Not affiliated with VRChat Inc. Content is provided "AS IS" and may contain errors. Always verify against official VRChat documentation.
-
-</details>
 
 ---
 
@@ -76,8 +50,8 @@ This repository provides AI coding agents with the knowledge to generate correct
 - A replacement for [official VRChat documentation](https://creators.vrchat.com/)
 - A guarantee of all AI behaviors
 
-> **Issue**: Bug reports and knowledge requests are welcome via [GitHub Issues](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues).
-> **PR**: Pull Requests are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+> **Issues**: Bug reports and knowledge requests are welcome via [GitHub Issues](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues).
+> **PRs**: Pull Requests are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 

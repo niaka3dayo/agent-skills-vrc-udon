@@ -1,38 +1,38 @@
-# UdonSharp イベントリファレンス
+# UdonSharp Event Reference
 
 Complete reference of all events available in UdonSharp. Override these methods to respond to events.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
+**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
 
-## 重要: override と Non-override
+## Important: override vs Non-override
 
-UdonSharp のイベントには **override が必要なもの** と **不要なもの** がある。間違えるとコンパイルエラー (CS0115) になる。
+UdonSharp events include those that **require override** and those that **do not**. Using the wrong one causes a compile error (CS0115).
 
-### override 必須 (VRChat/Udon 固有イベント)
+### override Required (VRChat/Udon-Specific Events)
 
 `OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
 
-### override 不要 (Unity 標準コールバック)
+### override Not Required (Standard Unity Callbacks)
 
 `Start`, `Update`, `LateUpdate`, `FixedUpdate`, `OnEnable`, `OnDisable`, `OnDestroy`, `OnTriggerEnter/Stay/Exit`, `OnCollisionEnter/Stay/Exit`, `OnAnimatorMove`, `OnAnimatorIK`, `OnWillRenderObject`, `OnBecameVisible/Invisible`
 
 ```csharp
-// NG: CS0115 エラー
+// WRONG: CS0115 error
 public override void OnTriggerEnter(Collider other) { }
-// OK
+// CORRECT
 public void OnTriggerEnter(Collider other) { }
 
-// OK: VRChat イベントは override 必須
+// CORRECT: VRChat events require override
 public override void OnPlayerJoined(VRCPlayerApi player) { }
 ```
 
 ---
 
-## Update イベント
+## Update Events
 
-毎フレームまたは物理ティックごとに呼び出される。
+Called every frame or physics tick.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void Update()` | Every frame |
 | `void LateUpdate()` | After all Update calls |
@@ -53,48 +53,48 @@ void FixedUpdate()
 }
 ```
 
-### SendCustomEventDelayed と EventTiming (SDK 3.10.2+)
+### SendCustomEventDelayed and EventTiming (SDK 3.10.2+)
 
-`SendCustomEventDelayedSeconds` / `SendCustomEventDelayedFrames` の第3引数で実行タイミングを指定できる。
+The third argument of `SendCustomEventDelayedSeconds` / `SendCustomEventDelayedFrames` specifies the execution timing.
 
-| EventTiming | 説明 | 追加バージョン |
+| EventTiming | Description | Added In |
 |-------------|------|--------------|
-| `EventTiming.Update` | Update ループ内 (デフォルト) | 3.7.1+ |
-| `EventTiming.LateUpdate` | LateUpdate 内 | 3.7.1+ |
-| `EventTiming.FixedUpdate` | 物理ティック内 | **3.10.2** |
-| `EventTiming.PostLateUpdate` | LateUpdate の後 | **3.10.2** |
+| `EventTiming.Update` | Within the Update loop (default) | 3.7.1+ |
+| `EventTiming.LateUpdate` | Within LateUpdate | 3.7.1+ |
+| `EventTiming.FixedUpdate` | Within physics tick | **3.10.2** |
+| `EventTiming.PostLateUpdate` | After LateUpdate | **3.10.2** |
 
 ```csharp
-// デフォルト (Update タイミング)
+// Default (Update timing)
 SendCustomEventDelayedSeconds(nameof(MyMethod), 2.0f);
 
-// FixedUpdate タイミングで実行 (SDK 3.10.2+)
+// Execute at FixedUpdate timing (SDK 3.10.2+)
 SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
 
-// フレーム遅延 + PostLateUpdate タイミング (SDK 3.10.2+)
+// Frame delay + PostLateUpdate timing (SDK 3.10.2+)
 SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
 ```
 
-> **Note**: `EventTiming.FixedUpdate` は物理演算と同期が必要な処理に、`EventTiming.PostLateUpdate` はカメラ追従やIK後の補正に適している。
+> **Note**: `EventTiming.FixedUpdate` is suitable for processing that needs to sync with physics calculations, and `EventTiming.PostLateUpdate` is suitable for camera following and post-IK corrections.
 
 ---
 
-## Input イベント
+## Input Events
 
-VRChat 固有の入力イベント。プレイヤーがボタンを押す/離すときに呼び出される。
+VRChat-specific input events. Called when the player presses/releases buttons.
 
-### アクションイベント
+### Action Events
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `InputJump(bool value, UdonInputEventArgs args)` | Jump button |
 | `InputUse(bool value, UdonInputEventArgs args)` | Use/Interact button |
 | `InputGrab(bool value, UdonInputEventArgs args)` | Grab button |
 | `InputDrop(bool value, UdonInputEventArgs args)` | Drop button |
 
-### 移動イベント
+### Movement Events
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `InputMoveHorizontal(float value, UdonInputEventArgs args)` | Left/right movement |
 | `InputMoveVertical(float value, UdonInputEventArgs args)` | Forward/back movement |
@@ -117,9 +117,9 @@ public override void InputMoveHorizontal(float value, VRC.Udon.Common.UdonInputE
 }
 ```
 
-## Interact イベント
+## Interact Event
 
-プレイヤーがオブジェクトとインタラクトしたときに呼び出される（コライダーが必要）。
+Called when a player interacts with the object (requires a Collider).
 
 ```csharp
 public override void Interact()
@@ -133,11 +133,11 @@ public override void Interact()
 - Collider must NOT be set to "Is Trigger" (for default interact)
 - Set "Interact Text" in UdonBehaviour component to customize prompt
 
-## Pickup イベント
+## Pickup Events
 
-VRC_Pickup コンポーネントを持つオブジェクトで呼び出される。
+Called on objects with a VRC_Pickup component.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPickup()` | When picked up |
 | `void OnDrop()` | When dropped |
@@ -168,11 +168,11 @@ public override void OnPickupUseUp()
 }
 ```
 
-## Player イベント
+## Player Events
 
-プレイヤーの参加・退出・状態変更時に呼び出される。
+Called when players join, leave, or change state.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPlayerJoined(VRCPlayerApi player)` | Player joins instance |
 | `void OnPlayerLeft(VRCPlayerApi player)` | Player leaves instance |
@@ -197,11 +197,11 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 }
 ```
 
-## Persistence イベント (SDK 3.7.4+)
+## Persistence Events (SDK 3.7.4+)
 
-PlayerData の永続化操作で呼び出される。
+Called during PlayerData persistence operations.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPlayerRestored(VRCPlayerApi player)` | Player's saved data has been loaded |
 | `void OnPlayerDataUpdated(VRCPlayerApi player, PlayerData.Info[] infos)` | PlayerData was updated |
@@ -213,7 +213,7 @@ public override void OnPlayerRestored(VRCPlayerApi player)
 
     Debug.Log($"{player.displayName}'s data restored!");
 
-    // PlayerDataにアクセスして保存されたデータを読み込む
+    // Access PlayerData to load saved data
     if (PlayerData.TryGetInt(player, "highScore", out int score))
     {
         highScoreDisplay.text = $"High Score: {score}";
@@ -221,15 +221,15 @@ public override void OnPlayerRestored(VRCPlayerApi player)
 }
 ```
 
-**Important:** `OnPlayerRestored` が呼ばれるまで PlayerData にアクセスしてはいけません。
+**Important:** Do not access PlayerData until `OnPlayerRestored` has been called.
 
-## VRChat Dynamics イベント (SDK 3.10.0+)
+## VRChat Dynamics Events (SDK 3.10.0+)
 
-ワールド内の PhysBones と Contacts で呼び出される。
+Called for PhysBones and Contacts in worlds.
 
-### Contact イベント
+### Contact Events
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnContactEnter(ContactEnterInfo info)` | Contact sender starts contacting receiver |
 | `void OnContactStay(ContactStayInfo info)` | Contact ongoing |
@@ -240,10 +240,10 @@ public override void OnContactEnter(ContactEnterInfo info)
 {
     Debug.Log($"Contact from: {info.senderName}");
 
-    // アバターからのコンタクトかワールドからか判定
+    // Determine if contact is from avatar or world object
     if (info.isAvatar)
     {
-        // アバターからのコンタクト
+        // Contact from avatar
         VRCPlayerApi player = info.player;
         if (player != null && player.IsValid())
         {
@@ -252,7 +252,7 @@ public override void OnContactEnter(ContactEnterInfo info)
     }
     else
     {
-        // ワールドオブジェクトからのコンタクト
+        // Contact from world object
         Debug.Log("Touched by world object");
     }
 }
@@ -263,9 +263,9 @@ public override void OnContactExit(ContactExitInfo info)
 }
 ```
 
-### PhysBones イベント
+### PhysBones Events
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPhysBoneGrab(PhysBoneGrabInfo info)` | PhysBone grabbed |
 | `void OnPhysBoneRelease(PhysBoneReleaseInfo info)` | PhysBone released |
@@ -284,29 +284,29 @@ public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
 
 **Note:** Contact/PhysBone events are triggered on all UdonBehaviours attached to the same GameObject as the receiver.
 
-## Player Trigger/Collision イベント
+## Player Trigger/Collision Events
 
-プレイヤーがトリガーに出入りしたり衝突したときに呼び出される。
+Called when players enter/exit triggers or collide.
 
-### Trigger イベント
+### Trigger Events
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPlayerTriggerEnter(VRCPlayerApi player)` | Player enters trigger |
 | `void OnPlayerTriggerStay(VRCPlayerApi player)` | Player stays in trigger |
 | `void OnPlayerTriggerExit(VRCPlayerApi player)` | Player exits trigger |
 
-### Collision イベント
+### Collision Events
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPlayerCollisionEnter(VRCPlayerApi player)` | Player collision starts |
 | `void OnPlayerCollisionStay(VRCPlayerApi player)` | Player collision ongoing |
 | `void OnPlayerCollisionExit(VRCPlayerApi player)` | Player collision ends |
 
-### Particle Collision イベント
+### Particle Collision Event
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPlayerParticleCollision(VRCPlayerApi player)` | Particle hits player |
 
@@ -325,11 +325,11 @@ public override void OnPlayerTriggerEnter(VRCPlayerApi player)
 - GameObject must have Collider with "Is Trigger" checked
 - For collision events, Collider must NOT be trigger
 
-## Networking イベント
+## Networking Events
 
-同期とオーナーシップ変更時に呼び出される。
+Called during sync and ownership changes.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnPreSerialization()` | Before data is serialized (owner only) |
 | `void OnDeserialization()` | After receiving synced data |
@@ -363,7 +363,7 @@ public override void OnPostSerialization(SerializationResult result)
 public override void OnOwnershipTransferred(VRCPlayerApi player)
 {
     Debug.Log($"New owner: {player.displayName}");
-    
+
     if (player.isLocal)
     {
         // We are now the owner
@@ -372,11 +372,11 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 }
 ```
 
-## Station イベント
+## Station Events
 
-プレイヤーが VRCStation（座席、乗り物）に乗り降りしたときに呼び出される。
+Called when a player enters/exits a VRCStation (seat, vehicle).
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnStationEntered(VRCPlayerApi player)` | Player sat down |
 | `void OnStationExited(VRCPlayerApi player)` | Player stood up |
@@ -385,7 +385,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 public override void OnStationEntered(VRCPlayerApi player)
 {
     Debug.Log($"{player.displayName} sat down");
-    
+
     if (player.isLocal)
     {
         // Start vehicle controls
@@ -402,11 +402,11 @@ public override void OnStationExited(VRCPlayerApi player)
 }
 ```
 
-## Video Player イベント
+## Video Player Events
 
-VRCUnityVideoPlayer または AVProVideoPlayer によって呼び出される。
+Called by VRCUnityVideoPlayer or AVProVideoPlayer.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnVideoStart()` | Video starts playing |
 | `void OnVideoEnd()` | Video ends |
@@ -428,12 +428,12 @@ public override void OnVideoError(VideoError videoError)
 }
 ```
 
-## String/Image Loading イベント
+## String/Image Loading Events
 
-VRCStringDownloader または VRCImageDownloader リクエスト後に呼び出される。
-API 詳細・制約・実用パターンは `references/web-loading.md` を参照。
+Called after VRCStringDownloader or VRCImageDownloader requests.
+For API details, constraints, and practical patterns, see `references/web-loading.md`.
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnStringLoadSuccess(IVRCStringDownload result)` | String download succeeded |
 | `void OnStringLoadError(IVRCStringDownload result)` | String download failed |
@@ -457,11 +457,11 @@ public override void OnStringLoadError(IVRCStringDownload result)
 }
 ```
 
-## MIDI イベント
+## MIDI Events
 
-MIDI 入力を受信したときに呼び出される（PC のみ）。
+Called when MIDI input is received (PC only).
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void MidiNoteOn(int channel, int note, int velocity)` | Note pressed |
 | `void MidiNoteOff(int channel, int note, int velocity)` | Note released |
@@ -475,22 +475,22 @@ public override void MidiNoteOn(int channel, int note, int velocity)
 }
 ```
 
-## Unity 標準イベント
+## Standard Unity Events
 
-UdonSharp で動作する Unity 標準イベント。
+Standard Unity events that work in UdonSharp.
 
-### ライフサイクル
+### Lifecycle
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void Start()` | First frame (after all Awake) |
 | `void OnEnable()` | When enabled |
 | `void OnDisable()` | When disabled |
 | `void OnDestroy()` | When destroyed |
 
-### 物理演算
+### Physics
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnTriggerEnter(Collider other)` | Object enters trigger |
 | `void OnTriggerStay(Collider other)` | Object stays in trigger |
@@ -499,17 +499,17 @@ UdonSharp で動作する Unity 標準イベント。
 | `void OnCollisionStay(Collision collision)` | Collision ongoing |
 | `void OnCollisionExit(Collision collision)` | Collision ends |
 
-### レンダリング
+### Rendering
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnWillRenderObject()` | Before rendering |
 | `void OnBecameVisible()` | Became visible to camera |
 | `void OnBecameInvisible()` | No longer visible |
 
-### アニメーション
+### Animation
 
-| イベント | 呼び出しタイミング |
+| Event | When Called |
 |-------|-------------|
 | `void OnAnimatorMove()` | Animator root motion update |
 | `void OnAnimatorIK(int layerIndex)` | IK pass |
@@ -531,7 +531,7 @@ void OnTriggerEnter(Collider other)
 }
 ```
 
-## イベント実行順序
+## Event Execution Order
 
 1. `Awake()` - Not available in UdonSharp
 2. `OnEnable()`
@@ -543,9 +543,9 @@ void OnTriggerEnter(Collider other)
 
 **Networking events** can occur at any time between frames.
 
-## ベストプラクティス
+## Best Practices
 
-### プレイヤーの有効性チェック
+### Player Validity Check
 
 ```csharp
 public override void OnPlayerTriggerEnter(VRCPlayerApi player)
@@ -558,13 +558,13 @@ public override void OnPlayerTriggerEnter(VRCPlayerApi player)
 }
 ```
 
-### ローカル vs 全プレイヤー
+### Local vs All Players
 
 ```csharp
 public override void OnPlayerJoined(VRCPlayerApi player)
 {
     // This runs for ALL players in the instance
-    
+
     if (player.isLocal)
     {
         // Only runs for the joining player themselves
@@ -573,7 +573,7 @@ public override void OnPlayerJoined(VRCPlayerApi player)
 }
 ```
 
-### 同期前のオーナーシップチェック
+### Ownership Check Before Sync
 
 ```csharp
 public override void OnPlayerJoined(VRCPlayerApi player)

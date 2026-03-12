@@ -1,59 +1,59 @@
-# UdonSharp チートシート
+# UdonSharp Cheatsheet
 
-**SDK 3.7.1 - 3.10.2 対応** (2026年3月時点)
+**SDK 3.7.1 - 3.10.2 Coverage** (as of March 2026)
 
-## ブロック機能と代替手段
+## Blocked Features and Alternatives
 
-| ブロック対象 | 代替手段 |
-|-------------|---------|
-| `List<T>` | `T[]` または `DataList` |
+| Blocked | Alternative |
+|---------|------------|
+| `List<T>` | `T[]` or `DataList` |
 | `Dictionary<K,V>` | `DataDictionary` |
 | `async/await` | `SendCustomEventDelayedSeconds()` |
 | `yield return` | `SendCustomEventDelayedSeconds()` |
-| `try/catch` | Null チェック、バリデーション |
-| LINQ | `for` ループ |
-| `interface` | 基底クラス / `SendCustomEvent` |
+| `try/catch` | Null checks, validation |
+| LINQ | `for` loops |
+| `interface` | Base class / `SendCustomEvent` |
 
-## 利用可能な機能 (SDK 3.7.1+)
+## Available Features (SDK 3.7.1+)
 
-| 機能 | SDK | 備考 |
+| Feature | SDK | Notes |
 |---------|-----|-------|
-| `StringBuilder` | 3.7.1 | 効率的な文字列結合 |
-| `RegularExpressions` | 3.7.1 | パターンマッチング |
-| `System.Random` | 3.7.1 | 決定論的乱数 |
-| `GetComponent<T>()` (継承) | 3.8+ | UdonSharpBehaviour で動作 |
-| `[NetworkCallable]` | 3.8.1 | パラメータ付きネットワークイベント |
+| `StringBuilder` | 3.7.1 | Efficient string concatenation |
+| `RegularExpressions` | 3.7.1 | Pattern matching |
+| `System.Random` | 3.7.1 | Deterministic random numbers |
+| `GetComponent<T>()` (inheritance) | 3.8+ | Works with UdonSharpBehaviour |
+| `[NetworkCallable]` | 3.8.1 | Parameterized network events |
 | Persistence | 3.7.4 | PlayerData/PlayerObject |
 | Dynamics for Worlds | 3.10.0 | PhysBones, Contacts |
 
 ---
 
-## 同期モード
+## Sync Modes
 
-| モード | 用途 | 上限 | 同期方法 |
-|--------|------|------|---------|
-| `NoVariableSync` | イベントのみ | - | 同期なし |
-| `Continuous` | 位置・回転 | ~200B | 自動 ~10Hz |
-| `Manual` | 状態・スコア | 280KB | `RequestSerialization()` |
+| Mode | Use Case | Limit | Sync Method |
+|------|----------|-------|-------------|
+| `NoVariableSync` | Events only | - | No sync |
+| `Continuous` | Position/rotation | ~200B | Automatic ~10Hz |
+| `Manual` | State/score | 280KB | `RequestSerialization()` |
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class MyScript : UdonSharpBehaviour { }
 ```
 
-### 同期判断 (クイック)
+### Sync Decision (Quick)
 
-| 質問 | No | Yes |
+| Question | No | Yes |
 |----------|-----|------|
-| 他プレイヤーに見える? | No sync | next |
-| Late Joiner に必要? | Events only | next |
-| 連続変化? | Manual sync | Continuous |
+| Visible to other players? | No sync | next |
+| Needed by late joiners? | Events only | next |
+| Continuous change? | Manual sync | Continuous |
 
-**目標**: 1 behaviour < 50 bytes (参考: 投票システム=9B, シューティング管理=38B)
+**Target**: 1 behaviour < 50 bytes (reference: voting system=9B, shooting manager=38B)
 
 ---
 
-## ネットワーキングパターン
+## Networking Patterns
 
 ```csharp
 [UdonSynced, FieldChangeCallback(nameof(Value))]
@@ -73,30 +73,30 @@ public void SetValue(int newValue) {
 
 ---
 
-## 主要イベント
+## Key Events
 
-| イベント | トリガー |
-|---------|---------|
-| `Interact()` | プレイヤーがインタラクト |
-| `OnPickup()` / `OnDrop()` | ピックアップ取得/解放 |
-| `OnPlayerJoined(VRCPlayerApi)` | プレイヤー参加 |
-| `OnPlayerLeft(VRCPlayerApi)` | プレイヤー退出 |
-| `OnPlayerTriggerEnter(VRCPlayerApi)` | プレイヤーがトリガーに入る |
-| `OnDeserialization()` | 同期データ受信 |
-| `OnOwnershipTransferred(VRCPlayerApi)` | オーナーシップ変更 |
-| `OnPlayerRestored(VRCPlayerApi)` | **3.7.4+** 永続化データ読込 |
-| `OnContactEnter(ContactEnterInfo)` | **3.10+** コンタクト開始 |
-| `OnPhysBoneGrab(PhysBoneGrabInfo)` | **3.10+** PhysBone グラブ |
+| Event | Trigger |
+|-------|---------|
+| `Interact()` | Player interacts |
+| `OnPickup()` / `OnDrop()` | Pickup grabbed/released |
+| `OnPlayerJoined(VRCPlayerApi)` | Player joined |
+| `OnPlayerLeft(VRCPlayerApi)` | Player left |
+| `OnPlayerTriggerEnter(VRCPlayerApi)` | Player entered trigger |
+| `OnDeserialization()` | Synced data received |
+| `OnOwnershipTransferred(VRCPlayerApi)` | Ownership changed |
+| `OnPlayerRestored(VRCPlayerApi)` | **3.7.4+** Persistence data loaded |
+| `OnContactEnter(ContactEnterInfo)` | **3.10+** Contact started |
+| `OnPhysBoneGrab(PhysBoneGrabInfo)` | **3.10+** PhysBone grabbed |
 
 ---
 
-## 初期化パターン (非アクティブ対応)
+## Initialization Pattern (Inactive Object Support)
 
 ```csharp
-// ❌ Start() は非アクティブ状態だと呼ばれない
+// NG: Start() is not called when the object is inactive
 void Start() { audioSource = GetComponent<AudioSource>(); }
 
-// ✅ OnEnable + フラグパターン
+// OK: OnEnable + flag pattern
 private bool _initialized = false;
 
 void OnEnable() => Initialize();
@@ -109,20 +109,20 @@ private void Initialize() {
 }
 
 public void PlaySound() {
-    Initialize(); // 外部呼び出しに備える
+    Initialize(); // Guard against external calls
     audioSource.Play();
 }
 ```
 
-| シナリオ | パターン |
-|----------|----------|
-| 常にアクティブ | `Start()` のみでOK |
-| 非アクティブで配置 | `OnEnable()` + `Initialize()` |
-| Synced変数あり | `OnDeserialization()` でも `Initialize()` |
+| Scenario | Pattern |
+|----------|---------|
+| Always active | `Start()` only is fine |
+| Placed as inactive | `OnEnable()` + `Initialize()` |
+| Has synced variables | Also call `Initialize()` in `OnDeserialization()` |
 
 ---
 
-## Player API クイックリファレンス
+## Player API Quick Reference
 
 ```csharp
 // Get players
@@ -154,7 +154,7 @@ player.Immobilize(true/false)
 
 ---
 
-## 遅延実行
+## Delayed Execution
 
 ```csharp
 // Instead of coroutines
@@ -179,7 +179,7 @@ public void DoLoop() {
 
 ---
 
-## スクリプト間通信
+## Inter-Script Communication
 
 ```csharp
 // Call method on another script
@@ -213,7 +213,7 @@ SendCustomNetworkEvent(
 );
 ```
 
-**制約:** `public`, no `static`/`virtual`/`override`, max 8 params, syncable types only
+**Constraints:** `public`, no `static`/`virtual`/`override`, max 8 params, syncable types only
 
 ---
 
@@ -234,7 +234,7 @@ public override void OnPlayerRestored(VRCPlayerApi player) {
 PlayerData.SetInt(Networking.LocalPlayer, "score", 100);
 ```
 
-**制限:** 100KB per player per world
+**Limit:** 100KB per player per world
 
 ---
 
@@ -256,26 +256,26 @@ public override void OnPhysBoneGrab(PhysBoneGrabInfo info) {
 
 ---
 
-## 同期可能な型
+## Syncable Types
 
-| 型 | バイト数 | 備考 |
-|----|---------|------|
+| Type | Bytes | Notes |
+|------|-------|-------|
 | `bool` | 1 | |
 | `byte` | 1 | 0-255 |
 | `short` | 2 | |
 | `int` | 4 | |
 | `float` | 4 | |
-| `string` | 可変 | 同期バッファサイズの制限あり |
+| `string` | Variable | Subject to sync buffer size limit |
 | `Vector3` | 12 | |
 | `Quaternion` | 16 | |
 | `Color` | 16 | |
-| `T[]` | 可変 | 上記の型の配列 |
+| `T[]` | Variable | Arrays of the above types |
 
-**同期不可:** `GameObject`, `Transform`, `VRCPlayerApi`, カスタムクラス
+**Not syncable:** `GameObject`, `Transform`, `VRCPlayerApi`, custom classes
 
 ---
 
-## デバッグテンプレート
+## Debug Template
 
 ```csharp
 [SerializeField] private bool _debug = false;
@@ -287,22 +287,22 @@ private void Log(string msg) {
 
 ---
 
-## よくある修正
+## Common Fixes
 
-| エラー | 修正方法 |
-|--------|---------|
-| 同期が動かない | `SetOwner()` → 変更 → `RequestSerialization()` |
-| プレイヤーで NullReference | `player != null && player.IsValid()` を確認 |
-| メソッドが見つからない | メソッドを `public` にし、パラメータを除去 |
-| FieldChangeCallback が無反応 | ローカルでもプロパティセッターを使う |
-| 構造体が変更できない | `var v = struct; v.x = 1; struct = v;` |
-| Start() not called | 非アクティブ対応: `OnEnable()` + `Initialize()` |
+| Error | Fix |
+|-------|-----|
+| Sync not working | `SetOwner()` -> modify -> `RequestSerialization()` |
+| NullReference on player | Check `player != null && player.IsValid()` |
+| Method not found | Make method `public` and remove parameters |
+| FieldChangeCallback not firing | Use property setter even for local changes |
+| Cannot modify struct | `var v = struct; v.x = 1; struct = v;` |
+| Start() not called | Inactive object support: `OnEnable()` + `Initialize()` |
 
 ---
 
-## Web Loading (String / Image ダウンロード)
+## Web Loading (String / Image Download)
 
-詳細は `references/web-loading.md` を参照。
+See `references/web-loading.md` for details.
 
 ```csharp
 using VRC.SDK3.StringLoading;  // String Loading
@@ -311,59 +311,59 @@ using VRC.SDK3.Data;           // VRCJson
 
 // String download
 VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
-// → OnStringLoadSuccess(IVRCStringDownload) / OnStringLoadError
+// -> OnStringLoadSuccess(IVRCStringDownload) / OnStringLoadError
 
-// Image download (Dispose 必須!)
+// Image download (Dispose required!)
 var dl = new VRCImageDownloader();
 dl.DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo);
-// → OnImageLoadSuccess(IVRCImageDownload) / OnImageLoadError
+// -> OnImageLoadSuccess(IVRCImageDownload) / OnImageLoadError
 
-// JSON parse (string download 後)
+// JSON parse (after string download)
 if (VRCJson.TryDeserializeFromJson(result.Result, out DataToken json))
 {
     DataDictionary dict = json.DataDictionary;
-    // 数値は Double で格納される: (int)token.Double
+    // Numbers are stored as Double: (int)token.Double
 }
 ```
 
-| 制約 | String Loading | Image Loading |
-|------|:---:|:---:|
-| レート制限 | 5秒/1回 | 5秒/1回 (シーン全体) |
-| 最大サイズ | - | 2048x2048 |
-| リダイレクト | ⚠️ trusted 限定 | ❌ 不可 |
-| Trusted URL | 別ドメインリスト | 別ドメインリスト |
-| メモリ管理 | 不要 | `Dispose()` 必須 |
+| Constraint | String Loading | Image Loading |
+|------------|:-:|:-:|
+| Rate limit | 5 sec / request | 5 sec / request (scene-wide) |
+| Max size | - | 2048x2048 |
+| Redirects | Trusted only | Not allowed |
+| Trusted URL | Separate domain list | Separate domain list |
+| Memory management | Not required | `Dispose()` required |
 
-**VRCUrl 動的生成: 不可** — `new VRCUrl(stringVar)` はランタイムで Udon VM がブロック。
-動的 URL が必要な場合: (1) `VRCUrlInputField`（ユーザー手入力）, (2) `VRCUrl[]` 配列（事前定義）, (3) サーバー側ルーティング
+**Dynamic VRCUrl generation: Not possible** -- `new VRCUrl(stringVar)` is blocked by the Udon VM at runtime.
+For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` array (predefined), (3) server-side routing
 
 ---
 
-## 公式ドキュメント・エラー調査 (WebSearch)
+## Official Documentation & Error Investigation (WebSearch)
 
-最新情報やエラー調査が必要な場合:
+When you need the latest information or error investigation:
 
 ```text
-# 公式ドキュメント検索
-WebSearch: "調べたいAPI名や機能 site:creators.vrchat.com"
+# Official documentation search
+WebSearch: "API name or feature site:creators.vrchat.com"
 
-# UdonSharp API リファレンス
-WebSearch: "API名 site:udonsharp.docs.vrchat.com"
+# UdonSharp API reference
+WebSearch: "API name site:udonsharp.docs.vrchat.com"
 
-# フォーラム検索
-WebSearch: "エラーメッセージ site:ask.vrchat.com"
+# Forum search
+WebSearch: "error message site:ask.vrchat.com"
 
-# 既知のバグ検索
-WebSearch: "エラーメッセージ site:feedback.vrchat.com"
+# Known bug search
+WebSearch: "error message site:feedback.vrchat.com"
 
 # GitHub Issues
-WebSearch: "エラーメッセージ site:github.com/vrchat-community/UdonSharp"
+WebSearch: "error message site:github.com/vrchat-community/UdonSharp"
 ```
 
-| サイト | 用途 |
-|--------|------|
-| creators.vrchat.com | 公式 Udon / SDK ドキュメント |
-| udonsharp.docs.vrchat.com | UdonSharp API リファレンス |
-| ask.vrchat.com | Q&A、解決策 |
-| feedback.vrchat.com | バグ報告、ステータス |
-| GitHub | UdonSharp固有のバグ |
+| Site | Purpose |
+|------|---------|
+| creators.vrchat.com | Official Udon / SDK documentation |
+| udonsharp.docs.vrchat.com | UdonSharp API reference |
+| ask.vrchat.com | Q&A, solutions |
+| feedback.vrchat.com | Bug reports, status |
+| GitHub | UdonSharp-specific bugs |

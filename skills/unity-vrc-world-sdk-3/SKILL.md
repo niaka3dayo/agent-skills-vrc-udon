@@ -39,21 +39,21 @@ metadata:
 
 ## SDK Versions
 
-**対応バージョン**: SDK 3.7.1 - 3.10.2 (2026年3月時点)
+**Supported versions**: SDK 3.7.1 - 3.10.2 (as of March 2026)
 
-| SDK    | 新機能                                                                  | 状態        |
-| ------ | ----------------------------------------------------------------------- | ----------- |
-| 3.7.1  | StringBuilder, Regex, System.Random                                     | ✅          |
-| 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                           | ✅          |
-| 3.7.6  | **マルチプラットフォーム Build & Publish** (PC + Android 同時ビルド)     | ✅          |
-| 3.8.0  | PhysBone 依存関係ソート, **Force Kinematic On Remote**, Drone API       | ✅          |
-| 3.8.1  | **[NetworkCallable]** パラメータ付きイベント, `Others`/`Self` ターゲット | ✅          |
-| 3.9.0  | **Camera Dolly API**, Auto Hold 簡素化, VRCCameraSettings               | ✅          |
-| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)          | ✅          |
-| 3.10.1 | バグ修正・安定性改善                                                    | ✅          |
-| 3.10.2 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル              | ✅ 最新安定 |
+| SDK    | New Features                                                                   | Status         |
+| ------ | ------------------------------------------------------------------------------ | -------------- |
+| 3.7.1  | StringBuilder, Regex, System.Random                                            | ✅             |
+| 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | ✅             |
+| 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | ✅             |
+| 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | ✅             |
+| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets          | ✅             |
+| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings              | ✅             |
+| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | ✅             |
+| 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅ Latest stable |
 
-> **重要**: SDK 3.9.0 未満は **2025年12月2日をもって非推奨**。新規ワールドのアップロードができません。
+> **Important**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible with these versions.
 
 ---
 
@@ -61,107 +61,107 @@ metadata:
 
 ### VRC_SceneDescriptor (Required)
 
-すべてのVRChatワールドに**1つだけ**必要。
+Exactly **one** is required in every VRChat world.
 
 ```
 [VRCWorld Prefab]
 ├── VRC_SceneDescriptor (Required)
 ├── VRC_PipelineManager (Auto-added)
-├── VRCWorldSettings (Optional - 移動速度設定)
-└── AvatarScalingSettings (Optional - アバタースケール制限)
+├── VRCWorldSettings (Optional - movement speed settings)
+└── AvatarScalingSettings (Optional - avatar scale limits)
 ```
 
 #### All Properties
 
-| プロパティ                      | 型          | 説明                     | デフォルト     |
-| ------------------------------- | ----------- | ------------------------ | -------------- |
-| **Spawns**                      | Transform[] | スポーン地点配列         | Descriptor位置 |
-| **Spawn Order**                 | enum        | Sequential/Random/Demo   | Sequential     |
-| **Respawn Height**              | float       | リスポーン高度(Y軸)      | -100           |
-| **Object Behaviour At Respawn** | enum        | Respawn/Destroy          | Respawn        |
-| **Reference Camera**            | Camera      | プレイヤーカメラ設定参照 | None           |
-| **Forbid User Portals**         | bool        | ユーザーポータル禁止     | false          |
-| **Voice Falloff Range**         | float       | ボイス減衰範囲           | -              |
-| **Interact Passthrough**        | LayerMask   | インタラクト透過レイヤー | Nothing        |
-| **Maximum Capacity**            | int         | 最大人数(ハードリミット) | -              |
-| **Recommended Capacity**        | int         | 推奨人数(UI表示用)       | -              |
+| Property                        | Type        | Description                     | Default           |
+| ------------------------------- | ----------- | ------------------------------- | ------------------ |
+| **Spawns**                      | Transform[] | Array of spawn points           | Descriptor position |
+| **Spawn Order**                 | enum        | Sequential/Random/Demo          | Sequential         |
+| **Respawn Height**              | float       | Respawn height (Y axis)         | -100               |
+| **Object Behaviour At Respawn** | enum        | Respawn/Destroy                 | Respawn            |
+| **Reference Camera**            | Camera      | Player camera settings reference | None              |
+| **Forbid User Portals**         | bool        | Disable user portals            | false              |
+| **Voice Falloff Range**         | float       | Voice attenuation range         | -                  |
+| **Interact Passthrough**        | LayerMask   | Interact passthrough layers     | Nothing            |
+| **Maximum Capacity**            | int         | Max player count (hard limit)   | -                  |
+| **Recommended Capacity**        | int         | Recommended player count (UI)   | -                  |
 
 #### Spawn Order Behavior
 
 ```
-Sequential: 0 → 1 → 2 → 0 → 1 → 2... (順番)
-Random:     ランダム選択
-Demo:       全員が Spawns[0] に出現
+Sequential: 0 → 1 → 2 → 0 → 1 → 2... (in order)
+Random:     Random selection
+Demo:       All players spawn at Spawns[0]
 ```
 
 #### Reference Camera Usage
 
 ```csharp
-// 用途:
-// 1. Near/Far クリッピング調整 (VR用: 0.01 ~ 1000 推奨)
-// 2. Post Processing エフェクト適用
-// 3. Background 色設定
+// Usage:
+// 1. Adjust Near/Far clipping (recommended for VR: 0.01 ~ 1000)
+// 2. Apply Post Processing effects
+// 3. Set background color
 
-// 設定手順:
-// 1. Camera を作成 (名前: "ReferenceCamera")
-// 2. Camera コンポーネントの設定を調整
-// 3. Camera を無効化 (チェックを外す)
-// 4. VRC_SceneDescriptor の Reference Camera に設定
+// Setup steps:
+// 1. Create a Camera (name: "ReferenceCamera")
+// 2. Adjust Camera component settings
+// 3. Disable the Camera (uncheck the component)
+// 4. Assign it to VRC_SceneDescriptor's Reference Camera
 ```
 
 ### Spawn Points Setup
 
 ```csharp
-// 設定手順:
-// 1. 空の GameObject を作成
-// 2. 位置・回転を設定 (プレイヤーは Z+ 方向を向く)
-// 3. VRC_SceneDescriptor の Spawns 配列に追加
+// Setup steps:
+// 1. Create an empty GameObject
+// 2. Set position and rotation (players face the Z+ direction)
+// 3. Add to the VRC_SceneDescriptor Spawns array
 
-// 推奨:
-// - 最低 2-3 個のスポーン (同時参加対応)
-// - 床から少し上 (0.1m程度)
-// - 障害物のない場所
-// - VRプレイヤーのガーディアン考慮
+// Recommendations:
+// - At least 2-3 spawn points (for simultaneous joins)
+// - Slightly above the floor (~0.1m)
+// - Clear of obstacles
+// - Account for VR player guardian boundaries
 ```
 
 ### Required Setup Checklist
 
 ```
-□ VRCWorld Prefab がシーンに 1 つだけ存在
-□ Spawns に最低 1 つの Transform を設定
-□ Respawn Height を適切な値に設定 (床より十分下)
-□ Reference Camera でクリッピング距離を調整 (VR用)
-□ Layer/Collision Matrix が正しく設定
-□ "Setup Layers for VRChat" を実行済み
+□ Exactly one VRCWorld Prefab exists in the scene
+□ At least one Transform set in Spawns
+□ Respawn Height set to an appropriate value (well below the floor)
+□ Reference Camera configured for clipping distances (for VR)
+□ Layer/Collision Matrix correctly configured
+□ "Setup Layers for VRChat" has been executed
 ```
 
 ---
 
 ## Components
 
-| コンポーネント             | 必須要素             | 用途                     | SDK  |
-| -------------------------- | -------------------- | ------------------------ | ---- |
-| **VRC_SceneDescriptor**    | -                    | ワールド設定 (必須)      | -    |
-| **VRC_Pickup**             | Collider + Rigidbody | 持てるオブジェクト       | -    |
-| **VRC_Station**            | Collider             | 座れる場所               | -    |
-| **VRC_ObjectSync**         | Rigidbody            | Transform/物理の自動同期 | -    |
-| **VRC_MirrorReflection**   | -                    | ミラー (⚠️ 高負荷)      | -    |
-| **VRC_PortalMarker**       | -                    | 他ワールドへのポータル   | -    |
-| **VRC_SpatialAudioSource** | AudioSource          | 3Dオーディオ             | -    |
-| **VRC_UIShape**            | Canvas (World Space) | Unity UI操作             | -    |
-| **VRC_AvatarPedestal**     | -                    | アバター表示/変更        | -    |
-| **VRC_CameraDolly**        | -                    | カメラドリー             | 3.9+ |
+| Component                  | Required Elements        | Purpose                        | SDK  |
+| -------------------------- | ------------------------ | ------------------------------ | ---- |
+| **VRC_SceneDescriptor**    | -                        | World settings (required)      | -    |
+| **VRC_Pickup**             | Collider + Rigidbody     | Grabbable objects              | -    |
+| **VRC_Station**            | Collider                 | Sittable locations             | -    |
+| **VRC_ObjectSync**         | Rigidbody                | Auto-sync Transform/physics    | -    |
+| **VRC_MirrorReflection**   | -                        | Mirror (⚠️ high cost)         | -    |
+| **VRC_PortalMarker**       | -                        | Portal to other worlds         | -    |
+| **VRC_SpatialAudioSource** | AudioSource              | 3D audio                       | -    |
+| **VRC_UIShape**            | Canvas (World Space)     | Unity UI interaction           | -    |
+| **VRC_AvatarPedestal**     | -                        | Avatar display/switch          | -    |
+| **VRC_CameraDolly**        | -                        | Camera dolly                   | 3.9+ |
 
 ### VRC_ObjectSync vs UdonSynced
 
-| シナリオ         | VRC_ObjectSync | UdonSynced変数 |
-| ---------------- | -------------- | -------------- |
-| 投げられる物・物理演算 | ✅ 推奨    | ❌             |
-| 状態のみ・複雑なロジック | ❌       | ✅ 推奨        |
+| Scenario                        | VRC_ObjectSync | UdonSynced variables |
+| ------------------------------- | -------------- | -------------------- |
+| Throwable objects / physics     | ✅ Recommended | ❌                   |
+| State only / complex logic      | ❌             | ✅ Recommended       |
 
-> **SDK 3.8.0+**: `Force Kinematic On Remote` — オーナー以外のクライアントで Rigidbody を Kinematic にし、予期しない物理挙動を防止。
+> **SDK 3.8.0+**: `Force Kinematic On Remote` — Makes Rigidbody kinematic on non-owner clients, preventing unexpected physics behavior.
 
-**→ プロパティ詳細・Udon イベント・コード例は `references/components.md`**
+**→ For detailed properties, Udon events, and code examples, see `references/components.md`**
 
 ---
 
@@ -169,28 +169,28 @@ Demo:       全員が Spawns[0] に出現
 
 ### VRChat Reserved Layers
 
-| Layer #   | Name                | 用途                   |
-| --------- | ------------------- | ---------------------- |
-| 0         | Default             | 一般オブジェクト       |
-| 9         | Player              | リモートプレイヤー     |
-| 10        | PlayerLocal         | ローカルプレイヤー     |
-| 11        | Environment         | 環境 (壁・床)          |
-| 13        | Pickup              | 持てるオブジェクト     |
-| 14        | PickupNoEnvironment | 環境と衝突しないPickup |
-| 17        | Walkthrough         | 通り抜け可能           |
-| 18        | MirrorReflection    | ミラー反射専用         |
-| **22-31** | **User Layers**     | **自由に使用可能**     |
+| Layer #   | Name                | Purpose                        |
+| --------- | ------------------- | ------------------------------ |
+| 0         | Default             | General objects                |
+| 9         | Player              | Remote players                 |
+| 10        | PlayerLocal         | Local player                   |
+| 11        | Environment         | Environment (walls, floors)    |
+| 13        | Pickup              | Grabbable objects              |
+| 14        | PickupNoEnvironment | Pickups that don't collide with environment |
+| 17        | Walkthrough         | Walk-through objects           |
+| 18        | MirrorReflection    | Mirror reflection only         |
+| **22-31** | **User Layers**     | **Available for custom use**   |
 
 ### Layer Setup Steps
 
 ```
 1. VRChat SDK > Show Control Panel
-2. Builder タブ
-3. "Setup Layers for VRChat" をクリック
-4. Collision Matrix が自動設定される
+2. Builder tab
+3. Click "Setup Layers for VRChat"
+4. Collision Matrix is automatically configured
 ```
 
-**→ 詳細は `references/layers.md`**
+**→ For details, see `references/layers.md`**
 
 ---
 
@@ -198,32 +198,32 @@ Demo:       全員が Spawns[0] に出現
 
 ### Target FPS
 
-| Platform   | FPS目標 | 測定場所          |
-| ---------- | ------- | ----------------- |
-| PC VR      | 45+ FPS | スポーン地点、1人 |
-| PC Desktop | 60+ FPS | スポーン地点、1人 |
-| Quest      | 72 FPS  | スポーン地点、1人 |
+| Platform   | FPS Target | Measurement Point      |
+| ---------- | ---------- | ---------------------- |
+| PC VR      | 45+ FPS    | Spawn point, 1 player  |
+| PC Desktop | 60+ FPS    | Spawn point, 1 player  |
+| Quest      | 72 FPS     | Spawn point, 1 player  |
 
 ### Critical Limits
 
-| 項目               | 推奨               | 理由                  |
-| ------------------ | ------------------ | --------------------- |
-| ミラー             | 1つ、デフォルトOFF | シーン2倍レンダリング |
-| ビデオプレイヤー   | 最大2つ            | デコード負荷          |
-| リアルタイムライト | 0-1                | 動的シャドウが重い    |
-| ライトマップ       | **必須**           | パフォーマンス基盤    |
+| Item                | Recommended           | Reason                        |
+| ------------------- | --------------------- | ----------------------------- |
+| Mirrors             | 1, default OFF        | Renders the entire scene 2x   |
+| Video players       | Max 2                 | Decoding overhead             |
+| Realtime lights     | 0-1                   | Dynamic shadows are expensive  |
+| Lightmaps           | **Required**          | Performance foundation         |
 
 ### Quest/Android Restrictions
 
-| コンポーネント     | PC  | Quest         |
+| Component          | PC  | Quest         |
 | ------------------ | --- | ------------- |
-| Dynamic Bones      | ✅  | ❌ 無効       |
-| Cloth              | ✅  | ❌ 無効       |
-| Post-Processing    | ✅  | ❌ 無効       |
-| Unity Constraints  | ✅  | ❌ 無効       |
-| リアルタイムライト | ✅  | ⚠️ 極力避ける |
+| Dynamic Bones      | ✅  | ❌ Disabled   |
+| Cloth              | ✅  | ❌ Disabled   |
+| Post-Processing    | ✅  | ❌ Disabled   |
+| Unity Constraints  | ✅  | ❌ Disabled   |
+| Realtime lights    | ✅  | ⚠️ Avoid     |
 
-**→ 詳細は `references/performance.md`**
+**→ For details, see `references/performance.md`**
 
 ---
 
@@ -232,19 +232,19 @@ Demo:       全員が Spawns[0] に出現
 ### Baked Lighting (Required)
 
 ```
-✅ 推奨設定:
+✅ Recommended settings:
 ├── Lightmapper: Progressive GPU
 ├── Lightmap Resolution: 10-20 texels/unit
-├── Light Mode: Baked または Mixed
-└── Light Probes: プレイヤー動線に配置
+├── Light Mode: Baked or Mixed
+└── Light Probes: Place along player paths
 
-❌ 避ける:
-├── Realtime ライト (動的シャドウ)
-├── 高解像度ライトマップ (メモリ消費)
-└── 過剰な Reflection Probes
+❌ Avoid:
+├── Realtime lights (dynamic shadows)
+├── High-resolution lightmaps (memory consumption)
+└── Excessive Reflection Probes
 ```
 
-**→ 詳細は `references/lighting.md`**
+**→ For details, see `references/lighting.md`**
 
 ---
 
@@ -252,24 +252,24 @@ Demo:       全員が Spawns[0] に出現
 
 ### VRC_SpatialAudioSource
 
-| プロパティ            | 説明         | デフォルト      |
-| --------------------- | ------------ | --------------- |
-| Gain                  | 音量 (dB)    | 0 (ワールド+10) |
-| Near                  | 減衰開始距離 | 0m              |
-| Far                   | 減衰終了距離 | 40m             |
-| Volumetric Radius     | 音源の広がり | 0m              |
-| Enable Spatialization | 3D定位       | true            |
+| Property              | Description           | Default            |
+| --------------------- | --------------------- | ------------------ |
+| Gain                  | Volume (dB)           | 0 (World: +10)    |
+| Near                  | Attenuation start     | 0m                 |
+| Far                   | Attenuation end       | 40m                |
+| Volumetric Radius     | Source spread          | 0m                 |
+| Enable Spatialization | 3D positioning        | true               |
 
 ### Video Player Selection
 
-| 機能               | AVPro | Unity Video |
+| Feature            | AVPro | Unity Video |
 | ------------------ | ----- | ----------- |
-| ライブストリーム   | ✅    | ❌          |
-| エディタプレビュー | ❌    | ✅          |
+| Live streaming     | ✅    | ❌          |
+| Editor preview     | ❌    | ✅          |
 | YouTube/Twitch     | ✅    | ❌          |
-| Quest対応          | ✅    | ✅          |
+| Quest support      | ✅    | ✅          |
 
-**→ 詳細は `references/audio-video.md`**
+**→ For details, see `references/audio-video.md`**
 
 ---
 
@@ -278,38 +278,38 @@ Demo:       全員が Spawns[0] に出現
 ### Upload Steps
 
 ```
-1. Validation 確認
+1. Check Validation
    └── VRChat SDK > Build Panel > Validations
 
-2. Build & Test (ローカルテスト)
+2. Build & Test (local testing)
    └── "Build & Test New Build"
-   └── 複数クライアントテスト可能
+   └── Supports multi-client testing
 
 3. Upload
    └── "Build and Upload"
-   └── Content Warnings 設定
-   └── Capacity 設定
+   └── Set Content Warnings
+   └── Set Capacity
 
-4. 公開設定
-   └── VRChat ウェブサイトで公開/非公開設定
+4. Publish settings
+   └── Configure public/private on the VRChat website
 ```
 
 ### Pre-Upload Checklist
 
 ```
 □ VRC_SceneDescriptor × 1
-□ Spawns 設定済み
-□ Respawn Height 適切
-□ Layer/Collision Matrix 確認
-□ ライトベイク完了
-□ ミラーデフォルト OFF
-□ VR で 45+ FPS
-□ Validation エラーなし
-□ Content Warnings 設定
-□ Capacity 設定
+□ Spawns configured
+□ Respawn Height appropriate
+□ Layer/Collision Matrix verified
+□ Light baking complete
+□ Mirror default OFF
+□ 45+ FPS in VR
+□ No Validation errors
+□ Content Warnings set
+□ Capacity set
 ```
 
-**→ 詳細は `references/upload.md`**
+**→ For details, see `references/upload.md`**
 
 ---
 
@@ -317,29 +317,29 @@ Demo:       全員が Spawns[0] に出現
 
 ### Common Issues
 
-| 問題                       | 原因                    | 解決策                |
-| -------------------------- | ----------------------- | --------------------- |
-| プレイヤーが壁を通り抜ける | 間違ったレイヤー        | Environment に設定    |
-| Pickup が持てない          | Collider/Rigidbody なし | 両方追加              |
-| Pickup が同期しない        | ObjectSync なし         | VRC_ObjectSync 追加   |
-| Station に座れない         | Collider なし           | Collider 追加         |
-| ミラーが映らない           | レイヤー設定            | MirrorReflection 確認 |
-| ビルドエラー               | Validation失敗          | SDK Panel で確認      |
+| Issue                           | Cause                      | Solution                   |
+| ------------------------------- | -------------------------- | -------------------------- |
+| Player walks through walls      | Wrong layer                | Set to Environment         |
+| Can't grab Pickup               | Missing Collider/Rigidbody | Add both                   |
+| Pickup doesn't sync             | Missing ObjectSync         | Add VRC_ObjectSync         |
+| Can't sit in Station            | Missing Collider           | Add Collider               |
+| Mirror doesn't reflect          | Layer settings             | Check MirrorReflection     |
+| Build error                     | Validation failure         | Check SDK Panel            |
 
-**→ 詳細は `references/troubleshooting.md`**
+**→ For details, see `references/troubleshooting.md`**
 
 ---
 
 ## Related Skills
 
-| タスク                  | 使用スキル                |
-| ----------------------- | ------------------------- |
-| C# コード作成           | `unity-vrc-udon-sharp` |
-| ネットワーク同期 (Udon) | `unity-vrc-udon-sharp` |
-| イベント実装            | `unity-vrc-udon-sharp` |
-| シーン設定              | **このスキル**            |
-| コンポーネント配置      | **このスキル**            |
-| パフォーマンス最適化    | **このスキル**            |
+| Task                     | Skill to Use              |
+| ------------------------ | ------------------------- |
+| C# code creation         | `unity-vrc-udon-sharp`    |
+| Network sync (Udon)      | `unity-vrc-udon-sharp`    |
+| Event implementation     | `unity-vrc-udon-sharp`    |
+| Scene setup              | **This skill**            |
+| Component placement      | **This skill**            |
+| Performance optimization | **This skill**            |
 
 ---
 
@@ -348,31 +348,31 @@ Demo:       全員が Spawns[0] に出現
 ### Official Documentation (WebSearch)
 
 ```
-# 公式ドキュメント検索
-WebSearch: "調べたいコンポーネントや機能 site:creators.vrchat.com"
+# Search official documentation
+WebSearch: "component or feature to look up site:creators.vrchat.com"
 ```
 
 ### Issue Investigation (WebSearch)
 
 ```
-# Step 1: フォーラム検索
+# Step 1: Forum search
 WebSearch:
-  query: "問題 site:ask.vrchat.com"
+  query: "issue description site:ask.vrchat.com"
   allowed_domains: ["ask.vrchat.com"]
 
-# Step 2: 既知のバグ検索
+# Step 2: Known bug search
 WebSearch:
-  query: "問題 site:feedback.vrchat.com"
+  query: "issue description site:feedback.vrchat.com"
   allowed_domains: ["feedback.vrchat.com"]
 
 # Step 3: GitHub Issues
 WebSearch:
-  query: "問題 site:github.com/vrchat-community"
+  query: "issue description site:github.com/vrchat-community"
 ```
 
 ### Official Resources
 
-| リソース          | URL                                   |
+| Resource          | URL                                   |
 | ----------------- | ------------------------------------- |
 | VRChat Creators   | https://creators.vrchat.com/worlds/   |
 | VRChat Forums     | https://ask.vrchat.com/               |
@@ -383,13 +383,13 @@ WebSearch:
 
 ## References
 
-| ファイル                        | 内容                 | 行数目安 |
-| ------------------------------- | -------------------- | -------- |
-| `references/components.md`      | 全コンポーネント詳細 | 800+     |
-| `references/layers.md`          | レイヤー・コリジョン | 400+     |
-| `references/performance.md`     | パフォーマンス最適化 | 500+     |
-| `references/lighting.md`        | ライティング設定     | 400+     |
-| `references/audio-video.md`     | オーディオ・ビデオ   | 400+     |
-| `references/upload.md`          | アップロード手順     | 300+     |
-| `references/troubleshooting.md` | 問題解決ガイド       | 500+     |
-| `CHEATSHEET.md`                 | クイックリファレンス | 200+     |
+| File                            | Content                   | Approx. Lines |
+| ------------------------------- | ------------------------- | ------------- |
+| `references/components.md`      | All component details     | 800+          |
+| `references/layers.md`          | Layers & collision        | 400+          |
+| `references/performance.md`     | Performance optimization  | 500+          |
+| `references/lighting.md`        | Lighting settings         | 400+          |
+| `references/audio-video.md`     | Audio & video             | 400+          |
+| `references/upload.md`          | Upload procedure          | 300+          |
+| `references/troubleshooting.md` | Troubleshooting guide     | 500+          |
+| `CHEATSHEET.md`                 | Quick reference           | 200+          |

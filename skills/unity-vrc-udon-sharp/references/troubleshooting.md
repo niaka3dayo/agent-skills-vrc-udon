@@ -1,34 +1,34 @@
-# UdonSharp トラブルシューティングガイド
+# UdonSharp Troubleshooting Guide
 
-VRChat UdonSharp 開発における一般的なエラー、原因、解決策。
+Common errors, causes, and solutions for VRChat UdonSharp development.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
+**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
 
-## 目次
+## Table of Contents
 
-- [コンパイルエラー](#コンパイルエラー)
-- [ランタイムエラー](#ランタイムエラー)
-- [ネットワーキングの問題](#ネットワーキングの問題)
-- [NetworkCallable の問題 (SDK 3.8.1+)](#networkcallable-の問題-sdk-381)
-- [Persistence の問題 (SDK 3.7.4+)](#persistence-の問題-sdk-374)
-- [Dynamics の問題 (SDK 3.10.0+)](#dynamics-の問題-sdk-3100)
-- [エディターの問題](#エディターの問題)
-- [パフォーマンスの問題](#パフォーマンスの問題)
-- [よくある落とし穴](#よくある落とし穴)
+- [Compile Errors](#compile-errors)
+- [Runtime Errors](#runtime-errors)
+- [Networking Issues](#networking-issues)
+- [NetworkCallable Issues (SDK 3.8.1+)](#networkcallable-issues-sdk-381)
+- [Persistence Issues (SDK 3.7.4+)](#persistence-issues-sdk-374)
+- [Dynamics Issues (SDK 3.10.0+)](#dynamics-issues-sdk-3100)
+- [Editor Issues](#editor-issues)
+- [Performance Issues](#performance-issues)
+- [Common Pitfalls](#common-pitfalls)
 
 ---
 
-## コンパイルエラー
+## Compile Errors
 
 ### "UdonSharp does not support X"
 
-**症状:**
+**Symptoms:**
 ```
 UdonSharpException: UdonSharp does not currently support [feature]
 ```
 
-**よくある非対応機能:**
-| 機能 | 代替手段 |
+**Common unsupported features:**
+| Feature | Alternative |
 |---------|-------------|
 | `async/await` | `SendCustomEventDelayedSeconds()` |
 | `yield return` / coroutines | `SendCustomEventDelayedSeconds()` |
@@ -41,34 +41,34 @@ UdonSharpException: UdonSharp does not currently support [feature]
 | `nameof()` on external types | String literals |
 | `try/catch/finally` | Validate inputs, null checks |
 
-**解決策:**
-ドキュメントに記載された代替手段を使用する。完全なリストは `constraints.md` を参照。
+**Solution:**
+Use the alternatives documented. See `constraints.md` for the complete list.
 
 ---
 
 ### "The type or namespace 'X' could not be found"
 
-**症状:**
+**Symptoms:**
 ```
 CS0246: The type or namespace name 'List' could not be found
 ```
 
-**原因:**
-1. 非対応の System 型を使用している
-2. `using` ディレクティブが不足している
-3. アセンブリ定義の問題
+**Causes:**
+1. Using an unsupported System type
+2. Missing `using` directive
+3. Assembly definition issues
 
-**解決策:**
+**Solution:**
 
 ```csharp
-// ❌ Wrong - List<T> not supported
+// Wrong - List<T> not supported
 using System.Collections.Generic;
 List<int> numbers = new List<int>();
 
-// ✅ Correct - Use arrays
+// Correct - Use arrays
 int[] numbers = new int[10];
 
-// ✅ Or use DataList for dynamic sizing
+// Or use DataList for dynamic sizing
 DataList list = new DataList();
 list.Add(new DataToken(42));
 ```
@@ -77,16 +77,16 @@ list.Add(new DataToken(42));
 
 ### "'UdonSharpBehaviour' does not contain a definition for 'X'"
 
-**症状:**
+**Symptoms:**
 ```
 CS1061: 'UdonSharpBehaviour' does not contain a definition for 'StartCoroutine'
 ```
 
-**原因:** Udon に公開されていない MonoBehaviour メソッドを使用しようとしている。
+**Cause:** Attempting to use MonoBehaviour methods not exposed to Udon.
 
-**よくある非公開メソッドと代替手段:**
+**Common unexposed methods and alternatives:**
 
-| 非公開メソッド | 代替手段 |
+| Unexposed method | Alternative |
 |----------------|-------------|
 | `StartCoroutine()` | `SendCustomEventDelayedSeconds()` |
 | `StopCoroutine()` | Boolean flag check |
@@ -99,30 +99,30 @@ CS1061: 'UdonSharpBehaviour' does not contain a definition for 'StartCoroutine'
 
 ### "Field 'X' is not serializable"
 
-**症状:**
+**Symptoms:**
 ```
 UdonSharp: Field 'X' is not serializable
 ```
 
-**原因:** 非対応の型を同期しようとしている。
+**Cause:** Attempting to sync an unsupported type.
 
-**同期可能な型:**
+**Syncable types:**
 - Primitives: `bool`, `byte`, `sbyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `float`, `double`, `char`
 - Strings: `string`
 - Unity types: `Vector2`, `Vector3`, `Vector4`, `Quaternion`, `Color`, `Color32`
 - Arrays of above types
 
-**同期不可:**
+**Not syncable:**
 - Custom classes/structs
 - `GameObject`, `Transform`
 - `VRCPlayerApi`
 
-**解決策:**
+**Solution:**
 ```csharp
-// ❌ Wrong - Cannot sync VRCPlayerApi
+// Wrong - Cannot sync VRCPlayerApi
 [UdonSynced] private VRCPlayerApi targetPlayer;
 
-// ✅ Correct - Sync player ID instead
+// Correct - Sync player ID instead
 [UdonSynced] private int targetPlayerId;
 
 public VRCPlayerApi GetTargetPlayer()
@@ -133,22 +133,22 @@ public VRCPlayerApi GetTargetPlayer()
 
 ---
 
-## ランタイムエラー
+## Runtime Errors
 
 ### "NullReferenceException"
 
-**症状:**
+**Symptoms:**
 ```
 NullReferenceException: Object reference not set to an instance of an object
 ```
 
-**よくある原因:**
-1. Inspector の参照が未設定
-2. 間違ったオブジェクトで `GetComponent()` を呼んでいる
-3. 操作中にプレイヤーが退出した
-4. オブジェクトが破棄された
+**Common causes:**
+1. Inspector references not assigned
+2. Calling `GetComponent()` on the wrong object
+3. Player left during an operation
+4. Object was destroyed
 
-**解決策:**
+**Solution:**
 
 ```csharp
 // Always validate Inspector references
@@ -189,29 +189,29 @@ public void DoSomethingWithPlayer()
 
 ### "SendCustomEvent: Method 'X' not found"
 
-**症状:**
+**Symptoms:**
 ```
 [UdonBehaviour] SendCustomEvent: Method 'MyMethod' not found
 ```
 
-**原因:**
-1. メソッド名のタイポ
-2. メソッドが private（public でなければならない）
-3. メソッドにパラメータがある（非対応）
+**Causes:**
+1. Typo in method name
+2. Method is private (must be public)
+3. Method has parameters (not supported)
 
-**解決策:**
+**Solution:**
 
 ```csharp
-// ❌ Wrong - Method is private
+// Wrong - Method is private
 private void MyMethod() { }
 
-// ❌ Wrong - Method has parameters
+// Wrong - Method has parameters
 public void MyMethod(int value) { }
 
-// ✅ Correct - Public, parameterless
+// Correct - Public, parameterless
 public void MyMethod() { }
 
-// ✅ For passing data, use SetProgramVariable first
+// For passing data, use SetProgramVariable first
 otherScript.SetProgramVariable("inputValue", 42);
 otherScript.SendCustomEvent("ProcessInput");
 ```
@@ -220,28 +220,28 @@ otherScript.SendCustomEvent("ProcessInput");
 
 ### "Heap ran out of memory"
 
-**症状:**
+**Symptoms:**
 ```
 Udon heap ran out of memory
 ```
 
-**原因:**
-1. ループ内で大量のオブジェクトを生成している
-2. 大きすぎる配列
-3. ループ内での文字列連結
-4. クリアされていない配列によるメモリリーク
+**Causes:**
+1. Creating large numbers of objects in loops
+2. Arrays that are too large
+3. String concatenation in loops
+4. Memory leaks from arrays that are not cleared
 
-**解決策:**
+**Solution:**
 
 ```csharp
-// ❌ Wrong - Creates new array every frame
+// Wrong - Creates new array every frame
 void Update()
 {
     VRCPlayerApi[] players = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
     VRCPlayerApi.GetPlayers(players);
 }
 
-// ✅ Correct - Reuse array, resize when needed
+// Correct - Reuse array, resize when needed
 private VRCPlayerApi[] _playerCache;
 private int _lastPlayerCount = 0;
 
@@ -255,14 +255,14 @@ void Update()
     VRCPlayerApi.GetPlayers(_playerCache);
 }
 
-// ❌ Wrong - String concatenation creates garbage
+// Wrong - String concatenation creates garbage
 string result = "";
 for (int i = 0; i < 100; i++)
 {
     result += i.ToString(); // Creates new string each iteration
 }
 
-// ✅ Correct - Use char array or limit concatenation
+// Correct - Use char array or limit concatenation
 // For display purposes, just show final result
 ```
 
@@ -270,17 +270,17 @@ for (int i = 0; i < 100; i++)
 
 ### "ArrayIndexOutOfRangeException"
 
-**症状:**
+**Symptoms:**
 ```
 IndexOutOfRangeException: Index was outside the bounds of the array
 ```
 
-**よくある原因:**
-1. 配列が初期化されていない
-2. Off-by-one エラー
-3. イテレーション中にプレイヤー数が変化した
+**Common causes:**
+1. Array not initialized
+2. Off-by-one errors
+3. Player count changed during iteration
 
-**解決策:**
+**Solution:**
 
 ```csharp
 // Always check array bounds
@@ -290,7 +290,7 @@ public void ProcessArray(int[] data)
     {
         return;
     }
-    
+
     for (int i = 0; i < data.Length; i++)
     {
         // Safe access
@@ -307,19 +307,19 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 
 ---
 
-## ネットワーキングの問題
+## Networking Issues
 
-### 変数が同期されない
+### Variables Not Syncing
 
-**症状:**
-- `[UdonSynced]` 変数が他のクライアントで更新されない
-- プレイヤー間で状態が異なる
+**Symptoms:**
+- `[UdonSynced]` variables not updating on other clients
+- State differs between players
 
-**チェックリスト:**
+**Checklist:**
 
 1. **Is the variable properly marked?**
 ```csharp
-// ✅ Correct
+// Correct
 [UdonSynced] private int myValue;
 ```
 
@@ -330,7 +330,7 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 public void ChangeValue()
 {
     myValue = 42;
-    RequestSerialization(); // ← Required for Manual sync mode!
+    RequestSerialization(); // Required for Manual sync mode!
 }
 ```
 
@@ -358,15 +358,15 @@ public void ChangeValue()
 
 ---
 
-### FieldChangeCallback が発火しない
+### FieldChangeCallback Not Firing
 
-**症状:** 同期時にプロパティのセッターが呼ばれない。
+**Symptoms:** Property setter not called during synchronization.
 
-**チェックリスト:**
+**Checklist:**
 
 1. **Correct attribute syntax?**
 ```csharp
-// ✅ Correct - nameof() points to PROPERTY
+// Correct - nameof() points to PROPERTY
 [UdonSynced, FieldChangeCallback(nameof(MyProperty))]
 private int _myValue;
 
@@ -383,10 +383,10 @@ public int MyProperty
 
 2. **Using property everywhere locally?**
 ```csharp
-// ❌ Wrong - Bypasses callback
+// Wrong - Bypasses callback
 _myValue = 10;
 
-// ✅ Correct - Uses property
+// Correct - Uses property
 MyProperty = 10;
 ```
 
@@ -396,16 +396,16 @@ MyProperty = 10;
 
 ---
 
-### オーナーシップ移転の競合状態
+### Ownership Transfer Race Conditions
 
-**問題:** 複数のプレイヤーが同時にオーナーシップを取得しようとしている。
+**Problem:** Multiple players attempting to take ownership simultaneously.
 
-**症状:**
-- 予期しないオーナーシップの変更
-- 状態の非同期
-- 状態間の「フリッカリング」
+**Symptoms:**
+- Unexpected ownership changes
+- State desynchronization
+- "Flickering" between states
 
-**解決策:**
+**Solution:**
 ```csharp
 // Use ownership request pattern
 public override void Interact()
@@ -441,11 +441,11 @@ private void DoAction()
 
 ---
 
-### 後から参加したプレイヤーの状態の問題
+### Late Joiner State Issues
 
-**問題:** 後から参加したプレイヤーに正しい状態が表示されない。
+**Problem:** Late joiners do not see the correct state.
 
-**解決策:**
+**Solution:**
 ```csharp
 public override void OnPlayerJoined(VRCPlayerApi player)
 {
@@ -466,22 +466,22 @@ void Start()
 
 ---
 
-## NetworkCallable の問題 (SDK 3.8.1+)
+## NetworkCallable Issues (SDK 3.8.1+)
 
 ### "Method 'X' is not network callable"
 
-**症状:**
+**Symptoms:**
 ```
 Method 'X' cannot be called as a network event
 ```
 
-**原因:**
-1. `[NetworkCallable]` 属性がない
-2. メソッドが `public` でない
-3. メソッドが `static`、`virtual`、または `override`
-4. メソッドのパラメータが 8 個を超えている
+**Causes:**
+1. Missing `[NetworkCallable]` attribute
+2. Method is not `public`
+3. Method is `static`, `virtual`, or `override`
+4. Method has more than 8 parameters
 
-**解決策:**
+**Solution:**
 ```csharp
 // WRONG
 public void MyMethod(int value) { } // Missing attribute
@@ -495,19 +495,19 @@ public void MyMethod(int value) { }
 
 ---
 
-### NetworkCallable のパラメータが受信されない
+### NetworkCallable Parameters Not Received
 
-**症状:** パラメータがデフォルト値（0、null など）で届く
+**Symptoms:** Parameters arrive as default values (0, null, etc.)
 
-**原因:**
-1. パラメータの型が同期不可
-2. レートリミット超過
-3. SDK バージョンの不一致
+**Causes:**
+1. Parameter type is not syncable
+2. Rate limit exceeded
+3. SDK version mismatch
 
-**チェックリスト:**
-1. パラメータの型が同期可能か確認（int、float、string、Vector3 など）
-2. レートリミットを確認（デフォルト 5/秒、最大 100/秒）
-3. すべてのクライアントが SDK 3.8.1+ であることを確認
+**Checklist:**
+1. Verify parameter types are syncable (int, float, string, Vector3, etc.)
+2. Check rate limits (default 5/sec, max 100/sec)
+3. Ensure all clients are on SDK 3.8.1+
 
 ```csharp
 // WRONG - VRCPlayerApi is not syncable
@@ -521,11 +521,11 @@ public void SetTarget(int playerId) { }
 
 ---
 
-### NetworkCallable のレートリミット超過
+### NetworkCallable Rate Limit Exceeded
 
-**症状:** イベントがドロップされ、すべてのクライアントに届かない
+**Symptoms:** Events are dropped and do not reach all clients
 
-**解決策:**
+**Solution:**
 ```csharp
 // Increase rate limit (max 100/sec)
 [NetworkCallable(100)]
@@ -545,18 +545,18 @@ public void SendIfReady(int value)
 
 ---
 
-## Persistence の問題 (SDK 3.7.4+)
+## Persistence Issues (SDK 3.7.4+)
 
-### PlayerData が読み込まれない
+### PlayerData Not Loading
 
-**症状:** `TryGet` が常に false を返し、データが空に見える
+**Symptoms:** `TryGet` always returns false, data appears empty
 
-**原因:**
-1. `OnPlayerRestored` より前にアクセスしている
-2. キーが存在しない
-3. 間違ったプレイヤー参照
+**Causes:**
+1. Accessing before `OnPlayerRestored`
+2. Key does not exist
+3. Wrong player reference
 
-**解決策:**
+**Solution:**
 ```csharp
 private bool dataReady = false;
 
@@ -585,16 +585,16 @@ public void SaveScore(int score)
 
 ---
 
-### PlayerData が保存されない
+### PlayerData Not Saving
 
-**症状:** セッション間でデータが永続化されない
+**Symptoms:** Data does not persist across sessions
 
-**原因:**
-1. 間違ったプレイヤー（ローカルプレイヤーでない）に書き込んでいる
-2. ストレージ制限（100 KB）を超えている
-3. キー名が長すぎる（最大 128 文字）
+**Causes:**
+1. Writing to wrong player (not local player)
+2. Exceeding storage limit (100 KB)
+3. Key name too long (max 128 characters)
 
-**解決策:**
+**Solution:**
 ```csharp
 // WRONG - Trying to write to other player's data
 PlayerData.SetInt(otherPlayer, "score", 100); // Will fail silently
@@ -609,37 +609,37 @@ Debug.Log($"Using {keys.Length} keys");
 
 ---
 
-### OnPlayerRestored が発火しない
+### OnPlayerRestored Not Firing
 
-**症状:** イベントが呼ばれず、データが読み込まれない
+**Symptoms:** Event is not called, data does not load
 
-**原因:**
-1. UdonBehaviour で VRC Enable Persistence が有効になっていない
-2. ロード時にスクリプトがシーンに存在しない
-3. プレイヤーデータが破損している
+**Causes:**
+1. VRC Enable Persistence not enabled on UdonBehaviour
+2. Script not present in scene at load time
+3. Player data is corrupted
 
-**解決策:**
-1. Inspector で "VRC Enable Persistence" チェックボックスを確認
-2. スクリプトがシーン階層内でアクティブであることを確認
-3. 新しいインスタンス（保存データなし）でテスト
+**Solution:**
+1. Check the "VRC Enable Persistence" checkbox in Inspector
+2. Ensure the script is active in the scene hierarchy
+3. Test with a new instance (no saved data)
 
 ---
 
-## Dynamics の問題 (SDK 3.10.0+)
+## Dynamics Issues (SDK 3.10.0+)
 
-### OnContactEnter が発火しない
+### OnContactEnter Not Firing
 
-**症状:** コンタクトイベントが一切トリガーされない
+**Symptoms:** Contact events not triggering at all
 
-**原因:**
-1. UdonBehaviour が Contact Receiver と同じ GameObject にない
-2. コンテンツタイプが一致しない
-3. Allow Self/Allow Others が無効
+**Causes:**
+1. UdonBehaviour not on the same GameObject as the Contact Receiver
+2. Content types do not match
+3. Allow Self/Allow Others is disabled
 
-**チェックリスト:**
-1. VRC Contact Receiver と UdonBehaviour が同じ GameObject にあること
-2. Sender のコンテンツタイプが Receiver の許可タイプと一致すること
-3. Allow Self/Allow Others の設定を確認（アバターコンタクトにのみ適用）
+**Checklist:**
+1. Ensure VRC Contact Receiver and UdonBehaviour are on the same GameObject
+2. Verify Sender's content types match Receiver's allowed types
+3. Check Allow Self/Allow Others settings (applies to avatar contacts only)
 
 ```csharp
 // Verify receiver is on this GameObject
@@ -655,16 +655,16 @@ void Start()
 
 ---
 
-### コンタクトイベントが多発する
+### Contact Events Firing Too Frequently
 
-**症状:** OnContactEnter が繰り返し呼ばれ、ログにスパムが発生
+**Symptoms:** OnContactEnter called repeatedly, log spam
 
-**原因:**
-1. Sender に複数のコライダーがある
-2. コンタクトが高速に出入りを繰り返している
-3. デバウンスロジックがない
+**Causes:**
+1. Multiple colliders on the Sender
+2. Contacts rapidly entering and exiting
+3. No debounce logic
 
-**解決策:**
+**Solution:**
 ```csharp
 private float lastContactTime;
 private const float DEBOUNCE = 0.1f;
@@ -680,29 +680,29 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 ---
 
-### PhysBone のグラブが動作しない
+### PhysBone Grab Not Working
 
-**症状:** PhysBone をグラブできず、イベントも発火しない
+**Symptoms:** Cannot grab PhysBone, events do not fire
 
-**原因:**
-1. VRC Phys Bone コンポーネントでグラブが無効
-2. プレイヤーの手がグラブポイントから遠すぎる
-3. グラブ半径が小さすぎる
+**Causes:**
+1. Grabbing is disabled on VRC Phys Bone component
+2. Player's hand is too far from grab point
+3. Grab radius is too small
 
-**解決策:**
-1. VRC Phys Bone の "Allow Grabbing" を確認
-2. "Grab Movement" の値を増やす
-3. 異なる値でグラブ半径をテスト
+**Solution:**
+1. Verify "Allow Grabbing" on VRC Phys Bone
+2. Increase "Grab Movement" value
+3. Test grab radius with different values
 
 ---
 
-### Contact/PhysBone の Player が Null
+### Contact/PhysBone Player Is Null
 
-**症状:** アクセス時に `info.player` が null
+**Symptoms:** `info.player` is null when accessed
 
-**原因:** コンタクトがアバターからではなく、ワールドオブジェクトからのもの
+**Cause:** Contact is from a world object, not from an avatar
 
-**解決策:**
+**Solution:**
 ```csharp
 public override void OnContactEnter(ContactEnterInfo info)
 {
@@ -724,30 +724,30 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 ---
 
-## エディターの問題
+## Editor Issues
 
-### Inspector で UdonSharpBehaviour が UdonBehaviour として表示される
+### UdonSharpBehaviour Displays as UdonBehaviour in Inspector
 
-**原因:** プロキシシステムが正しく同期されていない。
+**Cause:** Proxy system not properly synchronized.
 
-**解決策:**
+**Solution:**
 
-1. **スクリプトを再インポート:**
-   - `.cs` ファイルを右クリック → Reimport
+1. **Reimport the script:**
+   - Right-click the `.cs` file -> Reimport
 
-2. **強制同期:**
-   - UdonBehaviour コンポーネントをクリック
-   - 三点メニュー → "Refresh UdonSharp Component"
+2. **Force sync:**
+   - Click the UdonBehaviour component
+   - Three-dot menu -> "Refresh UdonSharp Component"
 
-3. **解決しない場合は Unity を再起動**
+3. **Restart Unity if unresolved**
 
 ---
 
-### Prefab に変更が保存されない
+### Changes Not Saved on Prefab
 
-**原因:** UdonSharp はプロキシシステムを使用しており、プロキシへの変更は自動保存されない。
+**Cause:** UdonSharp uses a proxy system, and changes to the proxy are not auto-saved.
 
-**解決策:**
+**Solution:**
 ```csharp
 #if UNITY_EDITOR
 // In custom editor or after programmatic changes
@@ -760,23 +760,23 @@ EditorUtility.SetDirty(behaviour);
 
 ### "The associated script cannot be loaded"
 
-**原因:**
-1. スクリプトにコンパイルエラーがある
-2. スクリプトの GUID が不一致
-3. UdonSharpProgramAsset が欠落している
+**Causes:**
+1. Script has compile errors
+2. Script GUID mismatch
+3. UdonSharpProgramAsset is missing
 
-**解決策:**
-1. すべてのコンパイルエラーを修正する
-2. UdonBehaviour を削除し、UdonSharpBehaviour を再追加する
-3. Console で詳細なエラーメッセージを確認する
+**Solution:**
+1. Fix all compile errors
+2. Remove the UdonBehaviour and re-add the UdonSharpBehaviour
+3. Check the Console for detailed error messages
 
 ---
 
-## パフォーマンスの問題
+## Performance Issues
 
-### 大量の UdonBehaviour による FPS 低下
+### FPS Drop from Many UdonBehaviours
 
-**チェックリスト:**
+**Checklist:**
 
 1. **Disable Update() when not needed:**
 ```csharp
@@ -812,13 +812,13 @@ void Update()
 
 3. **Cache component references:**
 ```csharp
-// ❌ Wrong - GetComponent every frame
+// Wrong - GetComponent every frame
 void Update()
 {
     GetComponent<Renderer>().material.color = newColor;
 }
 
-// ✅ Correct - Cache in Start()
+// Correct - Cache in Start()
 private Renderer _renderer;
 
 void Start()
@@ -838,13 +838,13 @@ void Update()
 
 ---
 
-### ネットワーク帯域幅の超過
+### Network Bandwidth Exceeded
 
-**症状:**
-- "Network rate limited" 警告
-- すべてのプレイヤーで同期が遅延
+**Symptoms:**
+- "Network rate limited" warnings
+- Sync delays for all players
 
-**解決策:**
+**Solution:**
 
 1. **Reduce sync frequency:**
 ```csharp
@@ -883,20 +883,20 @@ public class SmoothSync : UdonSharpBehaviour
 
 ---
 
-## よくある落とし穴
+## Common Pitfalls
 
-### 非アクティブなオブジェクトで Start() が呼ばれない
+### Start() Not Called on Inactive Objects
 
-**問題:**
+**Problem:**
 ```csharp
-// ❌ 非アクティブ状態で配置されたGameObjectでは Start() が呼ばれない
+// Inactive GameObjects do not call Start()
 public class BrokenGimmick : UdonSharpBehaviour
 {
     private AudioSource audioSource;
 
     void Start()
     {
-        // GameObjectが非アクティブだと、ここに到達しない！
+        // This is never reached if the GameObject is inactive!
         audioSource = GetComponent<AudioSource>();
     }
 
@@ -907,14 +907,14 @@ public class BrokenGimmick : UdonSharpBehaviour
 }
 ```
 
-**症状:**
-- ギミックが非アクティブ状態で配置されている
-- アクティブ化後に NullReferenceException が発生
-- 「動くはずなのに動かない」状態
+**Symptoms:**
+- Gimmick is placed in an inactive state
+- NullReferenceException occurs after activation
+- "Should work but doesn't" situation
 
-**解決策:**
+**Solution:**
 ```csharp
-// ✅ OnEnable + 初期化フラグパターン
+// OnEnable + initialization flag pattern
 public class RobustGimmick : UdonSharpBehaviour
 {
     private AudioSource audioSource;
@@ -940,7 +940,7 @@ public class RobustGimmick : UdonSharpBehaviour
 
     public void PlaySound()
     {
-        Initialize(); // 外部から呼ばれる可能性に備える
+        Initialize(); // Guard against being called externally first
         if (audioSource != null)
         {
             audioSource.Play();
@@ -949,23 +949,23 @@ public class RobustGimmick : UdonSharpBehaviour
 }
 ```
 
-**発生するケース:**
-- ギミックがパフォーマンス最適化のため非アクティブで配置されている
-- 条件付きで表示されるUIやオブジェクト
-- プールされたオブジェクト（Object Pooling）
-- トリガーで有効化されるギミック
+**Situations where this occurs:**
+- Gimmicks placed inactive for performance optimization
+- Conditionally displayed UI or objects
+- Pooled objects (Object Pooling)
+- Gimmicks activated by triggers
 
 ---
 
-### フィールド初期化子が機能しない
+### Field Initializers Not Working
 
-**問題:**
+**Problem:**
 ```csharp
 // This doesn't work as expected
 public int maxHealth = 100; // Serialized value from Inspector wins
 ```
 
-**解決策:**
+**Solution:**
 ```csharp
 // Use Start() or explicit initialization
 private int _maxHealth;
@@ -981,21 +981,21 @@ void Start()
 
 ---
 
-### GetComponent が UdonSharpBehaviour ではなくプロキシを返す
+### GetComponent Returns Proxy Instead of UdonSharpBehaviour
 
-**問題:**
+**Problem:**
 ```csharp
 // Returns UdonBehaviour, not your type
 var myScript = other.GetComponent<MyScript>();
 ```
 
-**解決策（ランタイム）:**
+**Solution (Runtime):**
 ```csharp
 // Cast works at runtime in VRChat
 var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
 ```
 
-**解決策（エディター）:**
+**Solution (Editor):**
 ```csharp
 #if UNITY_EDITOR
 var myScript = other.GetUdonSharpComponent<MyScript>();
@@ -1006,14 +1006,14 @@ var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
 
 ---
 
-### 構造体の変更が保持されない
+### Struct Modifications Not Persisting
 
-**問題:**
+**Problem:**
 ```csharp
 transform.position.x = 5; // Doesn't work!
 ```
 
-**解決策:**
+**Solution:**
 ```csharp
 // Assign full struct
 Vector3 pos = transform.position;
@@ -1023,11 +1023,11 @@ transform.position = pos;
 
 ---
 
-### SendCustomEventDelayedSeconds をキャンセルできない
+### Cannot Cancel SendCustomEventDelayedSeconds
 
-**問題:** 遅延イベントをキャンセルする組み込みの方法がない。
+**Problem:** No built-in way to cancel delayed events.
 
-**解決策:**
+**Solution:**
 ```csharp
 private bool _shouldExecute = true;
 
@@ -1051,16 +1051,16 @@ public void DelayedAction()
 
 ---
 
-### VRCPlayerApi が無効になる
+### VRCPlayerApi Becomes Invalid
 
-**問題:** `VRCPlayerApi` の参照を保持しているが、プレイヤーが退出した。
+**Problem:** Holding a `VRCPlayerApi` reference, but the player has left.
 
-**解決策:**
+**Solution:**
 ```csharp
-// ❌ Wrong - Storing reference
+// Wrong - Storing reference
 private VRCPlayerApi _targetPlayer;
 
-// ✅ Correct - Store ID, get player when needed
+// Correct - Store ID, get player when needed
 private int _targetPlayerId = -1;
 
 public void SetTarget(VRCPlayerApi player)
@@ -1071,7 +1071,7 @@ public void SetTarget(VRCPlayerApi player)
 public VRCPlayerApi GetTarget()
 {
     if (_targetPlayerId < 0) return null;
-    
+
     VRCPlayerApi player = VRCPlayerApi.GetPlayerById(_targetPlayerId);
     if (player == null || !player.IsValid())
     {
@@ -1084,9 +1084,9 @@ public VRCPlayerApi GetTarget()
 
 ---
 
-## デバッグ技法
+## Debugging Techniques
 
-### ログ出力のベストプラクティス
+### Logging Best Practices
 
 ```csharp
 // Use consistent format
@@ -1107,7 +1107,7 @@ private void LogDebug(string message)
 }
 ```
 
-### 状態の可視化
+### State Visualization
 
 ```csharp
 // Show state in world using TextMeshPro
@@ -1124,7 +1124,7 @@ void Update()
 }
 ```
 
-### ネットワークデバッグ
+### Network Debugging
 
 ```csharp
 public override void OnPreSerialization()
@@ -1139,20 +1139,20 @@ public override void OnDeserialization()
 
 public override void OnOwnershipTransferred(VRCPlayerApi player)
 {
-    LogDebug($"Ownership → {player.displayName}");
+    LogDebug($"Ownership -> {player.displayName}");
 }
 ```
 
 ---
 
-## クイックリファレンス: エラー → 解決策
+## Quick Reference: Error -> Solution
 
-| エラー | 応急処置 |
+| Error | Quick fix |
 |-------|-----------|
 | "does not support X" | Check constraints.md for alternative |
 | NullReferenceException | Add null checks, validate Inspector refs |
 | Method not found | Make method public, remove parameters |
-| Variables not syncing | SetOwner → change → RequestSerialization |
+| Variables not syncing | SetOwner -> change -> RequestSerialization |
 | FieldChangeCallback silent | Use property setter locally, check nameof() |
 | Heap out of memory | Reuse arrays, avoid string concat in loops |
 | Proxy issues | Reimport script, refresh component |
@@ -1164,61 +1164,61 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 
 ---
 
-## リソース
+## Resources
 
 - [Official UdonSharp Docs](https://udonsharp.docs.vrchat.com/)
 - [VRChat Creator Docs](https://creators.vrchat.com/worlds/udon/)
 - [UdonSharp GitHub Issues](https://github.com/vrchat-community/UdonSharp/issues)
-- [VRChat Forums](https://ask.vrchat.com/) - Q&A、解決策
-- [VRChat Canny](https://feedback.vrchat.com/) - バグ報告、既知の問題
+- [VRChat Forums](https://ask.vrchat.com/) - Q&A, solutions
+- [VRChat Canny](https://feedback.vrchat.com/) - Bug reports, known issues
 
 ---
 
-## 未知のエラー調査手順
+## Investigation Steps for Unknown Errors
 
-このドキュメントでカバーされていないエラーに遭遇した場合の調査手順：
+For errors not covered in this document, follow these investigation steps:
 
-### Step 1: 公式ドキュメント検索 (WebSearch)
+### Step 1: Search Official Docs (WebSearch)
 
 ```
-WebSearch: "エラーメッセージやキーワード site:creators.vrchat.com"
+WebSearch: "error message or keyword site:creators.vrchat.com"
 ```
 
-### Step 2: VRChat Forums 検索 (WebSearch)
+### Step 2: Search VRChat Forums (WebSearch)
 
 ```
 WebSearch:
-  query: "エラーメッセージ site:ask.vrchat.com"
+  query: "error message site:ask.vrchat.com"
   allowed_domains: ["ask.vrchat.com"]
 ```
 
-コミュニティで同じ問題に遭遇した人の解決策を探す。
+Look for solutions from community members who encountered the same issue.
 
-### Step 3: Canny (既知のバグ) 検索
+### Step 3: Search Canny (Known Bugs)
 
 ```
 WebSearch:
-  query: "エラーメッセージ site:feedback.vrchat.com"
+  query: "error message site:feedback.vrchat.com"
   allowed_domains: ["feedback.vrchat.com"]
 ```
 
-VRChat公式が認識しているバグかどうか、ワークアラウンドがあるか確認。
+Check whether VRChat officially recognizes the bug and if workarounds exist.
 
-### Step 4: GitHub Issues 検索
+### Step 4: Search GitHub Issues
 
 ```
 WebSearch:
-  query: "エラーメッセージ site:github.com/vrchat-community/UdonSharp"
+  query: "error message site:github.com/vrchat-community/UdonSharp"
   allowed_domains: ["github.com"]
 ```
 
-UdonSharp固有のバグや修正状況を確認。
+Check for UdonSharp-specific bugs and fix status.
 
-### 検索のコツ
+### Search Tips
 
-| テクニック | 例 |
+| Technique | Example |
 |------------|-----|
-| 完全一致 | `"The type or namespace could not be found"` |
-| SDKバージョン指定 | `SDK 3.10 error` |
-| 解決済みフィルタ | `solved` または Cannyのステータス確認 |
-| 日付フィルタ | 最新の情報を優先（古い解決策は動かないことも）|
+| Exact match | `"The type or namespace could not be found"` |
+| SDK version filter | `SDK 3.10 error` |
+| Resolved filter | `solved` or check Canny status |
+| Date filter | Prioritize latest info (old solutions may not work) |

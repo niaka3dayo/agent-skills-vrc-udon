@@ -1,31 +1,31 @@
-# VRChat Dynamics for Worlds リファレンス
+# VRChat Dynamics for Worlds Reference
 
 Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds (SDK 3.10.0+).
 
-**対応SDKバージョン**: 3.10.0+ (2025年〜)
+**Supported SDK Versions**: 3.10.0+ (2025 onward)
 
-## 概要
+## Overview
 
-SDK 3.10.0 で **VRChat Dynamics** がワールドで利用可能になりました:
+SDK 3.10.0 made **VRChat Dynamics** available in worlds:
 
-| コンポーネント | 用途 | ユースケース |
+| Component | Purpose | Use Cases |
 |-----------|---------|-----------|
 | **PhysBones** | Physics-based bone animation | Ropes, chains, flags, interactive objects |
 | **Contacts** | Collision detection system | Buttons, triggers, touch interaction |
 | **VRC Constraints** | Constraint system | Rigging, following, look-at |
 
-## Contacts (コンタクト)
+## Contacts
 
-### 基本コンセプト
+### Basic Concept
 
-Contacts は **Sender** と **Receiver** 間の衝突検出システムを提供する:
+Contacts provide a collision detection system between **Senders** and **Receivers**:
 
 - **Contact Sender**: Emits contact signals (like a finger or projectile)
 - **Contact Receiver**: Detects contact signals and triggers Udon events
 
-### Contacts のセットアップ
+### Contacts Setup
 
-#### Contact Sender (送信側)
+#### Contact Sender
 
 1. Add `VRC Contact Sender` component to a GameObject
 2. Configure `Radius` (collision size)
@@ -38,7 +38,7 @@ VRC Contact Sender
 └── Shape: Sphere
 ```
 
-#### Contact Receiver (受信側)
+#### Contact Receiver
 
 1. Add `VRC Contact Receiver` component to a GameObject
 2. Add UdonBehaviour to the **same** GameObject
@@ -53,7 +53,7 @@ VRC Contact Receiver
 └── Content Types: ["Finger", "Hand"]
 ```
 
-### Contact イベント
+### Contact Events
 
 ```csharp
 using UdonSharp;
@@ -109,7 +109,7 @@ public class ContactButton : UdonSharpBehaviour
 }
 ```
 
-### ContactEnterInfo 構造体
+### ContactEnterInfo Struct
 
 ```csharp
 public struct ContactEnterInfo
@@ -122,9 +122,9 @@ public struct ContactEnterInfo
 }
 ```
 
-### 動的コンテンツタイプ
+### Dynamic Content Types
 
-> **破壊的変更 (SDK 3.10.1)**: `VRCContactReceiver.UpdateContentTypes()` のシグネチャが `IEnumerable<string>` から **`string[]`** に変更されました。`List<string>` を直接渡していた場合は `.ToArray()` が必要ですが、UdonSharp では `List<T>` が使えないため、以下のように `string[]` を直接渡すのが正しいパターンです。
+> **Breaking Change (SDK 3.10.1)**: The signature of `VRCContactReceiver.UpdateContentTypes()` changed from `IEnumerable<string>` to **`string[]`**. If you were passing `List<string>` directly, you would need `.ToArray()`, but since `List<T>` is not available in UdonSharp, the correct pattern is to pass `string[]` directly as shown below.
 
 ```csharp
 public class DynamicReceiver : UdonSharpBehaviour
@@ -140,7 +140,7 @@ public class DynamicReceiver : UdonSharpBehaviour
     {
         // Only respond to hand contacts
         string[] types = new string[] { "Hand", "Finger" };
-        receiver.UpdateContentTypes(types); // string[] を直接渡す
+        receiver.UpdateContentTypes(types); // Pass string[] directly
     }
 
     public void EnableAll()
@@ -152,7 +152,7 @@ public class DynamicReceiver : UdonSharpBehaviour
 }
 ```
 
-### Udon からの Contact Sender 操作
+### Contact Sender Control from Udon
 
 ```csharp
 public class ProjectileContact : UdonSharpBehaviour
@@ -175,15 +175,15 @@ public class ProjectileContact : UdonSharpBehaviour
 
 ## PhysBones
 
-### 基本コンセプト
+### Basic Concept
 
-PhysBones は物理ベースのボーンアニメーションを提供する:
+PhysBones provide physics-based bone animation:
 
 - Simulate gravity, wind, and inertia on bones
 - Support **grabbing** interaction
 - Can be used for ropes, chains, hair, cloth
 
-### PhysBones のセットアップ
+### PhysBones Setup
 
 1. Add `VRC Phys Bone` component to a root bone
 2. Configure physics parameters
@@ -200,7 +200,7 @@ VRC Phys Bone
 └── Grab Movement: 1.0
 ```
 
-### PhysBone イベント
+### PhysBone Events
 
 ```csharp
 using UdonSharp;
@@ -261,25 +261,25 @@ VRCPlayerApi grabber = physBone.GetGrabbingPlayer();
 Transform[] bones = physBone.GetAffectedTransforms();
 
 // Force release (SDK 3.10.0+)
-physBone.ForceReleaseGrab();  // グラブを強制解除
-physBone.ForceReleasePose();  // ポーズを強制解除（曲げたPhysBoneをリセット）
+physBone.ForceReleaseGrab();  // Force release the grab
+physBone.ForceReleasePose();  // Force release the pose (reset bent PhysBone)
 ```
 
-### PhysBone 依存関係ソート (SDK 3.8.0+)
+### PhysBone Dependency Sorting (SDK 3.8.0+)
 
-SDK 3.8.0 以降、PhysBone コンポーネントは**依存関係に基づいて自動ソート**されます。親子関係を持つ PhysBone チェーンが正しい順序で評価されるため、以前のバージョンで発生していた不安定な挙動が解消されています。
+Since SDK 3.8.0, PhysBone components are **automatically sorted based on dependencies**. PhysBone chains with parent-child relationships are evaluated in the correct order, resolving the unstable behavior seen in previous versions.
 
-### Instantiated PhysBones (注意)
+### Instantiated PhysBones (Caution)
 
-`Instantiate()` で生成されたオブジェクトに含まれる PhysBone は、**ネットワーク同期されない場合があります**。PhysBone を使うオブジェクトはシーンに直接配置するか、VRChat Object Pool を使用してください。
+PhysBones contained in objects created with `Instantiate()` **may not be network-synced**. Place objects that use PhysBones directly in the scene, or use VRChat Object Pool.
 
 ## VRC Constraints
 
-### 基本コンセプト
+### Basic Concept
 
-VRC Constraints は Unity 組み込みの Constraints を VRChat 最適化バージョンに置き換えたもの:
+VRC Constraints replace Unity's built-in Constraints with a VRChat-optimized version:
 
-| Constraint | 用途 |
+| Constraint | Purpose |
 |------------|---------|
 | **Position Constraint** | Follow position of target(s) |
 | **Rotation Constraint** | Follow rotation of target(s) |
@@ -288,7 +288,7 @@ VRC Constraints は Unity 組み込みの Constraints を VRChat 最適化バー
 | **Aim Constraint** | Point at target |
 | **Look At Constraint** | Look at target (optimized for eyes) |
 
-### Constraints のセットアップ
+### Constraints Setup
 
 ```
 VRC Position Constraint
@@ -298,7 +298,7 @@ VRC Position Constraint
 └── At Rest: (0, 0, 0)
 ```
 
-### Udon からの Constraints アクセス
+### Accessing Constraints from Udon
 
 ```csharp
 using UdonSharp;
@@ -328,9 +328,9 @@ public class ConstraintController : UdonSharpBehaviour
 }
 ```
 
-## よくあるパターン
+## Common Patterns
 
-### フィードバック付きインタラクティブボタン
+### Interactive Button with Feedback
 
 ```csharp
 public class PhysicalButton : UdonSharpBehaviour
@@ -403,7 +403,7 @@ public class PhysicalButton : UdonSharpBehaviour
 }
 ```
 
-### つかめるレバー
+### Grabbable Lever
 
 ```csharp
 public class GrabbableLever : UdonSharpBehaviour
@@ -454,7 +454,7 @@ public class GrabbableLever : UdonSharpBehaviour
 }
 ```
 
-### タッチ感応サーフェス
+### Touch-Sensitive Surface
 
 ```csharp
 public class TouchSurface : UdonSharpBehaviour
@@ -493,9 +493,9 @@ public class TouchSurface : UdonSharpBehaviour
 }
 ```
 
-## 重要な注意事項
+## Important Notes
 
-### アバター vs ワールド Contacts
+### Avatar vs World Contacts
 
 ```csharp
 public override void OnContactEnter(ContactEnterInfo info)
@@ -516,16 +516,16 @@ public override void OnContactEnter(ContactEnterInfo info)
 }
 ```
 
-### パフォーマンスに関する考慮事項
+### Performance Considerations
 
-| ヒント | 説明 |
+| Tip | Description |
 |-----|-------------|
 | Limit PhysBones | Each PhysBone chain has CPU cost |
 | Minimize receivers | Only add where needed |
 | Use appropriate radii | Larger = more collision checks |
 | Disable when not needed | Disable components when inactive |
 
-### デバッグ
+### Debugging
 
 ```csharp
 public class DynamicsDebug : UdonSharpBehaviour
@@ -545,7 +545,7 @@ public class DynamicsDebug : UdonSharpBehaviour
 }
 ```
 
-## ベストプラクティス
+## Best Practices
 
 1. **Test with multiple players** - Contacts behave differently with network latency
 2. **Use appropriate content types** - Be specific to avoid unwanted triggers

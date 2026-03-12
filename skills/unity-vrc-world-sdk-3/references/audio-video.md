@@ -1,8 +1,8 @@
-# VRChat オーディオ & ビデオガイド
+# VRChat Audio & Video Guide
 
-オーディオとビデオ設定の完全ガイド。
+Complete guide for audio and video configuration.
 
-## 目次
+## Table of Contents
 
 - [Audio Overview](#audio-overview)
 - [VRC_SpatialAudioSource](#vrc_spatialaudiosource)
@@ -15,22 +15,22 @@
 
 ---
 
-## オーディオ概要
+## Audio Overview
 
-### VRChat のオーディオコンポーネント
+### VRChat Audio Components
 
-| コンポーネント | 目的 | 使用場面 |
-|-----------|---------|-------------|
-| AudioSource | Unity標準オーディオ | 基本的な音再生 |
-| VRC_SpatialAudioSource | VRChat空間オーディオ | 3D定位が必要な音 |
-| VoiceSettings | ボイス設定 | VRC_SceneDescriptor で設定 |
+| Component | Purpose | Use Case |
+|-----------|---------|----------|
+| AudioSource | Unity standard audio | Basic sound playback |
+| VRC_SpatialAudioSource | VRChat spatial audio | Sounds requiring 3D positioning |
+| VoiceSettings | Voice settings | Configured in VRC_SceneDescriptor |
 
-### オーディオシステムアーキテクチャ
+### Audio System Architecture
 
 ```
 [Audio Source]
-├── Unity AudioSource (基本機能)
-└── VRC_SpatialAudioSource (拡張機能)
+├── Unity AudioSource (base functionality)
+└── VRC_SpatialAudioSource (extended functionality)
     ├── Gain control
     ├── Near/Far distance
     ├── Volumetric radius
@@ -41,48 +41,48 @@
 
 ## VRC_SpatialAudioSource
 
-### コンポーネント設定
+### Component Settings
 
-VRC_SpatialAudioSource は Unity AudioSource に追加して使用。
+VRC_SpatialAudioSource is added alongside a Unity AudioSource.
 
-| プロパティ | 型 | 説明 | デフォルト |
+| Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| **Gain** | float (dB) | 音量増減 (-24 ~ +24) | 0 dB |
-| **Near** | float (m) | 減衰開始距離 | 0 m |
-| **Far** | float (m) | 減衰終了距離 (0=無限) | 40 m |
-| **Volumetric Radius** | float (m) | 音源の広がり | 0 m |
-| **Enable Spatialization** | bool | 3D定位有効化 | true |
-| **Use AudioSource Volume Curve** | bool | AudioSource カーブ使用 | false |
+| **Gain** | float (dB) | Volume adjustment (-24 ~ +24) | 0 dB |
+| **Near** | float (m) | Attenuation start distance | 0 m |
+| **Far** | float (m) | Attenuation end distance (0=infinite) | 40 m |
+| **Volumetric Radius** | float (m) | Source spread | 0 m |
+| **Enable Spatialization** | bool | Enable 3D positioning | true |
+| **Use AudioSource Volume Curve** | bool | Use AudioSource curve | false |
 
-### 距離減衰モデル
+### Distance Attenuation Model
 
 ```
-Near = 2m, Far = 10m の場合:
+Near = 2m, Far = 10m example:
 
-距離(m): 0    2    4    6    8    10   12
-音量(%): 100  100  75   50   25   0    0
-         ←Near→←---減衰---→←Far→
+Distance(m): 0    2    4    6    8    10   12
+Volume(%):   100  100  75   50   25   0    0
+             ←Near→←--Attenuation--→←Far→
 
-Near = 減衰開始（100%維持）
-Far = 減衰終了（0%）
+Near = Attenuation start (100% maintained)
+Far = Attenuation end (0%)
 ```
 
 ### Volumetric Radius
 
 ```
-Volumetric Radius = 0 (点音源):
-- リスナーと音源の距離で計算
-- 小さなオブジェクト向け
+Volumetric Radius = 0 (point source):
+- Calculated from listener-to-source distance
+- For small objects
 
-Volumetric Radius > 0 (体積音源):
-- 音源の「表面」からの距離で計算
-- 大きなオブジェクト（滝、群衆など）向け
-- 例: Radius=5m → 半径5mの球体の表面から減衰開始
+Volumetric Radius > 0 (volumetric source):
+- Calculated from distance to the source's "surface"
+- For large objects (waterfalls, crowds, etc.)
+- Example: Radius=5m → attenuation starts from the surface of a 5m sphere
 ```
 
-### 設定例
+### Configuration Examples
 
-#### 環境音 (BGM)
+#### Ambient Sound (BGM)
 
 ```
 AudioSource:
@@ -93,10 +93,10 @@ AudioSource:
 VRC_SpatialAudioSource:
 ├── Gain: 0 dB
 ├── Enable Spatialization: false
-└── (Near/Farは2D時無視)
+└── (Near/Far ignored in 2D mode)
 ```
 
-#### 3D効果音 (足音、ドア)
+#### 3D Sound Effects (footsteps, doors)
 
 ```
 AudioSource:
@@ -112,7 +112,7 @@ VRC_SpatialAudioSource:
 └── Enable Spatialization: true
 ```
 
-#### 広域音源 (滝、群衆)
+#### Wide Area Source (waterfall, crowd)
 
 ```
 AudioSource:
@@ -121,14 +121,14 @@ AudioSource:
 └── Volume: 1.0
 
 VRC_SpatialAudioSource:
-├── Gain: +6 dB (大きめ)
+├── Gain: +6 dB (louder)
 ├── Near: 5 m
 ├── Far: 50 m
 ├── Volumetric Radius: 10 m
 └── Enable Spatialization: true
 ```
 
-### Udon 制御
+### Udon Control
 
 ```csharp
 public class AudioController : UdonSharpBehaviour
@@ -158,29 +158,29 @@ public class AudioController : UdonSharpBehaviour
 
 ---
 
-## ボイス設定
+## Voice Settings
 
-### VRC_SceneDescriptor ボイスプロパティ
+### VRC_SceneDescriptor Voice Properties
 
-| プロパティ | 型 | 説明 | デフォルト |
+| Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| **Voice Falloff Range** | float | ボイス減衰範囲 | - |
-| **Voice Near** | float | ボイス近距離 | - |
-| **Voice Far** | float | ボイス遠距離 | - |
-| **Voice Volume** | float | ボイス音量 | - |
-| **Voice Disable Lowpass** | bool | ローパス無効 | false |
+| **Voice Falloff Range** | float | Voice attenuation range | - |
+| **Voice Near** | float | Voice near distance | - |
+| **Voice Far** | float | Voice far distance | - |
+| **Voice Volume** | float | Voice volume | - |
+| **Voice Disable Lowpass** | bool | Disable lowpass filter | false |
 
 ### Voice Zone (Udon)
 
 ```csharp
-// プレイヤーのボイス設定を変更
+// Modify a player's voice settings
 public class VoiceZone : UdonSharpBehaviour
 {
     public override void OnPlayerTriggerEnter(VRCPlayerApi player)
     {
         if (player.isLocal)
         {
-            // このプレイヤーのボイスが聞こえる範囲を変更
+            // Change the range at which this player's voice is heard
         }
     }
 }
@@ -188,45 +188,45 @@ public class VoiceZone : UdonSharpBehaviour
 
 ---
 
-## ビデオプレイヤー
+## Video Players
 
-### 種類と特徴
+### Types and Features
 
-| 機能 | AVPro | Unity Video Player |
-|---------|-------|-------------------|
-| **ライブストリーム** | ✅ 対応 | ❌ 非対応 |
-| **YouTube/Twitch** | ✅ 対応 | ❌ 非対応 |
-| **ローカルファイル** | ✅ | ✅ |
-| **エディタプレビュー** | ❌ | ✅ |
-| **Quest対応** | ✅ | ✅ |
+| Feature | AVPro | Unity Video Player |
+|---------|-------|--------------------|
+| **Live streaming** | ✅ Supported | ❌ Not supported |
+| **YouTube/Twitch** | ✅ Supported | ❌ Not supported |
+| **Local files** | ✅ | ✅ |
+| **Editor preview** | ❌ | ✅ |
+| **Quest support** | ✅ | ✅ |
 | **HLS/DASH** | ✅ | ❌ |
-| **パフォーマンス** | 良好 | 良好 |
-| **信頼性** | 高 | 中 |
+| **Performance** | Good | Good |
+| **Reliability** | High | Medium |
 
-### 選択ガイド
+### Selection Guide
 
 ```
-AVPro を使用:
-✅ YouTube/Twitch URL を再生したい
-✅ ライブストリームを表示したい
-✅ 高い信頼性が必要
+Use AVPro:
+✅ Want to play YouTube/Twitch URLs
+✅ Want to display live streams
+✅ Need high reliability
 
-Unity Video Player を使用:
-✅ エディタでプレビューしたい
-✅ 単純なローカルファイル再生
-✅ 軽量な実装が必要
+Use Unity Video Player:
+✅ Want editor preview
+✅ Simple local file playback
+✅ Need a lightweight implementation
 ```
 
 ---
 
-## AVPro と Unity Video Player の比較
+## AVPro vs Unity Video Player
 
 ### AVPro Video Player
 
 ```
 [Setup]
-1. VRChat SDK に含まれる VRCAVProVideoPlayer Prefab を使用
-2. または VRC_AVProVideoPlayer コンポーネントを追加
+1. Use the VRCAVProVideoPlayer Prefab included in the VRChat SDK
+2. Or add the VRC_AVProVideoPlayer component
 
 [Features]
 ├── Supported URLs:
@@ -236,70 +236,70 @@ Unity Video Player を使用:
 │   └── Direct video URLs
 │
 ├── Audio:
-│   └── VRC_AVProVideoSpeaker 経由
+│   └── Via VRC_AVProVideoSpeaker
 │
 └── Limitations:
-    ├── エディタでは再生不可
-    └── Quest で一部URLが非対応
+    ├── Cannot play in the editor
+    └── Some URLs not supported on Quest
 ```
 
 ### Unity Video Player
 
 ```
 [Setup]
-1. VRCUnityVideoPlayer Prefab を使用
-2. または VRC_UnityVideoPlayer コンポーネントを追加
+1. Use the VRCUnityVideoPlayer Prefab
+2. Or add the VRC_UnityVideoPlayer component
 
 [Features]
 ├── Supported URLs:
 │   ├── Direct video URLs (.mp4, .webm)
-│   └── ローカルファイル参照
+│   └── Local file references
 │
 ├── Audio:
-│   └── AudioSource 直接接続
+│   └── Direct AudioSource connection
 │
 └── Advantages:
-    ├── エディタでプレビュー可能
-    └── シンプルな設定
+    ├── Preview available in editor
+    └── Simple setup
 ```
 
 ---
 
-## ビデオプレイヤーセットアップ
+## Video Player Setup
 
-### AVPro Video Player セットアップ
+### AVPro Video Player Setup
 
 ```
 [AVPro Video Player Object]
 ├── VRC_AVProVideoPlayer
-│   ├── Auto Play: false (推奨)
+│   ├── Auto Play: false (recommended)
 │   ├── Loop: false
 │   └── Maximum Resolution: 1080
 │
-├── Mesh/Quad (スクリーン)
+├── Mesh/Quad (screen)
 │   └── Material with RenderTexture
 │
 └── VRC_AVProVideoSpeaker
     ├── AudioSource
-    └── VRC_SpatialAudioSource (3D用)
+    └── VRC_SpatialAudioSource (for 3D)
 ```
 
-### Unity Video Player セットアップ
+### Unity Video Player Setup
 
 ```
 [Unity Video Player Object]
 ├── VRC_UnityVideoPlayer
-│   ├── Auto Play: false (推奨)
+│   ├── Auto Play: false (recommended)
 │   └── Loop: false
 │
-├── Mesh/Quad (スクリーン)
+├── Mesh/Quad (screen)
 │   └── Material with RenderTexture
 │
 └── AudioSource
-    └── VRC_SpatialAudioSource (3D用)
+    └── VRC_SpatialAudioSource (for 3D)
 ```
 
-### Udon ビデオ制御
+### Udon Video Control
 
 ```csharp
 using UdonSharp;
@@ -311,7 +311,7 @@ using VRC.SDK3.Video.Components.AVPro;
 public class VideoController : UdonSharpBehaviour
 {
     [SerializeField] private VRCAVProVideoPlayer avProPlayer;
-    // または
+    // Or
     // [SerializeField] private VRCUnityVideoPlayer unityPlayer;
 
     [SerializeField] private VRCUrl defaultUrl;
@@ -320,12 +320,12 @@ public class VideoController : UdonSharpBehaviour
 
     void Start()
     {
-        // 初期化
+        // Initialization
     }
 
     public override void Interact()
     {
-        // トグル再生
+        // Toggle playback
         if (_isPlaying)
         {
             avProPlayer.Stop();
@@ -338,7 +338,7 @@ public class VideoController : UdonSharpBehaviour
         }
     }
 
-    // ビデオイベント
+    // Video events
     public override void OnVideoStart()
     {
         Debug.Log("Video started");
@@ -359,7 +359,7 @@ public class VideoController : UdonSharpBehaviour
 }
 ```
 
-### URL 同期付きビデオプレイヤー
+### URL-Synced Video Player
 
 ```csharp
 using UdonSharp;
@@ -403,101 +403,101 @@ public class SyncedVideoPlayer : UdonSharpBehaviour
 
 ---
 
-## 最適化
+## Optimization
 
-### オーディオ最適化
+### Audio Optimization
 
 ```
-圧縮設定:
+Compression settings:
 
-BGM (長い音声):
+BGM (long audio):
 ├── Load Type: Streaming
 ├── Compression Format: Vorbis
 ├── Quality: 70%
 └── Sample Rate: 44100 Hz
 
-効果音 (短い音声):
+Sound effects (short audio):
 ├── Load Type: Decompress On Load
 ├── Compression Format: Vorbis
 ├── Quality: 50-70%
 └── Preload Audio Data: ✅
 
-環境音 (ループ):
+Ambient sounds (looping):
 ├── Load Type: Compressed In Memory
 ├── Compression Format: Vorbis
 ├── Quality: 50%
 └── Loop: ✅
 ```
 
-### ビデオ最適化
+### Video Optimization
 
 ```
-⚠️ 制限事項:
+⚠️ Limitations:
 
-ワールド内ビデオプレイヤー数:
-├── 推奨: 1-2 つ
-└── 最大: 厳密な制限なし（パフォーマンス依存）
+Video players per world:
+├── Recommended: 1-2
+└── Maximum: No strict limit (performance dependent)
 
-同時再生:
-├── 同時再生は避ける
-└── 必要な場合は低解像度
+Simultaneous playback:
+├── Avoid simultaneous playback
+└── Use low resolution if necessary
 
-解像度設定:
-├── PC: 1080p まで
-├── Quest: 720p 推奨
-└── Maximum Resolution で制限
+Resolution settings:
+├── PC: Up to 1080p
+├── Quest: 720p recommended
+└── Limit with Maximum Resolution
 ```
 
-### メモリに関する考慮事項
+### Memory Considerations
 
 ```
-ビデオプレイヤーのメモリ影響:
+Video player memory impact:
 
-RenderTexture サイズ:
+RenderTexture size:
 ├── 1920x1080: ~8MB
 ├── 1280x720: ~4MB
 └── 854x480: ~2MB
 
-対策:
-□ 必要な解像度のみ使用
-□ 使用しない時は停止
-□ RenderTexture を適切なサイズに
+Countermeasures:
+□ Use only the necessary resolution
+□ Stop when not in use
+□ Size RenderTexture appropriately
 ```
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### オーディオの問題
+### Audio Issues
 
-| 問題 | 原因 | 解決策 |
+| Issue | Cause | Solution |
 |-------|-------|----------|
-| 音が聞こえない | Volume = 0 | Volume 確認 |
-| 音が聞こえない | Spatial Blend 設定ミス | 2D/3D 確認 |
-| 3D定位しない | Enable Spatialization = false | 有効化 |
-| 音が大きすぎ/小さすぎ | Gain 設定 | 調整 |
-| 遠くで聞こえない | Far 設定が小さい | Far を増加 |
+| No sound | Volume = 0 | Check Volume |
+| No sound | Spatial Blend misconfigured | Check 2D/3D |
+| No 3D positioning | Enable Spatialization = false | Enable it |
+| Too loud/quiet | Gain setting | Adjust |
+| Can't hear at distance | Far setting too small | Increase Far |
 
-### ビデオの問題
+### Video Issues
 
-| 問題 | 原因 | 解決策 |
+| Issue | Cause | Solution |
 |-------|-------|----------|
-| 再生されない | URL 非対応 | AVPro + 対応URL |
-| Quest で再生されない | URL 非対応 | 直接URL使用 |
-| 音が出ない | Speaker 未設定 | AVProVideoSpeaker 追加 |
-| 黒画面 | RenderTexture 未接続 | Material 確認 |
-| カクつく | 高解像度 | Maximum Resolution 下げる |
+| Won't play | Unsupported URL | AVPro + supported URL |
+| Won't play on Quest | Unsupported URL | Use direct URL |
+| No audio | Speaker not configured | Add AVProVideoSpeaker |
+| Black screen | RenderTexture not connected | Check Material |
+| Stuttering | High resolution | Lower Maximum Resolution |
 
-### よくあるオーディオコードの問題
+### Common Audio Code Issues
 
 ```csharp
-// ❌ 問題: AudioSource キャッシュなし
+// ❌ Problem: No AudioSource caching
 void PlaySound()
 {
-    GetComponent<AudioSource>().Play(); // 毎回検索
+    GetComponent<AudioSource>().Play(); // Searches every time
 }
 
-// ✅ 解決: キャッシュ使用
+// ✅ Solution: Use caching
 private AudioSource _audioSource;
 
 void Start()
@@ -511,24 +511,24 @@ void PlaySound()
 }
 ```
 
-### デバッグのヒント
+### Debugging Tips
 
 ```csharp
-// オーディオ状態確認
+// Check audio state
 Debug.Log($"Audio playing: {audioSource.isPlaying}");
 Debug.Log($"Volume: {audioSource.volume}");
 Debug.Log($"Spatial Blend: {audioSource.spatialBlend}");
 
-// ビデオ状態確認
+// Check video state
 Debug.Log($"Video ready: {videoPlayer.IsReady}");
 Debug.Log($"Video playing: {videoPlayer.IsPlaying}");
 ```
 
 ---
 
-## クイックリファレンス
+## Quick Reference
 
-### VRC_SpatialAudioSource デフォルト値
+### VRC_SpatialAudioSource Defaults
 
 ```
 Gain: 0 dB (World: +10 dB)
@@ -538,7 +538,7 @@ Volumetric Radius: 0 m
 Enable Spatialization: true
 ```
 
-### ビデオプレイヤーイベント
+### Video Player Events
 
 ```csharp
 public override void OnVideoStart() { }
@@ -548,11 +548,10 @@ public override void OnVideoReady() { }
 public override void OnVideoLoop() { }
 ```
 
-### オーディオ圧縮クイックガイド
+### Audio Compression Quick Guide
 
-| 種類 | Load Type | フォーマット | 品質 |
+| Type | Load Type | Format | Quality |
 |------|-----------|--------|---------|
 | BGM | Streaming | Vorbis | 70% |
 | SFX | Decompress | Vorbis | 50-70% |
 | Ambient | Compressed | Vorbis | 50% |
-

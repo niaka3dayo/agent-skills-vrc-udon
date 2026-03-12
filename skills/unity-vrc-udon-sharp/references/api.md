@@ -1,27 +1,27 @@
-# VRChat API リファレンス (UdonSharp)
+# VRChat API Reference (UdonSharp)
 
-UdonSharp で利用可能な VRChat 固有のクラス、メソッド、型の完全なリファレンス。
+Complete reference of VRChat-specific classes, methods, and types available in UdonSharp.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
+**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
 
 ## VRCPlayerApi
 
-プレイヤー情報とアクション。`Networking.LocalPlayer` またはイベントパラメータから取得。
+Player information and actions. Obtained from `Networking.LocalPlayer` or event parameters.
 
-### プロパティ
+### Properties
 
-| プロパティ | 型 | 説明 |
+| Property | Type | Description |
 |-----------|------|------|
-| `displayName` | `string` | プレイヤーの表示名 |
-| `playerId` | `int` | このインスタンスでのユニークなプレイヤーID |
-| `isLocal` | `bool` | ローカルプレイヤーの場合 true |
-| `isMaster` | `bool` | インスタンスマスターの場合 true |
-| `isInstanceOwner` | `bool` | インスタンスオーナーの場合 true |
-| `isUserInVR` | `bool` | VR を使用中の場合 true |
-| `isSuspended` | `bool` | サスペンド中 (タブアウト) の場合 true |
-| `isGrounded` | `bool` | 地面に接地している場合 true |
+| `displayName` | `string` | Player's display name |
+| `playerId` | `int` | Unique player ID within this instance |
+| `isLocal` | `bool` | True if this is the local player |
+| `isMaster` | `bool` | True if this is the instance master |
+| `isInstanceOwner` | `bool` | True if this is the instance owner |
+| `isUserInVR` | `bool` | True if using VR |
+| `isSuspended` | `bool` | True if suspended (tabbed out) |
+| `isGrounded` | `bool` | True if grounded on the floor |
 
-### 移動メソッド
+### Movement Methods
 
 ```csharp
 // Teleport player
@@ -43,7 +43,7 @@ player.SetGravityStrength(float strength); // Default: 1.0
 player.Immobilize(bool immobile);
 ```
 
-### 位置メソッド
+### Position Methods
 
 ```csharp
 // Get positions
@@ -59,7 +59,7 @@ VRCPlayerApi.TrackingData trackingData = player.GetTrackingData(TrackingDataType
 // trackingData.position, trackingData.rotation
 ```
 
-### ボイスとオーディオ
+### Voice and Audio
 
 ```csharp
 // Voice settings (affects how others hear this player)
@@ -70,7 +70,7 @@ player.SetVoiceVolumetricRadius(float radius); // Default: 0
 player.SetVoiceLowpass(bool enabled);         // Default: true
 ```
 
-### アバターメソッド
+### Avatar Methods
 
 ```csharp
 // Avatar audio parameters
@@ -81,7 +81,7 @@ player.SetAvatarAudioVolumetricRadius(float radius);
 player.SetAvatarAudioForceSpatial(bool force);
 ```
 
-### アバタースケーリングメソッド
+### Avatar Scaling Methods
 
 ```csharp
 // Get current avatar eye height
@@ -103,7 +103,7 @@ player.SetAvatarEyeHeightByMeters(1.6f);
 player.SetAvatarEyeHeightByMultiplier(1.5f); // 1.5x default height
 ```
 
-### ピックアップメソッド
+### Pickup Methods
 
 ```csharp
 // Get pickup in hand
@@ -113,7 +113,7 @@ VRC_Pickup pickup = player.GetPickupInHand(VRC_Pickup.PickupHand hand);
 player.PlayHapticEventInHand(VRC_Pickup.PickupHand hand, float duration, float amplitude, float frequency);
 ```
 
-### プレイヤータグ
+### Player Tags
 
 ```csharp
 // Tags (local only, not synced)
@@ -122,7 +122,7 @@ string value = player.GetPlayerTag(string tagName);
 player.ClearPlayerTags();
 ```
 
-### 有効性チェック
+### Validity Check
 
 ```csharp
 // Always check before using player reference
@@ -132,11 +132,11 @@ if (player != null && player.IsValid())
 }
 ```
 
-## Networking クラス
+## Networking Class
 
-ネットワーク操作用の静的メソッド。
+Static methods for network operations.
 
-### コアメソッド
+### Core Methods
 
 ```csharp
 // Get local player
@@ -155,7 +155,7 @@ bool clogged = Networking.IsClogged;
 Networking.SimulateNetworkLatency(float latency);
 ```
 
-### オーナーシップ
+### Ownership
 
 ```csharp
 // Check ownership
@@ -169,7 +169,7 @@ VRCPlayerApi owner = Networking.GetOwner(GameObject obj);
 Networking.SetOwner(VRCPlayerApi player, GameObject obj);
 ```
 
-### プレイヤー列挙
+### Player Enumeration
 
 ```csharp
 // Get player count
@@ -183,9 +183,9 @@ VRCPlayerApi.GetPlayers(players);
 VRCPlayerApi player = VRCPlayerApi.GetPlayerById(int playerId);
 ```
 
-## NetworkCalling クラス (SDK 3.8.1+)
+## NetworkCalling Class (SDK 3.8.1+)
 
-ネットワークイベントキューの監視と管理。
+Monitoring and management of the network event queue.
 
 ```csharp
 using VRC.SDK3.UdonNetworkCalling;
@@ -203,7 +203,7 @@ int totalQueued = NetworkCalling.GetAllQueuedEvents();
 bool isClogged = Networking.IsClogged;
 ```
 
-### 使用例: レート制限モニタリング
+### Usage Example: Rate Limit Monitoring
 
 ```csharp
 using TMPro;
@@ -249,19 +249,19 @@ public class NetworkMonitor : UdonSharpBehaviour
 
 ## VRC_Pickup
 
-持てるオブジェクト用のピックアップコンポーネント。
+Pickup component for holdable objects.
 
-### プロパティ
+### Properties
 
-| プロパティ | 型 | 説明 |
+| Property | Type | Description |
 |-----------|------|------|
-| `currentPlayer` | `VRCPlayerApi` | 現在持っているプレイヤー (未保持時は null) |
-| `IsHeld` | `bool` | 保持中の場合 true |
-| `currentHand` | `PickupHand` | どちらの手で保持しているか |
-| `pickupable` | `bool` | 拾えるかどうか |
-| `DisallowTheft` | `bool` | 他プレイヤーによる奪取を防止 |
+| `currentPlayer` | `VRCPlayerApi` | Player currently holding (null when not held) |
+| `IsHeld` | `bool` | True if currently held |
+| `currentHand` | `PickupHand` | Which hand is holding it |
+| `pickupable` | `bool` | Whether it can be picked up |
+| `DisallowTheft` | `bool` | Prevent theft by other players |
 
-### メソッド
+### Methods
 
 ```csharp
 VRC_Pickup pickup = (VRC_Pickup)GetComponent(typeof(VRC_Pickup));
@@ -276,16 +276,16 @@ pickup.GenerateHapticEvent(float duration, float amplitude, float frequency);
 
 ## VRCStation
 
-座席/ステーションコンポーネント。
+Seat/station component.
 
-### プロパティ
+### Properties
 
-| プロパティ | 型 | 説明 |
+| Property | Type | Description |
 |-----------|------|------|
-| `seated` | `bool` | 誰かが座っているか |
-| `Occupant` | `VRCPlayerApi` | 現在の着座者 (空席時は null) |
+| `seated` | `bool` | Whether someone is seated |
+| `Occupant` | `VRCPlayerApi` | Current occupant (null when empty) |
 
-### メソッド
+### Methods
 
 ```csharp
 VRCStation station = (VRCStation)GetComponent(typeof(VRCStation));
@@ -297,9 +297,9 @@ station.ExitStation(VRCPlayerApi player);
 
 ## VRCObjectPool
 
-ネットワーク対応オブジェクトのオブジェクトプーリング。
+Object pooling for network-aware objects.
 
-### メソッド
+### Methods
 
 ```csharp
 public VRCObjectPool pool;
@@ -313,9 +313,9 @@ pool.Return(GameObject obj);
 
 ## VRCObjectSync
 
-物理オブジェクトの位置/回転の自動同期。
+Automatic position/rotation sync for physics objects.
 
-### メソッド
+### Methods
 
 ```csharp
 VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
@@ -336,28 +336,28 @@ sync.FlagDiscontinuity();
 
 ## VRCUrl / VRCStringDownloader / VRCImageDownloader
 
-Web Loading API の詳細は `references/web-loading.md` を参照。
+For details on the Web Loading API, see `references/web-loading.md`.
 
-**要点:**
-- `VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this)` — テキスト/JSON ダウンロード
-- `new VRCImageDownloader().DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo)` — 画像ダウンロード
-- レート制限: **5秒に1回** (String/Image 各)
-- 画像解像度上限: **2048 x 2048**
-- Trusted URL: ドメイン許可リスト制限あり
-- メモリ管理: `IVRCImageDownload.Dispose()` で解放必須
+**Key Points:**
+- `VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this)` -- Text/JSON download
+- `new VRCImageDownloader().DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo)` -- Image download
+- Rate limit: **Once every 5 seconds** (for String/Image each)
+- Max image resolution: **2048 x 2048**
+- Trusted URLs: Domain allowlist restrictions apply
+- Memory management: Must release with `IVRCImageDownload.Dispose()`
 
 ```csharp
 // String Loading (VRC.SDK3.StringLoading)
 VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
-// → OnStringLoadSuccess / OnStringLoadError
+// -> OnStringLoadSuccess / OnStringLoadError
 
 // Image Loading (VRC.SDK3.ImageLoading)
 var downloader = new VRCImageDownloader();
 downloader.DownloadImage(imageUrl, material, (IUdonEventReceiver)this);
-// → OnImageLoadSuccess / OnImageLoadError
+// -> OnImageLoadSuccess / OnImageLoadError
 ```
 
-## 列挙型
+## Enumerations
 
 ### NetworkEventTarget
 
@@ -393,11 +393,11 @@ VRC_SceneDescriptor.SpawnOrientation.AlignPlayerWithSpawnPoint
 VRC_SceneDescriptor.SpawnOrientation.AlignRoomWithSpawnPoint
 ```
 
-## 同期変数の型とサイズ
+## Synced Variable Types and Sizes
 
-帯域幅の最適化のために、同期型のサイズを把握する:
+Know the sizes of synced types for bandwidth optimization:
 
-| 型 | サイズ (bytes) | 備考 |
+| Type | Size (bytes) | Notes |
 |------|--------------|-------|
 | `bool` | 1 | |
 | `byte`, `sbyte` | 1 | |
@@ -416,15 +416,15 @@ VRC_SceneDescriptor.SpawnOrientation.AlignRoomWithSpawnPoint
 | `Color32` | 4 | 4 bytes (RGBA) |
 | `VRCUrl` | variable | String-like |
 
-### 帯域幅制限
+### Bandwidth Limits
 
-- **Continuous sync**: UdonBehaviour あたり ~200 bytes
-- **Manual sync**: UdonBehaviour あたり ~282KB
-- **送信合計**: ~11 KB/秒
+- **Continuous sync**: ~200 bytes per UdonBehaviour
+- **Manual sync**: ~282KB per UdonBehaviour
+- **Total transmission**: ~11 KB/sec
 
 ## SerializationResult
 
-デバッグ用に `OnPostSerialization` から返される:
+Returned from `OnPostSerialization` for debugging:
 
 ```csharp
 public override void OnPostSerialization(SerializationResult result)
@@ -433,14 +433,14 @@ public override void OnPostSerialization(SerializationResult result)
 }
 ```
 
-| プロパティ | 型 | 説明 |
+| Property | Type | Description |
 |-----------|------|------|
-| `success` | `bool` | シリアライゼーションが成功したかどうか |
-| `byteCount` | `int` | シリアライズされたバイト数 |
+| `success` | `bool` | Whether serialization succeeded |
+| `byteCount` | `int` | Number of bytes serialized |
 
-## DataList と DataDictionary
+## DataList and DataDictionary
 
-`VRC.SDK3.Data` のジェネリクス風コレクション:
+Generic-like collections from `VRC.SDK3.Data`:
 
 ```csharp
 using VRC.SDK3.Data;
@@ -473,7 +473,7 @@ dict.Remove("key1");
 
 ### DataToken
 
-DataList/DataDictionary で使用される型安全なコンテナ:
+A type-safe container used by DataList/DataDictionary:
 
 ```csharp
 DataToken token = new DataToken("hello");
@@ -492,9 +492,9 @@ bool b = token.Boolean;
 
 ## PlayerData API (SDK 3.7.4+)
 
-セッション間で永続化されるプレイヤーデータのキーバリューストレージ。
+Key-value storage for player data persisted across sessions.
 
-### 静的メソッド
+### Static Methods
 
 ```csharp
 using VRC.SDK3.Persistence;
@@ -518,9 +518,9 @@ PlayerData.SetBool(Networking.LocalPlayer, "tutorialComplete", true);
 PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
 ```
 
-### サポートされる型
+### Supported Types
 
-| メソッド | 型 | サイズ制限 |
+| Method | Type | Size Limit |
 |---------|------|-----------|
 | `SetBool` / `TryGetBool` | `bool` | 1 byte |
 | `SetInt` / `TryGetInt` | `int` | 4 bytes |
@@ -532,15 +532,15 @@ PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
 | `SetQuaternion` / `TryGetQuaternion` | `Quaternion` | 16 bytes |
 | `SetColor` / `TryGetColor` | `Color` | 16 bytes |
 
-### ストレージ制限
+### Storage Limits
 
-| 制限 | 値 |
+| Limit | Value |
 |------|------|
 | PlayerData per player per world | 100 KB |
 | PlayerObject per player per world | 100 KB |
 | Single UdonBehaviour with VRC Enable Persistence | 108 bytes per variable type |
 
-### 使用パターン
+### Usage Pattern
 
 ```csharp
 public class PersistentScore : UdonSharpBehaviour
@@ -552,7 +552,7 @@ public class PersistentScore : UdonSharpBehaviour
     {
         if (!player.isLocal) return;
 
-        // データが読み込まれるのを待ってからアクセス
+        // Wait for data to be loaded before accessing
         if (PlayerData.TryGetInt(player, "highScore", out int saved))
         {
             highScore = saved;
@@ -562,7 +562,7 @@ public class PersistentScore : UdonSharpBehaviour
 
     public void SaveScore(int score)
     {
-        if (!dataLoaded) return; // まだロードされていない
+        if (!dataLoaded) return; // Not loaded yet
 
         if (score > highScore)
         {
@@ -575,7 +575,7 @@ public class PersistentScore : UdonSharpBehaviour
 
 ## VRCCameraSettings API (SDK 3.9.0+)
 
-VRChat カメラ設定の制御。
+Control VRChat camera settings.
 
 ```csharp
 // Get camera settings component
@@ -595,11 +595,11 @@ cameraSettings.backgroundColor = Color.black;
 
 ## VRChat Dynamics API (SDK 3.10.0+)
 
-ワールドでの PhysBones、Contacts、VRC Constraints。
+PhysBones, Contacts, and VRC Constraints in worlds.
 
 ### VRCContactReceiver
 
-Contact Sender からのコンタクトイベントを受信。
+Receives contact events from Contact Senders.
 
 ```csharp
 // Get contact receiver component
@@ -616,7 +616,7 @@ bool allowOthers = receiver.allowOthers; // Allow contacts from other avatars
 
 ### VRCContactSender
 
-レシーバーにコンタクトイベントを送信。
+Sends contact events to receivers.
 
 ```csharp
 VRCContactSender sender = GetComponent<VRCContactSender>();
@@ -628,7 +628,7 @@ string contentType = sender.contentType;
 
 ### VRCPhysBone
 
-ワールドでの物理ベースのボーンシステム。
+Physics-based bone system in worlds.
 
 ```csharp
 VRCPhysBone physBone = GetComponent<VRCPhysBone>();
@@ -641,7 +641,7 @@ VRCPlayerApi grabbingPlayer = physBone.GetGrabbingPlayer();
 Transform[] affectedBones = physBone.GetAffectedTransforms();
 ```
 
-### コンタクトイベント情報構造体
+### Contact Event Info Structs
 
 ```csharp
 // ContactEnterInfo
@@ -673,7 +673,7 @@ public struct ContactExitInfo
 }
 ```
 
-### PhysBone イベント情報構造体
+### PhysBone Event Info Structs
 
 ```csharp
 // PhysBoneGrabInfo
@@ -691,7 +691,7 @@ public struct PhysBoneReleaseInfo
 }
 ```
 
-### 使用例: Contacts によるインタラクティブボタン
+### Usage Example: Interactive Button with Contacts
 
 ```csharp
 public class ContactButton : UdonSharpBehaviour

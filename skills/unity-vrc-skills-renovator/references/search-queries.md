@@ -1,67 +1,67 @@
-# 効果的な検索クエリ集
+# Effective Search Query Collection
 
-VRChat SDK (UdonSharp + World SDK) の最新情報を収集するための検索クエリ集。
+Search query collection for gathering the latest VRChat SDK (UdonSharp + World SDK) information.
 
-## 基本検索（毎回実行）
+## Basic Searches (Run Every Time)
 
-### リリース情報
-
-```
-VRChat SDK {年} new features updates changelog
-```
-例: `VRChat SDK 2025 new features updates changelog`
+### Release Information
 
 ```
-UdonSharp VRChat SDK 3.{バージョン} changes
+VRChat SDK {year} new features updates changelog
 ```
-例: `UdonSharp VRChat SDK 3.11 changes`
+Example: `VRChat SDK 2025 new features updates changelog`
 
 ```
-VRChat Worlds SDK {年} UdonSharp
+UdonSharp VRChat SDK 3.{version} changes
 ```
-例: `VRChat Worlds SDK 2025 UdonSharp`
+Example: `UdonSharp VRChat SDK 3.11 changes`
 
-### バージョン固有
+```
+VRChat Worlds SDK {year} UdonSharp
+```
+Example: `VRChat Worlds SDK 2025 UdonSharp`
+
+### Version-Specific
 
 ```
 VRChat SDK Release 3.{major}.{minor}
 ```
-例: `VRChat SDK Release 3.10.0`
+Example: `VRChat SDK Release 3.10.0`
 
-## World SDK コンポーネント検索
+## World SDK Component Searches
 
-### コンポーネント変更
+### Component Changes
 
 ```
-VRChat World SDK components new features {年}
+VRChat World SDK components new features {year}
 VRChat SDK VRC_SceneDescriptor new settings
 VRChat SDK VRC_Pickup VRC_Station changes
 ```
 
-### ワールド最適化
+### World Optimization
 
 ```
-VRChat world optimization guidelines {年}
+VRChat world optimization guidelines {year}
 VRChat SDK performance limits draw calls
 ```
 
-### ライティング・オーディオ
+### Lighting & Audio
 
 ```
-VRChat world lighting baked lightmap {年}
+VRChat world lighting baked lightmap {year}
 VRChat SDK audio video player changes
 ```
 
-### レイヤー・コリジョン
+### Layers & Collision
 
 ```
 VRChat world layer collision matrix changes
-VRChat SDK new layers {年}
+VRChat SDK new layers {year}
 ```
 
-## UdonSharp 機能別検索
+## UdonSharp Feature-Specific Searches
 
-### ネットワーキング
+### Networking
 
 ```
 VRChat SDK NetworkCallable parameters UdonSharp
@@ -69,7 +69,7 @@ VRChat SDK SendCustomNetworkEvent parameters
 VRChat Udon network events with parameters
 ```
 
-### 永続化
+### Persistence
 
 ```
 VRChat SDK persistence PlayerData world data
@@ -77,7 +77,7 @@ VRChat PlayerObject PlayerData difference
 VRChat OnPlayerRestored event
 ```
 
-### Dynamics（PhysBones/Contacts）
+### Dynamics (PhysBones/Contacts)
 
 ```
 VRChat SDK PhysBones Contacts Udon API worlds
@@ -85,100 +85,100 @@ VRChat SDK 3.10 dynamics worlds
 VRChat OnContactEnter OnPhysBoneGrab
 ```
 
-### 新しいSystem名前空間
+### New System Namespaces
 
 ```
 VRChat SDK System.Random StringBuilder RegularExpressions Udon
 VRChat Udon new namespaces exposed
 ```
 
-### GetComponent/ジェネリック
+### GetComponent / Generics
 
 ```
 VRChat SDK GetComponent UdonSharpBehaviour inheritance generic
 UdonSharp GetComponent fix generic
 ```
 
-## 日本語検索（補足）
+## Japanese Searches (Supplementary)
 
 ```
-VRChat SDK 最新 変更点
-UdonSharp 新機能 {年}
-VRChat ワールド開発 SDK更新
+VRChat SDK latest changes
+UdonSharp new features {year}
+VRChat world development SDK update
 ```
 
-## 検索のコツ
+## Search Tips
 
-### 効果的なキーワード
+### Effective Keywords
 
-| 目的 | キーワード例 |
-|------|-----------|
-| リリースノート | "release", "changelog", "what's new" |
-| 新機能 | "new feature", "added", "now supports" |
-| 変更点 | "changed", "updated", "improved" |
-| 修正 | "fixed", "resolved", "bugfix" |
-| 非推奨 | "deprecated", "removed", "breaking change" |
+| Purpose | Example Keywords |
+|---------|-----------------|
+| Release notes | "release", "changelog", "what's new" |
+| New features | "new feature", "added", "now supports" |
+| Changes | "changed", "updated", "improved" |
+| Fixes | "fixed", "resolved", "bugfix" |
+| Deprecations | "deprecated", "removed", "breaking change" |
 
-### 検索順序
+### Search Order
 
-1. **まず公式リリースノート検索**
+1. **First, search official release notes**
    ```
-   VRChat SDK Releases {バージョン}
-   ```
-
-2. **次にUdonSharp固有の変更**
-   ```
-   UdonSharp {バージョン} release
+   VRChat SDK Releases {version}
    ```
 
-3. **機能別の詳細検索**
+2. **Next, UdonSharp-specific changes**
    ```
-   VRChat SDK {機能名} {年}
+   UdonSharp {version} release
    ```
 
-### 並列検索の推奨
+3. **Then, feature-specific detailed searches**
+   ```
+   VRChat SDK {feature name} {year}
+   ```
 
-以下の検索は依存関係がないため、並列実行可能:
+### Parallel Search Recommendations
+
+The following searches have no dependencies and can be run in parallel:
 
 ```
-// 並列実行グループ1（リリース情報）
-- VRChat SDK {年} new features updates changelog
-- UdonSharp VRChat SDK 3.{バージョン} changes
+// Parallel group 1 (release information)
+- VRChat SDK {year} new features updates changelog
+- UdonSharp VRChat SDK 3.{version} changes
 
-// 並列実行グループ2（機能別）
+// Parallel group 2 (feature-specific)
 - VRChat SDK NetworkCallable parameters
 - VRChat SDK persistence PlayerData
 - VRChat SDK PhysBones Contacts worlds
 ```
 
-## 検索結果の評価
+## Evaluating Search Results
 
-### 信頼度の高いソース
+### High-Reliability Sources
 
-| ソース | 信頼度 | 備考 |
-|--------|--------|------|
-| creators.vrchat.com | 最高 | 公式ドキュメント |
-| udonsharp.docs.vrchat.com | 最高 | UdonSharp公式 |
-| feedback.vrchat.com | 高 | 公式フィードバック |
-| github.com/vrchat-community | 高 | 公式GitHub |
-| qiita.com (VRChat タグ) | 中 | 日本語コミュニティ |
-| zenn.dev | 中 | 日本語技術記事 |
+| Source | Reliability | Notes |
+|--------|------------|-------|
+| creators.vrchat.com | Highest | Official documentation |
+| udonsharp.docs.vrchat.com | Highest | UdonSharp official |
+| feedback.vrchat.com | High | Official feedback |
+| github.com/vrchat-community | High | Official GitHub |
+| qiita.com (VRChat tag) | Medium | Japanese community |
+| zenn.dev | Medium | Japanese tech articles |
 
-### 情報の鮮度確認
+### Checking Information Freshness
 
-- 記事の日付を確認
-- 言及されているSDKバージョンを確認
-- 「beta」「preview」の情報は正式リリースを待つ
+- Check the article date
+- Check the SDK version mentioned
+- Wait for official release for "beta"/"preview" information
 
-## WebFetch が使えない場合
+## When WebFetch Is Not Available
 
-VRChat公式サイト（creators.vrchat.com）は403を返すことがあるため:
+The VRChat official site (creators.vrchat.com) may return 403 errors, so:
 
-1. **WebSearchで概要を把握**
-2. **検索結果のスニペットから情報を抽出**
-3. **複数の検索結果を組み合わせて情報を補完**
+1. **Get an overview via WebSearch**
+2. **Extract information from search result snippets**
+3. **Combine multiple search results to supplement information**
 
-代替情報源:
+Alternative sources:
 - GitHub Issues/Discussions
 - VRChat Ask Forum (ask.vrchat.com)
-- Discord（検索不可だが参考）
+- Discord (not searchable, but useful as a reference)

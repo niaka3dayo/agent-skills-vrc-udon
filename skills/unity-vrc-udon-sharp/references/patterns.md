@@ -1,22 +1,22 @@
-# UdonSharp 共通パターン
+# UdonSharp Common Patterns
 
 Ready-to-use code patterns for VRChat world development.
 
-## 初期化パターン
+## Initialization Patterns
 
-VRChatワールドでは、ギミックが**非アクティブ状態で配置**されることが多い（パフォーマンス最適化、条件付き表示など）。`Start()` は GameObjectがアクティブでないと呼ばれないため、初期化処理には注意が必要。
+In VRChat worlds, gimmicks are often **placed in an inactive state** (for performance optimization, conditional display, etc.). Since `Start()` is not called when the GameObject is inactive, initialization requires careful handling.
 
-### 問題: Start() が呼ばれない
+### Problem: Start() Not Called
 
 ```csharp
-// ❌ BAD: 非アクティブ状態で配置されるとStart()が呼ばれない
+// BAD: Start() is not called when placed in an inactive state
 public class BrokenGimmick : UdonSharpBehaviour
 {
     private AudioSource audioSource;
 
     void Start()
     {
-        // GameObjectが非アクティブだと、ここに到達しない！
+        // This is never reached if the GameObject is inactive!
         audioSource = GetComponent<AudioSource>();
     }
 
@@ -27,10 +27,10 @@ public class BrokenGimmick : UdonSharpBehaviour
 }
 ```
 
-### 解決策: 分離された Initialize メソッド
+### Solution: Separate Initialize Method
 
 ```csharp
-// ✅ GOOD: OnEnable + 初期化フラグパターン
+// GOOD: OnEnable + initialization flag pattern
 public class RobustGimmick : UdonSharpBehaviour
 {
     [Header("References")]
@@ -40,13 +40,13 @@ public class RobustGimmick : UdonSharpBehaviour
 
     void OnEnable()
     {
-        // 非アクティブ→アクティブ時に呼ばれる
+        // Called when transitioning from inactive to active
         Initialize();
     }
 
     void Start()
     {
-        // 最初からアクティブな場合はこちらで初期化
+        // Initializes here if active from the start
         Initialize();
     }
 
@@ -55,7 +55,7 @@ public class RobustGimmick : UdonSharpBehaviour
         if (_initialized) return;
         _initialized = true;
 
-        // SerializeFieldで設定されていない場合のフォールバック
+        // Fallback if not set via SerializeField
         if (audioSource == null)
         {
             audioSource = GetComponent<AudioSource>();
@@ -64,7 +64,7 @@ public class RobustGimmick : UdonSharpBehaviour
 
     public void PlaySound()
     {
-        Initialize(); // 外部から先に呼ばれる可能性に備える
+        Initialize(); // Guard against being called externally first
         if (audioSource != null)
         {
             audioSource.Play();
@@ -73,7 +73,7 @@ public class RobustGimmick : UdonSharpBehaviour
 }
 ```
 
-### 完全パターン: 防御的初期化
+### Full Pattern: Defensive Initialization
 
 ```csharp
 public class DefensiveGimmick : UdonSharpBehaviour
@@ -125,7 +125,7 @@ public class DefensiveGimmick : UdonSharpBehaviour
 
     private void ApplyInitialState()
     {
-        // 初期状態を適用（Late Joiner対応にも使える）
+        // Apply initial state (also useful for late joiner support)
     }
 
     // === Public API ===
@@ -149,16 +149,16 @@ public class DefensiveGimmick : UdonSharpBehaviour
 }
 ```
 
-### 各アプローチの使い分け
+### Choosing the Right Approach
 
-| シナリオ | 推奨パターン |
+| Scenario | Recommended pattern |
 |----------|--------------|
-| 常にアクティブなオブジェクト | `Start()` のみでOK |
-| 非アクティブで配置される可能性 | `OnEnable()` + `Initialize()` パターン |
-| 外部から先に呼ばれる可能性 | Public メソッド内でも `Initialize()` 呼び出し |
-| Synced変数との組み合わせ | `OnDeserialization()` でも `Initialize()` 呼び出し |
+| Always-active objects | `Start()` only is fine |
+| May be placed inactive | `OnEnable()` + `Initialize()` pattern |
+| May be called externally before activation | Call `Initialize()` in public methods too |
+| Combined with synced variables | Call `Initialize()` in `OnDeserialization()` too |
 
-### 同期変数との組み合わせ
+### Combined with Synced Variables
 
 ```csharp
 public class SyncedGimmick : UdonSharpBehaviour
@@ -175,7 +175,7 @@ public class SyncedGimmick : UdonSharpBehaviour
         set
         {
             _state = value;
-            Initialize(); // Sync受信時も初期化を保証
+            Initialize(); // Ensure initialization on sync receive
             ApplyState();
         }
     }
@@ -199,7 +199,7 @@ public class SyncedGimmick : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        Initialize(); // Late Joiner対応
+        Initialize(); // Late joiner support
         ApplyState();
     }
 }
@@ -207,9 +207,9 @@ public class SyncedGimmick : UdonSharpBehaviour
 
 ---
 
-## インタラクションパターン
+## Interaction Patterns
 
-### 基本的なボタン
+### Basic Button
 
 ```csharp
 using UdonSharp;
@@ -230,7 +230,7 @@ public class SimpleButton : UdonSharpBehaviour
 }
 ```
 
-### クールダウン付きボタン
+### Button with Cooldown
 
 ```csharp
 public class CooldownButton : UdonSharpBehaviour
@@ -256,7 +256,7 @@ public class CooldownButton : UdonSharpBehaviour
 }
 ```
 
-### トグルスイッチ (同期)
+### Synced Toggle Switch
 
 ```csharp
 public class SyncedSwitch : UdonSharpBehaviour
@@ -296,9 +296,9 @@ public class SyncedSwitch : UdonSharpBehaviour
 }
 ```
 
-## プレイヤー検知
+## Player Detection
 
-### トリガーゾーン
+### Trigger Zone
 
 ```csharp
 public class PlayerTrigger : UdonSharpBehaviour
@@ -342,7 +342,7 @@ public class PlayerTrigger : UdonSharpBehaviour
 }
 ```
 
-### プレイヤーカウンター表示
+### Player Counter Display
 
 ```csharp
 using TMPro;
@@ -375,7 +375,7 @@ public class PlayerCounter : UdonSharpBehaviour
 }
 ```
 
-### 範囲内の全プレイヤー取得
+### Get All Players in Range
 
 ```csharp
 public class ProximityDetector : UdonSharpBehaviour
@@ -427,9 +427,9 @@ public class ProximityDetector : UdonSharpBehaviour
 }
 ```
 
-## タイマーパターン
+## Timer Patterns
 
-### シンプルタイマー
+### Simple Timer
 
 ```csharp
 public class SimpleTimer : UdonSharpBehaviour
@@ -481,7 +481,7 @@ public class SimpleTimer : UdonSharpBehaviour
 }
 ```
 
-### 遅延アクション (コルーチンなし)
+### Delayed Action (Without Coroutines)
 
 ```csharp
 public class DelayedAction : UdonSharpBehaviour
@@ -505,7 +505,7 @@ public class DelayedAction : UdonSharpBehaviour
 }
 ```
 
-### 繰り返しアクション
+### Repeating Action
 
 ```csharp
 public class RepeatingAction : UdonSharpBehaviour
@@ -537,9 +537,9 @@ public class RepeatingAction : UdonSharpBehaviour
 }
 ```
 
-## オーディオパターン
+## Audio Patterns
 
-### シンプルオーディオプレイヤー
+### Simple Audio Player
 
 ```csharp
 public class AudioPlayer : UdonSharpBehaviour
@@ -572,7 +572,7 @@ public class AudioPlayer : UdonSharpBehaviour
 }
 ```
 
-### 同期ミュージックプレイヤー
+### Synced Music Player
 
 ```csharp
 public class SyncedMusicPlayer : UdonSharpBehaviour
@@ -628,9 +628,9 @@ public class SyncedMusicPlayer : UdonSharpBehaviour
 }
 ```
 
-## Pickup パターン
+## Pickup Patterns
 
-### 基本的な Pickup とイベント
+### Basic Pickup with Events
 
 ```csharp
 public class CustomPickup : UdonSharpBehaviour
@@ -663,7 +663,7 @@ public class CustomPickup : UdonSharpBehaviour
 }
 ```
 
-### 投げられるオブジェクト
+### Throwable Object
 
 ```csharp
 public class Throwable : UdonSharpBehaviour
@@ -691,9 +691,9 @@ public class Throwable : UdonSharpBehaviour
 }
 ```
 
-## アニメーションパターン
+## Animation Patterns
 
-### シンプルなアニメーター制御
+### Simple Animator Control
 
 ```csharp
 public class AnimatorController : UdonSharpBehaviour
@@ -717,7 +717,7 @@ public class AnimatorController : UdonSharpBehaviour
 }
 ```
 
-### 同期アニメーション状態
+### Synced Animation State
 
 ```csharp
 public class SyncedAnimator : UdonSharpBehaviour
@@ -747,9 +747,9 @@ public class SyncedAnimator : UdonSharpBehaviour
 }
 ```
 
-## UI パターン
+## UI Patterns
 
-### ボタン配列ハンドラー
+### Button Array Handler
 
 ```csharp
 public class ButtonHandler : UdonSharpBehaviour
@@ -767,7 +767,7 @@ public class ButtonHandler : UdonSharpBehaviour
 }
 ```
 
-### スライダー値表示
+### Slider Value Display
 
 ```csharp
 using UnityEngine.UI;
@@ -785,9 +785,9 @@ public class SliderDisplay : UdonSharpBehaviour
 }
 ```
 
-## ユーティリティパターン
+## Utility Patterns
 
-### オブジェクトプーリング (シンプル)
+### Simple Object Pooling
 
 ```csharp
 public class SimplePool : UdonSharpBehaviour
@@ -825,7 +825,7 @@ public class SimplePool : UdonSharpBehaviour
 }
 ```
 
-### 配列ヘルパー
+### Array Helpers
 
 ```csharp
 public class ArrayHelpers : UdonSharpBehaviour
@@ -863,9 +863,9 @@ public class ArrayHelpers : UdonSharpBehaviour
 }
 ```
 
-## テレポーテーション
+## Teleportation
 
-### シンプルテレポーター
+### Simple Teleporter
 
 ```csharp
 public class Teleporter : UdonSharpBehaviour
@@ -886,7 +886,7 @@ public class Teleporter : UdonSharpBehaviour
 }
 ```
 
-### マルチ目的地テレポーター
+### Multi-Destination Teleporter
 
 ```csharp
 public class MultiTeleporter : UdonSharpBehaviour
@@ -911,9 +911,9 @@ public class MultiTeleporter : UdonSharpBehaviour
 }
 ```
 
-## パフォーマンスパターン
+## Performance Patterns
 
-### クラス間呼び出しのオーバーヘッド
+### Cross-Class Call Overhead
 
 In Udon, calling methods on other UdonBehaviours has significant overhead (~1.5x slower than same-class calls). This creates a dilemma:
 
@@ -922,7 +922,7 @@ In Udon, calling methods on other UdonBehaviours has significant overhead (~1.5x
 
 Two patterns help resolve this: **Partial Classes** and **Update Handler Pattern**.
 
-### Partial クラスパターン
+### Partial Class Pattern
 
 Split a large class across multiple files while maintaining single-class performance:
 
@@ -1052,7 +1052,7 @@ public partial class MyGimmick
 | Partial-class method (different file) | 0.68 ms |
 | Other-class method | 1.04 ms |
 
-### Update ハンドラーパターン
+### Update Handler Pattern
 
 Separate `Update()` into a dedicated component that can be enabled/disabled:
 
@@ -1066,7 +1066,7 @@ public class GimmickManager : UdonSharpBehaviour
 {
     [Header("References")]
     [SerializeField] private GimmickUpdateHandler updateHandler;
-    
+
     [Header("Settings")]
     [SerializeField] private float processingDuration = 5.0f;
 
@@ -1090,7 +1090,7 @@ public class GimmickManager : UdonSharpBehaviour
     public void StartProcessing()
     {
         isProcessing = true;
-        
+
         if (updateHandler != null)
         {
             updateHandler.enabled = true;
@@ -1103,7 +1103,7 @@ public class GimmickManager : UdonSharpBehaviour
     public void StopProcessing()
     {
         isProcessing = false;
-        
+
         if (updateHandler != null)
         {
             updateHandler.enabled = false;
@@ -1159,7 +1159,7 @@ With 100 inactive gimmicks in a world:
 
 Reference template: `assets/templates/UpdateHandler.cs`
 
-### 両パターンの組み合わせ
+### Combining Both Patterns
 
 For complex gimmicks, combine Partial Class and Update Handler:
 
@@ -1187,7 +1187,7 @@ public partial class ComplexGimmick
 public class ComplexGimmickUpdateHandler : UdonSharpBehaviour
 {
     [SerializeField] private ComplexGimmick manager;
-    
+
     void Update()
     {
         // Heavy per-frame processing
@@ -1201,9 +1201,9 @@ This gives you:
 - Best possible performance for both active and inactive states
 ```
 
-## NetworkCallable パターン (SDK 3.8.1+)
+## NetworkCallable Patterns (SDK 3.8.1+)
 
-### 基本的なパラメータ付き RPC
+### Basic Parameterized RPC
 
 ```csharp
 using UdonSharp;
@@ -1236,7 +1236,7 @@ public class NetworkCallableBasic : UdonSharpBehaviour
 }
 ```
 
-### NetworkCallable によるダメージシステム
+### Damage System with NetworkCallable
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -1300,7 +1300,7 @@ public class DamageReceiver : UdonSharpBehaviour
 }
 ```
 
-### チャットシステム
+### Chat System
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
@@ -1350,9 +1350,9 @@ public class ChatSystem : UdonSharpBehaviour
 }
 ```
 
-## Persistence パターン (SDK 3.7.4+)
+## Persistence Patterns (SDK 3.7.4+)
 
-### 設定マネージャー
+### Settings Manager
 
 ```csharp
 using UdonSharp;
@@ -1409,7 +1409,7 @@ public class SettingsManager : UdonSharpBehaviour
 }
 ```
 
-### アンロックシステム
+### Unlock System
 
 ```csharp
 public class UnlockSystem : UdonSharpBehaviour
@@ -1459,9 +1459,9 @@ public class UnlockSystem : UdonSharpBehaviour
 }
 ```
 
-## Dynamics パターン (SDK 3.10.0+)
+## Dynamics Patterns (SDK 3.10.0+)
 
-### インタラクティブボタン
+### Interactive Button
 
 ```csharp
 public class ContactButton : UdonSharpBehaviour
@@ -1530,7 +1530,7 @@ public class ContactButton : UdonSharpBehaviour
 }
 ```
 
-### タッチピアノ
+### Touch Piano
 
 ```csharp
 public class TouchPiano : UdonSharpBehaviour
@@ -1563,7 +1563,7 @@ public class TouchPiano : UdonSharpBehaviour
 }
 ```
 
-### 掴めるロープ (物理演算)
+### Grabbable Rope (Physics)
 
 ```csharp
 public class GrabbableRope : UdonSharpBehaviour
@@ -1605,48 +1605,48 @@ public class GrabbableRope : UdonSharpBehaviour
 }
 ```
 
-## 同期ゲーム状態管理
+## Synced Game State Management
 
-### 履歴/Undo の同期パターン
+### History/Undo Sync Pattern
 
-ゲームで Undo 機能を実装する場合、**履歴は synced 変数として全員で共有**する。
-初期状態 = 履歴の 0 番目として保存し、リセット時は履歴 0 に戻す（別変数で初期状態を二重管理しない）。
+When implementing undo functionality in a game, **history is shared among all players as synced variables**.
+The initial state is saved as history entry 0, and resetting returns to history 0 (no separate variable for initial state).
 
-**注意点:**
-- **1回の論理操作 = 1回の履歴保存** (送信側と受信側で2回保存しない)
-- 操作**前**ではなく操作**後**の状態を保存
-- 履歴保存は Owner 側の操作処理メソッド内でのみ行う
+**Important notes:**
+- **1 logical operation = 1 history save** (do not save twice on both sender and receiver)
+- Save the state **after** the operation, not before
+- History saving is done only within the owner's operation processing method
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class UndoableGameManager : UdonSharpBehaviour
 {
-    // --- 同期データ ---
-    [UdonSynced] private byte[] currentState;     // 現在のゲーム状態
-    [UdonSynced] private byte[] stateHistory;     // 全履歴 (フラット配列)
-    [UdonSynced] private int historyCount;        // 保存済み履歴数
-    private int stateSize;                        // 1状態あたりのサイズ
+    // --- Synced data ---
+    [UdonSynced] private byte[] currentState;     // Current game state
+    [UdonSynced] private byte[] stateHistory;     // All history (flat array)
+    [UdonSynced] private int historyCount;        // Number of saved history entries
+    private int stateSize;                        // Size per state
 
     void Start()
     {
-        stateSize = 40; // 例: ボトル40本分
+        stateSize = 40; // Example: 40 bottles
         currentState = new byte[stateSize];
-        stateHistory = new byte[stateSize * 100]; // 最大100手
+        stateHistory = new byte[stateSize * 100]; // Max 100 moves
         InitializeGame();
-        SaveStateToHistory(); // 初期状態 = 履歴[0]
+        SaveStateToHistory(); // Initial state = history[0]
     }
 
-    // --- Owner のみ: 操作処理 ---
+    // --- Owner only: process operations ---
     [NetworkCallable]
     public void OwnerProcessMove(int from, int to, int playerId)
     {
-        // バリデーション省略
+        // Validation omitted
         ExecuteMove(from, to);
-        SaveStateToHistory(); // 操作後に1回だけ保存
+        SaveStateToHistory(); // Save once after the operation
         RequestSerialization();
     }
 
-    // --- 履歴管理 ---
+    // --- History management ---
     private void SaveStateToHistory()
     {
         int offset = historyCount * stateSize;
@@ -1662,7 +1662,7 @@ public class UndoableGameManager : UdonSharpBehaviour
     [NetworkCallable]
     public void OwnerUndo()
     {
-        if (historyCount <= 1) return; // 初期状態より前には戻れない
+        if (historyCount <= 1) return; // Cannot go before initial state
         historyCount--;
         int offset = (historyCount - 1) * stateSize;
         System.Array.Copy(stateHistory, offset, currentState, 0, stateSize);
@@ -1677,30 +1677,30 @@ public class UndoableGameManager : UdonSharpBehaviour
     [NetworkCallable]
     public void OwnerReset()
     {
-        // 履歴[0] = 初期状態に戻す (別変数で初期状態を保持しない)
+        // Return to history[0] = initial state (no separate variable for initial state)
         System.Array.Copy(stateHistory, 0, currentState, 0, stateSize);
         historyCount = 1;
         RequestSerialization();
     }
 
-    // --- 全クライアント: 表示更新 ---
+    // --- All clients: update display ---
     public override void OnDeserialization()
     {
-        // OnDeserialization で履歴を追加しない！(二重保存になる)
+        // Do NOT add to history in OnDeserialization! (causes double-saving)
         UpdateDisplay();
     }
 
-    private void InitializeGame() { /* currentState を初期化 */ }
-    private void ExecuteMove(int from, int to) { /* currentState を変更 */ }
-    private void UpdateDisplay() { /* currentState を UI に反映 */ }
+    private void InitializeGame() { /* Initialize currentState */ }
+    private void ExecuteMove(int from, int to) { /* Modify currentState */ }
+    private void UpdateDisplay() { /* Reflect currentState in UI */ }
 }
 ```
 
-**よくある間違い:**
+**Common mistakes:**
 
-| 間違い | 問題 | 正しい方法 |
+| Mistake | Problem | Correct approach |
 |--------|------|-----------|
-| OnDeserialization で履歴保存 | 送信側+受信側で2重保存 | Owner の操作メソッド内でのみ保存 |
-| 初期状態を別変数で管理 | リセット時に不整合 | 履歴[0] = 初期状態 |
-| 操作前の状態を保存 | Undo で1つ前でなく2つ前に戻る | 操作後の状態を保存 |
-| 履歴を synced にしない | Undo 結果がプレイヤー間で不一致 | 履歴は synced 変数で全員共有 |
+| Saving history in OnDeserialization | Double-saving on sender + receiver | Save only in owner's operation method |
+| Managing initial state in a separate variable | Inconsistency on reset | history[0] = initial state |
+| Saving state before the operation | Undo goes back 2 steps instead of 1 | Save state after the operation |
+| Not making history synced | Undo results differ between players | Share history as synced variables |

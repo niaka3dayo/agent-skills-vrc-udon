@@ -21,110 +21,110 @@ metadata:
 
 ## Overview
 
-UdonSharp は C# を Udon Assembly にコンパイルするトランスレータ。標準 C# と大きく異なる制約がある。
+UdonSharp is a translator that compiles C# into Udon Assembly. It has significant constraints that differ from standard C#.
 
-**SDK対応**: 3.7.1 - 3.10.2 (2026年3月時点)
+**SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
 
 ## Rules (Constraints & Networking)
 
-コンパイル制約とネットワーキングルールは **常時ロードされる Rules** を参照:
+Compile constraints and networking rules are defined in **always-loaded Rules**:
 
-| ルールファイル | 内容 |
-|---------------|------|
-| `rules/udonsharp-constraints.md` | ブロック機能、コード生成ルール、属性、同期可能な型 |
-| `rules/udonsharp-networking.md` | オーナーシップ、同期モード、RequestSerialization、NetworkCallable |
-| `rules/udonsharp-sync-selection.md` | 同期パターン選択、データバジェット、最小化原則 |
+| Rule File | Contents |
+|-----------|----------|
+| `rules/udonsharp-constraints.md` | Blocked features, code generation rules, attributes, syncable types |
+| `rules/udonsharp-networking.md` | Ownership, sync modes, RequestSerialization, NetworkCallable |
+| `rules/udonsharp-sync-selection.md` | Sync pattern selection, data budget, minimization principles |
 
-> インストール後、エージェントの rules ディレクトリに配置すると自動ロードされる。
+> After installation, place these in the agent's rules directory for automatic loading.
 
 ## SDK Versions
 
-| SDK バージョン | 主な機能 |
+| SDK Version | Key Features |
 |-------------|--------------|
-| 3.7.1 | `StringBuilder`, `RegularExpressions`, `System.Random` 追加 |
-| 3.7.4 | **Persistence API** (PlayerData/PlayerObject) 追加 |
-| 3.7.6 | マルチプラットフォーム Build & Publish (PC + Android 同時) |
-| 3.8.0 | PhysBone 依存関係ソート、Drone API (VRCDroneInteractable) |
-| 3.8.1 | **`[NetworkCallable]`** 属性、パラメータ付きネットワークイベント、`NetworkEventTarget.Others`/`.Self` |
-| 3.9.0 | Camera Dolly API, Auto Hold ピックアップ簡素化 |
+| 3.7.1 | Added `StringBuilder`, `RegularExpressions`, `System.Random` |
+| 3.7.4 | Added **Persistence API** (PlayerData/PlayerObject) |
+| 3.7.6 | Multi-platform Build & Publish (PC + Android simultaneously) |
+| 3.8.0 | PhysBone dependency sorting, Drone API (VRCDroneInteractable) |
+| 3.8.1 | **`[NetworkCallable]`** attribute, parameterized network events, `NetworkEventTarget.Others`/`.Self` |
+| 3.9.0 | Camera Dolly API, Auto Hold pickup simplification |
 | 3.10.0 | **VRChat Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
-| 3.10.1 | バグ修正・安定性改善 |
-| 3.10.2 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル |
+| 3.10.1 | Bug fixes and stability improvements |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
 
-> **注意**: SDK 3.9.0 未満は **2025年12月2日をもって非推奨**。新規ワールドアップロード不可。
+> **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
 
 ## Web Search
 
 ### When to Search
 
-| シナリオ | アクション |
-|----------|-----------|
-| 新SDKバージョン対応 | 公式ドキュメントで最新 API 確認 |
-| 「できる？」の質問 | 公式ドキュメントで可否確認 |
-| 不明エラー | 公式トラブルシューティング参照 |
-| 新機能の使い方 | 最新コード例を取得 |
+| Scenario | Action |
+|----------|--------|
+| New SDK version support | Check official docs for latest API |
+| "Is this possible?" questions | Verify feasibility in official docs |
+| Unknown errors | Refer to official troubleshooting |
+| New feature usage | Retrieve latest code examples |
 
 ### Search Strategy
 
 ```
-# 公式ドキュメント検索
-WebSearch: "調べたい機能やAPI名 site:creators.vrchat.com"
+# Official documentation search
+WebSearch: "feature or API name site:creators.vrchat.com"
 
-# UdonSharp API リファレンス
-WebSearch: "API名 site:udonsharp.docs.vrchat.com"
+# UdonSharp API reference
+WebSearch: "API name site:udonsharp.docs.vrchat.com"
 
-# エラー調査: VRChat公式フォーラム
-WebSearch: "エラーメッセージ site:ask.vrchat.com"
+# Error investigation: VRChat official forums
+WebSearch: "error message site:ask.vrchat.com"
 
-# エラー調査: Canny (バグ報告/既知の問題)
-WebSearch: "エラーメッセージ site:feedback.vrchat.com"
+# Error investigation: Canny (bug reports / known issues)
+WebSearch: "error message site:feedback.vrchat.com"
 
-# エラー調査: GitHub Issues
-WebSearch: "エラーメッセージ UdonSharp site:github.com"
+# Error investigation: GitHub Issues
+WebSearch: "error message UdonSharp site:github.com"
 ```
 
 ### Official Resources
 
-| リソース | URL | 内容 |
-|----------|-----|------|
-| VRChat Creators | creators.vrchat.com/worlds/udon/ | 公式 Udon / SDK ドキュメント |
-| UdonSharp Docs | udonsharp.docs.vrchat.com | UdonSharp API リファレンス |
-| VRChat Forums | ask.vrchat.com | Q&A、解決策 |
-| VRChat Canny | feedback.vrchat.com | バグ報告、既知の問題 |
-| GitHub | github.com/vrchat-community | サンプル・ライブラリ |
+| Resource | URL | Contents |
+|----------|-----|----------|
+| VRChat Creators | creators.vrchat.com/worlds/udon/ | Official Udon / SDK documentation |
+| UdonSharp Docs | udonsharp.docs.vrchat.com | UdonSharp API reference |
+| VRChat Forums | ask.vrchat.com | Q&A, solutions |
+| VRChat Canny | feedback.vrchat.com | Bug reports, known issues |
+| GitHub | github.com/vrchat-community | Samples and libraries |
 
 ## References
 
-| ファイル | 内容 |
-|------|---------|
-| `constraints.md` | C# 機能の UdonSharp 可否一覧 |
-| `networking.md` | ネットワーキングパターン詳細 (NetworkCallable 含む) |
+| File | Contents |
+|------|----------|
+| `constraints.md` | C# feature availability in UdonSharp |
+| `networking.md` | Networking pattern details (including NetworkCallable) |
 | `persistence.md` | PlayerData/PlayerObject (SDK 3.7.4+) |
 | `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) |
-| `patterns.md` | ボタン/ピックアップ/プレイヤー検知/オブジェクトプール等 |
-| `web-loading.md` | String/Image ダウンロード、VRCJson、Trusted URL |
-| `api.md` | VRCPlayerApi, Networking, enums リファレンス |
-| `events.md` | 全 Udon イベント (OnPlayerRestored, OnContactEnter 含む) |
-| `editor-scripting.md` | エディタスクリプティングとプロキシシステム |
+| `patterns.md` | Buttons, pickups, player detection, object pools, etc. |
+| `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs |
+| `api.md` | VRCPlayerApi, Networking, enums reference |
+| `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) |
+| `editor-scripting.md` | Editor scripting and proxy system |
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) |
-| `troubleshooting.md` | よくあるエラーと解決策 |
+| `troubleshooting.md` | Common errors and solutions |
 
 ## Templates (`assets/templates/`)
 
-| テンプレート | 用途 | パス |
-|-------------|------|------|
-| `BasicInteraction.cs` | インタラクティブオブジェクト | `assets/templates/BasicInteraction.cs` |
-| `SyncedObject.cs` | ネットワーク同期オブジェクト | `assets/templates/SyncedObject.cs` |
-| `PlayerSettings.cs` | プレイヤー移動設定 | `assets/templates/PlayerSettings.cs` |
-| `CustomInspector.cs` | カスタムエディタインスペクター | `assets/templates/CustomInspector.cs` |
+| Template | Purpose | Path |
+|----------|---------|------|
+| `BasicInteraction.cs` | Interactive object | `assets/templates/BasicInteraction.cs` |
+| `SyncedObject.cs` | Network-synced object | `assets/templates/SyncedObject.cs` |
+| `PlayerSettings.cs` | Player movement settings | `assets/templates/PlayerSettings.cs` |
+| `CustomInspector.cs` | Custom editor inspector | `assets/templates/CustomInspector.cs` |
 
 ## Hooks
 
-| フック | プラットフォーム | 用途 |
-|--------|-----------------|------|
-| `validate-udonsharp.ps1` | Windows (PowerShell) | PostToolUse 制約バリデーション |
-| `validate-udonsharp.sh` | Linux/macOS (Bash) | PostToolUse 制約バリデーション |
+| Hook | Platform | Purpose |
+|------|----------|---------|
+| `validate-udonsharp.ps1` | Windows (PowerShell) | PostToolUse constraint validation |
+| `validate-udonsharp.sh` | Linux/macOS (Bash) | PostToolUse constraint validation |
 
 ## Quick Reference
 
-- `CHEATSHEET.md` - 1ページクイックリファレンス
+- `CHEATSHEET.md` - One-page quick reference

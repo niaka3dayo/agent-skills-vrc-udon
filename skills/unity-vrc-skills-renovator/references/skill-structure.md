@@ -1,155 +1,155 @@
-# VRCスキルの構造テンプレート
+# VRC Skill Structure Template
 
-更新対象スキルのファイル構造と各ファイルの役割。
+File structure and role of each file in the target skills.
 
-> **パス表記について**: 本ドキュメント内の `skills/` はリポジトリルートの `skills/` ディレクトリを指す。
-> `rules/` は `skills/unity-vrc-udon-sharp/rules/` 配下に統合されている。
-> エージェントからは `.claude/skills/`、`.claude/rules/` (シンボリックリンク) 経由でもアクセス可能。
+> **Path notation**: `skills/` in this document refers to the `skills/` directory at the repository root.
+> `rules/` is consolidated under `skills/unity-vrc-udon-sharp/rules/`.
+> Agents can also access these via symlinks at `.claude/skills/` and `.claude/rules/`.
 
 ## unity-vrc-udon-sharp
 
 ```text
 unity-vrc-udon-sharp/
-├── SKILL.md                    # メイン定義ファイル
-├── CHEATSHEET.md               # 1ページクイックリファレンス
-├── rules/                      # 常時ロードルール (Rules 層)
-│   ├── udonsharp-constraints.md    # ブロック機能、コード生成ルール、属性、同期可能型
-│   ├── udonsharp-networking.md     # オーナーシップ、同期モード、NetworkCallable
-│   └── udonsharp-sync-selection.md # 同期パターン選択、データバジェット、最小化原則
-├── hooks/                      # Enforcement 層 - バリデーションフック
-│   ├── validate-udonsharp.sh   # PostToolUse バリデーションフック (Linux/macOS)
-│   └── validate-udonsharp.ps1  # PostToolUse バリデーションフック (Windows)
-├── assets/                     # Enforcement 層 - テンプレート
+├── SKILL.md                    # Main definition file
+├── CHEATSHEET.md               # One-page quick reference
+├── rules/                      # Auto-loaded rules (Rules layer)
+│   ├── udonsharp-constraints.md    # Blocked features, code generation rules, attributes, syncable types
+│   ├── udonsharp-networking.md     # Ownership, sync modes, NetworkCallable
+│   └── udonsharp-sync-selection.md # Sync pattern selection, data budget, minimization principles
+├── hooks/                      # Enforcement layer - Validation hooks
+│   ├── validate-udonsharp.sh   # PostToolUse validation hook (Linux/macOS)
+│   └── validate-udonsharp.ps1  # PostToolUse validation hook (Windows)
+├── assets/                     # Enforcement layer - Templates
 │   └── templates/
-│       ├── BasicInteraction.cs # 基本インタラクションテンプレート
-│       ├── SyncedObject.cs     # ネットワーク同期テンプレート
-│       ├── PlayerSettings.cs   # プレイヤー設定テンプレート
-│       └── CustomInspector.cs  # カスタムインスペクターテンプレート
-└── references/                 # Knowledge 層 - リファレンスドキュメント
-    ├── constraints.md          # C#機能の制約リスト
-    ├── networking.md           # ネットワーキングガイド
-    ├── events.md               # イベントリファレンス
-    ├── api.md                  # VRChat APIリファレンス
-    ├── patterns.md             # コードパターン集
-    ├── troubleshooting.md      # トラブルシューティング
-    ├── web-loading.md          # String/Image ダウンロード、VRCJson
-    ├── editor-scripting.md     # エディタスクリプティング
-    ├── persistence.md          # 永続化ガイド (SDK 3.7.4+)
-    └── dynamics.md             # Dynamics ガイド (SDK 3.10.0+)
+│       ├── BasicInteraction.cs # Basic interaction template
+│       ├── SyncedObject.cs     # Network sync template
+│       ├── PlayerSettings.cs   # Player settings template
+│       └── CustomInspector.cs  # Custom inspector template
+└── references/                 # Knowledge layer - Reference documents
+    ├── constraints.md          # C# feature constraint list
+    ├── networking.md           # Networking guide
+    ├── events.md               # Event reference
+    ├── api.md                  # VRChat API reference
+    ├── patterns.md             # Code pattern collection
+    ├── troubleshooting.md      # Troubleshooting
+    ├── web-loading.md          # String/Image download, VRCJson
+    ├── editor-scripting.md     # Editor scripting
+    ├── persistence.md          # Persistence guide (SDK 3.7.4+)
+    └── dynamics.md             # Dynamics guide (SDK 3.10.0+)
 ```
 
-### 各ファイルの役割
+### Role of Each File
 
-#### Knowledge 層 (ドキュメント)
+#### Knowledge Layer (Documents)
 
-| ファイル | 目的 | 更新ポイント |
-|----------|------|--------------|
-| SKILL.md | エントリーポイント、SDK対応バージョン | バージョン番号、新機能サマリー |
-| CHEATSHEET.md | クイックリファレンス | 新パターン、新イベント、新エラー |
-| constraints.md | C# 機能の可否リスト | 使えるようになった機能を移動 |
-| networking.md | ネットワーキング詳細 | 新ネットワーク機能、データ制限変更 |
-| events.md | 全イベントリファレンス | 新イベント追加、パラメータ変更 |
-| api.md | VRChat 固有 API 詳細 | 新 API クラス/メソッド |
-| patterns.md | 実用コードパターン | 新機能のパターン |
-| troubleshooting.md | エラーと解決策 | 新機能のトラブルシューティング |
+| File | Purpose | Update Points |
+|------|---------|---------------|
+| SKILL.md | Entry point, SDK version support | Version numbers, new feature summary |
+| CHEATSHEET.md | Quick reference | New patterns, new events, new errors |
+| constraints.md | C# feature availability list | Move newly available features |
+| networking.md | Networking details | New network features, data limit changes |
+| events.md | Full event reference | Add new events, parameter changes |
+| api.md | VRChat-specific API details | New API classes/methods |
+| patterns.md | Practical code patterns | Patterns for new features |
+| troubleshooting.md | Errors and solutions | Troubleshooting for new features |
 
-#### Enforcement 層 (実行される検証・テンプレート)
+#### Enforcement Layer (Executed validation and templates)
 
-| ファイル | 目的 | 更新ポイント |
-|----------|------|--------------|
-| hooks/validate-udonsharp.sh | PostToolUse 自動バリデーション (Linux/macOS) | 制約変更時にルール追加/削除 |
-| hooks/validate-udonsharp.ps1 | PostToolUse 自動バリデーション (Windows) | .sh と同じルールを同期 |
-| assets/templates/*.cs | コード生成の見本テンプレート | 新APIパターン反映、非推奨パターン除去 |
+| File | Purpose | Update Points |
+|------|---------|---------------|
+| hooks/validate-udonsharp.sh | PostToolUse auto-validation (Linux/macOS) | Add/remove rules on constraint changes |
+| hooks/validate-udonsharp.ps1 | PostToolUse auto-validation (Windows) | Sync same rules as .sh |
+| assets/templates/*.cs | Code generation sample templates | Reflect new API patterns, remove deprecated patterns |
 
 ## unity-vrc-world-sdk-3
 
 ```text
 unity-vrc-world-sdk-3/
-├── SKILL.md                    # メイン定義ファイル
-├── CHEATSHEET.md               # 1ページクイックリファレンス
+├── SKILL.md                    # Main definition file
+├── CHEATSHEET.md               # One-page quick reference
 └── references/
-    ├── components.md           # VRCコンポーネント詳細
-    ├── layers.md               # レイヤー・コリジョンマトリックス
-    ├── performance.md          # パフォーマンス最適化
-    ├── lighting.md             # ライティング設定
-    ├── audio-video.md          # オーディオ・ビデオ設定
-    ├── upload.md               # アップロード手順
-    └── troubleshooting.md      # トラブルシューティング
+    ├── components.md           # VRC component details
+    ├── layers.md               # Layer and collision matrix
+    ├── performance.md          # Performance optimization
+    ├── lighting.md             # Lighting settings
+    ├── audio-video.md          # Audio and video settings
+    ├── upload.md               # Upload procedure
+    └── troubleshooting.md      # Troubleshooting
 ```
 
-### 各ファイルの役割
+### Role of Each File
 
-| ファイル | 目的 | 更新ポイント |
-|----------|------|--------------|
-| SKILL.md | エントリーポイント、SDK対応バージョン | バージョン番号、新機能サマリー |
-| CHEATSHEET.md | クイックリファレンス | 新コンポーネント、設定変更 |
-| components.md | VRCコンポーネント詳細 | 新コンポーネント、プロパティ変更 |
-| layers.md | レイヤー・コリジョン | レイヤー変更、コリジョン設定 |
-| performance.md | 最適化ガイド | 新ガイドライン、制限値変更 |
-| lighting.md | ライティング設定 | 新ライティング機能 |
-| audio-video.md | オーディオ・ビデオ | 新機能、設定変更 |
-| upload.md | アップロード手順 | 手順変更、新要件 |
-| troubleshooting.md | 問題解決 | 新エラー→解決策 |
+| File | Purpose | Update Points |
+|------|---------|---------------|
+| SKILL.md | Entry point, SDK version support | Version numbers, new feature summary |
+| CHEATSHEET.md | Quick reference | New components, setting changes |
+| components.md | VRC component details | New components, property changes |
+| layers.md | Layers and collision | Layer changes, collision settings |
+| performance.md | Optimization guide | New guidelines, limit value changes |
+| lighting.md | Lighting settings | New lighting features |
+| audio-video.md | Audio and video | New features, setting changes |
+| upload.md | Upload procedure | Procedure changes, new requirements |
+| troubleshooting.md | Problem solving | New error → solution entries |
 
-## 常時ロードルール (Rules 層)
+## Auto-Loaded Rules (Rules Layer)
 
-常時コンテキストにロードされるルールファイルは `unity-vrc-udon-sharp/rules/` に配置されている。
-`.claude/rules/`、`.agents/rules/` 等のシンボリックリンク経由で会話開始時に自動ロードされる。
-スキル更新時はこれらも必ず同期すること。
+Auto-loaded rule files that are loaded into context are placed in `unity-vrc-udon-sharp/rules/`.
+They are automatically loaded at conversation start via symlinks at `.claude/rules/`, `.agents/rules/`, etc.
+Always sync these when updating skills.
 
-| ファイル | 目的 | 更新ポイント |
-|----------|------|--------------|
-| udonsharp-constraints.md | コンパイル制約の常時参照 | ブロック機能の追加/解除、新属性 |
-| udonsharp-networking.md | ネットワーキング基本ルール | 新同期モード、制限値変更 |
-| udonsharp-sync-selection.md | 同期パターン判断基準 | データバジェット変更、新パターン |
+| File | Purpose | Update Points |
+|------|---------|---------------|
+| udonsharp-constraints.md | Compilation constraint reference (always loaded) | Blocked feature additions/removals, new attributes |
+| udonsharp-networking.md | Networking basic rules | New sync modes, limit value changes |
+| udonsharp-sync-selection.md | Sync pattern decision criteria | Data budget changes, new patterns |
 
-### 3層の整合性ルール
+### 3-Layer Consistency Rules
 
-Knowledge / Rules / Enforcement の3層は必ず同じ事実を反映すること:
+Knowledge / Rules / Enforcement must always reflect the same facts:
 
-| 変更例 | Knowledge 層 | Rules 層 | Enforcement 層 |
-|--------|:---:|:---:|:---:|
-| 機能がブロック解除 | constraints.md 更新 | udonsharp-constraints.md 更新 | フックからルール削除 |
-| 新しい制約追加 | constraints.md 追加 | udonsharp-constraints.md 追加 | フックにルール追加 |
-| 新 API パターン | patterns.md 追加 | (該当あれば更新) | テンプレート追加/更新 |
-| データ制限値変更 | networking.md 更新 | udonsharp-sync-selection.md 更新 | フックの閾値更新 |
+| Change Example | Knowledge Layer | Rules Layer | Enforcement Layer |
+|---------------|:---:|:---:|:---:|
+| Feature unblocked | Update constraints.md | Update udonsharp-constraints.md | Remove rule from hooks |
+| New constraint added | Add to constraints.md | Add to udonsharp-constraints.md | Add rule to hooks |
+| New API pattern | Add to patterns.md | (Update if applicable) | Add/update template |
+| Data limit value changed | Update networking.md | Update udonsharp-sync-selection.md | Update hook threshold |
 
-## 共通ルール
+## Common Rules
 
-### バージョン表記の統一
+### Unified Version Notation
 
-各ファイルの冒頭に:
+At the beginning of each file:
 
 ```markdown
-**対応SDKバージョン**: 3.7.1 - 3.X.X (20XX年X月時点)
+**Supported SDK versions**: 3.7.1 - 3.X.X (as of XXXX-XX)
 ```
 
-SDK固有機能には:
+For SDK-specific features:
 
 ```markdown
-### 機能名 (SDK 3.X.X+)
+### Feature Name (SDK 3.X.X+)
 ```
 
-### 新規ファイル作成の基準
+### Criteria for Creating New Files
 
-以下の場合は対応するスキルの `references/` に新ファイルを作成:
+Create a new file in the corresponding skill's `references/` in the following cases:
 
-1. **大きな新機能カテゴリ** — 例: Persistence (SDK 3.7.4), Dynamics (SDK 3.10.0)
-2. **複数の関連コンポーネント** — 例: PhysBones + Contacts + Constraints → dynamics.md
-3. **独立した設定/概念** — 例: PlayerData vs PlayerObject → persistence.md
+1. **Major new feature category** — e.g., Persistence (SDK 3.7.4), Dynamics (SDK 3.10.0)
+2. **Multiple related components** — e.g., PhysBones + Contacts + Constraints → dynamics.md
+3. **Independent setup/concept** — e.g., PlayerData vs PlayerObject → persistence.md
 
-### ファイル間の相互参照
+### Cross-References Between Files
 
-参照時は相対パスを使用:
+Use relative paths when referencing:
 
 ```markdown
-詳細は `references/networking.md` を参照。
+See `references/networking.md` for details.
 ```
 
-新機能を追加した場合、以下のファイルで言及を追加:
-1. SKILL.md (Resources セクション)
-2. CHEATSHEET.md (関連セクション)
-3. 関連する既存リファレンスファイル
-4. rules/ の該当ファイル (制約・ネットワーキング関連の場合)
-5. hooks/ のバリデーションルール (制約変更の場合、.sh と .ps1 の両方)
-6. assets/templates/ のテンプレート (パターン変更の場合)
+When adding a new feature, add mentions in the following files:
+1. SKILL.md (Resources section)
+2. CHEATSHEET.md (related section)
+3. Related existing reference files
+4. Applicable files in rules/ (for constraint/networking-related changes)
+5. Validation rules in hooks/ (for constraint changes, both .sh and .ps1)
+6. Templates in assets/templates/ (for pattern changes)

@@ -1,8 +1,8 @@
-# VRChat ワールドトラブルシューティングガイド
+# VRChat World Troubleshooting Guide
 
-ワールド開発でよく遭遇する問題と解決策。
+Common problems encountered during world development and their solutions.
 
-## 目次
+## Table of Contents
 
 - [Build & Upload Issues](#build--upload-issues)
 - [Scene Setup Issues](#scene-setup-issues)
@@ -15,413 +15,413 @@
 
 ---
 
-## ビルド & アップロードの問題
+## Build & Upload Issues
 
 ### "Missing VRC_SceneDescriptor"
 
-**症状**: ビルド時に SceneDescriptor がないというエラー
+**Symptom**: Error saying SceneDescriptor is missing during build
 
-**解決策**:
+**Solution**:
 ```
 1. VRChat SDK > Show Control Panel
-2. Builder タブ
-3. "Add VRChat World" または VRCWorld Prefab を追加
-4. シーンに 1 つだけ存在することを確認
+2. Builder tab
+3. "Add VRChat World" or add VRCWorld Prefab
+4. Confirm exactly 1 exists in the scene
 ```
 
 ### "Layer collision matrix needs setup"
 
-**症状**: レイヤー設定が正しくないという警告
+**Symptom**: Warning that layer settings are incorrect
 
-**解決策**:
+**Solution**:
 ```text
 1. VRChat SDK > Show Control Panel
-2. Builder タブ
-3. "Setup Layers for VRChat" をクリック
-4. 自動的にレイヤーとコリジョンマトリックスが設定される
+2. Builder tab
+3. Click "Setup Layers for VRChat"
+4. Layers and collision matrix are automatically configured
 ```
 
-### Upload 後にワールドが見つからない
+### World not found after upload
 
-**症状**: アップロード成功したがワールドが表示されない
+**Symptom**: Upload succeeded but world doesn't appear
 
-**解決策**:
+**Solution**:
 ```
-1. VRChat ウェブサイトにログイン
-2. "My Worlds" を確認
-3. 非公開設定を確認
-4. 数分待つ（反映に時間がかかる場合あり）
-5. VRChat クライアントを再起動
+1. Log in to the VRChat website
+2. Check "My Worlds"
+3. Check privacy settings
+4. Wait a few minutes (may take time to propagate)
+5. Restart the VRChat client
 ```
 
 ### "Build was cancelled"
 
-**症状**: ビルドがキャンセルされた
+**Symptom**: Build was cancelled
 
-**解決策**:
+**Solution**:
 ```
-1. Unity Console でエラーを確認
-2. スクリプトコンパイルエラーを解決
-3. Missing Reference を解決
-4. 再度ビルド
-```
-
----
-
-## シーンセットアップの問題
-
-### プレイヤーがスポーン地点に出現しない
-
-**症状**: 参加時に予期しない場所に出現
-
-**解決策**:
-```
-1. VRC_SceneDescriptor の Spawns 配列を確認
-2. Spawns に有効な Transform が設定されているか確認
-3. Spawn 位置が障害物の中にないか確認
-4. Spawn の Y 座標が Respawn Height より上か確認
-```
-
-### プレイヤーが無限にリスポーンする
-
-**症状**: 参加直後にリスポーンを繰り返す
-
-**解決策**:
-```
-1. Respawn Height を確認
-2. Spawn 位置が Respawn Height より上にあることを確認
-3. Spawn 位置が床の下にないか確認
-4. Respawn Height を十分低く設定 (例: -100)
-```
-
-### Reference Camera が反映されない
-
-**症状**: カメラ設定が適用されない
-
-**解決策**:
-```
-1. Reference Camera の Camera コンポーネントが無効化されているか確認
-2. SceneDescriptor の Reference Camera フィールドに正しく設定
-3. Post Processing の場合、Volume も確認
+1. Check Unity Console for errors
+2. Resolve script compilation errors
+3. Fix Missing References
+4. Build again
 ```
 
 ---
 
-## コンポーネントの問題
+## Scene Setup Issues
 
-### VRC_Pickup が持てない
+### Player doesn't appear at spawn point
 
-**症状**: オブジェクトをインタラクトできない、持てない
+**Symptom**: Appears at an unexpected location when joining
 
-**解決策**:
+**Solution**:
+```
+1. Check the VRC_SceneDescriptor Spawns array
+2. Confirm valid Transforms are set in Spawns
+3. Verify spawn positions aren't inside obstacles
+4. Confirm spawn Y coordinates are above Respawn Height
+```
+
+### Player continuously respawns
+
+**Symptom**: Keeps respawning immediately after joining
+
+**Solution**:
+```
+1. Check Respawn Height
+2. Confirm spawn positions are above Respawn Height
+3. Verify spawn positions aren't below the floor
+4. Set Respawn Height low enough (e.g., -100)
+```
+
+### Reference Camera not taking effect
+
+**Symptom**: Camera settings aren't being applied
+
+**Solution**:
+```
+1. Confirm the Reference Camera's Camera component is disabled
+2. Verify it's correctly assigned to SceneDescriptor's Reference Camera field
+3. For Post Processing, also check the Volume
+```
+
+---
+
+## Component Issues
+
+### Can't grab VRC_Pickup
+
+**Symptom**: Can't interact with or grab the object
+
+**Solution**:
 ```text
-1. Collider が存在するか確認
-2. Rigidbody が存在するか確認
-3. VRC_Pickup の Pickupable が true か確認
-4. レイヤーが正しいか確認 (Pickup layer 推奨)
-5. Collider が有効か確認
+1. Check that a Collider exists
+2. Check that a Rigidbody exists
+3. Confirm VRC_Pickup's Pickupable is true
+4. Verify the layer is correct (Pickup layer recommended)
+5. Confirm the Collider is enabled
 ```
 
-### VRC_Pickup が同期しない
+### VRC_Pickup doesn't sync
 
-**症状**: 持ったオブジェクトが他プレイヤーに見えない
+**Symptom**: Grabbed object not visible to other players
 
-**解決策**:
+**Solution**:
 ```
-1. VRC_ObjectSync コンポーネントを追加
-2. Rigidbody が存在するか確認
-3. Is Kinematic の設定を確認
-```
-
-### VRC_Pickup を離せない
-
-**症状**: 持ったオブジェクトを離せない
-
-**解決策**:
-```
-1. Auto Hold 設定を確認 (SDK 3.9+)
-2. Udon スクリプトで Drop を阻害していないか確認
-3. VRC_Pickup コンポーネントを再追加
+1. Add VRC_ObjectSync component
+2. Confirm a Rigidbody exists
+3. Check Is Kinematic settings
 ```
 
-### VRC_Station に座れない
+### Can't release VRC_Pickup
 
-**症状**: Station をインタラクトできない
+**Symptom**: Can't release a grabbed object
 
-**解決策**:
+**Solution**:
 ```
-1. Collider が存在するか確認
-2. VRC_Station の Disable Station Exit が false か確認
-3. Udon で UseAttachedStation() を呼んでいる場合、
-   そのスクリプトが Station と同じオブジェクトにあるか確認
-```
-
-### VRC_Station から降りられない
-
-**症状**: 座った後に降りられない
-
-**解決策**:
-```
-1. Disable Station Exit が true なら false に
-2. Exit Transform が障害物の中にないか確認
-3. Udon で強制退出を実装
+1. Check Auto Hold settings (SDK 3.9+)
+2. Check if an Udon script is preventing Drop
+3. Re-add the VRC_Pickup component
 ```
 
-### VRC_Mirror が映らない
+### Can't sit in VRC_Station
 
-**症状**: ミラーに何も表示されない
+**Symptom**: Can't interact with the Station
 
-**解決策**:
+**Solution**:
 ```
-1. MirrorReflection レイヤー設定を確認
-2. ミラーが有効か確認
-3. カメラの Near/Far Clip を確認
-4. ミラー解像度を確認
+1. Check that a Collider exists
+2. Confirm VRC_Station's Disable Station Exit is false
+3. If using UseAttachedStation() in Udon,
+   verify the script is on the same object as the Station
 ```
 
-### VRC_ObjectSync がずれる
+### Can't exit VRC_Station
 
-**症状**: 同期オブジェクトの位置が他プレイヤーとずれる
+**Symptom**: Can't exit after sitting
 
-**解決策**:
+**Solution**:
 ```
-1. FlagDiscontinuity() を瞬間移動時に呼ぶ
-2. Allow Collision Ownership Transfer 設定を確認
-3. 頻繁な所有権移転を避ける
+1. If Disable Station Exit is true, set it to false
+2. Verify Exit Transform isn't inside an obstacle
+3. Implement forced exit in Udon
+```
+
+### VRC_Mirror doesn't reflect
+
+**Symptom**: Nothing displays in the mirror
+
+**Solution**:
+```
+1. Check MirrorReflection layer settings
+2. Confirm the mirror is enabled
+3. Check the camera's Near/Far Clip
+4. Check mirror resolution
+```
+
+### VRC_ObjectSync is misaligned
+
+**Symptom**: Synced object position differs between players
+
+**Solution**:
+```
+1. Call FlagDiscontinuity() on teleport
+2. Check Allow Collision Ownership Transfer settings
+3. Avoid frequent ownership transfers
 ```
 
 ---
 
-## レイヤーとコリジョンの問題
+## Layer & Collision Issues
 
-### プレイヤーが壁を通り抜ける
+### Player walks through walls
 
-**症状**: 壁やオブジェクトをすり抜ける
+**Symptom**: Passes through walls or objects
 
-**解決策**:
+**Solution**:
 ```
-1. 壁を Environment レイヤーに設定
-2. Collider が存在するか確認
-3. Collider の Is Trigger が false か確認
-4. Collision Matrix で Player と Environment が衝突するか確認
+1. Set walls to Environment layer
+2. Confirm a Collider exists
+3. Check Collider's Is Trigger is false
+4. Verify Player and Environment collide in Collision Matrix
 ```
 
-### Pickup が床を通り抜ける
+### Pickup falls through floor
 
-**症状**: 落としたオブジェクトが床を通り抜ける
+**Symptom**: Dropped objects fall through the floor
 
-**解決策**:
+**Solution**:
 ```text
-1. Pickup を Pickup レイヤーに設定
-2. 床を Environment レイヤーに設定
-3. Collision Matrix で Pickup と Environment が衝突するか確認
-4. Rigidbody の Collision Detection を Continuous に
+1. Set Pickup to Pickup layer
+2. Set floor to Environment layer
+3. Verify Pickup and Environment collide in Collision Matrix
+4. Set Rigidbody's Collision Detection to Continuous
 ```
 
-### オブジェクトがミラーに映らない
+### Object not visible in mirror
 
-**症状**: 特定のオブジェクトだけミラーに映らない
+**Symptom**: Specific objects don't appear in the mirror
 
-**解決策**:
+**Solution**:
 ```
-1. オブジェクトのレイヤーを確認
-2. MirrorReflection レイヤーとの関係を確認
-3. オブジェクトの Renderer が有効か確認
+1. Check the object's layer
+2. Verify relationship with MirrorReflection layer
+3. Confirm the object's Renderer is enabled
 ```
 
 ---
 
-## パフォーマンスの問題
+## Performance Issues
 
-### FPS が低い
+### Low FPS
 
-**症状**: フレームレートが低い
+**Symptom**: Low frame rate
 
-**解決策**:
+**Solution**:
 ```text
-1. ミラーをデフォルト OFF にする
-2. リアルタイムライトを削減/削除
-3. ライトをベイク
-4. ビデオプレイヤー数を確認 (2つまで)
-5. Draw Call を削減
-6. ポリゴン数を削減
-7. テクスチャ解像度を下げる
+1. Set mirror to default OFF
+2. Reduce/remove realtime lights
+3. Bake lights
+4. Check video player count (max 2)
+5. Reduce Draw Calls
+6. Reduce polygon count
+7. Lower texture resolution
 ```
 
-### ミラーが重い
+### Mirror is slow
 
-**症状**: ミラー有効時に FPS が激減
+**Symptom**: FPS drops drastically when mirror is enabled
 
-**解決策**:
+**Solution**:
 ```
-1. ミラー解像度を下げる
-2. ミラー数を 1 つに制限
-3. デフォルト OFF にして切り替え式に
-4. 距離で自動無効化を実装
+1. Lower mirror resolution
+2. Limit to 1 mirror
+3. Default OFF with toggle
+4. Implement auto-disable by distance
 ```
 
-### ライティングが重い
+### Lighting is slow
 
-**症状**: ライト周辺で FPS が低下
+**Symptom**: FPS drops near lights
 
-**解決策**:
+**Solution**:
 ```
-1. リアルタイムライトを削除
-2. Mixed または Baked に変更
-3. ライトマップをベイク
-4. Light Probes を配置
-5. シャドウ品質を下げる
+1. Remove realtime lights
+2. Change to Mixed or Baked
+3. Bake lightmaps
+4. Place Light Probes
+5. Lower shadow quality
 ```
 
 ---
 
-## ネットワーキングの問題
+## Networking Issues
 
-### オブジェクトの所有権が移転しない
+### Object ownership won't transfer
 
-**症状**: SetOwner が機能しない
+**Symptom**: SetOwner doesn't work
 
-**解決策**:
+**Solution**:
 ```csharp
-// 正しい呼び出し:
+// Correct call:
 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-// VRC_ObjectSync がある場合:
-// Allow Collision Ownership Transfer 設定を確認
+// If VRC_ObjectSync is present:
+// Check Allow Collision Ownership Transfer settings
 ```
 
-### Late Joiner に状態が同期しない
+### State doesn't sync for Late Joiners
 
-**症状**: 後から参加したプレイヤーに状態が反映されない
+**Symptom**: State not reflected for players who join later
 
-**解決策**:
+**Solution**:
 ```csharp
-// OnDeserialization で状態を適用
+// Apply state in OnDeserialization
 public override void OnDeserialization()
 {
     ApplyState();
 }
 
-// VRC_ObjectSync の場合は自動同期
-// Udon 変数の場合は [UdonSynced] 属性を使用
+// VRC_ObjectSync auto-syncs
+// For Udon variables, use [UdonSynced] attribute
 ```
 
 ---
 
-## Quest/Android の問題
+## Quest/Android Issues
 
-### Quest でワールドが表示されない
+### World doesn't display on Quest
 
-**症状**: PC では動くが Quest で動かない
+**Symptom**: Works on PC but not on Quest
 
-**解決策**:
+**Solution**:
 ```text
-1. Android ビルドターゲットで確認
-2. シェーダーを Mobile 対応に変更
-3. Dynamic Bones を削除 (Quest では無効)
-4. Cloth を削除 (Quest では無効)
-5. Post Processing を削除 (Quest では無効)
-6. ポリゴン数を削減 (100K以下推奨)
+1. Verify with Android build target
+2. Change shaders to Mobile-compatible
+3. Remove Dynamic Bones (disabled on Quest)
+4. Remove Cloth (disabled on Quest)
+5. Remove Post Processing (disabled on Quest)
+6. Reduce polygon count (recommended under 100K)
 ```
 
-### Quest でパフォーマンスが悪い
+### Poor performance on Quest
 
-**症状**: Quest で FPS が低い
+**Symptom**: Low FPS on Quest
 
-**解決策**:
+**Solution**:
 ```text
-1. ポリゴン数: 100K 以下
-2. マテリアル数: 25 以下
-3. テクスチャ: 1024x1024 以下
-4. ライト: 完全ベイク
-5. シェーダー: Mobile/VRChat/Lightmapped
-6. 透明度を最小限に
-7. ミラーを削除または極小に
+1. Polygon count: Under 100K
+2. Material count: Under 25
+3. Textures: 1024x1024 or less
+4. Lights: Fully baked
+5. Shaders: Mobile/VRChat/Lightmapped
+6. Minimize transparency
+7. Remove or minimize mirrors
 ```
 
 ---
 
-## 調査手順
+## Investigation Steps
 
-### 未知のエラー調査手順
+### Steps for Investigating Unknown Errors
 
-#### 手順 1: Unity Console 確認
+#### Step 1: Check Unity Console
 
 ```
 Window > General > Console
-- エラー (赤) を優先的に確認
-- 警告 (黄) も確認
-- スタックトレースで発生箇所を特定
+- Prioritize errors (red)
+- Also check warnings (yellow)
+- Identify the source from the stack trace
 ```
 
-#### 手順 2: VRChat SDK バリデーション
+#### Step 2: VRChat SDK Validation
 
 ```
 VRChat SDK > Show Control Panel
-Builder タブ > Validations セクション
-- 自動修正可能な問題はボタンで修正
-- 手動修正が必要な問題は指示に従う
+Builder tab > Validations section
+- Auto-fixable issues have buttons for fixing
+- Follow instructions for manual fixes
 ```
 
-#### 手順 3: ビルドとテスト
+#### Step 3: Build and Test
 
 ```text
 VRChat SDK > Show Control Panel
-Builder タブ > "Build & Test New Build"
-- Number of Clients で複数プレイヤーテスト
-- VRChat 内でデバッグ情報を確認
+Builder tab > "Build & Test New Build"
+- Multi-player test with Number of Clients
+- Check debug information inside VRChat
 ```
 
-#### 手順 4: 公式ドキュメント検索 (WebSearch)
+#### Step 4: Search Official Documentation (WebSearch)
 
 ```
-WebSearch: "エラーメッセージやキーワード site:creators.vrchat.com"
+WebSearch: "error message or keyword site:creators.vrchat.com"
 ```
 
-#### 手順 5: VRChat Forums 検索 (WebSearch)
+#### Step 5: VRChat Forums Search (WebSearch)
 
 ```
 WebSearch:
-  query: "エラーメッセージ site:ask.vrchat.com"
+  query: "error message site:ask.vrchat.com"
   allowed_domains: ["ask.vrchat.com"]
 ```
 
-#### 手順 6: Canny (既知のバグ) 検索
+#### Step 6: Canny (Known Bugs) Search
 
 ```
 WebSearch:
-  query: "問題 site:feedback.vrchat.com"
+  query: "issue site:feedback.vrchat.com"
   allowed_domains: ["feedback.vrchat.com"]
 ```
 
-#### 手順 7: GitHub Issues 検索
+#### Step 7: GitHub Issues Search
 
 ```
 WebSearch:
-  query: "問題 site:github.com/vrchat-community"
+  query: "issue site:github.com/vrchat-community"
   allowed_domains: ["github.com"]
 ```
 
 ---
 
-## クイックリファレンス: エラー → 解決策
+## Quick Reference: Error → Solution
 
-| エラー/問題 | 解決策 |
-|------------|--------|
-| Missing SceneDescriptor | VRCWorld Prefab を追加 |
-| Layer Matrix 警告 | "Setup Layers for VRChat" |
-| Pickup 持てない | Collider + Rigidbody 追加 |
-| Pickup 同期しない | VRC_ObjectSync 追加 |
-| Station 座れない | Collider 追加 |
-| Mirror 映らない | レイヤー確認 |
-| 壁すり抜け | Environment レイヤー |
-| FPS 低い | ミラーOFF、ライトベイク |
-| Quest で動かない | Mobile シェーダー使用 |
-| Late Joiner 同期 | OnDeserialization で適用 |
+| Error/Issue | Solution |
+|-------------|----------|
+| Missing SceneDescriptor | Add VRCWorld Prefab |
+| Layer Matrix warning | "Setup Layers for VRChat" |
+| Can't grab Pickup | Add Collider + Rigidbody |
+| Pickup doesn't sync | Add VRC_ObjectSync |
+| Can't sit in Station | Add Collider |
+| Mirror doesn't reflect | Check layers |
+| Walking through walls | Environment layer |
+| Low FPS | Mirror OFF, bake lights |
+| Doesn't work on Quest | Use Mobile shaders |
+| Late Joiner sync | Apply in OnDeserialization |
 
 ---
 
-## リソース
+## Resources
 
 - [VRChat Creators](https://creators.vrchat.com/worlds/)
 - [VRChat Forums](https://ask.vrchat.com/)

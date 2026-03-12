@@ -1,8 +1,8 @@
-# VRChat ワールドコンポーネント完全リファレンス
+# VRChat World Components Complete Reference
 
-SDK 3.7.1 - 3.10.2 対応の全コンポーネント詳細リファレンス。
+Full component reference for SDK 3.7.1 - 3.10.2.
 
-## 目次
+## Table of Contents
 
 - [VRC_SceneDescriptor](#vrc_scenedescriptor)
 - [VRC_Pickup](#vrc_pickup)
@@ -15,161 +15,161 @@ SDK 3.7.1 - 3.10.2 対応の全コンポーネント詳細リファレンス。
 - [VRC_AvatarPedestal](#vrc_avatarpedestal)
 - [VRC_CameraDolly](#vrc_cameradolly)
 - [VRCCameraSettings API](#vrccamerasettings-api)
-- [許可済み Unity コンポーネント](#許可済み-unity-コンポーネント)
+- [Allowed Unity Components](#allowed-unity-components)
 
 ---
 
 ## VRC_SceneDescriptor
 
-**必須**: すべてのVRChatワールドに1つ必要。
+**Required**: One is needed in every VRChat world.
 
-### 全プロパティ
+### All Properties
 
-| プロパティ | 型 | 説明 | デフォルト |
-|-----------|------|------|-----------|
-| Spawns | Transform[] | スポーン地点配列 | Descriptor位置 |
+| Property | Type | Description | Default |
+|----------|------|-------------|---------|
+| Spawns | Transform[] | Array of spawn points | Descriptor position |
 | Spawn Order | SpawnOrder | Sequential/Random/Demo | Sequential |
-| Respawn Height | float | リスポーンY座標 | -100 |
+| Respawn Height | float | Respawn Y coordinate | -100 |
 | Object Behaviour At Respawn | enum | Respawn/Destroy | Respawn |
-| Reference Camera | Camera | カメラ設定参照 | None |
-| Forbid User Portals | bool | ポータル禁止 | false |
-| Voice Falloff Range | float | ボイス減衰範囲 | - |
-| Interact Passthrough | LayerMask | インタラクト透過 | Nothing |
-| Maximum Capacity | int | 最大人数 | - |
-| Recommended Capacity | int | 推奨人数 | - |
-| Dynamic Materials | Material[] | 動的マテリアル | - |
-| Dynamic Prefabs | GameObject[] | 動的プレハブ | - |
+| Reference Camera | Camera | Camera settings reference | None |
+| Forbid User Portals | bool | Disable portals | false |
+| Voice Falloff Range | float | Voice attenuation range | - |
+| Interact Passthrough | LayerMask | Interact passthrough | Nothing |
+| Maximum Capacity | int | Max player count | - |
+| Recommended Capacity | int | Recommended player count | - |
+| Dynamic Materials | Material[] | Dynamic materials | - |
+| Dynamic Prefabs | GameObject[] | Dynamic prefabs | - |
 
-### Spawn Order 詳細
-
-```csharp
-// Sequential: 順番にスポーン
-// Join順: Player1→Spawn0, Player2→Spawn1, Player3→Spawn2, Player4→Spawn0...
-
-// Random: ランダム選択
-// 毎回異なるスポーン地点
-
-// Demo: 全員同じ場所
-// 全プレイヤーが Spawns[0] に出現
-```
-
-### Reference Camera 設定
+### Spawn Order Details
 
 ```csharp
-// 用途:
-// 1. Near Clip Plane: VR用 0.01m 推奨
-// 2. Far Clip Plane: ワールドサイズに応じて調整
-// 3. Post Processing: Profile適用
-// 4. Background: Skybox または Solid Color
-// 5. Clear Flags: 設定継承
+// Sequential: Spawn in order
+// Join order: Player1→Spawn0, Player2→Spawn1, Player3→Spawn2, Player4→Spawn0...
 
-// 設定手順:
-// 1. Camera を作成
-// 2. 設定を調整
-// 3. Camera コンポーネントを無効化
-// 4. SceneDescriptor の Reference Camera に割り当て
+// Random: Random selection
+// Different spawn point each time
+
+// Demo: All at the same location
+// All players appear at Spawns[0]
 ```
 
-### Capacity の動作
+### Reference Camera Settings
+
+```csharp
+// Usage:
+// 1. Near Clip Plane: 0.01m recommended for VR
+// 2. Far Clip Plane: Adjust based on world size
+// 3. Post Processing: Apply Profile
+// 4. Background: Skybox or Solid Color
+// 5. Clear Flags: Settings are inherited
+
+// Setup steps:
+// 1. Create a Camera
+// 2. Adjust settings
+// 3. Disable the Camera component
+// 4. Assign to SceneDescriptor's Reference Camera
+```
+
+### Capacity Behavior
 
 ```csharp
 // Maximum Capacity:
-// - この人数に達すると新規参加不可
-// - ハードリミット
+// - No new joins once this count is reached
+// - Hard limit
 
 // Recommended Capacity:
-// - この人数に達するとパブリックリストから非表示
-// - ソフトリミット（直接参加は可能）
+// - Hidden from public listings when reached
+// - Soft limit (direct join is still possible)
 
-// 注意: 古いSDKでは Recommended 未設定時、
-// 実際の Max = 指定値 × 2 になるバグあり
+// Note: In older SDKs, when Recommended was not set,
+// the actual Max = specified value × 2 (bug)
 ```
 
 ---
 
 ## VRC_Pickup
 
-オブジェクトをプレイヤーが持てるようにする。
+Allows players to grab objects.
 
-### 必須セットアップ
+### Required Setup
 
 ```
 [Pickup GameObject]
 ├── Collider (Required)
-│   └── IsTrigger = true 推奨
+│   └── IsTrigger = true recommended
 ├── Rigidbody (Required)
 │   ├── Use Gravity = true/false
-│   └── Is Kinematic = false (持つ時)
+│   └── Is Kinematic = false (when held)
 ├── VRC_Pickup
-└── VRC_ObjectSync (ネットワーク同期時)
+└── VRC_ObjectSync (for network sync)
 ```
 
-### 全プロパティ
+### All Properties
 
-| プロパティ | 型 | 説明 | デフォルト |
-|-----------|------|------|-----------|
-| Interaction Text | string | デスクトップでの表示テキスト | - |
-| Use Text | string | VRでの使用テキスト | - |
-| Throw Velocity Boost Min Speed | float | ブースト開始速度 | - |
-| Throw Velocity Boost Scale | float | 投げ加速倍率 | - |
-| Pickupable | bool | 持てるか | true |
+| Property | Type | Description | Default |
+|----------|------|-------------|---------|
+| Interaction Text | string | Text displayed on desktop | - |
+| Use Text | string | Use text in VR | - |
+| Throw Velocity Boost Min Speed | float | Boost start speed | - |
+| Throw Velocity Boost Scale | float | Throw acceleration multiplier | - |
+| Pickupable | bool | Can be grabbed | true |
 | Pickup Orientation | enum | Any/Grip/Gun | Any |
-| Allow Theft | bool | 奪取許可 | true |
-| Exact Grip | Transform | 正確なグリップ位置 | null |
-| Exact Gun | Transform | 正確なガン位置 | null |
-| Proximity | float | 拾得可能距離 | 2.0 |
+| Allow Theft | bool | Allow stealing | true |
+| Exact Grip | Transform | Exact grip position | null |
+| Exact Gun | Transform | Exact gun position | null |
+| Proximity | float | Pickup distance | 2.0 |
 | **Auto Hold** | enum | Yes/No/AutoDetect | No |
 
 ### Auto Hold (SDK 3.9+)
 
 ```csharp
-// v1.0 (旧): AutoDetect / Yes / No
-// v1.1 (新): チェックボックス (Yes/No のみ)
+// v1.0 (old): AutoDetect / Yes / No
+// v1.1 (new): Checkbox (Yes/No only)
 
-// Yes: グリップを離しても持ち続ける
-// No: グリップ中のみ保持
+// Yes: Keeps holding after releasing grip
+// No: Only held while gripping
 
-// AutoDetect (v1.0のみ):
-// オブジェクトサイズから自動判定
+// AutoDetect (v1.0 only):
+// Auto-determines based on object size
 ```
 
 ### Pickup Orientation
 
 ```csharp
-// Any: 持った位置そのまま
-//      小物、ボールなど
+// Any: Held at the grab position
+//      Small items, balls, etc.
 
-// Grip: グリップ位置で持つ
-//       ハンドル、工具など
+// Grip: Held at grip position
+//       Handles, tools, etc.
 
-// Gun: 銃持ちポーズ
-//      銃、ポインターなど
+// Gun: Gun holding pose
+//      Guns, pointers, etc.
 ```
 
-### Udon イベント
+### Udon Events
 
 ```csharp
 public class PickupHandler : UdonSharpBehaviour
 {
-    // 持った時
+    // When grabbed
     public override void OnPickup()
     {
         Debug.Log("Picked up!");
     }
 
-    // 離した時
+    // When released
     public override void OnDrop()
     {
         Debug.Log("Dropped!");
     }
 
-    // トリガー押下 (VR) / 左クリック (Desktop)
+    // Trigger pressed (VR) / Left click (Desktop)
     public override void OnPickupUseDown()
     {
         Debug.Log("Use started!");
     }
 
-    // トリガー解放
+    // Trigger released
     public override void OnPickupUseUp()
     {
         Debug.Log("Use ended!");
@@ -177,185 +177,185 @@ public class PickupHandler : UdonSharpBehaviour
 }
 ```
 
-### ネットワーク同期
+### Network Sync
 
 ```csharp
-// VRC_ObjectSync を追加すると:
-// - 位置・回転が自動同期
-// - 物理状態が同期
-// - 所有権が自動管理
+// When VRC_ObjectSync is added:
+// - Position and rotation are auto-synced
+// - Physics state is synced
+// - Ownership is auto-managed
 
-// 所有権の流れ:
-// 1. 持つ → ローカルプレイヤーが所有者に
-// 2. 離す → 所有権維持
-// 3. 他プレイヤーが持つ → 所有権移転
+// Ownership flow:
+// 1. Grab → Local player becomes owner
+// 2. Release → Ownership maintained
+// 3. Another player grabs → Ownership transfers
 ```
 
 ---
 
 ## VRC_Station
 
-プレイヤーが座れる場所を作成。
+Creates a location where players can sit.
 
-### 必須セットアップ
+### Required Setup
 
 ```
 [Station GameObject]
-├── Collider (Required - Interact用)
+├── Collider (Required - for Interact)
 └── VRC_Station
-    ├── Entry Transform (オプション)
-    └── Exit Transform (オプション)
+    ├── Entry Transform (optional)
+    └── Exit Transform (optional)
 ```
 
-### 全プロパティ
+### All Properties
 
-| プロパティ | 型 | 説明 | デフォルト |
-|-----------|------|------|-----------|
+| Property | Type | Description | Default |
+|----------|------|-------------|---------|
 | Player Mobility | enum | Mobile/Immobilize/ImmobilizeForVehicle | Immobilize |
-| Can Use Station From Station | bool | Station間移動 | true |
-| Animator Controller | AnimatorController | 座りアニメーション | null |
-| Disable Station Exit | bool | 退出禁止 | false |
-| Seated | bool | 座りアニメーション使用 | true |
-| Station Enter Player Location | Transform | 入る位置 | null |
-| Station Exit Player Location | Transform | 出る位置 | null |
-| Controls Object | Transform | 乗り物制御用 | null |
+| Can Use Station From Station | bool | Station-to-station transfer | true |
+| Animator Controller | AnimatorController | Sitting animation | null |
+| Disable Station Exit | bool | Prevent exit | false |
+| Seated | bool | Use seated animation | true |
+| Station Enter Player Location | Transform | Entry position | null |
+| Station Exit Player Location | Transform | Exit position | null |
+| Controls Object | Transform | Vehicle control target | null |
 
 ### Player Mobility
 
 ```csharp
-// Mobile: 自由に動ける
-//         アニメーション付きの立ち位置など
+// Mobile: Free to move
+//         Standing positions with animation, etc.
 
-// Immobilize: 完全固定
-//             椅子、ベンチなど
+// Immobilize: Fully fixed
+//             Chairs, benches, etc.
 
-// ImmobilizeForVehicle: 乗り物用
-//                       プレイヤー視点がStation追従
+// ImmobilizeForVehicle: For vehicles
+//                       Player view follows the Station
 ```
 
-### Udon 制御
+### Udon Control
 
 ```csharp
 public class StationController : UdonSharpBehaviour
 {
-    // プレイヤーを座らせる
+    // Seat the player
     public override void Interact()
     {
         Networking.LocalPlayer.UseAttachedStation();
     }
 
-    // 座った時
+    // When seated
     public override void OnStationEntered(VRCPlayerApi player)
     {
-        Debug.Log($"{player.displayName} が座りました");
+        Debug.Log($"{player.displayName} sat down");
     }
 
-    // 降りた時
+    // When exited
     public override void OnStationExited(VRCPlayerApi player)
     {
-        Debug.Log($"{player.displayName} が降りました");
+        Debug.Log($"{player.displayName} stood up");
     }
 }
 ```
 
-### アバター上の Station ルール
+### Avatar Station Rules
 
 ```
-⚠️ アバター上の Station には追加制限:
-- 最大 6 Station まで
-- Station Descriptor (赤いボックス) はアップロード時に有効必須
-- Entry/Exit は Station から 2m 以内
-- FX レイヤーで有効/無効を制御
+⚠️ Additional restrictions for Stations on avatars:
+- Maximum 6 Stations
+- Station Descriptor (red box) must be enabled at upload time
+- Entry/Exit must be within 2m of the Station
+- Enable/disable controlled via the FX layer
 ```
 
 ---
 
 ## VRC_ObjectSync
 
-Transform と Rigidbody を自動ネットワーク同期。
+Automatically syncs Transform and Rigidbody over the network.
 
-### 全プロパティ
+### All Properties
 
-| プロパティ | 型 | 説明 | デフォルト |
-|-----------|------|------|-----------|
-| Allow Collision Ownership Transfer | bool | 衝突でオーナー移転 | false |
+| Property | Type | Description | Default |
+|----------|------|-------------|---------|
+| Allow Collision Ownership Transfer | bool | Transfer ownership on collision | false |
 
-### Udon メソッド
+### Udon Methods
 
 ```csharp
-// VRC_ObjectSync の取得
+// Get VRC_ObjectSync
 VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
 
-// 初期位置にリセット
+// Reset to initial position
 sync.Respawn();
 
-// 重力設定
+// Gravity setting
 sync.SetGravity(true);
 
-// キネマティック設定
+// Kinematic setting
 sync.SetKinematic(false);
 
-// 瞬間移動時 (補間をスキップ)
+// On teleport (skip interpolation)
 sync.FlagDiscontinuity();
 
-// ネットワーク統計 (デバッグ用)
+// Network statistics (for debugging)
 float updateInterval = sync.UpdateInterval;
 float receiveInterval = sync.ReceiveInterval;
 ```
 
-### 所有権管理
+### Ownership Management
 
 ```csharp
-// 所有者確認
+// Check ownership
 bool isOwner = Networking.IsOwner(gameObject);
 
-// 所有者取得
+// Get owner
 VRCPlayerApi owner = Networking.GetOwner(gameObject);
 
-// 所有権移転
+// Transfer ownership
 Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
-// イベント
+// Event
 public override void OnOwnershipTransferred(VRCPlayerApi player)
 {
-    Debug.Log($"新しい所有者: {player.displayName}");
+    Debug.Log($"New owner: {player.displayName}");
 }
 ```
 
 ### VRC_ObjectSync vs UdonSynced
 
-| 用途 | VRC_ObjectSync | UdonSynced |
-|------|----------------|------------|
-| Transform同期 | ✅ 自動 | ❌ 手動実装 |
-| Rigidbody同期 | ✅ 自動 | ❌ 手動実装 |
-| 状態のみ | ❌ 不要なオーバーヘッド | ✅ 最適 |
-| カスタム補間 | ❌ 固定 | ✅ 自由 |
-| 帯域制御 | ❌ 自動 | ✅ 細かく制御可能 |
+| Use Case | VRC_ObjectSync | UdonSynced |
+|----------|----------------|------------|
+| Transform sync | ✅ Automatic | ❌ Manual implementation |
+| Rigidbody sync | ✅ Automatic | ❌ Manual implementation |
+| State only | ❌ Unnecessary overhead | ✅ Optimal |
+| Custom interpolation | ❌ Fixed | ✅ Flexible |
+| Bandwidth control | ❌ Automatic | ✅ Fine-grained control |
 
 ---
 
 ## VRC_MirrorReflection
 
-ミラー（鏡）を作成。
+Creates a mirror.
 
-### パフォーマンス警告
+### Performance Warning
 
 ```
-⚠️ 重大なパフォーマンス影響:
-- シーン全体を追加レンダリング
-- VR: 両目×2 = 4倍レンダリング
-- 複数ミラー: 指数的に増加
-- 解像度が高いほど負荷増大
+⚠️ Significant performance impact:
+- Renders the entire scene an additional time
+- VR: Both eyes × 2 = 4x rendering
+- Multiple mirrors: Increases exponentially
+- Higher resolution = more overhead
 ```
 
-### ベストプラクティス
+### Best Practices
 
 ```csharp
-// 推奨実装:
-// 1. デフォルトで OFF
-// 2. トグルボタンで有効化
-// 3. 距離で自動無効化
-// 4. 解像度を適切に設定
+// Recommended implementation:
+// 1. Default OFF
+// 2. Toggle button to enable
+// 3. Auto-disable by distance
+// 4. Set appropriate resolution
 
 public class MirrorController : UdonSharpBehaviour
 {
@@ -400,171 +400,171 @@ public class MirrorController : UdonSharpBehaviour
 }
 ```
 
-### シェーダーグローバル変数
+### Shader Global Variables
 
 ```csharp
-// ミラー関連のシェーダー変数 (読み取り専用)
+// Mirror-related shader variables (read-only)
 // _VRChatCameraMode:
-//   0 = 通常レンダリング
-//   1 = VR ハンドヘルドカメラ
-//   2 = Desktop ハンドヘルドカメラ
-//   3 = スクリーンショット
+//   0 = Normal rendering
+//   1 = VR handheld camera
+//   2 = Desktop handheld camera
+//   3 = Screenshot
 
 // _VRChatMirrorMode:
-//   0 = 通常レンダリング
-//   1 = VR ミラー
-//   2 = Desktop ミラー
+//   0 = Normal rendering
+//   1 = VR mirror
+//   2 = Desktop mirror
 
 // _VRChatMirrorCameraPos:
-//   ミラーカメラのワールド座標
+//   Mirror camera world position
 ```
 
 ---
 
 ## VRC_PortalMarker
 
-他のワールドへのポータルを作成。
+Creates a portal to another world.
 
-### セットアップ
+### Setup
 
 ```
-[Portal GameObject] ← シーン階層のルートに配置
+[Portal GameObject] ← Place at the root of the scene hierarchy
 ├── VRC_PortalMarker
 │   ├── World ID: wrld_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-│   └── Custom Portal Prefab (オプション)
-└── Visual (オプション)
+│   └── Custom Portal Prefab (optional)
+└── Visual (optional)
 ```
 
-### 重要な制限
+### Important Restrictions
 
 ```
-⚠️ ポータルはシーン階層のルートに配置必須
-   先行プレイヤーのインスタンス情報が他プレイヤーに同期されるため
+⚠️ Portals must be placed at the root of the scene hierarchy
+   Instance information from preceding players is synced to other players
 
-⚠️ ワールド ID は VRChat ウェブサイトから取得
-   例: wrld_4432ea9b-729c-46e3-8eaf-846aa0a37fdd
+⚠️ World ID is obtained from the VRChat website
+   Example: wrld_4432ea9b-729c-46e3-8eaf-846aa0a37fdd
 ```
 
 ---
 
 ## VRC_SpatialAudioSource
 
-3D空間オーディオを設定。AudioSource に自動追加される。
+Configures 3D spatial audio. Automatically added to AudioSource.
 
-### 全プロパティ
+### All Properties
 
-| プロパティ | 型 | 説明 | デフォルト | 範囲 |
-|-----------|------|------|-----------|------|
-| Gain | float | 追加ボリューム | 0 dB | 0-24 dB |
-| Near | float | 減衰開始距離 | 0 m | - |
-| Far | float | 減衰終了距離 | 40 m | - |
-| Volumetric Radius | float | 音源サイズ | 0 m | < Far |
-| Use AudioSource Volume Curve | bool | カーブ使用 | false | - |
-| Enable Spatialization | bool | 3D定位 | true | - |
+| Property | Type | Description | Default | Range |
+|----------|------|-------------|---------|-------|
+| Gain | float | Additional volume | 0 dB | 0-24 dB |
+| Near | float | Attenuation start distance | 0 m | - |
+| Far | float | Attenuation end distance | 40 m | - |
+| Volumetric Radius | float | Source size | 0 m | < Far |
+| Use AudioSource Volume Curve | bool | Use curve | false | - |
+| Enable Spatialization | bool | 3D positioning | true | - |
 
-### 用途別設定
+### Settings by Use Case
 
 ```csharp
 // BGM (2D):
 // Enable Spatialization = false
 // Near = 0, Far = 0
 
-// 環境音 (広い音源):
+// Ambient sound (wide source):
 // Near = 0, Far = 20-40
 // Volumetric Radius = 5-10
 
-// 効果音 (点音源):
+// Sound effects (point source):
 // Near = 0, Far = 10
 // Volumetric Radius = 0
 
-// ボイス風:
+// Voice-like:
 // Near = 0, Far = 25
-// Gain = 適度に調整
+// Gain = adjust appropriately
 ```
 
-### アバター上の制限
+### Avatar Restrictions
 
 ```
-⚠️ アバター上の AudioSource:
-- Gain 上限: 10 dB
-- Far 上限: 40 m
-- 必ず VRC_SpatialAudioSource を追加すること
-  (未追加だとSDKが自動生成し、予期しない動作の原因に)
+⚠️ AudioSource on avatars:
+- Gain limit: 10 dB
+- Far limit: 40 m
+- Always add VRC_SpatialAudioSource
+  (If not added, SDK auto-generates one, causing unexpected behavior)
 ```
 
 ---
 
 ## VRC_UIShape
 
-Unity UI (Canvas) との VRChat インタラクションを有効化。
+Enables VRChat interaction with Unity UI (Canvas).
 
-### セットアップ
+### Setup
 
 ```
 [Canvas GameObject]
 ├── Canvas (Render Mode: World Space)
 ├── VRC_UIShape
-├── Graphic Raycaster (自動追加)
+├── Graphic Raycaster (auto-added)
 └── UI Elements (Button, Slider, etc.)
 ```
 
-### 設定手順
+### Configuration Steps
 
 ```csharp
-// 方法1 (推奨): 自動セットアップ
-// 1. UI > TextMeshPro (VRC) を選択
-// 2. 自動的に正しい設定が適用される
+// Method 1 (recommended): Auto setup
+// 1. Select UI > TextMeshPro (VRC)
+// 2. Correct settings are applied automatically
 
-// 方法2: 手動セットアップ
-// 1. Canvas を作成
-// 2. Render Mode を "World Space" に変更
-// 3. Layer を "Default" に変更 (UI層ではインタラクト不可)
-// 4. VRC_UIShape コンポーネントを追加
-// 5. スケール調整 (デフォルト 1 = 1ピクセル1メートル)
-//    推奨: 0.001 〜 0.005
+// Method 2: Manual setup
+// 1. Create a Canvas
+// 2. Change Render Mode to "World Space"
+// 3. Change Layer to "Default" (can't interact on UI layer)
+// 4. Add VRC_UIShape component
+// 5. Adjust scale (default 1 = 1 pixel per meter)
+//    Recommended: 0.001 ~ 0.005
 
-// 重要:
-// - EventSystem をシーンに配置 (削除しない)
-// - Canvas の Z軸をプレイヤーから離れる方向に
-// - UI要素の Navigation を "None" に設定
+// Important:
+// - Keep EventSystem in the scene (don't delete it)
+// - Canvas Z-axis should face away from the player
+// - Set Navigation to "None" on UI elements
 ```
 
-### TextMeshPro 推奨理由
+### TextMeshPro Recommendation
 
 ```
 ✅ TextMeshPro:
-- 高品質なテキストレンダリング
-- VR での可読性向上
-- スーパーサンプリング対応
+- High-quality text rendering
+- Better readability in VR
+- Supersampling support
 
 ❌ Unity Text:
-- VR でぼやける
-- パフォーマンス劣化
-- 品質が低い
+- Blurry in VR
+- Performance degradation
+- Lower quality
 ```
 
 ---
 
 ## VRC_AvatarPedestal
 
-アバターを表示し、切り替え可能にする。
+Displays avatars and allows switching.
 
-### セットアップ
+### Setup
 
 ```
 [Pedestal GameObject]
 ├── VRC_AvatarPedestal
 │   └── Avatar ID: avtr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-└── Display Model (オプション)
+└── Display Model (optional)
 ```
 
 ---
 
 ## VRC_CameraDolly
 
-カメラドリーアニメーションを適用 (SDK 3.9+)。
+Applies camera dolly animations (SDK 3.9+).
 
-### セットアップ
+### Setup
 
 ```
 [Dolly Track]
@@ -577,25 +577,25 @@ Unity UI (Canvas) との VRChat インタラクションを有効化。
 
 ## VRCCameraSettings API
 
-カメラ情報を取得 (SDK 3.9+)。
+Retrieves camera information (SDK 3.9+).
 
-### プロパティ
+### Properties
 
 ```csharp
 using VRC.SDK3.Rendering;
 
-// 2つのカメラインスタンス
+// Two camera instances
 VRCCameraSettings screenCamera = VRCCameraSettings.ScreenCamera;
 VRCCameraSettings photoCamera = VRCCameraSettings.PhotoCamera;
 
-// プロパティ
+// Properties
 int width = screenCamera.PixelWidth;
 int height = screenCamera.PixelHeight;
 float fov = screenCamera.FieldOfView;
 bool isActive = photoCamera.Active;
 ```
 
-### イベント
+### Events
 
 ```csharp
 public class CameraMonitor : UdonSharpBehaviour
@@ -609,7 +609,7 @@ public class CameraMonitor : UdonSharpBehaviour
 
     public override void OnVRCCameraSettingsChanged(VRCCameraSettings camera)
     {
-        // ハンドヘルドカメラは無視
+        // Ignore handheld camera
         if (camera != VRCCameraSettings.ScreenCamera) return;
 
         infoText.text = $"{camera.PixelWidth}x{camera.PixelHeight}\n" +
@@ -620,11 +620,11 @@ public class CameraMonitor : UdonSharpBehaviour
 
 ---
 
-## 許可済み Unity コンポーネント
+## Allowed Unity Components
 
-VRChat で使用可能な Unity 標準コンポーネント。
+Unity standard components available in VRChat.
 
-### 物理
+### Physics
 
 - Rigidbody
 - BoxCollider, SphereCollider, CapsuleCollider, MeshCollider
@@ -632,7 +632,7 @@ VRChat で使用可能な Unity 標準コンポーネント。
 - ConstantForce
 - WheelCollider
 
-### レンダリング
+### Rendering
 
 - MeshRenderer, SkinnedMeshRenderer
 - MeshFilter
@@ -646,7 +646,7 @@ VRChat で使用可能な Unity 標準コンポーネント。
 - LODGroup
 - OcclusionArea, OcclusionPortal
 
-### オーディオ
+### Audio
 
 - AudioSource
 - AudioReverbZone
@@ -658,36 +658,36 @@ VRChat で使用可能な Unity 標準コンポーネント。
 - Canvas, CanvasGroup, CanvasRenderer
 - RectTransform
 
-### アニメーション
+### Animation
 
 - Animator
 - PlayableDirector
 
-### ナビゲーション
+### Navigation
 
 - NavMeshAgent
 - NavMeshObstacle
 - OffMeshLink
 
-### その他
+### Other
 
 - Transform
 - VideoPlayer
-- TextMesh (TextMeshPro 推奨)
+- TextMesh (TextMeshPro recommended)
 - Terrain, TerrainCollider
 - Cloth
 - WindZone
 - Grid, GridLayout
 - Tilemap, TilemapRenderer
 
-### Quest/Android で無効
+### Disabled on Quest/Android
 
 ```
 ❌ Dynamic Bones
-❌ Cloth (ワールドは可、アバターは不可)
+❌ Cloth (allowed in worlds, not on avatars)
 ❌ Physics on Avatar (Rigidbody, Collider, Joint)
 ❌ Cameras on Avatar
 ❌ Lights on Avatar
 ❌ Audio Sources on Avatar
-❌ Unity Constraints (VRC Constraints 使用)
+❌ Unity Constraints (use VRC Constraints instead)
 ```

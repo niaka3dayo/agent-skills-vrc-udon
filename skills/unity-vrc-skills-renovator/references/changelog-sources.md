@@ -1,178 +1,178 @@
-# 公式情報ソース一覧
+# Official Information Sources
 
-VRChat SDK (UdonSharp + World SDK) の公式情報ソースとアクセス方法。
+Official information sources and access methods for VRChat SDK (UdonSharp + World SDK).
 
-## 主要公式ソース
+## Primary Official Sources
 
 ### VRChat Creator Docs
 
-| ページ | URL | 内容 |
-|--------|-----|------|
-| SDK リリース一覧 | `creators.vrchat.com/releases/` | 全SDKリリースノート |
-| 最新リリース | `creators.vrchat.com/releases/release-3-{version}/` | 個別リリース詳細 |
-| Udon | `creators.vrchat.com/worlds/udon/` | Udon 公式ドキュメント |
-| ネットワーキング | `creators.vrchat.com/worlds/udon/networking/` | ネットワーキング |
-| 永続化 | `creators.vrchat.com/worlds/udon/persistence/` | 永続化 |
-| コンポーネント | `creators.vrchat.com/worlds/components/` | ワールドコンポーネント |
-| レイヤー | `creators.vrchat.com/worlds/layers/` | レイヤー設定 |
-| 許可 URL リスト | `creators.vrchat.com/worlds/udon/string-loading/` | 許可URLリスト |
+| Page | URL | Content |
+|------|-----|---------|
+| SDK Release List | `creators.vrchat.com/releases/` | All SDK release notes |
+| Latest Release | `creators.vrchat.com/releases/release-3-{version}/` | Individual release details |
+| Udon | `creators.vrchat.com/worlds/udon/` | Udon official documentation |
+| Networking | `creators.vrchat.com/worlds/udon/networking/` | Networking |
+| Persistence | `creators.vrchat.com/worlds/udon/persistence/` | Persistence |
+| Components | `creators.vrchat.com/worlds/components/` | World components |
+| Layers | `creators.vrchat.com/worlds/layers/` | Layer settings |
+| Allowed URL List | `creators.vrchat.com/worlds/udon/string-loading/` | Allowed URL list |
 
-**注意**: 403エラーが返る場合があるため、WebSearchで検索してスニペットから情報を取得。
+**Note**: May return 403 errors, so use WebSearch to retrieve information from snippets.
 
 ### UdonSharp Docs
 
-| ページ | URL | 内容 |
-|--------|-----|------|
-| ブログ/ニュース | `udonsharp.docs.vrchat.com/news/` | UdonSharp 更新情報 |
-| リリースタグ | `udonsharp.docs.vrchat.com/news/tags/release/` | リリース一覧 |
-| コード例 | `udonsharp.docs.vrchat.com/examples/` | コード例 |
+| Page | URL | Content |
+|------|-----|---------|
+| Blog/News | `udonsharp.docs.vrchat.com/news/` | UdonSharp update information |
+| Release Tags | `udonsharp.docs.vrchat.com/news/tags/release/` | Release list |
+| Code Examples | `udonsharp.docs.vrchat.com/examples/` | Code examples |
 
 ### VRChat Feedback (Canny)
 
-| ページ | URL | 内容 |
-|--------|-----|------|
-| Udon フィードバック | `feedback.vrchat.com/udon` | Udon 機能リクエスト |
-| 実装済み | `feedback.vrchat.com/udon?status=complete` | 実装済み機能 |
-| 永続化 | `feedback.vrchat.com/persistence` | 永続化関連 |
+| Page | URL | Content |
+|------|-----|---------|
+| Udon Feedback | `feedback.vrchat.com/udon` | Udon feature requests |
+| Completed | `feedback.vrchat.com/udon?status=complete` | Completed features |
+| Persistence | `feedback.vrchat.com/persistence` | Persistence-related |
 
 ### GitHub
 
-| リポジトリ | URL | 内容 |
-|-----------|-----|------|
-| UdonSharp リリース | `github.com/MerlinVR/UdonSharp/releases` | リリース履歴 |
-| Creator Companion | `github.com/vrchat-community/creator-companion` | VCC 関連 |
+| Repository | URL | Content |
+|-----------|-----|---------|
+| UdonSharp Releases | `github.com/MerlinVR/UdonSharp/releases` | Release history |
+| Creator Companion | `github.com/vrchat-community/creator-companion` | VCC related |
 
-## バージョン履歴の追跡
+## Version History Tracking
 
-### SDK バージョン体系
+### SDK Version Scheme
 
 ```
 SDK 3.{major}.{minor}
-例: SDK 3.10.0
+Example: SDK 3.10.0
 
-major: 大きな機能追加
-minor: バグ修正、小さな変更
+major: Major feature additions
+minor: Bug fixes, small changes
 ```
 
-### 主要マイルストーン
+### Key Milestones
 
-| バージョン | 日付 | 主な変更点 |
-|-----------|------|----------|
+| Version | Date | Key Changes |
+|---------|------|-------------|
 | 3.7.1 | 2024 | StringBuilder, Regex, System.Random |
 | 3.7.4 | 2024 | Persistence API |
-| 3.7.6 | 2024 | マルチプラットフォーム Build & Publish |
-| 3.8.0 | 2025 | PhysBone 依存関係ソート, Force Kinematic On Remote |
-| 3.8.1 | 2025 | NetworkCallable, パラメータ付きイベント, Others/Self ターゲット |
-| 3.9.0 | 2025 | Camera Dolly API, Auto Hold 簡素化 |
+| 3.7.6 | 2024 | Multi-platform Build & Publish |
+| 3.8.0 | 2025 | PhysBone dependency sorting, Force Kinematic On Remote |
+| 3.8.1 | 2025 | NetworkCallable, events with parameters, Others/Self targets |
+| 3.9.0 | 2025 | Camera Dolly API, Auto Hold simplification |
 | 3.10.0 | 2025 | Dynamics for Worlds |
-| 3.10.1 | 2025 | バグ修正・安定性改善 |
-| 3.10.2 | 2026 | EventTiming 拡張, PhysBones 修正, シェーダー時間グローバル |
+| 3.10.1 | 2025 | Bug fixes and stability improvements |
+| 3.10.2 | 2026 | EventTiming extensions, PhysBones fixes, shader time globals |
 
-### 次回更新時の確認ポイント
+### Checkpoints for Next Update
 
-1. **各スキルの最終対応バージョン確認**
+1. **Check the last supported version for each skill**
    ```
-   unity-vrc-udon-sharp/SKILL.md の「対応SDKバージョン」
-   unity-vrc-world-sdk-3/SKILL.md の「対応SDKバージョン」
+   unity-vrc-udon-sharp/SKILL.md "Supported SDK version" line
+   unity-vrc-world-sdk-3/SKILL.md "Supported SDK version" line
    ```
 
-2. **公式リリースページで新バージョン確認**
+2. **Check for new versions on the official releases page**
    ```
    WebSearch: "VRChat SDK Releases"
    ```
 
-3. **差分バージョンのリリースノート確認**
+3. **Check release notes for the version gap**
    ```
-   例: 3.10.0 → 3.11.0 の場合
+   Example: 3.10.0 → 3.11.0
    WebSearch: "VRChat SDK Release 3.11.0"
    ```
 
-4. **差分をスキル別に分類**
+4. **Classify the differences by skill**
    ```
-   UdonSharp関連 → unity-vrc-udon-sharp
-   ワールド設定関連 → unity-vrc-world-sdk-3
+   UdonSharp-related → unity-vrc-udon-sharp
+   World settings-related → unity-vrc-world-sdk-3
    ```
 
-## 情報収集フロー
+## Information Gathering Flow
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 1. WebSearch: "VRChat SDK {年} releases changelog"      │
-│    → 最新バージョン番号を特定                            │
+│ 1. WebSearch: "VRChat SDK {year} releases changelog"     │
+│    → Identify the latest version number                  │
 └──────────────────────────┬──────────────────────────────┘
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 2. WebSearch: "VRChat SDK Release 3.{新バージョン}"     │
-│    → リリースノートの概要を取得                          │
+│ 2. WebSearch: "VRChat SDK Release 3.{new version}"       │
+│    → Get release note summary                            │
 └──────────────────────────┬──────────────────────────────┘
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 3. WebSearch: 機能別クエリ（並列実行）                   │
+│ 3. WebSearch: Feature-specific queries (parallel)        │
 │    - NetworkCallable                                     │
 │    - Persistence                                         │
 │    - Dynamics                                            │
-│    → 各機能の詳細を取得                                  │
+│    → Get details for each feature                        │
 └──────────────────────────┬──────────────────────────────┘
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 4. 情報の統合と差分リスト作成                            │
-│    → 更新すべきファイルと内容を決定                      │
+│ 4. Integrate information and create diff list            │
+│    → Determine files and content to update               │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 補助情報源
+## Supplementary Sources
 
-### 日本語コミュニティ
+### Japanese Community
 
-| ソース | 検索クエリ例 |
-|--------|-------------|
-| Qiita | `site:qiita.com VRChat SDK {バージョン}` |
+| Source | Example Search Query |
+|--------|---------------------|
+| Qiita | `site:qiita.com VRChat SDK {version}` |
 | Zenn | `site:zenn.dev VRChat UdonSharp` |
-| note | `site:note.com VRChat SDK 更新` |
+| note | `site:note.com VRChat SDK update` |
 
-### VRChat Ask フォーラム
+### VRChat Ask Forum
 
 ```
 ask.vrchat.com
-- Developer Update カテゴリ
-- SDK関連の質問と回答
+- Developer Update category
+- SDK-related questions and answers
 ```
 
-### Twitter/X (SNS)
+### Twitter/X (Social Media)
 
 ```
-検索: "VRChat SDK" OR "UdonSharp" 新機能
-アカウント: @VRChat, @MerlinVR
+Search: "VRChat SDK" OR "UdonSharp" new features
+Accounts: @VRChat, @MerlinVR
 ```
 
-## アクセス制限への対処
+## Handling Access Restrictions
 
-### 403 エラーの場合
+### In Case of 403 Errors
 
-1. **WebSearchでキャッシュ/スニペットを活用**
-2. **GitHubのミラー/関連リポジトリを確認**
-3. **フォーラム/コミュニティの議論を参照**
+1. **Use WebSearch to leverage cached/snippet content**
+2. **Check GitHub mirrors/related repositories**
+3. **Reference forum/community discussions**
 
-### 情報が見つからない場合
+### When Information Cannot Be Found
 
-1. **異なるキーワードで再検索**
-2. **日本語/英語を切り替え**
-3. **日付範囲を広げる**
-4. **関連する機能名で検索**
+1. **Re-search with different keywords**
+2. **Switch between Japanese/English**
+3. **Broaden the date range**
+4. **Search by related feature names**
 
-## 定期更新のタイミング
+## Periodic Update Timing
 
-### 推奨更新頻度
+### Recommended Update Frequency
 
-| 状況 | 推奨頻度 |
-|------|------|
-| 新メジャーバージョン | 即時更新 |
-| マイナー更新（.1, .2等） | 1-2週間以内 |
-| 定期確認 | 月1回 |
+| Situation | Recommended Frequency |
+|-----------|----------------------|
+| New major version | Update immediately |
+| Minor updates (.1, .2, etc.) | Within 1-2 weeks |
+| Periodic check | Once per month |
 
-### 更新が必要なシグナル
+### Signals That Updates Are Needed
 
-- VRChat公式Twitterでリリース告知
-- Creator Companionで新バージョン通知
-- ユーザーからの「情報が古い」フィードバック
-- 既知の制約が解消されたという報告
+- Release announcements on VRChat's official Twitter
+- New version notifications in Creator Companion
+- "Information is outdated" feedback from users
+- Reports that known constraints have been resolved

@@ -1,50 +1,50 @@
-# UdonSharp コンパイル制約 (常時ロード)
+# UdonSharp Compile Constraints (Always Loaded)
 
-UdonSharp は C# から Udon Assembly へコンパイルする。標準 C# と異なる制約を常に遵守すること。
+UdonSharp compiles C# to Udon Assembly. Always adhere to these constraints, which differ from standard C#.
 
-**SDK対応**: 3.7.1 - 3.10.2 (2026年3月時点)
+**SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
 
-## ブロック機能
+## Blocked Features
 
-| 機能 | 代替手段 |
-|------|---------|
-| `List<T>`, `Dictionary<T,K>` | `T[]` 配列 or `DataList`/`DataDictionary` (VRC.SDK3.Data) |
-| `HashSet<T>`, `Queue<T>`, `Stack<T>` | 配列で実装 |
-| Generic type parameters | 具象型を使用 |
-| `interface` | 基底クラス継承 or `SendCustomEvent` |
-| Method overloading | 一意なメソッド名 (`DoInt`, `DoString`) |
-| Operator overloading | 明示的メソッド |
-| `try`/`catch`/`finally`/`throw` | 防御的 null チェック + 早期 return |
+| Feature | Alternative |
+|---------|------------|
+| `List<T>`, `Dictionary<T,K>` | `T[]` arrays or `DataList`/`DataDictionary` (VRC.SDK3.Data) |
+| `HashSet<T>`, `Queue<T>`, `Stack<T>` | Implement with arrays |
+| Generic type parameters | Use concrete types |
+| `interface` | Base class inheritance or `SendCustomEvent` |
+| Method overloading | Unique method names (`DoInt`, `DoString`) |
+| Operator overloading | Explicit methods |
+| `try`/`catch`/`finally`/`throw` | Defensive null checks + early return |
 | `async`/`await` | `SendCustomEventDelayedSeconds()` |
 | `yield return` (coroutines) | `SendCustomEventDelayedSeconds()` |
 | `StartCoroutine()` | `SendCustomEventDelayedSeconds()` |
 | Delegates / C# events | `SendCustomEvent` |
-| `Button.onClick.AddListener()` | Inspector で SendCustomEvent を設定 |
-| LINQ (`.Where`, `.Select` 等) | 手動 for ループ |
-| Lambda expressions | 名前付きメソッド |
-| Local functions | private メソッド |
-| Pattern matching | 従来の `if`/`switch` |
-| Anonymous types | 明示的な型定義 |
+| `Button.onClick.AddListener()` | Configure SendCustomEvent via Inspector |
+| LINQ (`.Where`, `.Select`, etc.) | Manual for loops |
+| Lambda expressions | Named methods |
+| Local functions | private methods |
+| Pattern matching | Traditional `if`/`switch` |
+| Anonymous types | Explicit type definitions |
 | `System.IO`, `System.Net` | `VRCStringDownloader`, `VRCImageDownloader` |
-| `System.Reflection` | 利用不可 |
-| `System.Threading` | 利用不可 |
-| `unsafe`, pointers | 利用不可 |
+| `System.Reflection` | Not available |
+| `System.Threading` | Not available |
+| `unsafe`, pointers | Not available |
 
-## 利用可能な機能 (SDK 3.7.1+)
+## Available Features (SDK 3.7.1+)
 
-| 機能 | 備考 |
-|------|------|
-| `System.Text.StringBuilder` | 効率的な文字列連結 |
-| `System.Text.RegularExpressions` | Regex パターンマッチング |
-| `System.Random` | シード付き決定性乱数 |
-| `System.Type` | ランタイム型情報 |
-| `GetComponent<T>()` (継承) | UdonSharpBehaviour 継承型で動作 (SDK 3.8+) |
+| Feature | Notes |
+|---------|-------|
+| `System.Text.StringBuilder` | Efficient string concatenation |
+| `System.Text.RegularExpressions` | Regex pattern matching |
+| `System.Random` | Seeded deterministic random numbers |
+| `System.Type` | Runtime type information |
+| `GetComponent<T>()` (inheritance) | Works with UdonSharpBehaviour subclasses (SDK 3.8+) |
 
-## コード生成ルール
+## Code Generation Rules
 
-### 1. クラス宣言
+### 1. Class Declaration
 
-必ず `UdonSharpBehaviour` を継承。`MonoBehaviour` 禁止。
+Must inherit from `UdonSharpBehaviour`. `MonoBehaviour` is forbidden.
 
 ```csharp
 using UdonSharp;
@@ -55,23 +55,23 @@ using VRC.Udon;
 public class MyScript : UdonSharpBehaviour { }
 ```
 
-### 2. フィールド初期化
+### 2. Field Initialization
 
-フィールド初期化子はコンパイル時評価。シーン依存の参照は `Start()` / Lazy Init で取得。
+Field initializers are evaluated at compile time. Scene-dependent references must be obtained in `Start()` or via Lazy Init.
 
 ```csharp
-// OK: コンパイル時定数
+// OK: Compile-time constant
 private int maxPlayers = 10;
 
-// NG: ランタイム値をフィールド初期化子に書く
-// private int rng = Random.Range(0, 100); // 全インスタンスで同じ値!
+// NG: Runtime value in field initializer
+// private int rng = Random.Range(0, 100); // Same value for all instances!
 
-// OK: Start() で初期化
+// OK: Initialize in Start()
 private int rng;
 void Start() { rng = Random.Range(0, 100); }
 ```
 
-**Lazy Initialization パターン** (非アクティブオブジェクト対策):
+**Lazy Initialization Pattern** (for inactive objects):
 
 ```csharp
 private Transform _target;
@@ -86,22 +86,22 @@ private void EnsureInit()
 }
 ```
 
-### 3. 構造体のミューテーション
+### 3. Struct Mutation
 
-構造体のミューテーションメソッドは元の値を変更しない。戻り値を使う。
+Struct mutation methods do not modify the original value. Use the return value.
 
 ```csharp
-// NG: v は変わらない
+// NG: v is not modified
 Vector3 v = new Vector3(3, 4, 0);
 v.Normalize();
 
-// OK: 戻り値を代入
+// OK: Assign return value
 v = v.normalized;
 ```
 
-### 4. GetComponent の制限
+### 4. GetComponent Restrictions
 
-`GetComponent<UdonBehaviour>()` は未公開。キャスト構文を使う。
+`GetComponent<UdonBehaviour>()` is not exposed. Use cast syntax.
 
 ```csharp
 // NG
@@ -110,17 +110,17 @@ UdonBehaviour ub = GetComponent<UdonBehaviour>();
 // OK
 UdonBehaviour ub = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
 
-// OK (SDK 3.8+): UdonSharpBehaviour 継承型は Generic で取得可能
+// OK (SDK 3.8+): Generic retrieval works for UdonSharpBehaviour subclasses
 MyScript s = GetComponent<MyScript>();
 ```
 
-### 5. アクセス修飾子
+### 5. Access Modifiers
 
-`private` メソッド推奨。public メソッドは Udon のメソッドルックアップを遅くする。
+Prefer `private` methods. Public methods slow down Udon's method lookup.
 
-### 6. 再帰メソッド
+### 6. Recursive Methods
 
-再帰呼び出しには `[RecursiveMethod]` 属性が必須。
+The `[RecursiveMethod]` attribute is required for recursive calls.
 
 ```csharp
 [RecursiveMethod]
@@ -131,79 +131,79 @@ private int Factorial(int n)
 }
 ```
 
-### 7. uGUI ボタンイベントと Unity コールバック
+### 7. uGUI Button Events and Unity Callbacks
 
-- `Button.onClick.AddListener()` 不可 → Inspector の OnClick で SendCustomEvent を設定
-- Unity コールバック (`OnTriggerEnter` 等) に `override` は**不要** → `override` は VRChat イベントのみ
+- `Button.onClick.AddListener()` is not available -- configure OnClick via Inspector to call SendCustomEvent
+- Unity callbacks (`OnTriggerEnter`, etc.) do **not** require `override` -- `override` is only for VRChat events
 
 ```csharp
-// NG: override → CS0115 エラー
+// NG: override -> CS0115 error
 public override void OnTriggerEnter(Collider other) { }
-// OK: override なし
+// OK: No override
 public void OnTriggerEnter(Collider other) { }
-// OK: VRChat イベントは override 必要
+// OK: VRChat events require override
 public override void OnPlayerJoined(VRCPlayerApi player) { }
 ```
 
-## 属性クイックリファレンス
+## Attribute Quick Reference
 
-### クラスレベル
+### Class Level
 
-| 属性 | 用途 |
-|------|------|
-| `[UdonBehaviourSyncMode(mode)]` | 同期モード指定 |
-| `[DefaultExecutionOrder(n)]` | 実行順序制御 |
+| Attribute | Purpose |
+|-----------|---------|
+| `[UdonBehaviourSyncMode(mode)]` | Specify sync mode |
+| `[DefaultExecutionOrder(n)]` | Control execution order |
 
-### フィールドレベル
+### Field Level
 
-| 属性 | 用途 |
-|------|------|
-| `[UdonSynced]` | フィールド同期 |
-| `[UdonSynced(UdonSyncMode.Linear)]` | 線形補間 (位置/回転) |
-| `[UdonSynced(UdonSyncMode.Smooth)]` | スムース補間 |
-| `[FieldChangeCallback(nameof(Prop))]` | 変更時プロパティ setter 呼び出し |
+| Attribute | Purpose |
+|-----------|---------|
+| `[UdonSynced]` | Sync field |
+| `[UdonSynced(UdonSyncMode.Linear)]` | Linear interpolation (position/rotation) |
+| `[UdonSynced(UdonSyncMode.Smooth)]` | Smooth interpolation |
+| `[FieldChangeCallback(nameof(Prop))]` | Invoke property setter on change |
 
-### メソッドレベル
+### Method Level
 
-| 属性 | 用途 |
-|------|------|
-| `[RecursiveMethod]` | 再帰呼び出し許可 |
-| `[NetworkCallable]` | ネットワークイベント (SDK 3.8.1+) |
+| Attribute | Purpose |
+|-----------|---------|
+| `[RecursiveMethod]` | Allow recursive calls |
+| `[NetworkCallable]` | Network event (SDK 3.8.1+) |
 
-## 同期可能な型
+## Syncable Types
 
-`[UdonSynced]` で同期可能な型:
+Types that can be used with `[UdonSynced]`:
 
 `bool`, `byte`, `sbyte`, `char`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
-`float`, `double`, `string` (~50文字制限), `Vector2`, `Vector3`, `Vector4`,
-`Quaternion`, `Color`, `Color32`, `T[]` (上記型の配列)
+`float`, `double`, `string` (~50 character limit), `Vector2`, `Vector3`, `Vector4`,
+`Quaternion`, `Color`, `Color32`, `T[]` (arrays of the above types)
 
 ## DataList / DataDictionary
 
 ```csharp
 using VRC.SDK3.Data;
 
-// List<string> の代替
+// Alternative to List<string>
 DataList list = new DataList();
 list.Add("a");
 string first = list[0].String;
 
-// Dictionary<string, int> の代替
+// Alternative to Dictionary<string, int>
 DataDictionary dict = new DataDictionary();
 dict["key"] = 100;
 int val = dict["key"].Int;
 ```
 
-## バリデーションチェックリスト
+## Validation Checklist
 
-- [ ] `List<T>` / `Dictionary<T,K>` を使っていないか
-- [ ] `interface` 宣言がないか
-- [ ] メソッドオーバーロードがないか (全メソッド名が一意か)
-- [ ] `try`/`catch` がないか
-- [ ] `async`/`await` / `yield return` がないか
-- [ ] LINQ / Lambda がないか
-- [ ] `System.IO` / `System.Net` がないか
-- [ ] 再帰メソッドに `[RecursiveMethod]` があるか
-- [ ] 構造体メソッドで戻り値を使っているか
-- [ ] `AddListener()` を使っていないか
-- [ ] Unity コールバック (OnTriggerEnter 等) に override を付けていないか
+- [ ] Not using `List<T>` / `Dictionary<T,K>`
+- [ ] No `interface` declarations
+- [ ] No method overloading (all method names are unique)
+- [ ] No `try`/`catch`
+- [ ] No `async`/`await` / `yield return`
+- [ ] No LINQ / Lambda
+- [ ] No `System.IO` / `System.Net`
+- [ ] Recursive methods have `[RecursiveMethod]`
+- [ ] Using return values for struct methods
+- [ ] Not using `AddListener()`
+- [ ] Unity callbacks (OnTriggerEnter, etc.) do not have override

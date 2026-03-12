@@ -1,14 +1,14 @@
-# UdonSharp 制約リファレンス
+# UdonSharp Constraints Reference
 
 Complete reference of C# features and their availability in UdonSharp.
 
-**対応SDKバージョン**: 3.7.1 - 3.10.2 (2026年3月時点)
+**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
 
-## サポートされている機能
+## Supported Features
 
-### データ型
+### Data Types
 
-| 型 | ステータス | 備考 |
+| Type | Status | Notes |
 |------|--------|-------|
 | `int`, `float`, `double`, `bool` | Supported | Basic value types work normally |
 | `string`, `char` | Supported | String interpolation (`$""`) available |
@@ -18,9 +18,9 @@ Complete reference of C# features and their availability in UdonSharp.
 | `T[,]` (multi-dimensional arrays) | Supported | Works but less common |
 | `T[][]` (jagged arrays) | Supported | Arrays of arrays |
 
-### 制御フロー
+### Control Flow
 
-| 機能 | ステータス | 備考 |
+| Feature | Status | Notes |
 |---------|--------|-------|
 | `if`/`else` | Supported | |
 | `switch` | Supported | |
@@ -31,9 +31,9 @@ Complete reference of C# features and their availability in UdonSharp.
 | Null-coalescing `??` | Supported | |
 | Null-conditional `?.` | Supported | |
 
-### メソッドとプロパティ
+### Methods and Properties
 
-| 機能 | ステータス | 備考 |
+| Feature | Status | Notes |
 |---------|--------|-------|
 | User-defined methods | Supported | Parameters and return values work |
 | `out`/`ref` parameters | Supported | |
@@ -43,9 +43,9 @@ Complete reference of C# features and their availability in UdonSharp.
 | Virtual methods | Supported | For inheritance |
 | `[RecursiveMethod]` | Required | For recursive calls |
 
-### オブジェクト指向機能
+### Object-Oriented Features
 
-| 機能 | ステータス | 備考 |
+| Feature | Status | Notes |
 |---------|--------|-------|
 | `UdonSharpBehaviour` inheritance | Supported | Required base class |
 | Single inheritance | Supported | One base class only |
@@ -56,11 +56,11 @@ Complete reference of C# features and their availability in UdonSharp.
 | Partial classes | Supported | Split class across files |
 | `typeof()` | Supported | |
 
-## サポートされていない機能
+## Unsupported Features
 
-### コレクションとジェネリクス
+### Collections and Generics
 
-| 機能 | ステータス | 代替手段 |
+| Feature | Status | Alternative |
 |---------|--------|-------------|
 | `List<T>` | Blocked | Use `T[]` arrays or `DataList` |
 | `Dictionary<T,K>` | Blocked | Use `DataDictionary` from VRC SDK |
@@ -86,9 +86,9 @@ dict["key2"] = 200;
 int value = dict["key1"].Int;
 ```
 
-### 言語機能
+### Language Features
 
-| 機能 | ステータス | 代替手段 |
+| Feature | Status | Alternative |
 |---------|--------|-------------|
 | `interface` | Blocked | Use base class or `SendCustomEvent` |
 | Method overloading | Blocked | Use distinct method names |
@@ -98,7 +98,7 @@ int value = dict["key1"].Int;
 | `async`/`await` | Blocked | Use `SendCustomEventDelayedSeconds` |
 | `yield return` (coroutines) | Blocked | Use delayed events |
 | Delegates | Blocked | Use `SendCustomEvent` |
-| `Button.onClick.AddListener()` | Blocked | Inspector OnClick → `SendCustomEvent` |
+| `Button.onClick.AddListener()` | Blocked | Inspector OnClick -> `SendCustomEvent` |
 | Events (C# events) | Blocked | Use UdonSharp events |
 | LINQ | Blocked | Use manual loops |
 | Anonymous types | Blocked | Define explicit types |
@@ -137,9 +137,9 @@ if (data == null)
 ProcessData(data);
 ```
 
-### System 名前空間
+### System Namespaces
 
-| 名前空間 | ステータス | 備考 |
+| Namespace | Status | Notes |
 |-----------|--------|-------|
 | `System.IO` | Blocked | Not available (security) |
 | `System.Net` | Blocked | Use `VRCStringDownloader`, `VRCImageDownloader` |
@@ -190,25 +190,25 @@ public class RegexExample : UdonSharpBehaviour
 {
     public bool IsValidUsername(string username)
     {
-        // 3-16文字、英数字とアンダースコアのみ
+        // 3-16 characters, alphanumeric and underscores only
         Regex pattern = new Regex(@"^[a-zA-Z0-9_]{3,16}$");
         return pattern.IsMatch(username);
     }
 }
 ```
 
-### Unsafe と低レベル機能
+### Unsafe and Low-Level Features
 
-| 機能 | ステータス | 備考 |
+| Feature | Status | Notes |
 |---------|--------|-------|
 | `unsafe` keyword | Blocked | Memory safety |
 | Pointers (`*`, `&`) | Blocked | Not available |
 | `fixed` statement | Blocked | Not available |
 | `stackalloc` | Blocked | Not available |
 
-## C# との動作の違い
+## Behavioral Differences from C#
 
-### 数値オーバーフローチェック
+### Numeric Overflow Checking
 
 UdonVM checks for numeric overflow. Operations that overflow will behave differently:
 
@@ -218,7 +218,7 @@ int max = int.MaxValue;
 int overflow = max + 1; // In Udon: checked for overflow
 ```
 
-### 構造体メソッドのミューテーション
+### Struct Method Mutation
 
 Mutating methods on structs do NOT modify the original struct:
 
@@ -232,7 +232,7 @@ Vector3 v = new Vector3(3, 4, 0);
 v = v.normalized; // v is now (0.6, 0.8, 0)
 ```
 
-### 配列操作
+### Array Operations
 
 Some array operations behave differently:
 
@@ -247,11 +247,11 @@ int[] dest = new int[3];
 System.Array.Copy(source, dest, 3);
 ```
 
-## VRChat 固有の型
+## VRChat-Specific Types
 
 UdonSharp provides access to VRChat-specific types:
 
-| 型 | 用途 |
+| Type | Purpose |
 |------|---------|
 | `VRCPlayerApi` | Player information and actions |
 | `VRCStation` | Station/seat management |
@@ -261,7 +261,7 @@ UdonSharp provides access to VRChat-specific types:
 | `DataList`, `DataDictionary` | Generic-like collections |
 | `DataToken` | Type-safe data container |
 
-## クイックバリデーションチェックリスト
+## Quick Validation Checklist
 
 Before compiling UdonSharp code, verify:
 
@@ -276,15 +276,15 @@ Before compiling UdonSharp code, verify:
 - [ ] All recursive methods have `[RecursiveMethod]` attribute
 - [ ] Struct methods return new values (not mutating)
 
-## 既知の制限と注意点
+## Known Limitations and Caveats
 
-### Prefab フィールドの変更
+### Prefab Field Changes
 
 Changes to serialized fields on prefabs do NOT propagate to instances in the scene or other prefabs that reference them. This is a Unity limitation that affects UdonSharp as well.
 
 **Workaround**: After modifying a prefab, manually update instances or use `PrefabUtility.ApplyPrefabInstance` in editor scripts.
 
-### フィールド初期化子
+### Field Initializers
 
 Field initializers are evaluated at **compile time**, not runtime. This means:
 
@@ -301,7 +301,7 @@ void Start()
 }
 ```
 
-### GetComponent と UdonBehaviour
+### GetComponent and UdonBehaviour
 
 Generic `GetComponent<UdonBehaviour>()` is not directly exposed, but **SDK 3.8+** improved support for inherited types:
 
@@ -326,7 +326,7 @@ DerivedGimmick derived = GetComponent<DerivedGimmick>();
 
 **Note:** SDK 3.8+ added proper handling for `GetComponent(s)<T>()` on UdonSharpBehaviour types using inheritance.
 
-### 構造体メソッドのミューテーション (再掲)
+### Struct Method Mutation (Reiterated)
 
 Methods that mutate structs do NOT modify the original:
 
@@ -339,18 +339,18 @@ v.Normalize(); // v is UNCHANGED!
 v = v.normalized;
 ```
 
-### uGUI ボタンイベントの登録
+### uGUI Button Event Registration
 
-`Button.onClick.AddListener()` は使用不可 (Delegate ベースのため)。uGUI ボタンのイベントは Unity Inspector で設定する。
+`Button.onClick.AddListener()` is not available (delegate-based). uGUI button events must be configured in the Unity Inspector.
 
 ```csharp
 // WRONG - NotImplementedException at runtime
 button.onClick.AddListener(() => DoSomething());
-button.onClick.AddListener(DoSomething); // これも不可
+button.onClick.AddListener(DoSomething); // Also not possible
 
-// CORRECT - Unity Inspector で設定:
-// 1. Button コンポーネントの OnClick() リストに追加
-// 2. UdonBehaviour をドラッグ
-// 3. SendCustomEvent を選択
-// 4. メソッド名を入力 (例: "OnButtonClicked")
+// CORRECT - Configure in Unity Inspector:
+// 1. Add to the Button component's OnClick() list
+// 2. Drag the UdonBehaviour
+// 3. Select SendCustomEvent
+// 4. Enter the method name (e.g., "OnButtonClicked")
 ```

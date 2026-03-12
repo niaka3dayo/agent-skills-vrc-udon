@@ -1,14 +1,14 @@
-# UdonSharp エディタースクリプティングリファレンス
+# UdonSharp Editor Scripting Reference
 
-エディタースクリプト、カスタムインスペクター、UdonSharp プロキシシステムの操作ガイド。
+Guide to editor scripts, custom inspectors, and working with the UdonSharp proxy system.
 
-## 概要
+## Overview
 
-UdonSharp は**プロキシシステム**を使用しており、C# の `UdonSharpBehaviour` スクリプトが基盤となる `UdonBehaviour` コンポーネントのプロキシとして機能する。このシステムの理解はエディタースクリプティングに不可欠。
+UdonSharp uses a **proxy system** where C# `UdonSharpBehaviour` scripts act as proxies for the underlying `UdonBehaviour` components. Understanding this system is essential for editor scripting.
 
-## プリプロセッサディレクティブ
+## Preprocessor Directives
 
-条件付きコンパイルに使用:
+Used for conditional compilation:
 
 ```csharp
 #if UNITY_EDITOR
@@ -25,7 +25,7 @@ using UnityEditor;
 #endif
 ```
 
-**よくあるパターン:**
+**Common Pattern:**
 
 ```csharp
 using UdonSharp;
@@ -39,12 +39,12 @@ using UdonSharpEditor;
 public class MyScript : UdonSharpBehaviour
 {
     public float speed = 5f;
-    
+
     void Update()
     {
         transform.Translate(Vector3.forward * speed * Time.deltaTime);
     }
-    
+
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
     // Editor-only code here
     public void EditorOnlyMethod()
@@ -55,17 +55,17 @@ public class MyScript : UdonSharpBehaviour
 }
 ```
 
-## プロキシシステム
+## Proxy System
 
-### 仕組み
+### How It Works
 
 1. Your `UdonSharpBehaviour` C# class is a **proxy**
 2. The actual data lives in the `UdonBehaviour` component
 3. Changes must be synchronized between proxy and underlying UdonBehaviour
 
-### プロキシ拡張メソッド
+### Proxy Extension Methods
 
-`UdonSharpEditor` 名前空間から:
+From the `UdonSharpEditor` namespace:
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -80,9 +80,9 @@ MyScript proxy = UdonSharpEditorUtility.GetProxyBehaviour(udonBehaviour) as MySc
 UdonBehaviour underlying = UdonSharpEditorUtility.GetBackingUdonBehaviour(proxy);
 ```
 
-### プロキシ値の更新
+### Updating Proxy Values
 
-エディタースクリプトで値を変更する際は、以下のパターンを使用:
+When changing values in editor scripts, use the following pattern:
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -95,11 +95,11 @@ UdonSharpEditorUtility.CopyUdonToProxy(proxy);
 #endif
 ```
 
-## コンポーネントの追加
+## Adding Components
 
 ### AddUdonSharpComponent
 
-エディターで UdonSharpBehaviour を追加する際は `AddComponent` の代わりにこれを使用:
+Use this instead of `AddComponent` when adding UdonSharpBehaviours in the editor:
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -114,7 +114,7 @@ MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
 
 ### GetUdonSharpComponent
 
-GameObject から型付き UdonSharpBehaviour を取得:
+Get a typed UdonSharpBehaviour from a GameObject:
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -126,9 +126,9 @@ MyScript[] scripts = gameObject.GetUdonSharpComponentsInChildren<MyScript>();
 #endif
 ```
 
-## カスタムインスペクター
+## Custom Inspectors
 
-### 基本的なカスタムインスペクター
+### Basic Custom Inspector
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -141,28 +141,28 @@ public class MyScriptEditor : Editor
     public override void OnInspectorGUI()
     {
         MyScript script = (MyScript)target;
-        
+
         // REQUIRED: Draw the default UdonSharp header
         if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
         {
             return; // Returns true if the script is not valid
         }
-        
+
         // Your custom inspector code here
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Custom Settings", EditorStyles.boldLabel);
-        
+
         // Use SerializedProperty for proper Undo support
         SerializedProperty speedProp = serializedObject.FindProperty("speed");
         EditorGUILayout.PropertyField(speedProp);
-        
+
         // Apply changes
         if (serializedObject.ApplyModifiedProperties())
         {
             // Sync changes to UdonBehaviour
             UdonSharpEditorUtility.CopyProxyToUdon(script);
         }
-        
+
         // Custom buttons
         if (GUILayout.Button("Reset Speed"))
         {
@@ -175,13 +175,13 @@ public class MyScriptEditor : Editor
 #endif
 ```
 
-### 重要: DrawDefaultUdonSharpBehaviourHeader
+### Important: DrawDefaultUdonSharpBehaviourHeader
 
-**インスペクターの最初に必ずこれを呼び出すこと。** 以下を処理する:
-- UdonSharp スクリプト参照フィールドの描画
-- コンパイルエラーの表示
-- 同期モードインジケーターの表示
-- コンポーネントが無効な場合に `true` を返す（描画をスキップ）
+**Always call this at the beginning of the inspector.** It handles:
+- Drawing the UdonSharp script reference field
+- Displaying compile errors
+- Showing the sync mode indicator
+- Returning `true` when the component is invalid (skip drawing)
 
 ```csharp
 if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
@@ -190,9 +190,9 @@ if (UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader(target))
 }
 ```
 
-## シーンハンドルとギズモ
+## Scene Handles and Gizmos
 
-### カスタムハンドル
+### Custom Handles
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -204,7 +204,7 @@ public class TeleportPointEditor : Editor
     private void OnSceneGUI()
     {
         TeleportPoint point = (TeleportPoint)target;
-        
+
         // Draw position handle
         EditorGUI.BeginChangeCheck();
         Vector3 newPosition = Handles.PositionHandle(
@@ -217,10 +217,10 @@ public class TeleportPointEditor : Editor
             point.targetPosition = newPosition;
             UdonSharpEditorUtility.CopyProxyToUdon(point);
         }
-        
+
         // Draw label
         Handles.Label(point.targetPosition, "Teleport Target");
-        
+
         // Draw line from object to target
         Handles.color = Color.cyan;
         Handles.DrawDottedLine(
@@ -233,13 +233,13 @@ public class TeleportPointEditor : Editor
 #endif
 ```
 
-### ギズモ
+### Gizmos
 
 ```csharp
 public class TriggerZone : UdonSharpBehaviour
 {
     public float radius = 5f;
-    
+
 #if UNITY_EDITOR
     // Gizmos don't need COMPILER_UDONSHARP check
     private void OnDrawGizmos()
@@ -247,7 +247,7 @@ public class TriggerZone : UdonSharpBehaviour
         Gizmos.color = new Color(0, 1, 0, 0.3f);
         Gizmos.DrawSphere(transform.position, radius);
     }
-    
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
@@ -257,7 +257,7 @@ public class TriggerZone : UdonSharpBehaviour
 }
 ```
 
-## エディターウィンドウ
+## Editor Windows
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -271,11 +271,11 @@ public class MyToolWindow : EditorWindow
     {
         GetWindow<MyToolWindow>("My Tool");
     }
-    
+
     private void OnGUI()
     {
         EditorGUILayout.LabelField("UdonSharp Tool", EditorStyles.boldLabel);
-        
+
         if (GUILayout.Button("Find All MyScript Components"))
         {
             MyScript[] scripts = FindObjectsOfType<MyScript>();
@@ -284,7 +284,7 @@ public class MyToolWindow : EditorWindow
                 Debug.Log($"Found: {script.gameObject.name}");
             }
         }
-        
+
         if (GUILayout.Button("Reset All Speeds"))
         {
             MyScript[] scripts = FindObjectsOfType<MyScript>();
@@ -300,7 +300,7 @@ public class MyToolWindow : EditorWindow
 #endif
 ```
 
-## プロパティドロワー
+## Property Drawers
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
@@ -311,7 +311,7 @@ public class MinMaxAttribute : PropertyAttribute
 {
     public float min;
     public float max;
-    
+
     public MinMaxAttribute(float min, float max)
     {
         this.min = min;
@@ -326,7 +326,7 @@ public class MinMaxDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         MinMaxAttribute attr = (MinMaxAttribute)attribute;
-        
+
         if (property.propertyType == SerializedPropertyType.Float)
         {
             property.floatValue = EditorGUI.Slider(
@@ -349,9 +349,9 @@ public class MyScript : UdonSharpBehaviour
 }
 ```
 
-## ベストプラクティス
+## Best Practices
 
-### 1. 常に Undo を使用する
+### 1. Always Use Undo
 
 ```csharp
 Undo.RecordObject(target, "Description of change");
@@ -359,14 +359,14 @@ Undo.RecordObject(target, "Description of change");
 UdonSharpEditorUtility.CopyProxyToUdon(target);
 ```
 
-### 2. Null プロキシのチェック
+### 2. Check for Null Proxy
 
 ```csharp
 MyScript script = target as MyScript;
 if (script == null) return;
 ```
 
-### 3. 可能な限り SerializedProperty を使用する
+### 3. Use SerializedProperty When Possible
 
 ```csharp
 SerializedProperty prop = serializedObject.FindProperty("fieldName");
@@ -374,7 +374,7 @@ EditorGUILayout.PropertyField(prop);
 serializedObject.ApplyModifiedProperties();
 ```
 
-### 4. プロキシ更新のバッチ処理
+### 4. Batch Proxy Updates
 
 ```csharp
 // Don't call CopyProxyToUdon after every change
@@ -384,7 +384,7 @@ script.value3 = 3;
 UdonSharpEditorUtility.CopyProxyToUdon(script); // Once at the end
 ```
 
-### 5. 必要に応じてシーンを Dirty にマークする
+### 5. Mark Scene Dirty When Needed
 
 ```csharp
 if (GUI.changed)
@@ -399,19 +399,19 @@ if (GUI.changed)
 }
 ```
 
-## よくある問題
+## Common Issues
 
-### 変更が保持されない
+### Changes Not Persisting
 
-カスタムインスペクターで行った変更が保持されない場合:
+If changes made in a custom inspector are not persisting:
 
-1. `UdonSharpEditorUtility.CopyProxyToUdon()` を呼び出しているか確認
-2. 変更前に `Undo.RecordObject()` を使用しているか確認
-3. ターゲットに対して `EditorUtility.SetDirty()` を呼び出しているか確認
+1. Verify you are calling `UdonSharpEditorUtility.CopyProxyToUdon()`
+2. Verify you are using `Undo.RecordObject()` before making changes
+3. Verify you are calling `EditorUtility.SetDirty()` on the target
 
-### シリアライゼーションエラー
+### Serialization Errors
 
-"SerializedObject target has been destroyed" が表示される場合:
+If you see "SerializedObject target has been destroyed":
 
 ```csharp
 if (serializedObject == null || serializedObject.targetObject == null)
@@ -420,9 +420,9 @@ if (serializedObject == null || serializedObject.targetObject == null)
 }
 ```
 
-### プレイモードでの変更が失われる
+### Play Mode Changes Lost
 
-プレイモード中に行った変更は終了時に失われる。これは Unity の仕様。テスト用には以下を使用:
+Changes made during Play Mode are lost when exiting. This is standard Unity behavior. For testing purposes, use:
 
 ```csharp
 [ExecuteInEditMode]
@@ -432,4 +432,4 @@ public class MyScript : UdonSharpBehaviour
 }
 ```
 
-注意: `ExecuteInEditMode` は UdonSharp で問題を起こすことがある。慎重に使用すること。
+Note: `ExecuteInEditMode` can cause issues with UdonSharp. Use with caution.

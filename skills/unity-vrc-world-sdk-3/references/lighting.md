@@ -1,8 +1,8 @@
-# VRChat ワールドライティングガイド
+# VRChat World Lighting Guide
 
-VRChat ワールドのライティング設定と最適化ガイド。
+Lighting settings and optimization guide for VRChat worlds.
 
-## 目次
+## Table of Contents
 
 - [Lighting Fundamentals](#lighting-fundamentals)
 - [Baked Lighting](#baked-lighting)
@@ -13,41 +13,41 @@ VRChat ワールドのライティング設定と最適化ガイド。
 
 ---
 
-## ライティングの基礎
+## Lighting Fundamentals
 
-### ライトモード
+### Light Modes
 
-| モード | パフォーマンス | 動的オブジェクト | 用途 |
-|------|----------------|------------------|------|
-| **Baked** | ✅ 最高 | ❌ 影響なし | 静的環境 |
-| **Mixed** | ⚠️ 中程度 | ✅ 影響あり | 動的影が必要 |
-| **Realtime** | ❌ 重い | ✅ 完全対応 | 極力避ける |
+| Mode | Performance | Dynamic Objects | Use Case |
+|------|-------------|-----------------|----------|
+| **Baked** | ✅ Best | ❌ No effect | Static environment |
+| **Mixed** | ⚠️ Moderate | ✅ Affected | When dynamic shadows needed |
+| **Realtime** | ❌ Heavy | ✅ Full support | Avoid whenever possible |
 
-### 推奨アプローチ
+### Recommended Approach
 
 ```
-✅ 推奨:
-1. 環境ライト → Baked
-2. Light Probes → 動的オブジェクト用
-3. Reflection Probes → 反射品質向上
+✅ Recommended:
+1. Environment lights → Baked
+2. Light Probes → For dynamic objects
+3. Reflection Probes → Improve reflection quality
 
-❌ 避ける:
-1. Realtime ライト (動的シャドウ)
-2. 過度なライトマップ解像度
-3. 多数の Mixed ライト
+❌ Avoid:
+1. Realtime lights (dynamic shadows)
+2. Excessive lightmap resolution
+3. Many Mixed lights
 ```
 
 ---
 
-## ベイクドライティング
+## Baked Lighting
 
-### ライトマップ設定
+### Lightmap Settings
 
 ```
 Window > Rendering > Lighting
 
-推奨設定:
-├── Lightmapper: Progressive GPU (高速)
+Recommended settings:
+├── Lightmapper: Progressive GPU (fast)
 ├── Lightmap Resolution: 10-20 texels/unit
 ├── Lightmap Padding: 2
 ├── Lightmap Size: 1024 (Quest) / 2048 (PC)
@@ -58,228 +58,228 @@ Window > Rendering > Lighting
 └── Directional Mode: Non-Directional (Quest)
 ```
 
-### オブジェクト設定
+### Object Settings
 
 ```
-静的オブジェクト (Static):
-├── Inspector > Static チェック
+Static objects (Static):
+├── Inspector > Static check
 ├── Contribute GI: ✅
 └── Receive GI: Lightmaps
 
-動的オブジェクト:
+Dynamic objects:
 ├── Contribute GI: ❌
 └── Receive GI: Light Probes
 ```
 
-### ベイク手順
+### Baking Procedure
 
 ```
-1. すべてのライトを Baked/Mixed に設定
-2. 静的オブジェクトを Static に設定
-3. Light Probes を配置
-4. Lighting ウィンドウで "Generate Lighting"
-5. 完了を待つ（数分〜数時間）
-6. 結果を確認、必要に応じて調整
+1. Set all lights to Baked/Mixed
+2. Mark static objects as Static
+3. Place Light Probes
+4. Click "Generate Lighting" in the Lighting window
+5. Wait for completion (minutes to hours)
+6. Review results and adjust as needed
 ```
 
 ---
 
-## ライトプローブ
+## Light Probes
 
-### 目的
-
-```
-Light Probes は:
-- 動的オブジェクト（プレイヤー、Pickup）に
-  ベイクドライティングの影響を与える
-- Lightmap を使えないオブジェクト用
-- 低負荷で動的ライティング効果を実現
-```
-
-### 配置ガイドライン
+### Purpose
 
 ```
-配置場所:
-✅ プレイヤーが通る場所
-✅ 明暗の境界
-✅ 色が変わる場所
-✅ 屋内外の境界
-✅ 高さ方向にも分散
-
-配置しない場所:
-❌ 壁の中
-❌ 到達不可能な場所
-❌ 静的オブジェクトのみの場所
+Light Probes:
+- Apply baked lighting influence to
+  dynamic objects (players, pickups)
+- For objects that can't use Lightmaps
+- Achieve dynamic lighting effects at low cost
 ```
 
-### 作成手順
+### Placement Guidelines
+
+```
+Place at:
+✅ Where players walk
+✅ Light/dark boundaries
+✅ Where colors change
+✅ Indoor/outdoor boundaries
+✅ Distribute vertically as well
+
+Do NOT place at:
+❌ Inside walls
+❌ Unreachable areas
+❌ Areas with only static objects
+```
+
+### Creation Steps
 
 ```
 1. GameObject > Light > Light Probe Group
-2. Edit Light Probes ボタン
-3. Probe を追加/移動
-4. 3D的に配置（床だけでなく高さも）
-5. Generate Lighting で更新
+2. Click Edit Light Probes button
+3. Add/move probes
+4. Place in 3D (not just on the floor, include height)
+5. Update with Generate Lighting
 ```
 
-### 配置密度
+### Placement Density
 
 ```
-推奨密度:
-├── 屋内通路: 2-3m 間隔
-├── 広い空間: 3-5m 間隔
-├── 明暗境界: 1m 以下
-└── 高さ: 0.5m, 1.5m, 3m など複数レベル
+Recommended density:
+├── Indoor corridors: 2-3m intervals
+├── Large open spaces: 3-5m intervals
+├── Light/dark boundaries: 1m or less
+└── Height: Multiple levels at 0.5m, 1.5m, 3m, etc.
 ```
 
 ---
 
-## リフレクションプローブ
+## Reflection Probes
 
-### 目的
-
-```
-Reflection Probes は:
-- 環境反射を提供
-- 金属・光沢表面の品質向上
-- リアルタイム反射の代替
-```
-
-### 設定
+### Purpose
 
 ```
-推奨設定:
-├── Type: Baked (リアルタイム避ける)
+Reflection Probes:
+- Provide environmental reflections
+- Improve quality of metallic/glossy surfaces
+- Alternative to realtime reflections
+```
+
+### Settings
+
+```
+Recommended settings:
+├── Type: Baked (avoid Realtime)
 ├── Resolution: 128-256
-├── HDR: ✅ (品質重視時)
-├── Box Projection: 必要時のみ
-├── Importance: 1 (デフォルト)
+├── HDR: ✅ (when quality is important)
+├── Box Projection: Only when needed
+├── Importance: 1 (default)
 └── Blend Distance: 1-3
 ```
 
-### 配置
+### Placement
 
 ```
-配置場所:
-├── 各部屋に 1 つ
-├── 屋外に大きな 1 つ
-├── 特殊な反射が必要な場所
-└── 重なりを考慮
+Place at:
+├── One per room
+├── One large one outdoors
+├── Where special reflections are needed
+└── Consider overlap
 
-注意:
-- 多すぎると負荷増加
-- 適切な Bounds 設定が重要
+Notes:
+- Too many increases overhead
+- Proper Bounds settings are important
 ```
 
 ---
 
-## Quest 最適化
+## Quest Optimization
 
-### Quest 専用設定
+### Quest-Specific Settings
 
 ```
-必須:
-├── すべてのライトを Baked に
+Required:
+├── All lights set to Baked
 ├── Directional Mode: Non-Directional
 ├── Lightmap Size: 512-1024
 ├── Compress Lightmaps: ✅
-└── リアルタイムライト: 0
+└── Realtime lights: 0
 
-推奨シェーダー:
+Recommended shaders:
 ├── Mobile/VRChat/Lightmapped
 ├── Mobile/Diffuse
 └── Mobile/Particles
 ```
 
-### Quest ライティング手順
+### Quest Lighting Procedure
 
 ```
-1. Platform を Android に切り替え
-2. すべての Realtime ライトを削除
-3. Mixed → Baked に変更
-4. Lightmap 解像度を下げる
-5. Light Probes を配置
+1. Switch Platform to Android
+2. Remove all Realtime lights
+3. Change Mixed → Baked
+4. Lower lightmap resolution
+5. Place Light Probes
 6. Generate Lighting
-7. Quest 実機でテスト
+7. Test on Quest hardware
 ```
 
 ---
 
-## よくある問題
+## Common Issues
 
-### ライトマップがぼやける
+### Blurry Lightmaps
 
-**解決策**:
+**Solution**:
 ```
-1. Lightmap Resolution を上げる (10→20)
-2. Lightmap Size を上げる (1024→2048)
-3. オブジェクトの UV2 を確認
-4. Generate Lightmap UVs を有効化
-```
-
-### 継ぎ目が目立つ
-
-**解決策**:
-```
-1. Lightmap Padding を増やす (2→4)
-2. オブジェクトのスケールを確認
-3. UV2 の継ぎ目を調整
+1. Increase Lightmap Resolution (10→20)
+2. Increase Lightmap Size (1024→2048)
+3. Check object UV2
+4. Enable Generate Lightmap UVs
 ```
 
-### 動的オブジェクトが暗い
+### Visible Seams
 
-**解決策**:
+**Solution**:
 ```
-1. Light Probes を配置
-2. Receive GI: Light Probes に設定
-3. Generate Lighting を再実行
+1. Increase Lightmap Padding (2→4)
+2. Check object scale
+3. Adjust UV2 seams
 ```
 
-### ベイクが遅い
+### Dark Dynamic Objects
 
-**解決策**:
+**Solution**:
 ```
-1. Progressive GPU を使用
-2. Lightmap Resolution を下げる
-3. 不要なオブジェクトを Static から外す
-4. Bounces を減らす (2-3)
+1. Place Light Probes
+2. Set Receive GI to Light Probes
+3. Re-run Generate Lighting
+```
+
+### Slow Baking
+
+**Solution**:
+```
+1. Use Progressive GPU
+2. Lower Lightmap Resolution
+3. Remove unnecessary objects from Static
+4. Reduce Bounces (2-3)
 ```
 
 ---
 
-## シェーダーグローバル変数
+## Shader Global Variables
 
 ```csharp
-// ライティング関連のシェーダー変数
+// Lighting-related shader variables
 // _VRChatCameraMode:
-//   0 = 通常
-//   1 = VR ハンドヘルド
-//   2 = Desktop ハンドヘルド
-//   3 = スクリーンショット
+//   0 = Normal
+//   1 = VR handheld
+//   2 = Desktop handheld
+//   3 = Screenshot
 
-// カスタムシェーダーで使用可能
+// Available for use in custom shaders
 ```
 
 ---
 
-## クイックリファレンス
+## Quick Reference
 
-### 設定チェックリスト
+### Settings Checklist
 
 ```
-□ すべてのライトが Baked/Mixed
-□ 静的オブジェクトが Static 設定
-□ Light Probes が配置済み
-□ Reflection Probes が配置済み
-□ Lightmap がベイク済み
-□ Quest: Realtime ライト 0
+□ All lights are Baked/Mixed
+□ Static objects are marked Static
+□ Light Probes placed
+□ Reflection Probes placed
+□ Lightmaps baked
+□ Quest: Realtime lights = 0
 □ Quest: Directional Mode = Non-Directional
 ```
 
-### パフォーマンス目安
+### Performance Guidelines
 
-| 設定項目 | PC | Quest |
-|------|-----|-------|
+| Setting | PC | Quest |
+|---------|-----|-------|
 | Lightmap Resolution | 20 | 10 |
 | Lightmap Size | 2048 | 1024 |
 | Reflection Probe Res | 256 | 128 |

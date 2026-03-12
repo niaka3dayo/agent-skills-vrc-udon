@@ -1,224 +1,224 @@
-# VRChat レイヤーとコリジョンリファレンス
+# VRChat Layers and Collision Reference
 
-## 概要
+## Overview
 
-VRChat は Unity のレイヤーシステムを使用して、GameObject の整理、コリジョン制御、選択的レンダリングを行います。VRChat SDK でプロジェクトを作成すると、レイヤーは自動的に設定されます。
+VRChat uses Unity's layer system to organize GameObjects, control collisions, and perform selective rendering. When you create a project with the VRChat SDK, layers are automatically configured.
 
-**重要**: VRChat予約レイヤー（0-21）の名前変更・削除は、アップロード時に上書きされます。
+**Important**: Renaming or deleting VRChat reserved layers (0-21) will be overwritten at upload time.
 
 ---
 
-## VRChat 予約レイヤー (0-21)
+## VRChat Reserved Layers (0-21)
 
-### システムレイヤー
+### System Layers
 
-| レイヤー番号 | 名前 | 用途 |
-|-------------|------|------|
-| 0 | Default | 一般オブジェクト |
-| 1 | TransparentFX | 透明エフェクト |
-| 2 | Ignore Raycast | Raycast無視 |
-| 3 | - | 未使用 |
-| 4 | Water | 水面 |
+| Layer # | Name | Purpose |
+|---------|------|---------|
+| 0 | Default | General objects |
+| 1 | TransparentFX | Transparent effects |
+| 2 | Ignore Raycast | Ignored by Raycast |
+| 3 | - | Unused |
+| 4 | Water | Water surfaces |
 | 5 | UI | Unity UI |
 
-### VRChat 固有レイヤー
+### VRChat-Specific Layers
 
-| レイヤー番号 | 名前 | 用途 |
-|-------------|------|------|
-| 8 | Interactive | インタラクト可能オブジェクト |
-| 9 | Player | リモートプレイヤー |
-| 10 | PlayerLocal | ローカルプレイヤー |
-| 11 | Environment | 環境オブジェクト（壁・床） |
-| 12 | UiMenu | VRChat UIメニュー |
-| 13 | Pickup | 持てるオブジェクト |
-| 14 | PickupNoEnvironment | 環境と衝突しないPickup |
-| 15 | StereoLeft | ステレオ左目 |
-| 16 | StereoRight | ステレオ右目 |
-| 17 | Walkthrough | 通り抜け可能 |
-| 18 | MirrorReflection | ミラー反射用 |
-| 19 | reserved2 | 予約済み |
-| 20 | reserved3 | 予約済み |
-| 21 | reserved4 | 予約済み |
-
----
-
-## ユーザーレイヤー (22-31)
-
-**自由に使用可能**: 名前変更・コリジョン設定が保持される。
-
-| レイヤー番号 | 推奨用途 |
-|-------------|----------|
-| 22 | カスタム用途1 |
-| 23 | カスタム用途2 |
-| 24 | カスタム用途3 |
-| 25 | カスタム用途4 |
-| 26 | カスタム用途5 |
-| 27 | カスタム用途6 |
-| 28 | カスタム用途7 |
-| 29 | カスタム用途8 |
-| 30 | カスタム用途9 |
-| 31 | カスタム用途10 |
-
-### よく使われるカスタムレイヤー
-
-```
-Layer 22: "Intangible" - 衝突しないデコレーション
-Layer 23: "LocalOnly" - ローカル専用オブジェクト
-Layer 24: "TriggerZone" - トリガーゾーン専用
-Layer 25: "Projectiles" - 発射物
-```
+| Layer # | Name | Purpose |
+|---------|------|---------|
+| 8 | Interactive | Interactable objects |
+| 9 | Player | Remote players |
+| 10 | PlayerLocal | Local player |
+| 11 | Environment | Environment objects (walls, floors) |
+| 12 | UiMenu | VRChat UI menu |
+| 13 | Pickup | Grabbable objects |
+| 14 | PickupNoEnvironment | Pickups that don't collide with environment |
+| 15 | StereoLeft | Stereo left eye |
+| 16 | StereoRight | Stereo right eye |
+| 17 | Walkthrough | Walk-through objects |
+| 18 | MirrorReflection | Mirror reflection |
+| 19 | reserved2 | Reserved |
+| 20 | reserved3 | Reserved |
+| 21 | reserved4 | Reserved |
 
 ---
 
-## レイヤー使用ガイドライン
+## User Layers (22-31)
 
-### Default (レイヤー 0)
+**Available for custom use**: Names and collision settings are preserved.
 
-```
-用途:
-- 一般的なオブジェクト
-- 特別な処理が不要なもの
+| Layer # | Suggested Use |
+|---------|---------------|
+| 22 | Custom purpose 1 |
+| 23 | Custom purpose 2 |
+| 24 | Custom purpose 3 |
+| 25 | Custom purpose 4 |
+| 26 | Custom purpose 5 |
+| 27 | Custom purpose 6 |
+| 28 | Custom purpose 7 |
+| 29 | Custom purpose 8 |
+| 30 | Custom purpose 9 |
+| 31 | Custom purpose 10 |
 
-注意:
-- プレイヤーと衝突する
-- Raycastで検出される
-```
-
-### Environment (レイヤー 11)
-
-```
-用途:
-- 壁、床、天井
-- 歩行可能な地形
-- 障害物
-
-特徴:
-- プレイヤーと確実に衝突
-- Pickup も衝突
-```
-
-### Pickup (レイヤー 13)
+### Commonly Used Custom Layers
 
 ```
-用途:
-- VRC_Pickup を持つオブジェクト
-
-特徴:
-- プレイヤーと衝突
-- 環境と衝突
-- 他のPickupとの衝突は設定次第
-```
-
-### PickupNoEnvironment (レイヤー 14)
-
-```
-用途:
-- 環境を通り抜けるPickup
-- 壁越しに渡せるオブジェクト
-
-特徴:
-- プレイヤーと衝突
-- 環境と衝突しない
-```
-
-### Walkthrough (レイヤー 17)
-
-```
-用途:
-- 通り抜け可能なオブジェクト
-- 視覚的な障壁
-- エフェクト用コライダー
-
-特徴:
-- プレイヤーが通り抜けられる
-- トリガーイベントは発火可能
-```
-
-### MirrorReflection (レイヤー 18)
-
-```
-用途:
-- ミラーに映すオブジェクト
-- ミラー専用レイヤー
-
-注意:
-- 通常のカメラには映らない
-- ミラーのみに表示
+Layer 22: "Intangible" - Decorations with no collision
+Layer 23: "LocalOnly" - Local-only objects
+Layer 24: "TriggerZone" - Trigger zones only
+Layer 25: "Projectiles" - Projectiles
 ```
 
 ---
 
-## コリジョンマトリックス
+## Layer Usage Guidelines
 
-### 現在のマトリックス確認
+### Default (Layer 0)
+
+```
+Purpose:
+- General objects
+- Objects that don't need special handling
+
+Notes:
+- Collides with players
+- Detected by Raycast
+```
+
+### Environment (Layer 11)
+
+```
+Purpose:
+- Walls, floors, ceilings
+- Walkable terrain
+- Obstacles
+
+Characteristics:
+- Reliably collides with players
+- Pickups also collide
+```
+
+### Pickup (Layer 13)
+
+```
+Purpose:
+- Objects with VRC_Pickup
+
+Characteristics:
+- Collides with players
+- Collides with environment
+- Collision with other Pickups depends on settings
+```
+
+### PickupNoEnvironment (Layer 14)
+
+```
+Purpose:
+- Pickups that pass through environment
+- Objects that can be handed through walls
+
+Characteristics:
+- Collides with players
+- Does NOT collide with environment
+```
+
+### Walkthrough (Layer 17)
+
+```
+Purpose:
+- Walk-through objects
+- Visual barriers
+- Effect colliders
+
+Characteristics:
+- Players can walk through
+- Trigger events can still fire
+```
+
+### MirrorReflection (Layer 18)
+
+```
+Purpose:
+- Objects to display in mirrors
+- Mirror-only layer
+
+Notes:
+- Not visible to regular cameras
+- Displayed only in mirrors
+```
+
+---
+
+## Collision Matrix
+
+### Checking the Current Matrix
 
 ```
 Edit > Project Settings > Physics > Layer Collision Matrix
 ```
 
-### VRChat デフォルトコリジョンマトリックス
+### VRChat Default Collision Matrix
 
 ```
-重要な衝突ペア:
+Important collision pairs:
 
-✅ 衝突する:
+✅ Collide:
 - Player ↔ Environment
 - Player ↔ Pickup
 - PlayerLocal ↔ Environment
 - Pickup ↔ Environment
 
-❌ 衝突しない:
-- Player ↔ Player (VRChat制御)
+❌ Do NOT collide:
+- Player ↔ Player (VRChat controlled)
 - Player ↔ PlayerLocal
 - PickupNoEnvironment ↔ Environment
 - Walkthrough ↔ Player
 ```
 
-### カスタムレイヤーコリジョン設定
+### Custom Layer Collision Settings
 
 ```csharp
-// スクリプトでレイヤーコリジョンを設定（エディタ専用）
+// Set layer collision via script (editor only)
 #if UNITY_EDITOR
-Physics.IgnoreLayerCollision(22, 11, true); // Layer 22 と Environment の衝突を無効化
+Physics.IgnoreLayerCollision(22, 11, true); // Disable collision between Layer 22 and Environment
 #endif
 ```
 
 ---
 
-## Udon でのレイヤーマスク
+## Layer Masks in Udon
 
-### レイヤーマスクの取得
+### Getting Layer Masks
 
 ```csharp
-// レイヤー番号からマスクを取得
+// Get mask from layer number
 int playerLayer = LayerMask.NameToLayer("Player");
 int layerMask = 1 << playerLayer;
 
-// 複数レイヤーのマスク
+// Multiple layer mask
 int mask = (1 << LayerMask.NameToLayer("Player")) |
            (1 << LayerMask.NameToLayer("Environment"));
 ```
 
-### レイヤーマスクを使った Raycast
+### Raycast with Layer Masks
 
 ```csharp
-// 特定レイヤーのみにRaycast
+// Raycast only specific layers
 int playerMask = 1 << 9; // Player layer
 
 RaycastHit hit;
 if (Physics.Raycast(origin, direction, out hit, maxDistance, playerMask))
 {
-    // Player にヒット
+    // Hit a Player
 }
 
-// 特定レイヤーを除外
+// Exclude specific layers
 int everythingExceptPlayer = ~(1 << 9);
 ```
 
-### よく使うレイヤーマスク
+### Commonly Used Layer Masks
 
 ```csharp
-// よく使うマスク
+// Common masks
 private int _environmentMask;
 private int _playerMask;
 private int _pickupMask;
@@ -233,59 +233,59 @@ void Start()
 
 ---
 
-## レイヤーのベストプラクティス
+## Layer Best Practices
 
-### 推奨事項
-
-```
-✅ 適切なレイヤーを選択:
-- 床・壁 → Environment
-- 持てる物 → Pickup
-- 装飾（衝突不要） → User Layer + 衝突無効
-
-✅ User Layers を活用:
-- カスタム衝突設定が必要な場合
-- 特定のRaycastフィルタリング
-```
-
-### 禁止事項
+### Recommendations
 
 ```
-❌ 避けること:
-- VRChat予約レイヤーの名前変更
-- Player/PlayerLocal レイヤーの使用（VRChat専用）
-- 不要な衝突の有効化
+✅ Choose the appropriate layer:
+- Floors, walls → Environment
+- Grabbable items → Pickup
+- Decorations (no collision needed) → User Layer + collision disabled
+
+✅ Use User Layers:
+- When custom collision settings are needed
+- For specific Raycast filtering
+```
+
+### Prohibited Actions
+
+```
+❌ Avoid:
+- Renaming VRChat reserved layers
+- Using Player/PlayerLocal layers (VRChat exclusive)
+- Enabling unnecessary collisions
 ```
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### よくある問題
+### Common Issues
 
-| 問題 | 原因 | 解決策 |
-|------|------|--------|
-| プレイヤーが壁を通り抜ける | 間違ったレイヤー | Environment に設定 |
-| Pickupが床を通り抜ける | PickupNoEnvironment使用 | Pickup に変更 |
-| オブジェクトがミラーに映らない | レイヤー設定 | MirrorReflection確認 |
-| Raycastが検出しない | レイヤーマスク | 正しいマスクを使用 |
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Player walks through walls | Wrong layer | Set to Environment |
+| Pickup falls through floor | Using PickupNoEnvironment | Change to Pickup |
+| Object not visible in mirror | Layer settings | Check MirrorReflection |
+| Raycast not detecting | Layer mask | Use correct mask |
 
-### レイヤー問題のデバッグ
+### Debugging Layer Issues
 
 ```csharp
-// オブジェクトのレイヤーを確認
+// Check an object's layer
 Debug.Log($"Layer: {gameObject.layer} ({LayerMask.LayerToName(gameObject.layer)})");
 
-// コリジョンマトリックス確認
+// Check collision matrix
 bool willCollide = !Physics.GetIgnoreLayerCollision(layerA, layerB);
 Debug.Log($"Layers {layerA} and {layerB} collision: {willCollide}");
 ```
 
 ---
 
-## クイックリファレンス
+## Quick Reference
 
-### レイヤー番号一覧
+### Layer Number List
 
 ```
 0  = Default
@@ -296,19 +296,19 @@ Debug.Log($"Layers {layerA} and {layerB} collision: {willCollide}");
 14 = PickupNoEnvironment
 17 = Walkthrough
 18 = MirrorReflection
-22-31 = User Layers (自由)
+22-31 = User Layers (custom)
 ```
 
-### よく使う操作
+### Common Operations
 
 ```csharp
-// レイヤー設定
+// Set layer
 gameObject.layer = LayerMask.NameToLayer("Pickup");
 
-// レイヤー確認
+// Check layer
 if (gameObject.layer == LayerMask.NameToLayer("Environment")) { }
 
-// 子オブジェクト含めて変更
+// Change all children including self
 foreach (Transform child in transform.GetComponentsInChildren<Transform>())
 {
     child.gameObject.layer = newLayer;

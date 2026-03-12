@@ -1,91 +1,91 @@
-# VRC World SDK 3 チートシート
+# VRC World SDK 3 Cheatsheet
 
-**SDK 3.7.x - 3.10.x 対応** (2026年2月時点)
-
----
-
-## 目次
-
-| セクション | 内容 |
-|-----------|------|
-| [シーンセットアップ](#シーンセットアップ) | VRCWorld、スポーン、リスポーン |
-| [コンポーネント](#コンポーネント) | Pickup, Station, ObjectSync |
-| [レイヤー](#レイヤー) | レイヤー番号と用途 |
-| [パフォーマンス](#パフォーマンス) | 制限値と最適化 |
-| [ライティング](#ライティング) | ベイク設定 |
-| [オーディオ/ビデオ](#オーディオビデオ) | オーディオ・ビデオ |
-| [アップロード](#アップロード) | アップロード手順 |
+**SDK 3.7.x - 3.10.x supported** (as of February 2026)
 
 ---
 
-## シーンセットアップ
+## Table of Contents
 
-### チェックリスト
+| Section | Content |
+|---------|---------|
+| [Scene Setup](#scene-setup) | VRCWorld, Spawns, Respawn |
+| [Components](#components) | Pickup, Station, ObjectSync |
+| [Layers](#layers) | Layer numbers and purposes |
+| [Performance](#performance) | Limits and optimization |
+| [Lighting](#lighting) | Bake settings |
+| [Audio/Video](#audiovideo) | Audio and video |
+| [Upload](#upload) | Upload procedure |
+
+---
+
+## Scene Setup
+
+### Checklist
 
 ```
 □ VRCWorld prefab × 1
-□ Spawns 設定済み
-□ Respawn Height 設定済み (床より下)
-□ "Setup Layers for VRChat" 実行
-□ ライトベイク完了
+□ Spawns configured
+□ Respawn Height set (below the floor)
+□ "Setup Layers for VRChat" executed
+□ Light baking complete
 □ 45+ FPS (VR)
 ```
 
 ### VRC_SceneDescriptor
 
-| プロパティ | 説明 | デフォルト |
-|-----------|------|-----------|
-| Spawns | スポーン地点配列 | Descriptor位置 |
+| Property | Description | Default |
+|----------|-------------|---------|
+| Spawns | Array of spawn points | Descriptor position |
 | Spawn Order | Sequential/Random/Demo | Sequential |
-| Respawn Height | リスポーンY座標 | -100 |
-| Reference Camera | カメラ設定参照 | None |
-| Maximum Capacity | 最大人数 | - |
-| Recommended Capacity | 推奨人数 | - |
+| Respawn Height | Respawn Y coordinate | -100 |
+| Reference Camera | Camera settings reference | None |
+| Maximum Capacity | Max player count | - |
+| Recommended Capacity | Recommended player count | - |
 
-### スポーン順序
+### Spawn Order
 
 ```
-Sequential: 0 → 1 → 2 → 0 → 1 (順番)
-Random:     ランダム選択
-Demo:       全員が Spawns[0]
+Sequential: 0 → 1 → 2 → 0 → 1 (in order)
+Random:     Random selection
+Demo:       All players at Spawns[0]
 ```
 
 ---
 
-## コンポーネント
+## Components
 
-### 必須要素
+### Required Elements
 
-| コンポーネント | Collider | Rigidbody | 用途 |
-|--------------|----------|-----------|------|
-| VRC_SceneDescriptor | - | - | ワールド設定 |
-| VRC_Pickup | 必須 | 必須 | 持てる |
-| VRC_Station | 必須 | - | 座れる |
-| VRC_ObjectSync | - | 必須 | 物理同期 |
-| VRC_Mirror | - | - | 鏡 |
+| Component | Collider | Rigidbody | Purpose |
+|-----------|----------|-----------|---------|
+| VRC_SceneDescriptor | - | - | World settings |
+| VRC_Pickup | Required | Required | Grabbable |
+| VRC_Station | Required | - | Sittable |
+| VRC_ObjectSync | - | Required | Physics sync |
+| VRC_Mirror | - | - | Mirror |
 
-### VRC_Pickup セットアップ
+### VRC_Pickup Setup
 
 ```
 [GameObject]
-├── Collider (IsTrigger推奨)
+├── Collider (IsTrigger recommended)
 ├── Rigidbody
 ├── VRC_Pickup
 │   ├── Auto Hold: Yes/No/AutoDetect
 │   ├── Pickupable: true
 │   └── Allow Theft: true
-└── VRC_ObjectSync (同期時)
+└── VRC_ObjectSync (for sync)
 ```
 
-**イベント:**
+**Events:**
 ```csharp
-OnPickup()           // 持った時
-OnDrop()             // 離した時
-OnPickupUseDown()    // トリガー押下
-OnPickupUseUp()      // トリガー解放
+OnPickup()           // When grabbed
+OnDrop()             // When released
+OnPickupUseDown()    // Trigger pressed
+OnPickupUseUp()      // Trigger released
 ```
 
-### VRC_Station セットアップ
+### VRC_Station Setup
 
 ```
 [GameObject]
@@ -109,16 +109,16 @@ OnStationExited(VRCPlayerApi player)
 ```csharp
 VRCObjectSync sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
 
-sync.Respawn();           // 初期位置にリセット
-sync.SetGravity(true);    // 重力設定
-sync.SetKinematic(false); // 物理設定
-sync.FlagDiscontinuity(); // 瞬間移動時（補間スキップ）
+sync.Respawn();           // Reset to initial position
+sync.SetGravity(true);    // Gravity setting
+sync.SetKinematic(false); // Physics setting
+sync.FlagDiscontinuity(); // On teleport (skip interpolation)
 ```
 
 ### VRC_Mirror
 
 ```csharp
-// デフォルトOFF + トグル
+// Default OFF + toggle
 void Start() => mirrorObject.SetActive(false);
 
 public override void Interact()
@@ -129,33 +129,33 @@ public override void Interact()
 
 ---
 
-## レイヤー
+## Layers
 
-### VRChat 予約レイヤー
+### VRChat Reserved Layers
 
-| # | 名前 | 用途 |
-|---|------|-----|
-| 0 | Default | 一般オブジェクト |
-| 9 | Player | リモートプレイヤー |
-| 10 | PlayerLocal | ローカルプレイヤー |
-| 11 | Environment | 壁・床 |
-| 13 | Pickup | 持てる物 |
-| 14 | PickupNoEnvironment | 壁通過Pickup |
-| 17 | Walkthrough | 通り抜け可能 |
-| 18 | MirrorReflection | ミラー専用 |
-| **22-31** | **User** | **自由に使用可** |
+| # | Name | Purpose |
+|---|------|---------|
+| 0 | Default | General objects |
+| 9 | Player | Remote players |
+| 10 | PlayerLocal | Local player |
+| 11 | Environment | Walls, floors |
+| 13 | Pickup | Grabbable objects |
+| 14 | PickupNoEnvironment | Pickups that pass through walls |
+| 17 | Walkthrough | Walk-through objects |
+| 18 | MirrorReflection | Mirror only |
+| **22-31** | **User** | **Available for custom use** |
 
-### レイヤーマスク (Udon)
+### Layer Masks (Udon)
 
 ```csharp
-// レイヤーマスク取得
+// Get layer mask
 int playerMask = 1 << 9;
 int envMask = 1 << LayerMask.NameToLayer("Environment");
 
-// 複数レイヤー
+// Multiple layers
 int combined = (1 << 9) | (1 << 11);
 
-// 除外
+// Exclude
 int exceptPlayer = ~(1 << 9);
 
 // Raycast
@@ -164,23 +164,23 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 
 ---
 
-## パフォーマンス
+## Performance
 
-### 制限値
+### Limits
 
-| 項目 | PC | Quest |
+| Item | PC | Quest |
 |------|-----|-------|
 | FPS Target | 45+ VR, 60+ Desktop | 72 |
-| Mirrors | 1 (デフォルトOFF) | 0-1 |
+| Mirrors | 1 (default OFF) | 0-1 |
 | Video Players | 2 | 1 |
 | Realtime Lights | 0-1 | 0 |
 | Polygons | 500K-1M | 50K-100K |
-| Materials | 制限なし | 25以下 |
-| Texture Size | 制限なし | 1024以下 |
+| Materials | No limit | 25 or less |
+| Texture Size | No limit | 1024 or less |
 
-### Quest 制限
+### Quest Restrictions
 
-| 機能 | PC | Quest |
+| Feature | PC | Quest |
 |---------|-----|-------|
 | Dynamic Bones | ✅ | ❌ |
 | Cloth | ✅ | ❌ |
@@ -188,83 +188,83 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 | Unity Constraints | ✅ | ❌ |
 | Realtime Shadows | ✅ | ⚠️ |
 
-### 最適化チェックリスト
+### Optimization Checklist
 
 ```
-□ ライトベイク完了
-□ リアルタイムライト ≤ 1
-□ ミラー デフォルトOFF
-□ ビデオプレイヤー ≤ 2
-□ Static Batching 有効
-□ Occlusion Culling 設定
-□ LOD 設定
+□ Light baking complete
+□ Realtime lights ≤ 1
+□ Mirror default OFF
+□ Video players ≤ 2
+□ Static Batching enabled
+□ Occlusion Culling configured
+□ LOD configured
 ```
 
 ---
 
-## ライティング
+## Lighting
 
-### クイックセットアップ
+### Quick Setup
 
 ```
 ✅ DO:
 ├── Lightmapper: Progressive GPU
 ├── Light Mode: Baked / Mixed
-├── Light Probes 配置
-└── Reflection Probes 配置
+├── Light Probes placed
+└── Reflection Probes placed
 
 ❌ DON'T:
-├── Realtime ライト多用
-├── 高解像度ライトマップ
-└── 動的シャドウ多用
+├── Overuse Realtime lights
+├── High-resolution lightmaps
+└── Overuse dynamic shadows
 ```
 
-### ライトマップ設定
+### Lightmap Settings
 
-| 設定 | PC | Quest |
+| Setting | PC | Quest |
 |---------|-----|-------|
 | Resolution | 20 texels/unit | 10 |
 | Size | 2048 | 1024 |
 | Directional | Directional | Non-Directional |
 | Compress | ✅ | ✅ |
 
-### ライトプローブ
+### Light Probes
 
 ```
-配置場所:
-✅ プレイヤーが通る場所
-✅ 明暗の境界
-✅ 屋内外の境界
-✅ 高さ方向にも分散
+Placement locations:
+✅ Where players walk
+✅ Light/dark boundaries
+✅ Indoor/outdoor boundaries
+✅ Distribute vertically as well
 
-配置しない場所:
-❌ 壁の中
-❌ 到達不可能な場所
+Do NOT place:
+❌ Inside walls
+❌ Unreachable areas
 ```
 
 ---
 
-## オーディオ/ビデオ
+## Audio/Video
 
 ### VRC_SpatialAudioSource
 
-| プロパティ | デフォルト | 範囲 |
-|-----------|-----------|------|
+| Property | Default | Range |
+|----------|---------|-------|
 | Gain | 0 dB | -24 ~ +24 |
-| Near | 0 m | 減衰開始 |
-| Far | 40 m | 減衰終了 |
-| Volumetric Radius | 0 m | 音源の広がり |
+| Near | 0 m | Attenuation start |
+| Far | 40 m | Attenuation end |
+| Volumetric Radius | 0 m | Source spread |
 
-### ビデオプレイヤー比較
+### Video Player Comparison
 
-| 機能 | AVPro | Unity |
+| Feature | AVPro | Unity |
 |---------|-------|-------|
 | YouTube/Twitch | ✅ | ❌ |
 | Live Stream | ✅ | ❌ |
 | Editor Preview | ❌ | ✅ |
 | Quest | ✅ | ✅ |
 
-### ビデオイベント
+### Video Events
 
 ```csharp
 OnVideoStart()
@@ -273,56 +273,56 @@ OnVideoError(VideoError error)
 OnVideoReady()
 ```
 
-### オーディオ圧縮
+### Audio Compression
 
-| 種類 | ロード方式 | 品質 |
-|------|----------|------|
+| Type | Load Method | Quality |
+|------|------------|---------|
 | BGM | Streaming | 70% |
 | SFX | Decompress | 50-70% |
 | Ambient | Compressed | 50% |
 
 ---
 
-## アップロード
+## Upload
 
-### アップロード前チェックリスト
+### Pre-Upload Checklist
 
 ```
 □ VRC_SceneDescriptor × 1
-□ Spawns 設定
-□ Respawn Height 適切
-□ Layer/Collision 確認
-□ Lights ベイク済
-□ Mirror OFF デフォルト
+□ Spawns configured
+□ Respawn Height appropriate
+□ Layer/Collision verified
+□ Lights baked
+□ Mirror OFF default
 □ 45+ FPS (VR)
-□ Validation エラーなし
+□ No Validation errors
 ```
 
-### アップロード手順
+### Upload Procedure
 
 ```
 1. VRChat SDK > Show Control Panel
-2. Builder タブ
-3. Validations 確認 & 修正
-4. Build & Test (ローカルテスト)
+2. Builder tab
+3. Check & fix Validations
+4. Build & Test (local testing)
 5. Build & Upload
-6. World Settings 設定
+6. World Settings
    - Name / Description
    - Content Warnings
    - Capacity
 7. Upload
-8. VRChat ウェブで確認
+8. Verify on VRChat website
 ```
 
-### キャパシティガイドライン
+### Capacity Guidelines
 
-| ワールド規模 | 推奨 | 最大 |
-|-------------|------|------|
-| 小規模 | 8-16 | 20-32 |
-| 中規模 | 20-32 | 40-64 |
-| 大規模 | 40-80 | 80+ |
+| World Size | Recommended | Maximum |
+|------------|-------------|---------|
+| Small | 8-16 | 20-32 |
+| Medium | 20-32 | 40-64 |
+| Large | 40-80 | 80+ |
 
-### コンテンツ警告
+### Content Warnings
 
 ```
 □ Adult Language
@@ -335,43 +335,42 @@ OnVideoReady()
 
 ---
 
-## トラブルシューティング早見表
+## Troubleshooting Quick Reference
 
-| 問題 | 解決策 |
+| Issue | Solution |
 |-------|----------|
-| プレイヤーが壁を通り抜ける | Layer → Environment |
-| Pickup が持てない | Collider + Rigidbody 追加 |
-| Pickup が同期しない | VRC_ObjectSync 追加 |
-| Station に座れない | Collider 追加 |
-| ミラーが映らない | Layer 確認 |
-| FPS が低い | ミラーOFF、ライトベイク |
-| Quest で動かない | Mobile シェーダー使用 |
-| ビルドエラー | Validation 確認 |
-| アップロード後見つからない | Public に変更 |
+| Player walks through walls | Layer → Environment |
+| Can't grab Pickup | Add Collider + Rigidbody |
+| Pickup doesn't sync | Add VRC_ObjectSync |
+| Can't sit in Station | Add Collider |
+| Mirror doesn't reflect | Check layers |
+| Low FPS | Turn off mirror, bake lights |
+| Doesn't work on Quest | Use Mobile shaders |
+| Build error | Check Validation |
+| World not found after upload | Change to Public |
 
 ---
 
-## 公式ドキュメント・問題調査 (WebSearch)
+## Official Docs & Issue Investigation (WebSearch)
 
 ```bash
-# VRChat フォーラム
-site:ask.vrchat.com "問題キーワード"
+# VRChat Forums
+site:ask.vrchat.com "issue keyword"
 
-# バグ報告・要望
-site:feedback.vrchat.com "問題キーワード"
+# Bug reports & feature requests
+site:feedback.vrchat.com "issue keyword"
 
 # GitHub
-site:github.com/vrchat-community "問題キーワード"
+site:github.com/vrchat-community "issue keyword"
 ```
 
 ---
 
-## SDK バージョン別機能
+## SDK Version Features
 
-| SDK | 主な機能 |
-|-----|---------|
+| SDK | Key Features |
+|-----|-------------|
 | 3.7.4 | Persistence API |
 | 3.8.1 | [NetworkCallable] |
 | 3.9.0 | Camera Dolly, Auto Hold |
 | 3.10.0 | Dynamics (PhysBones) |
-

@@ -1,8 +1,8 @@
-# VRChat ワールドアップロードガイド
+# VRChat World Upload Guide
 
-ワールドアップロードの完全手順とベストプラクティス。
+Complete upload procedure and best practices.
 
-## 目次
+## Table of Contents
 
 - [Pre-Upload Checklist](#pre-upload-checklist)
 - [Build & Test](#build--test)
@@ -16,534 +16,533 @@
 
 ---
 
-## アップロード前チェックリスト
+## Pre-Upload Checklist
 
-### 必須チェック項目
+### Required Checks
 
 ```
 □ Scene Setup
-  □ VRC_SceneDescriptor が 1 つだけ存在
-  □ Spawns に Transform が設定済み
-  □ Respawn Height が適切（床より十分下）
-  □ Reference Camera 設定（必要な場合）
+  □ Exactly 1 VRC_SceneDescriptor exists
+  □ Transforms set in Spawns
+  □ Respawn Height is appropriate (well below the floor)
+  □ Reference Camera configured (if needed)
 
 □ Layers & Collision
-  □ "Setup Layers for VRChat" 実行済み
-  □ Collision Matrix 確認済み
-  □ オブジェクトが適切なレイヤーに配置
+  □ "Setup Layers for VRChat" executed
+  □ Collision Matrix verified
+  □ Objects placed on appropriate layers
 
 □ Components
-  □ VRC_Pickup に Collider + Rigidbody
-  □ VRC_Station に Collider
-  □ VRC_ObjectSync に Rigidbody
-  □ ミラーがデフォルトで OFF
+  □ VRC_Pickup has Collider + Rigidbody
+  □ VRC_Station has Collider
+  □ VRC_ObjectSync has Rigidbody
+  □ Mirror is default OFF
 
 □ Performance
-  □ VR で 45+ FPS
-  □ ライトマップがベイク済み
-  □ リアルタイムライト最小限
+  □ 45+ FPS in VR
+  □ Lightmaps baked
+  □ Minimal realtime lights
 
 □ Content
-  □ 著作権侵害コンテンツなし
-  □ 規約違反コンテンツなし
-  □ Content Warnings 設定
+  □ No copyright-infringing content
+  □ No terms-of-service violating content
+  □ Content Warnings set
 ```
 
-### 推奨チェック項目
+### Recommended Checks
 
 ```
-□ Build & Test でローカル確認済み
-□ 複数プレイヤーテスト実施
-□ Quest 対応（必要な場合）
-□ ワールドサムネイル準備
-□ ワールド説明文作成
+□ Local verification with Build & Test
+□ Multi-player testing conducted
+□ Quest support (if applicable)
+□ World thumbnail prepared
+□ World description written
 ```
 
 ---
 
-## ビルドとテスト
+## Build & Test
 
-### ローカルテスト手順
+### Local Testing Procedure
 
 ```
 1. VRChat SDK > Show Control Panel
-2. Builder タブ
-3. "Build & Test New Build" セクション
-4. Number of Clients: テストしたいクライアント数
-5. Force Non-VR: Desktop モード強制（オプション）
-6. "Build & Test" ボタン
+2. Builder tab
+3. "Build & Test New Build" section
+4. Number of Clients: Number of test clients desired
+5. Force Non-VR: Force Desktop mode (optional)
+6. "Build & Test" button
 ```
 
-### テスト項目
+### Test Items
 
 ```
 Single Player Test:
-□ スポーン位置が正しい
-□ Respawn Height で正しくリスポーン
-□ 壁・床のコリジョンが正しい
-□ Pickup が持てる/離せる
-□ Station に座れる/降りれる
-□ ミラーが動作する（有効化時）
-□ オーディオが正しく再生
-□ ビデオプレイヤーが動作
+□ Spawn position is correct
+□ Respawn Height causes correct respawn
+□ Wall/floor collision is correct
+□ Pickup can be grabbed/released
+□ Station can be entered/exited
+□ Mirror works (when enabled)
+□ Audio plays correctly
+□ Video player works
 
-Multi-Player Test (複数クライアント):
-□ スポーン位置が分散される
-□ Pickup の同期が正しい
-□ Station の同期が正しい
-□ UdonSynced 変数が同期
-□ Late Joiner に状態が同期
-□ Ownership 転送が正しく動作
+Multi-Player Test (multiple clients):
+□ Spawn positions are distributed
+□ Pickup sync is correct
+□ Station sync is correct
+□ UdonSynced variables sync
+□ State syncs for Late Joiners
+□ Ownership transfer works correctly
 ```
 
-### Number of Clients 設定
+### Number of Clients Settings
 
 ```
-テスト目的別推奨:
+Recommended by test purpose:
 
-基本動作確認: 1 クライアント
-同期テスト: 2 クライアント
-多人数テスト: 3-4 クライアント
+Basic functionality: 1 client
+Sync testing: 2 clients
+Multi-player testing: 3-4 clients
 
-注意:
-- 各クライアントは独立した VRChat インスタンス
-- PC リソースを消費
-- 初回ビルドは時間がかかる
+Notes:
+- Each client is an independent VRChat instance
+- Consumes PC resources
+- First build takes extra time
 ```
 
 ---
 
-## バリデーション
+## Validation
 
-### バリデーション確認手順
+### Validation Check Procedure
 
 ```
 1. VRChat SDK > Show Control Panel
-2. Builder タブ
-3. Validations セクションを確認
-4. エラー (赤) を解決
-5. 警告 (黄) を確認
+2. Builder tab
+3. Check Validations section
+4. Resolve errors (red)
+5. Review warnings (yellow)
 ```
 
-### よくあるバリデーションエラー
+### Common Validation Errors
 
-| エラー | 原因 | 解決策 |
+| Error | Cause | Solution |
 |-------|-------|----------|
-| Missing SceneDescriptor | VRCWorld がない | VRCWorld Prefab 追加 |
-| Layer setup required | レイヤー未設定 | "Setup Layers" クリック |
-| Build size too large | ビルドが大きすぎ | アセット削減 |
-| Script errors | コンパイルエラー | スクリプト修正 |
-| Missing references | 参照エラー | 参照を修正 |
+| Missing SceneDescriptor | No VRCWorld | Add VRCWorld Prefab |
+| Layer setup required | Layers not configured | Click "Setup Layers" |
+| Build size too large | Build is too big | Reduce assets |
+| Script errors | Compilation errors | Fix scripts |
+| Missing references | Reference errors | Fix references |
 
-### 自動修正機能
+### Auto-Fix Feature
 
 ```
-一部の問題は自動修正可能:
+Some issues can be auto-fixed:
 
-"Auto Fix" ボタンが表示される項目:
+Items with "Auto Fix" button:
 - Layer collision matrix
 - Project settings
 - Quality settings
 
-自動修正できない項目:
-- スクリプトエラー
+Items that can't be auto-fixed:
+- Script errors
 - Missing references
-- コンポーネント設定ミス
+- Component misconfiguration
 ```
 
 ---
 
-## アップロードプロセス
+## Upload Process
 
-### アップロード手順
+### Upload Procedure
 
 ```
-1. Validation エラーがないことを確認
+1. Confirm no Validation errors
 
 2. VRChat SDK > Show Control Panel
 
-3. Builder タブ
+3. Builder tab
 
-4. "Build and Upload" ボタンをクリック
+4. Click "Build and Upload" button
 
-5. 初回アップロードの場合:
-   - World Name 入力
-   - Description 入力
-   - Content Warnings 設定
-   - Capacity 設定
+5. For first upload:
+   - Enter World Name
+   - Enter Description
+   - Set Content Warnings
+   - Set Capacity
 
-6. 更新の場合:
-   - 変更内容を確認
-   - 必要に応じて設定変更
+6. For updates:
+   - Review changes
+   - Modify settings as needed
 
-7. "Upload" をクリック
+7. Click "Upload"
 
-8. アップロード完了を待つ
+8. Wait for upload to complete
 ```
 
-### ブループリント ID
+### Blueprint ID
 
 ```
 Blueprint ID:
-- ワールドの一意識別子
-- VRC_PipelineManager に保存
-- 同じIDで上書き更新
+- Unique identifier for the world
+- Stored in VRC_PipelineManager
+- Overwrites/updates with the same ID
 
-新規作成:
-- "Attach a New Blueprint ID" をクリック
-- または新規シーンでアップロード
+New creation:
+- Click "Attach a New Blueprint ID"
+- Or upload from a new scene
 
-既存ワールド更新:
-- 同じ Blueprint ID を維持
-- 設定のみ変更可能
+Updating an existing world:
+- Maintain the same Blueprint ID
+- Only settings can be changed
 ```
 
-### ワールドサムネイル
+### World Thumbnail
 
 ```
-サムネイル設定:
+Thumbnail settings:
 
-方法1: Screenshot
-- アップロード画面で "Take Screenshot"
-- 現在のシーンビューをキャプチャ
+Method 1: Screenshot
+- Click "Take Screenshot" on the upload screen
+- Captures the current Scene View
 
-方法2: 外部画像
-- PNG/JPG をインポート
-- サムネイルとして選択
+Method 2: External image
+- Import a PNG/JPG
+- Select as thumbnail
 
-推奨仕様:
-- 解像度: 1200x900 以上
-- アスペクト比: 4:3
-- ファイルサイズ: < 10MB
+Recommended specifications:
+- Resolution: 1200x900 or higher
+- Aspect ratio: 4:3
+- File size: < 10MB
 ```
 
 ---
 
-## ワールド設定
+## World Settings
 
-### 基本設定
+### Basic Settings
 
-| 設定 | 説明 | 推奨 |
+| Setting | Description | Recommendation |
 |---------|-------------|----------------|
-| Name | ワールド名 | 検索しやすい名前 |
-| Description | 説明文 | 機能・注意事項を記載 |
-| Tags | タグ | 適切なタグを選択 |
-| Release Status | 公開状態 | Private → Public |
+| Name | World name | Easy to search |
+| Description | Description text | List features and notes |
+| Tags | Tags | Select appropriate tags |
+| Release Status | Publication status | Private → Public |
 
-### 公開ステータス
+### Release Status
 
 ```
 Private:
-- 自分と招待した人のみアクセス可
-- テスト・開発用
+- Only you and invited people can access
+- For testing and development
 
 Friends:
-- フレンドのみアクセス可
-- 限定公開用
+- Only friends can access
+- For limited release
 
 Friends+:
-- フレンドのフレンドもアクセス可
+- Friends of friends can also access
 
 Public:
-- 全員がアクセス可
-- 検索に表示される
+- Everyone can access
+- Appears in search results
 ```
 
 ---
 
-## コンテンツ警告
+## Content Warnings
 
-### 必須設定
+### Required Settings
 
 ```
-該当する場合は必ず設定:
+Must be set if applicable:
 
 □ Adult Language
-  - 成人向け言語が含まれる
+  - Contains adult language
 
 □ Blood/Gore
-  - 血液・グロテスク表現
+  - Blood or grotesque content
 
 □ Fear/Horror
-  - ホラー・恐怖要素
+  - Horror or fear elements
 
 □ Nudity/Suggestive
-  - 裸体・性的示唆
+  - Nudity or sexually suggestive content
 
 □ Substance Use
-  - 薬物・アルコール表現
+  - Drug or alcohol depiction
 
 □ Violence
-  - 暴力表現
+  - Violent content
 ```
 
-### 警告設定の重要性
+### Importance of Warning Settings
 
 ```
-⚠️ 警告:
+⚠️ Warning:
 
-設定しない場合:
-- 規約違反でワールド削除の可能性
-- アカウント制限の可能性
+If not set:
+- World may be deleted for terms violation
+- Account restrictions possible
 
-誤設定の場合:
-- ユーザー体験に影響
-- 不適切なフラグはユーザーを遠ざける
+If incorrectly set:
+- Affects user experience
+- Inappropriate flags may drive users away
 
-ベストプラクティス:
-- 該当するものはすべて選択
-- 疑わしい場合は選択する
+Best practices:
+- Select all that apply
+- When in doubt, select it
 ```
 
 ---
 
-## キャパシティ設定
+## Capacity Settings
 
-### キャパシティの種類
+### Types of Capacity
 
-| 設定 | 目的 | 動作 |
+| Setting | Purpose | Behavior |
 |---------|---------|----------|
-| **Recommended Capacity** | 推奨人数 | UI表示、検索フィルター |
-| **Maximum Capacity** | 最大人数 | ハードリミット |
+| **Recommended Capacity** | Recommended count | UI display, search filter |
+| **Maximum Capacity** | Maximum count | Hard limit |
 
-### 設定ガイドライン
+### Configuration Guidelines
 
 ```
 Recommended Capacity:
-- 快適にプレイできる人数
-- パフォーマンスが維持される人数
-- UI に表示される
+- Number of players for comfortable play
+- Number where performance is maintained
+- Displayed in UI
 
 Maximum Capacity:
-- 技術的に対応可能な最大人数
-- これ以上は参加不可
-- 通常は Recommended の 2-4 倍
+- Technically supportable maximum
+- No more can join beyond this
+- Usually 2-4x the Recommended
 
-例:
-- 小規模ワールド: 8-16 人
-- 中規模ワールド: 20-32 人
-- 大規模ワールド: 40-80 人
+Examples:
+- Small world: 8-16 players
+- Medium world: 20-32 players
+- Large world: 40-80 players
 ```
 
-### Capacity 設定のベストプラクティス
+### Capacity Best Practices
 
 ```
-✅ 推奨:
+✅ Recommended:
 
-1. パフォーマンステストで決定
-   - 実際に複数人でテスト
-   - FPS を確認
+1. Determine through performance testing
+   - Actually test with multiple people
+   - Check FPS
 
-2. ネットワーク負荷を考慮
-   - 同期オブジェクトが多い → 少なめ
-   - 静的ワールド → 多め
+2. Consider network load
+   - Many synced objects → lower count
+   - Static world → higher count
 
-3. ワールドの目的を考慮
-   - イベント用 → 多め
-   - 少人数向け → 少なめ
+3. Consider the world's purpose
+   - Event use → higher count
+   - Small group use → lower count
 
-❌ 避ける:
+❌ Avoid:
 
-- 根拠なく最大に設定
-- テストせずに決定
-- パフォーマンス無視
+- Setting to maximum without justification
+- Deciding without testing
+- Ignoring performance
 ```
 
 ---
 
-## アップロード後
+## Post-Upload
 
-### 確認事項
+### Verification Items
 
 ```
-1. VRChat ウェブサイトで確認
+1. Verify on VRChat website
    - https://vrchat.com/home/
-   - "My Worlds" セクション
+   - "My Worlds" section
 
-2. ゲーム内で確認
-   - ワールド検索
-   - 正しく表示されるか
+2. Verify in-game
+   - World search
+   - Confirm correct display
 
-3. 設定確認
-   - 公開状態
-   - サムネイル
-   - 説明文
+3. Check settings
+   - Publication status
+   - Thumbnail
+   - Description
 ```
 
-### 更新後の注意
+### Notes After Updating
 
 ```
-更新後:
-- 既存インスタンスは古いバージョン
-- 新規インスタンスのみ新バージョン
-- キャッシュクリアが必要な場合あり
+After update:
+- Existing instances remain on the old version
+- Only new instances use the new version
+- Cache clearing may be needed
 
-反映時間:
-- 通常数分で反映
-- 検索インデックスは数時間かかる場合
+Propagation time:
+- Usually reflects within minutes
+- Search indexing may take hours
 ```
 
-### ワールドの管理
+### World Management
 
 ```
-VRChat ウェブサイトで:
+On the VRChat website:
 
-□ Release Status 変更
-□ 説明文の更新
-□ タグの変更
-□ Capacity の変更
-□ Content Warnings の変更
-□ サムネイルの変更
-□ ワールドの削除
+□ Change Release Status
+□ Update description
+□ Change tags
+□ Change Capacity
+□ Change Content Warnings
+□ Change thumbnail
+□ Delete world
 ```
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### アップロードエラー
+### Upload Errors
 
-| エラー | 原因 | 解決策 |
+| Error | Cause | Solution |
 |-------|-------|----------|
-| "Build failed" | ビルドエラー | Console でエラー確認 |
-| "Upload failed" | ネットワークエラー | 再試行 |
-| "File too large" | サイズ超過 | アセット削減 |
-| "Not logged in" | ログインしていない | SDK Panel でログイン |
-| "Validation failed" | Validation エラー | エラーを修正 |
+| "Build failed" | Build error | Check Console for errors |
+| "Upload failed" | Network error | Retry |
+| "File too large" | Size exceeded | Reduce assets |
+| "Not logged in" | Not logged in | Log in via SDK Panel |
+| "Validation failed" | Validation error | Fix errors |
 
-### よくある問題
+### Common Problems
 
-#### ワールドが見つからない
-
-```
-原因:
-1. Private 設定のまま
-2. 検索インデックス未反映
-3. ワールド名が一般的すぎる
-
-解決策:
-1. Public に変更
-2. 数時間待つ
-3. ユニークな名前に変更
-4. 直接URLでアクセス
-```
-
-#### アップロードに時間がかかる
+#### World not found
 
 ```
-原因:
-1. ビルドサイズが大きい
-2. ネットワークが遅い
-3. サーバー混雑
+Cause:
+1. Still set to Private
+2. Search index not yet updated
+3. World name is too generic
 
-解決策:
-1. アセットを最適化
-2. 安定したネット接続
-3. 時間をおいて再試行
+Solution:
+1. Change to Public
+2. Wait a few hours
+3. Change to a unique name
+4. Access via direct URL
 ```
 
-#### 変更が反映されない
+#### Upload takes too long
 
 ```
-原因:
-1. 古いインスタンスに参加
-2. キャッシュの問題
-3. Blueprint ID の問題
+Cause:
+1. Build size is large
+2. Slow network
+3. Server congestion
 
-解決策:
-1. 新規インスタンスを作成
-2. VRChat キャッシュクリア
-3. Blueprint ID を確認
+Solution:
+1. Optimize assets
+2. Use a stable connection
+3. Retry after some time
 ```
 
-### デバッグチェックリスト
+#### Changes not reflected
 
 ```
-□ Console にエラーがないか
-□ Validation がすべてパスか
-□ Blueprint ID が正しいか
-□ ログイン状態か
-□ ネット接続が安定しているか
-□ ディスク容量が十分か
+Cause:
+1. Joined an old instance
+2. Cache issue
+3. Blueprint ID issue
+
+Solution:
+1. Create a new instance
+2. Clear VRChat cache
+3. Verify Blueprint ID
+```
+
+### Debug Checklist
+
+```
+□ No errors in Console
+□ All Validations pass
+□ Blueprint ID is correct
+□ Logged in
+□ Stable network connection
+□ Sufficient disk space
 ```
 
 ---
 
-## プラットフォーム別アップロード
+## Platform-Specific Upload
 
-### PC + Quest クロスプラットフォーム
+### PC + Quest Cross-Platform
 
 ```
-手順:
+Procedure:
 
-1. PC 向けビルド
+1. Build for PC
    - Platform: Windows
    - Build & Upload
 
-2. Quest 向けビルド
-   - Platform: Android に切り替え
-   - Quest 向け最適化
-   - Build & Upload (同じ Blueprint ID)
+2. Build for Quest
+   - Switch Platform to Android
+   - Apply Quest optimizations
+   - Build & Upload (same Blueprint ID)
 
-3. 両プラットフォームで確認
+3. Verify on both platforms
 
-注意:
-- 同じ Blueprint ID を使用
-- 両プラットフォームで機能が異なる場合あり
-- Quest では一部機能が無効化される
+Notes:
+- Use the same Blueprint ID
+- Features may differ between platforms
+- Some features are disabled on Quest
 ```
 
-### Quest 専用ワールド
+### Quest-Only World
 
 ```
-設定:
+Settings:
 
 1. Platform: Android
-2. Quest 向け最適化を適用
+2. Apply Quest optimizations
 3. Build & Upload
 
-注意:
-- PC ユーザーはアクセス不可
-- Quest 最適化必須
+Notes:
+- PC users cannot access
+- Quest optimization is required
 ```
 
 ---
 
-## クイックリファレンス
+## Quick Reference
 
-### アップロードチェックリスト (最小)
+### Upload Checklist (Minimum)
 
 ```
 □ VRC_SceneDescriptor × 1
-□ Spawns 設定
-□ Validation パス
-□ Build & Test 確認
-□ Content Warnings 設定
+□ Spawns configured
+□ Validation passed
+□ Build & Test verified
+□ Content Warnings set
 □ Upload
 ```
 
-### SDK パネルショートカット
+### SDK Panel Shortcuts
 
 ```
 VRChat SDK > Show Control Panel
 
-Builder タブ:
+Builder tab:
 - Build & Test
 - Build & Upload
 - Validations
 
-Content Manager タブ:
-- アップロード済みコンテンツ管理
+Content Manager tab:
+- Manage uploaded content
 
-Settings タブ:
-- SDK 設定
+Settings tab:
+- SDK settings
 ```
 
-### 主要 URL
+### Key URLs
 
-| 目的 | URL |
+| Purpose | URL |
 |---------|-----|
 | VRChat Home | https://vrchat.com/home/ |
 | My Worlds | https://vrchat.com/home/worlds |
 | World Detail | https://vrchat.com/home/world/{worldId} |
-
