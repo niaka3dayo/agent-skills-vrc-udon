@@ -1,0 +1,59 @@
+name: Knowledge Request
+description: Request new patterns, tips, or SDK feature coverage
+labels: ["type: knowledge-request"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of knowledge are you requesting?
+      options:
+        - New pattern / code example
+        - New SDK feature coverage
+        - Anti-pattern documentation
+        - New template
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Target Skill
+      description: Which skill should this be added to?
+      options:
+        - unity-vrc-udon-sharp
+        - unity-vrc-world-sdk-3
+        - unity-vrc-skills-renovator
+        - New skill
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the knowledge you'd like to see added.
+      placeholder: |
+        Example: Add a pattern for VRCObjectPool with
+        ownership transfer on spawn.
+    validations:
+      required: true
+
+  - type: input
+    id: docs-url
+    attributes:
+      label: Official Documentation URL
+      description: Link to relevant VRChat documentation (optional)
+      placeholder: "https://creators.vrchat.com/..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: code-example
+    attributes:
+      label: Code Example
+      description: If applicable, provide a code example (optional)
+      render: csharp
+    validations:
+      required: false

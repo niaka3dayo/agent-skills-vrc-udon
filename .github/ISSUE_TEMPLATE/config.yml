@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: VRChat Creators Docs
+    url: https://creators.vrchat.com/
+    about: Check the official documentation first before reporting
+  - name: VRChat Forum (Q&A)
+    url: https://ask.vrchat.com/
+    about: VRChat community Q&A forum

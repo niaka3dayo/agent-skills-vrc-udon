@@ -1,0 +1,66 @@
+name: Bug Report
+description: Report incorrect information or broken hooks
+labels: ["type: bug"]
+body:
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      description: Which skill is affected?
+      options:
+        - unity-vrc-udon-sharp
+        - unity-vrc-world-sdk-3
+        - unity-vrc-skills-renovator
+        - NPX Installer
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is incorrect or broken?
+      placeholder: |
+        Example: The constraint rule says `List<T>` is blocked,
+        but `DataList` usage example has a syntax error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should the correct information or behavior be?
+    validations:
+      required: true
+
+  - type: input
+    id: sdk-version
+    attributes:
+      label: VRChat SDK Version
+      description: Which SDK version are you using? (optional)
+      placeholder: "3.10.1"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: ai-tool
+    attributes:
+      label: AI Tool
+      description: Which AI tool are you using?
+      options:
+        - Claude Code
+        - Codex CLI
+        - Gemini CLI
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any additional information, screenshots, or links to official docs.
+    validations:
+      required: false
