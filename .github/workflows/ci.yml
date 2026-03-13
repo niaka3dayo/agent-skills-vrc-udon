@@ -10,6 +10,22 @@ permissions:
   contents: read
 
 jobs:
+  symlinks:
+    name: Symlink Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Reject symlinks
+        run: |
+          SYMLINKS=$(find . -type l -not -path './.git/*')
+          if [ -n "$SYMLINKS" ]; then
+            echo "ERROR: Symlinks found (breaks npm pack):"
+            echo "$SYMLINKS"
+            exit 1
+          fi
+          echo "OK: No symlinks found"
+
   hooks:
     name: Hook Scripts
     runs-on: ubuntu-latest
