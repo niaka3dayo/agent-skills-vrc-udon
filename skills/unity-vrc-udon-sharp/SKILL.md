@@ -19,9 +19,21 @@ metadata:
 
 # UdonSharp Skill
 
-## Overview
+## Why This Skill Matters
 
-UdonSharp is a translator that compiles C# into Udon Assembly. It has significant constraints that differ from standard C#.
+UdonSharp looks like regular Unity C# scripting — until you hit its hidden walls. Many standard C# features (`List<T>`, `async/await`, `try/catch`, LINQ, generics) **silently fail or refuse to compile** in Udon. Networking is even more treacherous: modifying a synced variable without ownership produces no error — it just does nothing. Forgetting `RequestSerialization` means your state changes never leave your machine. Standard single-player local testing gives zero signal about these networking bugs because there is only one player.
+
+Every rule in this skill exists because UdonSharp's default behavior is to **fail silently**. Read the Rules before generating any code.
+
+## Core Principles
+
+1. **Constraints First** — Assume standard C# features are blocked until verified. Check `udonsharp-constraints.md` before using any API.
+2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. Always `SetOwner` → modify → `RequestSerialization`.
+3. **Late Joiner Correctness** — State must be correct for players who join after events have occurred. Design for re-serialization, not just live updates.
+4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
+5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()`.
+
+## Overview
 
 **SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
 
