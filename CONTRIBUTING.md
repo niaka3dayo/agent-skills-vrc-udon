@@ -27,7 +27,7 @@ All fixes and updates are made by the maintainer. If you find an issue, please r
 
 - Default branch: **`dev`** (integration)
 - Release branch: **`main`** (npm publish via GitHub Release)
-- All PRs target `dev`. `main` is updated only via release PRs from `dev`.
+- Maintainer PRs target `dev`. `main` is updated only via release PRs from `dev`.
 - Both branches are protected: no direct push, CI must pass.
 
 ## Fork & Modify
