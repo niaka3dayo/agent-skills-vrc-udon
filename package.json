@@ -1,6 +1,6 @@
 {
   "name": "agent-skills-vrc-udon",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AI Agent Skills for VRChat UdonSharp - Rules, validation hooks, and knowledge base for correct UdonSharp code generation",
   "license": "MIT",
   "author": "niaka3dayo",
