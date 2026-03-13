@@ -24,10 +24,25 @@ package.json                     # npm package config
 
 ## Development Workflow
 
-- Default branch: `dev` (integration)
-- Release branch: `main` (triggers npm publish via GitHub Release)
-- Flow: `feature/* -> dev -> main`
-- All branches protected: PR + CI required, no direct push
+```
+feature/* ──PR──> dev ──release PR──> main ──tag──> npm publish
+```
+
+- Default branch: **`dev`** (integration)
+- Release branch: **`main`** (triggers npm publish via GitHub Release)
+- **All PRs must target `dev`** (never `main` directly)
+- `main` is updated only via release PRs from `dev`
+
+### Branch Protection
+
+Both `dev` and `main` are protected:
+- No direct push (`enforce_admins: true`, applies to admin too)
+- CI must pass: Symlink Integrity, Hook Scripts, npm Pack Test
+- PR required for all changes
+
+### Branch Naming
+
+`feature/*`, `fix/*`, `docs/*`, `refactor/*`, `security/*`, `chore/*`
 
 ## Key Files
 
