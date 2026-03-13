@@ -1,50 +1,74 @@
-# UdonSharp / VRChat World Development
+# agent-skills-vrc-udon Development Guide
 
-Agent Skills for VRChat world development using UdonSharp (C# → Udon Assembly).
-**UdonSharp has significant constraints compared to standard C#. Always read the Rules before generating code.**
+This repository is an **npm package** that distributes AI agent skills for VRChat UdonSharp development.
+It is NOT a VRChat/Unity project. The codebase consists of markdown knowledge files, a Node.js installer, and CI workflows.
 
-## Skills
+## Repository Structure
 
-| Skill | Purpose | Path |
-|-------|---------|------|
-| `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
-| `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
-| `unity-vrc-skills-renovator` | Skill renovation (knowledge updates, quality improvements) | `skills/unity-vrc-skills-renovator/SKILL.md` |
+```
+skills/                          # Skill content (distributed to users)
+  unity-vrc-udon-sharp/          # UdonSharp constraints, networking, templates
+  unity-vrc-world-sdk-3/         # World SDK components, optimization
+  unity-vrc-skills-renovator/    # Meta-skill for maintaining skills
+templates/                       # AI tool config templates (distributed to users)
+  CLAUDE.md                      # Claude Code project instructions
+  AGENTS.md                      # Codex CLI / generic agent instructions
+  GEMINI.md                      # Gemini CLI instructions
+bin/
+  install.mjs                    # npx installer script
+.github/
+  workflows/                     # CI (lint, pack test, publish)
+  ISSUE_TEMPLATE/                # Bug report, knowledge request
+package.json                     # npm package config
+```
 
-## Rules
+## Development Workflow
 
-Located in `skills/unity-vrc-udon-sharp/rules/`:
+- Default branch: `dev` (integration)
+- Release branch: `main` (triggers npm publish via GitHub Release)
+- Flow: `feature/* -> dev -> main`
+- All branches protected: PR + CI required, no direct push
 
-- **udonsharp-constraints.md** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
-- **udonsharp-networking.md** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
-- **udonsharp-sync-selection.md** — Sync Pattern Decision Tree, Data Budget, Minimization
+## Key Files
 
-## SDK (3.7.1 - 3.10.2)
+| File | Purpose |
+|------|---------|
+| `bin/install.mjs` | npx installer (copies skills + templates to user project) |
+| `package.json` | npm metadata, `files` array controls what gets published |
+| `skills/*/SKILL.md` | Skill definitions with YAML frontmatter |
+| `skills/*/rules/*.md` | Constraint rules for AI code generation |
+| `templates/*.md` | AI tool config files distributed to end users |
 
-| Version | Key Features |
-|---------|--------------|
-| 3.7.1 | StringBuilder, Regex, System.Random |
-| 3.7.4 | Persistence API (PlayerData/PlayerObject) |
-| 3.8.1 | `[NetworkCallable]` network events with parameters |
-| 3.10.0 | VRChat Dynamics for Worlds (PhysBones, Contacts) |
-| 3.10.1 | Bug fixes and stability improvements |
-| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
+## Testing
 
-## Docs Reference
+```bash
+# Verify npm pack includes correct files
+npm pack --dry-run
 
-Use web search to reference official documentation and community resources:
+# Test installer
+node bin/install.mjs --list
+node bin/install.mjs --help
+```
 
-| Site | Purpose | Search Example |
-|------|---------|----------------|
-| `site:creators.vrchat.com` | Official Udon / SDK documentation | `site:creators.vrchat.com UdonSharp networking` |
-| `site:udonsharp.docs.vrchat.com` | UdonSharp API reference | `site:udonsharp.docs.vrchat.com synced variables` |
-| `site:ask.vrchat.com` | Community Q&A and troubleshooting | `site:ask.vrchat.com PlayerData persistence` |
-| `site:feedback.vrchat.com` | Known bugs and feature requests | `site:feedback.vrchat.com PhysBones worlds` |
-| `site:github.com/vrchat-community` | Samples and libraries | `site:github.com/vrchat-community ClientSim` |
+## CI Checks
 
-## Hooks
+| Check | What it verifies |
+|-------|-----------------|
+| Symlink Integrity | No symlinks in repo (breaks npm pack) |
+| Hook Scripts | validate-udonsharp.sh is executable and valid bash |
+| npm Pack Test | Package includes all required files, installer works |
+| Markdown Links | No broken links in documentation |
 
-PostToolUse auto-validation when editing `.cs` files:
+## Publishing
 
-- Windows: `skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1`
-- Linux/macOS: `skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh`
+1. Merge dev -> main via PR
+2. Create GitHub Release with `v*` tag
+3. `publish.yml` auto-publishes to npm with provenance
+
+## Editing Skills
+
+When modifying skill content in `skills/`:
+- Always verify against [official VRChat documentation](https://creators.vrchat.com/)
+- Update SDK version tables if adding new API coverage
+- Run the validate-udonsharp hook against any `.cs` code examples
+- Keep `templates/` in sync if skills table or rules paths change
