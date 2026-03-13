@@ -80,7 +80,7 @@ jobs:
           npm pack --dry-run 2>&1 | tee pack-output.txt
           echo ""
           echo "--- Verifying required files ---"
-          for f in "bin/install.mjs" "skills/" "CLAUDE.md" "AGENTS.md" "GEMINI.md" "LICENSE" "README.md"; do
+          for f in "bin/install.mjs" "skills/" "templates/" "LICENSE" "README.md"; do
             if grep -q "$f" pack-output.txt; then
               echo "OK: $f"
             else

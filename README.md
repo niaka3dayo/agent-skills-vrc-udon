@@ -113,8 +113,10 @@ skills/                                  # All skills
   unity-vrc-skills-renovator/           # Self-maintenance meta-skill
     SKILL.md, LICENSE.txt, references/ (4 files)
 
+templates/                               # AI tool config templates
+  CLAUDE.md  AGENTS.md  GEMINI.md        # Distributed to users via installer
 .claude-plugin/marketplace.json         # Claude Code plugin registration
-CLAUDE.md  AGENTS.md  GEMINI.md         # Per-tool config references
+CLAUDE.md                               # Development guide (this repo only)
 ```
 
 ---

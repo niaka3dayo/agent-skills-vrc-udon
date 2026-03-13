@@ -107,6 +107,7 @@ const AGENT_DOCS_SRC = join(PKG_ROOT, 'skills');
 const DEST_DIR = join(TARGET, '.agent-skills');
 const AGENT_DOCS_DEST = join(DEST_DIR, 'skills');
 
+const TEMPLATES_DIR = join(PKG_ROOT, 'templates');
 const CONFIG_FILES = ['CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
 const AI_TOOL_DIRS = ['.claude', '.agents', '.codex', '.gemini'];
 
@@ -121,6 +122,8 @@ if (listOnly) {
 
   console.log('');
   for (const cf of CONFIG_FILES) {
+    const src = join(TEMPLATES_DIR, cf);
+    if (!existsSync(src)) continue;
     console.log(`  ${dim('.agent-skills/')}${cf} ${dim('(reference)')}`);
   }
 
@@ -159,7 +162,7 @@ if (existsSync(AGENT_DOCS_DEST) && !force) {
 
 // 2. Copy config reference files
 for (const cf of CONFIG_FILES) {
-  const src = join(PKG_ROOT, cf);
+  const src = join(TEMPLATES_DIR, cf);
   const dest = join(DEST_DIR, cf);
 
   if (!existsSync(src)) continue;

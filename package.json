@@ -19,9 +19,7 @@
   "files": [
     "bin/",
     "skills/",
-    "CLAUDE.md",
-    "AGENTS.md",
-    "GEMINI.md",
+    "templates/",
     "README.md",
     "LICENSE"
   ],
