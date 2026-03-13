@@ -23,6 +23,13 @@ All fixes and updates are made by the maintainer. If you find an issue, please r
 3. Include a **link to official VRChat documentation** when possible
 4. Provide a **reproducible code example** if applicable
 
+## Branch Policy (for maintainer)
+
+- Default branch: **`dev`** (integration)
+- Release branch: **`main`** (npm publish via GitHub Release)
+- All PRs target `dev`. `main` is updated only via release PRs from `dev`.
+- Both branches are protected: no direct push, CI must pass.
+
 ## Fork & Modify
 
 This project is MIT licensed. You are free to:
