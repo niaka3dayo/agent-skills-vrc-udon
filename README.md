@@ -57,6 +57,8 @@ This repository provides AI coding agents with the knowledge to generate correct
 
 <h2 id="install">Install</h2>
 
+> **Migrating from fork/clone?** &mdash; Since v1.0.0, this project is distributed as an **npm package**. You no longer need to fork or clone the repository. Simply run one of the install commands below inside your VRChat Unity project. If you previously cloned this repo, you can safely delete the cloned directory and switch to the npm-based install.
+
 ### Method 1: skills CLI (recommended)
 
 ```bash
