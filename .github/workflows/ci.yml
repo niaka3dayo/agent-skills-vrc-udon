@@ -4,14 +4,33 @@ on:
   push:
     branches: [dev, main]
   pull_request:
-    branches: [main]
+    branches: [dev, main]
+
+permissions:
+  contents: read
 
 jobs:
+  symlinks:
+    name: Symlink Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Reject symlinks
+        run: |
+          SYMLINKS=$(find . -type l -not -path './.git/*')
+          if [ -n "$SYMLINKS" ]; then
+            echo "ERROR: Symlinks found (breaks npm pack):"
+            echo "$SYMLINKS"
+            exit 1
+          fi
+          echo "OK: No symlinks found"
+
   hooks:
     name: Hook Scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Check execute permission
         run: |
@@ -29,10 +48,10 @@ jobs:
     name: Markdown Links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
       - name: Check markdown links
-        uses: lycheeverse/lychee-action@v2
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2
         with:
           args: >-
             --exclude "^https://creators\.vrchat\.com"
@@ -50,9 +69,9 @@ jobs:
     name: npm Pack Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: "22"
 
@@ -61,7 +80,7 @@ jobs:
           npm pack --dry-run 2>&1 | tee pack-output.txt
           echo ""
           echo "--- Verifying required files ---"
-          for f in "bin/install.mjs" "skills/" "CLAUDE.md" "AGENTS.md" "GEMINI.md" "LICENSE" "README.md"; do
+          for f in "bin/install.mjs" "skills/" "templates/" "LICENSE" "README.md"; do
             if grep -q "$f" pack-output.txt; then
               echo "OK: $f"
             else
