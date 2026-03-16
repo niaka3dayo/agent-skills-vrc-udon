@@ -114,9 +114,6 @@ skills/                                  # All skills
     references/                          # Detailed documentation (11 files)
   unity-vrc-world-sdk-3/                # VRC World SDK skill
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
-  unity-vrc-skills-renovator/           # Self-maintenance meta-skill
-    SKILL.md, LICENSE.txt, references/ (4 files)
-
 templates/                               # AI tool config templates
   CLAUDE.md  AGENTS.md  GEMINI.md        # Distributed to users via installer
 .claude-plugin/marketplace.json         # Claude Code plugin registration
@@ -154,16 +151,6 @@ World-level scene setup, component placement, and optimization.
 | **Lighting** | Baked lighting best practices |
 | **Audio/Video** | Spatial audio, video player selection (AVPro vs Unity) |
 | **Upload** | Build and upload workflow, pre-upload checklist |
-
-### unity-vrc-skills-renovator
-
-Meta-skill for maintaining skills. Three pillars to keep knowledge current.
-
-| Pillar | Purpose |
-|--------|---------|
-| **Fill** | Add missing knowledge (new SDK APIs, patterns, tips) |
-| **Refresh** | Update outdated information (version tables, deprecated APIs) |
-| **Improve** | Enhance existing content (code examples, clarity) |
 
 ---
 

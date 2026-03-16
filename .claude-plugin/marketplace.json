@@ -15,8 +15,7 @@
       "strict": false,
       "skills": [
         "./skills/unity-vrc-udon-sharp",
-        "./skills/unity-vrc-world-sdk-3",
-        "./skills/unity-vrc-skills-renovator"
+        "./skills/unity-vrc-world-sdk-3"
       ]
     }
   ]

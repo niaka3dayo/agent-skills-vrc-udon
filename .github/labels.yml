@@ -37,7 +37,7 @@
 
 - name: "skill: renovator"
   color: "ff6b35"
-  description: "unity-vrc-skills-renovator meta-skill"
+  description: "unity-vrc-skills-renovator internal dev skill (not distributed)"
 
 # --- Priority ---
 - name: "priority: critical"

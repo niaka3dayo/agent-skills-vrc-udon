@@ -4,7 +4,7 @@ File structure and role of each file in the target skills.
 
 > **Path notation**: `skills/` in this document refers to the `skills/` directory at the repository root.
 > `rules/` is consolidated under `skills/unity-vrc-udon-sharp/rules/`.
-> Agents can also access these via symlinks at `.claude/skills/` and `.claude/rules/`.
+> `unity-vrc-skills-renovator` itself is located at `.claude/skills/unity-vrc-skills-renovator/` (dev-only, not distributed via npm).
 
 ## unity-vrc-udon-sharp
 
