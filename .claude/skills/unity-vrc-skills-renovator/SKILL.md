@@ -32,6 +32,7 @@ A guide for renovating (filling knowledge, refreshing, and improving quality of)
 
 > **Path notation**: `skills/` refers to the `skills/` directory at the repository root.
 > `rules/` refers to files under `skills/unity-vrc-udon-sharp/rules/`.
+> This skill itself resides at `.claude/skills/unity-vrc-skills-renovator/` (dev-only, not distributed via npm).
 
 | Skill | Directory | Content |
 |-------|-----------|---------|

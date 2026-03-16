@@ -24,7 +24,6 @@ body:
       options:
         - unity-vrc-udon-sharp
         - unity-vrc-world-sdk-3
-        - unity-vrc-skills-renovator
         - New skill
     validations:
       required: true
