@@ -9,7 +9,9 @@ It is NOT a VRChat/Unity project. The codebase consists of markdown knowledge fi
 skills/                          # Skill content (distributed to users)
   unity-vrc-udon-sharp/          # UdonSharp constraints, networking, templates
   unity-vrc-world-sdk-3/         # World SDK components, optimization
-  unity-vrc-skills-renovator/    # Meta-skill for maintaining skills
+.claude/
+  skills/
+    unity-vrc-skills-renovator/  # Meta-skill for maintaining skills (dev only, not distributed)
 templates/                       # AI tool config templates (distributed to users)
   CLAUDE.md                      # Claude Code project instructions
   AGENTS.md                      # Codex CLI / generic agent instructions

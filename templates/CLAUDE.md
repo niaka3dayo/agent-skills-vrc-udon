@@ -9,7 +9,6 @@ Agent Skills for VRChat world development using UdonSharp (C# → Udon Assembly)
 |-------|---------|------|
 | `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
 | `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
-| `unity-vrc-skills-renovator` | Skill renovation (knowledge updates, quality improvements) | `skills/unity-vrc-skills-renovator/SKILL.md` |
 
 ## Rules
 

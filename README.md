@@ -1,3 +1,5 @@
+> **日本語版**: [README.ja.md](README.ja.md)
+
 <p align="center">
   <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.2-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
@@ -57,6 +59,8 @@ This repository provides AI coding agents with the knowledge to generate correct
 
 <h2 id="install">Install</h2>
 
+> **Migrating from fork/clone?** &mdash; Since v1.0.0, this project is distributed as an **npm package**. You no longer need to fork or clone the repository. Simply run one of the install commands below inside your VRChat Unity project. If you previously cloned this repo, you can safely delete the cloned directory and switch to the npm-based install.
+
 ### Method 1: skills CLI (recommended)
 
 ```bash
@@ -110,9 +114,6 @@ skills/                                  # All skills
     references/                          # Detailed documentation (11 files)
   unity-vrc-world-sdk-3/                # VRC World SDK skill
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
-  unity-vrc-skills-renovator/           # Self-maintenance meta-skill
-    SKILL.md, LICENSE.txt, references/ (4 files)
-
 templates/                               # AI tool config templates
   CLAUDE.md  AGENTS.md  GEMINI.md        # Distributed to users via installer
 .claude-plugin/marketplace.json         # Claude Code plugin registration
@@ -150,16 +151,6 @@ World-level scene setup, component placement, and optimization.
 | **Lighting** | Baked lighting best practices |
 | **Audio/Video** | Spatial audio, video player selection (AVPro vs Unity) |
 | **Upload** | Build and upload workflow, pre-upload checklist |
-
-### unity-vrc-skills-renovator
-
-Meta-skill for maintaining skills. Three pillars to keep knowledge current.
-
-| Pillar | Purpose |
-|--------|---------|
-| **Fill** | Add missing knowledge (new SDK APIs, patterns, tips) |
-| **Refresh** | Update outdated information (version tables, deprecated APIs) |
-| **Improve** | Enhance existing content (code examples, clarity) |
 
 ---
 
