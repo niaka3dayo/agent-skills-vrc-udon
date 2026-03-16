@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.1.1] - 2026-03-16
+## [1.2.0] - 2026-03-16
 
 ### Added
 
@@ -45,5 +45,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Support for Claude Code, Codex CLI, Gemini CLI
 - SDK 3.7.1 - 3.10.2 coverage
 
-[1.1.1]: https://github.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/v1.1.1
+[1.2.0]: https://github.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/v1.2.0
 [1.0.0]: https://github.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/v1.0.0
