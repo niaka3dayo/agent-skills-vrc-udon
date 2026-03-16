@@ -1,0 +1,31 @@
+name: Quick Feedback
+description: Share quick feedback, tips, or anything that doesn't fit other templates
+labels: ["type: feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing! This is for quick feedback that doesn't fit the Bug Report or Knowledge Request templates.
+        Feel free to write in **Japanese or English**.
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+      description: Share anything -- tips, suggestions, corrections, or things you noticed.
+      placeholder: |
+        Examples:
+        - "I noticed SDK 3.11 added a new event called OnXxx"
+        - "The SyncedObject template could use an example with arrays"
+        - "Is there a reason XxxComponent isn't covered?"
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Source / Reference
+      description: Link to official docs, forum post, or other reference (optional)
+      placeholder: "https://creators.vrchat.com/..."
+    validations:
+      required: false

@@ -10,6 +10,10 @@
   color: "a2eeef"
   description: "Request for new patterns, tips, or SDK coverage"
 
+- name: "type: feedback"
+  color: "c5def5"
+  description: "Quick feedback, tips, or lightweight suggestions"
+
 - name: "type: sdk-update"
   color: "0075ca"
   description: "SDK version update requiring rule/reference changes"
