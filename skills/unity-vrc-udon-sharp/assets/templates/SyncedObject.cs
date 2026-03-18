@@ -50,13 +50,18 @@ public class SyncedObject : UdonSharpBehaviour
 
     void Start()
     {
-        // Apply initial state without side effects (safe for late joiners)
+        // Apply initial visual state only (no side effects).
+        // _isInitialized stays false until first OnDeserialization,
+        // which is the late-joiner guard boundary.
         ApplyVisualState();
-        _isInitialized = true;
     }
 
     public override void Interact()
     {
+        // Local interaction always marks as initialized (instance master
+        // may never receive OnDeserialization for their own changes)
+        _isInitialized = true;
+
         // Take ownership before modifying synced variables
         if (!Networking.IsOwner(gameObject))
         {
@@ -160,6 +165,8 @@ public class SyncedObject : UdonSharpBehaviour
     /// </summary>
     public void SetState(bool newState)
     {
+        _isInitialized = true;
+
         if (!Networking.IsOwner(gameObject))
         {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
