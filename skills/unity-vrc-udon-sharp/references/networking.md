@@ -302,7 +302,8 @@ public class SafeSyncedObject : UdonSharpBehaviour
             ApplyStateWithoutSideEffects();
             return;
         }
-        // Subsequent deserializations: full update with effects
+        // Subsequent deserializations: side effects are handled by
+        // FieldChangeCallback (GameState property setter), not here
     }
 
     private void ApplyState(int previousState)
@@ -327,9 +328,9 @@ public class SafeSyncedObject : UdonSharpBehaviour
 }
 ```
 
-#### Using `DeserializationResult` Parameter
+#### Using `OnDeserialization(DeserializationResult)` Overload
 
-The overloaded `OnDeserialization(DeserializationResult)` provides additional context:
+The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_isInitialized` flag pattern for late-joiner guards:
 
 ```csharp
 public override void OnDeserialization(DeserializationResult result)
@@ -338,6 +339,8 @@ public override void OnDeserialization(DeserializationResult result)
     UpdateDisplay();
 
     // Guard side effects: skip on initial sync for late joiners
+    // Note: DeserializationResult does not provide a late-joiner flag;
+    // use _isInitialized for this purpose
     if (!_isInitialized)
     {
         _isInitialized = true;
