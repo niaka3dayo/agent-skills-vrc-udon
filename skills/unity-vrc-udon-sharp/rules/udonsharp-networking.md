@@ -200,3 +200,4 @@ public override void OnDeserialization()
 - [ ] VRCPlayerApi validity checked
 - [ ] Works correctly for late joiners
 - [ ] NetworkCallable rate limits considered
+- [ ] OnDeserialization side effects guarded with `_isInitialized` flag for late-joiner safety
