@@ -444,7 +444,7 @@ When AI creates a new `.cs` UdonSharp script file, the corresponding `.asset` (U
 
 Every UdonSharp script requires a paired UdonSharpProgramAsset:
 
-```
+```text
 MyScript.cs          → Source code (UdonSharpBehaviour)
 MyScript.asset       → UdonSharpProgramAsset (links script to Udon compiler)
 ```
