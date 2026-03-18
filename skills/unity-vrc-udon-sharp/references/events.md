@@ -336,7 +336,7 @@ Called during sync and ownership changes.
 | `void OnDeserialization(DeserializationResult result)` | With result info |
 | `void OnPostSerialization(SerializationResult result)` | After serialization complete |
 | `void OnOwnershipTransferred(VRCPlayerApi player)` | Ownership changed |
-| `void OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)` | Ownership requested |
+| `bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)` | Ownership requested (return `true` to accept, `false` to reject) |
 
 ```csharp
 public override void OnPreSerialization()
@@ -371,6 +371,33 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
     }
 }
 ```
+
+### Ownership Request Arbitration
+
+`OnOwnershipRequest` allows the current owner to accept or reject ownership transfers. This is called **only on the current owner's client**.
+
+```csharp
+/// <summary>
+/// Called on the current owner's client when another player requests ownership.
+/// Return true to accept, false to reject the transfer.
+/// </summary>
+public override bool OnOwnershipRequest(
+    VRCPlayerApi requestingPlayer,
+    VRCPlayerApi requestedOwner)
+{
+    if (requestingPlayer == null || !requestingPlayer.IsValid()) return true;
+
+    // Example: Only allow ownership transfer when game is in lobby phase
+    if (gamePhase != 0)
+    {
+        return false; // Reject during active gameplay
+    }
+
+    return true;
+}
+```
+
+> **Important**: If the current owner disconnects, `OnOwnershipRequest` is **not called** — VRChat auto-assigns a new owner directly. Only use this for arbitrating live transfer requests.
 
 ## Station Events
 

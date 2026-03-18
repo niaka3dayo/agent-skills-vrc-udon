@@ -397,6 +397,79 @@ Acknowledges transfer   |
 
 **Race condition warning**: If multiple players call `SetOwner` simultaneously, the last one processed wins. There is no built-in conflict resolution.
 
+### Owner Leave and Ownership Cascade
+
+When the owner of a networked GameObject disconnects:
+
+1. **VRChat automatically assigns a new owner** — typically the instance master (lowest join order)
+2. **`OnOwnershipTransferred` fires** on all clients with the new owner
+3. **Synced variables are preserved** — they are not reset when ownership transfers
+
+```csharp
+public override void OnOwnershipTransferred(VRCPlayerApi player)
+{
+    if (player == null || !player.IsValid()) return;
+
+    if (player.isLocal)
+    {
+        // We became the new owner (e.g., previous owner left)
+        // Resume game logic that only the owner should run
+        Debug.Log("Inherited ownership — resuming owner duties");
+        RequestSerialization(); // Re-broadcast current state
+    }
+}
+
+public override void OnPlayerLeft(VRCPlayerApi player)
+{
+    if (player == null || !player.IsValid()) return;
+
+    // Clean up player-specific data
+    // Note: If this player was the owner, OnOwnershipTransferred
+    // will fire separately with the new owner
+    RemovePlayerFromGame(player.playerId);
+}
+```
+
+**Best practices for ownership transitions:**
+- Do **not** assume the local player will become the new owner — VRChat decides
+- Always re-broadcast state via `RequestSerialization()` when inheriting ownership
+- Clean up departing player data in `OnPlayerLeft`, not in `OnOwnershipTransferred`
+- If your game logic runs in `Update()` with an owner check, it will automatically resume on the new owner
+
+### Ownership Arbitration with OnOwnershipRequest
+
+`OnOwnershipRequest` allows the current owner to **accept or reject** ownership transfer requests:
+
+```csharp
+private bool _isProcessingCriticalAction = false;
+
+public override bool OnOwnershipRequest(
+    VRCPlayerApi requestingPlayer,
+    VRCPlayerApi requestedOwner)
+{
+    // Reject ownership transfers during critical game logic
+    if (_isProcessingCriticalAction)
+    {
+        Debug.Log($"Rejected ownership request from {requestingPlayer.displayName} " +
+                  $"— critical action in progress");
+        return false;
+    }
+
+    // Accept the transfer
+    return true;
+}
+```
+
+**When to use `OnOwnershipRequest`:**
+| Scenario | Return |
+|----------|--------|
+| Default (no override) | Always accepts (`true`) |
+| During critical game state transitions | Reject (`false`) until complete |
+| Turn-based game during active turn | Reject (`false`) until turn ends |
+| Free-for-all interaction | Accept (`true`) |
+
+> **Note**: `OnOwnershipRequest` is only called on the **current owner's client**. If the owner has left, there is no one to reject — VRChat auto-assigns directly.
+
 ## Synced Variables
 
 ### Basic Synchronization
