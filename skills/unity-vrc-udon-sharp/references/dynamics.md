@@ -338,11 +338,10 @@ VRChat provides its own constraint components that replace Unity's built-in cons
 |---------|----------------|-------------------|
 | **Quest/Android** | Supported | Disabled |
 | **PC** | Supported | Supported |
-| **Network sync** | Integrated with VRChat networking | No network awareness |
+| **Network sync** | Compatible with VRChat networking (sync via UdonSynced/VRC_ObjectSync) | No VRChat network integration |
 | **Performance** | Optimized for VRChat | Standard Unity performance |
-| **Udon API access** | Full (`IsActive`, `SetSourceWeight`, etc.) | Limited |
+| **Udon API access** | Full (`IsActive`, `SetSourceWeight`, etc.) | Not all properties exposed to Udon |
 | **PhysBone compatibility** | Full | Not guaranteed |
-| **Dependency sorting** | Automatic (SDK 3.8.0+) | Manual |
 
 #### Formal Component Names
 
