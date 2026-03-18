@@ -3,20 +3,20 @@
 Agent Skills for VRChat world development using UdonSharp (C# → Udon Assembly).
 **UdonSharp has significant constraints compared to standard C#. Always read the Rules before generating code.**
 
+## Rules (Required Reading)
+
+Read the following Rules before writing any UdonSharp code:
+
+- **`skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md`** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
+- **`skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md`** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
+- **`skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md`** — Sync Pattern Decision Tree, Data Budget, Minimization
+
 ## Skills
 
 | Skill | Purpose | Path |
 |-------|---------|------|
 | `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
 | `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
-
-## Rules
-
-Located in `skills/unity-vrc-udon-sharp/rules/`:
-
-- **udonsharp-constraints.md** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
-- **udonsharp-networking.md** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
-- **udonsharp-sync-selection.md** — Sync Pattern Decision Tree, Data Budget, Minimization
 
 ## SDK (3.7.1 - 3.10.2)
 
