@@ -689,5 +689,5 @@ Unity standard components available in VRChat.
 ❌ Cameras on Avatar
 ❌ Lights on Avatar
 ❌ Audio Sources on Avatar
-❌ Unity Constraints (use VRC Constraints instead)
+❌ Unity Constraints (use VRC equivalents: VRCPositionConstraint, VRCRotationConstraint, VRCScaleConstraint, VRCParentConstraint, VRCAimConstraint, VRCLookAtConstraint)
 ```

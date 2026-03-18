@@ -328,6 +328,57 @@ public class ConstraintController : UdonSharpBehaviour
 }
 ```
 
+### VRC Constraints vs Unity Constraints
+
+VRChat provides its own constraint components that replace Unity's built-in constraints. **Unity Constraints are disabled on Quest/Android**, making VRC Constraints the only cross-platform option.
+
+#### Comparison Table
+
+| Feature | VRC Constraints | Unity Constraints |
+|---------|----------------|-------------------|
+| **Quest/Android** | Supported | Disabled |
+| **PC** | Supported | Supported |
+| **Network sync** | Integrated with VRChat networking | No network awareness |
+| **Performance** | Optimized for VRChat | Standard Unity performance |
+| **Udon API access** | Full (`IsActive`, `SetSourceWeight`, etc.) | Limited |
+| **PhysBone compatibility** | Full | Not guaranteed |
+| **Dependency sorting** | Automatic (SDK 3.8.0+) | Manual |
+
+#### Formal Component Names
+
+When referencing VRC Constraints in code or Inspector, use the exact component names:
+
+| VRC Constraint | Unity Equivalent | Namespace |
+|----------------|-----------------|-----------|
+| `VRCPositionConstraint` | `PositionConstraint` | `VRC.SDK3.Dynamics.Constraint.Components` |
+| `VRCRotationConstraint` | `RotationConstraint` | `VRC.SDK3.Dynamics.Constraint.Components` |
+| `VRCScaleConstraint` | `ScaleConstraint` | `VRC.SDK3.Dynamics.Constraint.Components` |
+| `VRCParentConstraint` | `ParentConstraint` | `VRC.SDK3.Dynamics.Constraint.Components` |
+| `VRCAimConstraint` | `AimConstraint` | `VRC.SDK3.Dynamics.Constraint.Components` |
+| `VRCLookAtConstraint` | `LookAtConstraint` | `VRC.SDK3.Dynamics.Constraint.Components` |
+
+```csharp
+using VRC.SDK3.Dynamics.Constraint.Components;
+
+// Correct: Use VRC Constraint components
+public VRCParentConstraint parentConstraint;
+public VRCPositionConstraint positionConstraint;
+public VRCRotationConstraint rotationConstraint;
+
+// Wrong: Unity constraints are disabled on Quest
+// public UnityEngine.Animations.ParentConstraint parentConstraint;
+```
+
+#### Decision Guide
+
+| Scenario | Recommendation |
+|----------|---------------|
+| World targets PC + Quest | **VRC Constraints** (mandatory) |
+| World targets PC only | VRC Constraints preferred (future-proof) |
+| Need Udon API control | **VRC Constraints** (better API) |
+| Migrating from Unity Constraints | Replace with VRC equivalents |
+| Avatar constraints | Follow VRChat avatar documentation |
+
 ## Common Patterns
 
 ### Interactive Button with Feedback
