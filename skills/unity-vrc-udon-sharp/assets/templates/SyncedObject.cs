@@ -5,7 +5,8 @@ using VRC.Udon;
 
 /// <summary>
 /// Synchronized object template for multiplayer VRChat worlds.
-/// Demonstrates proper network synchronization patterns.
+/// Demonstrates proper network synchronization patterns with late-joiner safety.
+/// See references/networking.md "Side-Effect Guard for Late Joiners" for details.
 /// </summary>
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class SyncedObject : UdonSharpBehaviour
@@ -29,6 +30,10 @@ public class SyncedObject : UdonSharpBehaviour
     [UdonSynced]
     private int lastInteractorId = -1;
 
+    // Late-joiner safety: prevents side effects (audio, animations) from
+    // firing on the first OnDeserialization when a player joins mid-session.
+    private bool _isInitialized = false;
+
     /// <summary>
     /// Property wrapper for synced _isActive field.
     /// Called automatically when the synced value changes.
@@ -45,12 +50,18 @@ public class SyncedObject : UdonSharpBehaviour
 
     void Start()
     {
-        // Apply initial state
-        OnStateChanged();
+        // Apply initial visual state only (no side effects).
+        // _isInitialized stays false until first OnDeserialization,
+        // which is the late-joiner guard boundary.
+        ApplyVisualState();
     }
 
     public override void Interact()
     {
+        // Local interaction always marks as initialized (instance master
+        // may never receive OnDeserialization for their own changes)
+        _isInitialized = true;
+
         // Take ownership before modifying synced variables
         if (!Networking.IsOwner(gameObject))
         {
@@ -71,10 +82,32 @@ public class SyncedObject : UdonSharpBehaviour
 
     /// <summary>
     /// Called when IsActive changes (locally or from network).
+    /// Plays side effects only after initialization (late-joiner safe).
     /// </summary>
     private void OnStateChanged()
     {
-        // Update controlled objects
+        // Always update visuals (safe for late joiners)
+        ApplyVisualState();
+
+        // Side effects only after initialization to prevent
+        // audio/animation replay when a late joiner receives initial sync
+        if (_isInitialized)
+        {
+            if (audioSource != null && toggleSound != null)
+            {
+                audioSource.PlayOneShot(toggleSound);
+            }
+        }
+
+        LogDebug($"State changed to: {_isActive}");
+    }
+
+    /// <summary>
+    /// Applies visual state without side effects. Safe to call during
+    /// initialization and late-joiner deserialization.
+    /// </summary>
+    private void ApplyVisualState()
+    {
         if (controlledObjects != null)
         {
             foreach (GameObject obj in controlledObjects)
@@ -85,21 +118,21 @@ public class SyncedObject : UdonSharpBehaviour
                 }
             }
         }
-
-        // Play sound
-        if (audioSource != null && toggleSound != null)
-        {
-            audioSource.PlayOneShot(toggleSound);
-        }
-
-        LogDebug($"State changed to: {_isActive}");
     }
 
     /// <summary>
     /// Called when synced data is received from the network.
+    /// The first call is the initial sync for late joiners.
     /// </summary>
     public override void OnDeserialization()
     {
+        if (!_isInitialized)
+        {
+            // First deserialization (late joiner): mark as initialized
+            // Side effects are already guarded in OnStateChanged via _isInitialized
+            _isInitialized = true;
+        }
+
         LogDebug($"Deserialization: IsActive = {_isActive}, LastInteractor = {lastInteractorId}");
     }
 
@@ -132,6 +165,8 @@ public class SyncedObject : UdonSharpBehaviour
     /// </summary>
     public void SetState(bool newState)
     {
+        _isInitialized = true;
+
         if (!Networking.IsOwner(gameObject))
         {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);

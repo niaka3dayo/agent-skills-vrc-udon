@@ -433,3 +433,90 @@ public class MyScript : UdonSharpBehaviour
 ```
 
 Note: `ExecuteInEditMode` can cause issues with UdonSharp. Use with caution.
+
+## UdonSharpProgramAsset Auto-Generation
+
+### The Problem
+
+When AI creates a new `.cs` UdonSharp script file, the corresponding `.asset` (UdonSharpProgramAsset) is **not auto-generated**. Without this asset file, Unity cannot associate the C# script with an UdonBehaviour, resulting in "The associated script cannot be loaded" errors.
+
+### The `.cs` to `.asset` Relationship
+
+Every UdonSharp script requires a paired UdonSharpProgramAsset:
+
+```text
+MyScript.cs          → Source code (UdonSharpBehaviour)
+MyScript.asset       → UdonSharpProgramAsset (links script to Udon compiler)
+```
+
+When creating scripts through the Unity Editor (Assets > Create > U# Script), both files are generated automatically. However, when AI creates `.cs` files directly on the filesystem, the `.asset` file is missing.
+
+### Auto-Generation via AssetPostprocessor
+
+Use `AssetPostprocessor.OnPostprocessAllAssets()` to detect newly imported UdonSharp scripts and auto-generate their program assets:
+
+```csharp
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEngine;
+using UdonSharp;
+using UdonSharpEditor;
+
+/// <summary>
+/// Automatically generates UdonSharpProgramAsset for new UdonSharp scripts.
+/// Place this file in an Editor folder (e.g., Assets/Editor/).
+/// </summary>
+public class UdonSharpAutoAssetGenerator : AssetPostprocessor
+{
+    private static void OnPostprocessAllAssets(
+        string[] importedAssets,
+        string[] deletedAssets,
+        string[] movedAssets,
+        string[] movedFromAssetPaths)
+    {
+        foreach (string assetPath in importedAssets)
+        {
+            if (!assetPath.EndsWith(".cs")) continue;
+
+            MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
+            if (script == null) continue;
+
+            System.Type scriptType = script.GetClass();
+            if (scriptType == null) continue;
+            if (!scriptType.IsSubclassOf(typeof(UdonSharpBehaviour))) continue;
+
+            // Check if program asset already exists
+            string assetFilePath = assetPath.Replace(".cs", ".asset");
+            UdonSharpProgramAsset existingAsset =
+                AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(assetFilePath);
+
+            if (existingAsset != null) continue;
+
+            // Create new UdonSharpProgramAsset
+            UdonSharpProgramAsset programAsset =
+                ScriptableObject.CreateInstance<UdonSharpProgramAsset>();
+            programAsset.sourceCsScript = script;
+
+            AssetDatabase.CreateAsset(programAsset, assetFilePath);
+            Debug.Log($"[UdonSharp] Auto-generated ProgramAsset: {assetFilePath}");
+        }
+
+        AssetDatabase.SaveAssets();
+    }
+}
+#endif
+```
+
+> **Credit**: This approach is based on [nemurigi's AssetPostprocessor pattern](https://gist.github.com/nemurigi/dea7c0a1fb94f7b9cf1c36481a459ded) (MIT License).
+
+### Setup Instructions
+
+1. Create an `Editor` folder in your Unity project (e.g., `Assets/Editor/`)
+2. Place the `UdonSharpAutoAssetGenerator.cs` file inside it
+3. New UdonSharp scripts will automatically get their `.asset` files on import
+
+### Limitations
+
+- The script must compile successfully before the asset can be generated
+- `scriptType.GetClass()` returns `null` if the script has compile errors
+- The `Editor` folder placement is required (scripts in `Editor` are not compiled by UdonSharp)

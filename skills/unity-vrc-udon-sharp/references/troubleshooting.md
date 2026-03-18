@@ -770,6 +770,8 @@ EditorUtility.SetDirty(behaviour);
 2. Remove the UdonBehaviour and re-add the UdonSharpBehaviour
 3. Check the Console for detailed error messages
 
+4. If the UdonSharpProgramAsset is missing, see [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for an `AssetPostprocessor`-based auto-generation workflow
+
 ---
 
 ## Performance Issues

@@ -262,6 +262,98 @@ public void StartGame()
 }
 ```
 
+### Side-Effect Guard for Late Joiners
+
+When a late joiner enters a world, `OnDeserialization` fires for all synced variables. If side effects (audio, animations, particles) are triggered directly in `OnDeserialization`, they will play unintentionally on join.
+
+#### The `_isInitialized` Flag Pattern
+
+Use an initialization flag to skip side effects on the first `OnDeserialization` call:
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SafeSyncedObject : UdonSharpBehaviour
+{
+    [UdonSynced, FieldChangeCallback(nameof(GameState))]
+    private int _gameState;
+
+    public AudioSource sfx;
+    public Animator animator;
+
+    private bool _isInitialized = false;
+
+    public int GameState
+    {
+        get => _gameState;
+        set
+        {
+            int previousState = _gameState;
+            _gameState = value;
+            ApplyState(previousState);
+        }
+    }
+
+    public override void OnDeserialization()
+    {
+        if (!_isInitialized)
+        {
+            _isInitialized = true;
+            // First deserialization (late joiner): apply state silently
+            ApplyStateWithoutSideEffects();
+            return;
+        }
+        // Subsequent deserializations: side effects are handled by
+        // FieldChangeCallback (GameState property setter), not here
+    }
+
+    private void ApplyState(int previousState)
+    {
+        // Update visuals (always safe)
+        UpdateDisplay();
+
+        // Side effects only after initialization
+        if (_isInitialized && previousState != _gameState)
+        {
+            sfx.Play();
+            animator.SetTrigger("StateChange");
+        }
+    }
+
+    private void ApplyStateWithoutSideEffects()
+    {
+        UpdateDisplay();
+    }
+
+    private void UpdateDisplay() { /* Update UI/visuals */ }
+}
+```
+
+#### Using `OnDeserialization(DeserializationResult)` Overload
+
+The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_isInitialized` flag pattern for late-joiner guards:
+
+```csharp
+public override void OnDeserialization(DeserializationResult result)
+{
+    // Update visuals (always safe)
+    UpdateDisplay();
+
+    // Guard side effects: skip on initial sync for late joiners
+    // Note: DeserializationResult does not provide a late-joiner flag;
+    // use _isInitialized for this purpose
+    if (!_isInitialized)
+    {
+        _isInitialized = true;
+        return;
+    }
+
+    // Runtime update: play effects
+    PlayTransitionEffects();
+}
+```
+
+> **Common pitfall**: Without this guard, a late joiner entering a multiplayer game will hear all audio cues and see all animations replay simultaneously. This was a reported issue in real-world VRChat game development.
+
 ## Optimization Tips
 
 ### Use Integers/Enums for Multiple Flags
@@ -396,6 +488,80 @@ Acknowledges transfer   |
 ```
 
 **Race condition warning**: If multiple players call `SetOwner` simultaneously, the last one processed wins. There is no built-in conflict resolution.
+
+### Owner Leave and Ownership Cascade
+
+When the owner of a networked GameObject disconnects:
+
+1. **VRChat automatically assigns a new owner** — the exact selection rule is not publicly documented; do not assume a specific player will be chosen
+2. **`OnOwnershipTransferred` fires** on all clients with the new owner
+3. **Synced variables are preserved** — they are not reset when ownership transfers
+
+```csharp
+public override void OnOwnershipTransferred(VRCPlayerApi player)
+{
+    if (player == null || !player.IsValid()) return;
+
+    if (player.isLocal)
+    {
+        // We became the new owner (e.g., previous owner left)
+        // Resume game logic that only the owner should run
+        Debug.Log("Inherited ownership — resuming owner duties");
+        RequestSerialization(); // Re-broadcast current state
+    }
+}
+
+public override void OnPlayerLeft(VRCPlayerApi player)
+{
+    if (player == null || !player.IsValid()) return;
+
+    // Clean up player-specific data
+    // Note: If this player was the owner, OnOwnershipTransferred
+    // will fire separately with the new owner
+    RemovePlayerFromGame(player.playerId);
+}
+```
+
+**Best practices for ownership transitions:**
+- Do **not** assume the local player will become the new owner — VRChat decides
+- Always re-broadcast state via `RequestSerialization()` when inheriting ownership
+- Clean up departing player data in `OnPlayerLeft`, not in `OnOwnershipTransferred`
+- If your game logic runs in `Update()` with an owner check, it will automatically resume on the new owner
+
+### Ownership Arbitration with OnOwnershipRequest
+
+`OnOwnershipRequest` allows the current owner to **accept or reject** ownership transfer requests:
+
+```csharp
+private bool _isProcessingCriticalAction = false;
+
+public override bool OnOwnershipRequest(
+    VRCPlayerApi requestingPlayer,
+    VRCPlayerApi requestedOwner)
+{
+    // Reject ownership transfers during critical game logic
+    if (_isProcessingCriticalAction)
+    {
+        Debug.Log($"Rejected ownership request from {requestingPlayer.displayName} " +
+                  $"— critical action in progress");
+        return false;
+    }
+
+    // Accept the transfer
+    return true;
+}
+```
+
+**When to use `OnOwnershipRequest`:**
+
+| Scenario | Return |
+|----------|--------|
+| Default (no override) | Always accepts (`true`) |
+| During critical game state transitions | Reject (`false`) until complete |
+| Turn-based game during active turn | Reject (`false`) until turn ends |
+| Free-for-all interaction | Accept (`true`) |
+
+> **Important**: `OnOwnershipRequest` runs locally on **both the requester and the current owner**. The logic must be consistent on both sides to avoid desync. If the owner has disconnected, the callback is not invoked — VRChat auto-assigns directly.
 
 ## Synced Variables
 

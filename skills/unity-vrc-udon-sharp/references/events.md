@@ -10,7 +10,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
+`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
 
 ### override Not Required (Standard Unity Callbacks)
 
@@ -336,7 +336,7 @@ Called during sync and ownership changes.
 | `void OnDeserialization(DeserializationResult result)` | With result info |
 | `void OnPostSerialization(SerializationResult result)` | After serialization complete |
 | `void OnOwnershipTransferred(VRCPlayerApi player)` | Ownership changed |
-| `void OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)` | Ownership requested |
+| `bool OnOwnershipRequest(VRCPlayerApi requestingPlayer, VRCPlayerApi requestedOwner)` | Ownership requested (return `true` to accept, `false` to reject) |
 
 ```csharp
 public override void OnPreSerialization()
@@ -371,6 +371,33 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
     }
 }
 ```
+
+### Ownership Request Arbitration
+
+`OnOwnershipRequest` allows the current owner to accept or reject ownership transfers. This is called **only on the current owner's client**.
+
+```csharp
+/// <summary>
+/// Called on the current owner's client when another player requests ownership.
+/// Return true to accept, false to reject the transfer.
+/// </summary>
+public override bool OnOwnershipRequest(
+    VRCPlayerApi requestingPlayer,
+    VRCPlayerApi requestedOwner)
+{
+    if (requestingPlayer == null || !requestingPlayer.IsValid()) return true;
+
+    // Example: Only allow ownership transfer when game is in lobby phase
+    if (gamePhase != 0)
+    {
+        return false; // Reject during active gameplay
+    }
+
+    return true;
+}
+```
+
+> **Important**: This callback runs locally on **both the requester and the current owner**. The logic must return the same result on both sides to avoid desync. If the current owner has disconnected, the callback is not invoked — VRChat auto-assigns a new owner directly.
 
 ## Station Events
 
