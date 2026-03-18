@@ -401,7 +401,7 @@ Acknowledges transfer   |
 
 When the owner of a networked GameObject disconnects:
 
-1. **VRChat automatically assigns a new owner** — typically the instance master (lowest join order)
+1. **VRChat automatically assigns a new owner** — the exact selection rule is not publicly documented; do not assume a specific player will be chosen
 2. **`OnOwnershipTransferred` fires** on all clients with the new owner
 3. **Synced variables are preserved** — they are not reset when ownership transfers
 
@@ -461,6 +461,7 @@ public override bool OnOwnershipRequest(
 ```
 
 **When to use `OnOwnershipRequest`:**
+
 | Scenario | Return |
 |----------|--------|
 | Default (no override) | Always accepts (`true`) |
@@ -468,7 +469,7 @@ public override bool OnOwnershipRequest(
 | Turn-based game during active turn | Reject (`false`) until turn ends |
 | Free-for-all interaction | Accept (`true`) |
 
-> **Note**: `OnOwnershipRequest` is only called on the **current owner's client**. If the owner has left, there is no one to reject — VRChat auto-assigns directly.
+> **Important**: `OnOwnershipRequest` runs locally on **both the requester and the current owner**. The logic must be consistent on both sides to avoid desync. If the owner has disconnected, the callback is not invoked — VRChat auto-assigns directly.
 
 ## Synced Variables
 

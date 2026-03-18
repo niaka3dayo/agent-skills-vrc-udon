@@ -397,7 +397,7 @@ public override bool OnOwnershipRequest(
 }
 ```
 
-> **Important**: If the current owner disconnects, `OnOwnershipRequest` is **not called** — VRChat auto-assigns a new owner directly. Only use this for arbitrating live transfer requests.
+> **Important**: This callback runs locally on **both the requester and the current owner**. The logic must return the same result on both sides to avoid desync. If the current owner has disconnected, the callback is not invoked — VRChat auto-assigns a new owner directly.
 
 ## Station Events
 
