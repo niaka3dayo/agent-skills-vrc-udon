@@ -262,6 +262,95 @@ public void StartGame()
 }
 ```
 
+### Side-Effect Guard for Late Joiners
+
+When a late joiner enters a world, `OnDeserialization` fires for all synced variables. If side effects (audio, animations, particles) are triggered directly in `OnDeserialization`, they will play unintentionally on join.
+
+#### The `_isInitialized` Flag Pattern
+
+Use an initialization flag to skip side effects on the first `OnDeserialization` call:
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SafeSyncedObject : UdonSharpBehaviour
+{
+    [UdonSynced, FieldChangeCallback(nameof(GameState))]
+    private int _gameState;
+
+    public AudioSource sfx;
+    public Animator animator;
+
+    private bool _isInitialized = false;
+
+    public int GameState
+    {
+        get => _gameState;
+        set
+        {
+            int previousState = _gameState;
+            _gameState = value;
+            ApplyState(previousState);
+        }
+    }
+
+    public override void OnDeserialization()
+    {
+        if (!_isInitialized)
+        {
+            _isInitialized = true;
+            // First deserialization (late joiner): apply state silently
+            ApplyStateWithoutSideEffects();
+            return;
+        }
+        // Subsequent deserializations: full update with effects
+    }
+
+    private void ApplyState(int previousState)
+    {
+        // Update visuals (always safe)
+        UpdateDisplay();
+
+        // Side effects only after initialization
+        if (_isInitialized && previousState != _gameState)
+        {
+            sfx.Play();
+            animator.SetTrigger("StateChange");
+        }
+    }
+
+    private void ApplyStateWithoutSideEffects()
+    {
+        UpdateDisplay();
+    }
+
+    private void UpdateDisplay() { /* Update UI/visuals */ }
+}
+```
+
+#### Using `DeserializationResult` Parameter
+
+The overloaded `OnDeserialization(DeserializationResult)` provides additional context:
+
+```csharp
+public override void OnDeserialization(DeserializationResult result)
+{
+    // Update visuals (always safe)
+    UpdateDisplay();
+
+    // Guard side effects: skip on initial sync for late joiners
+    if (!_isInitialized)
+    {
+        _isInitialized = true;
+        return;
+    }
+
+    // Runtime update: play effects
+    PlayTransitionEffects();
+}
+```
+
+> **Common pitfall**: Without this guard, a late joiner entering a multiplayer game will hear all audio cues and see all animations replay simultaneously. This was a reported issue in real-world VRChat game development.
+
 ## Optimization Tips
 
 ### Use Integers/Enums for Multiple Flags
