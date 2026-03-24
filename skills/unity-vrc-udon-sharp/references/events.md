@@ -815,5 +815,6 @@ public override void OnPlayerJoined(VRCPlayerApi player)
 
 ## See Also
 
+- [api.md](api.md) - VRCPlayerApi and Networking class reference for types used in event handlers
 - [dynamics.md](dynamics.md) - PhysBone and Contact component setup for the events listed here
 - [networking.md](networking.md) - Serialization and ownership events in depth (`OnDeserialization`, `OnOwnershipTransferred`)

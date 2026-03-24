@@ -93,8 +93,6 @@ public void ExecuteSync()
 - Up to `SyncInterval` seconds of latency
 - Individual sync requests may be merged (syncing state, not events)
 
-Reference template: `assets/templates/ThrottledSync.cs`
-
 ### Periodic Sync Pattern
 
 Continuous synchronization at controlled intervals:
@@ -215,8 +213,6 @@ public void UnpackValues(ulong packed, byte[] values)
     }
 }
 ```
-
-Reference template: `assets/templates/BitPacking.cs`
 
 ### Range Shifting
 

@@ -477,6 +477,12 @@ public class MyScript : UdonSharpBehaviour
 
 Note: `ExecuteInEditMode` can cause issues with UdonSharp. Use with caution.
 
+## See Also
+
+- [api.md](api.md) - VRChat API reference including types used in editor scripts
+- [constraints.md](constraints.md) - C# feature constraints that affect editor-time validation
+- [patterns-performance.md](patterns-performance.md) - DefaultExecutionOrder and performance patterns
+
 ## UdonSharpProgramAsset Auto-Generation
 
 ### The Problem

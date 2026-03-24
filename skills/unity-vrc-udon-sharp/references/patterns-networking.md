@@ -617,6 +617,8 @@ public class DebouncedSearch : UdonSharpBehaviour
 
 ## See Also
 
+- [networking-antipatterns.md](networking-antipatterns.md) - Anti-patterns to avoid and advanced sync patterns
+- [networking-bandwidth.md](networking-bandwidth.md) - Bandwidth throttling, bit packing, and data size optimization
 - [patterns-core.md](patterns-core.md) - Initialization, interaction, timer, audio, pickup, animation, UI
 - [patterns-performance.md](patterns-performance.md) - Partial class, update handler, PostLateUpdate, spatial query
 - [patterns-utilities.md](patterns-utilities.md) - Array helpers, event bus, relay communication
