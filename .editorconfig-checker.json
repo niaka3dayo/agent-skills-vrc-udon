@@ -1,0 +1,13 @@
+{
+  "Verbose": false,
+  "IgnoreDefaults": false,
+  "SpacesAfterTabs": false,
+  "NoColor": false,
+  "Exclude": [
+    "\\.git/",
+    "node_modules/"
+  ],
+  "Disable": {
+    "IndentSize": true
+  }
+}

@@ -105,6 +105,15 @@ jobs:
       - name: Test installer list
         run: node bin/install.mjs --list
 
+  editorconfig:
+    name: EditorConfig
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Check editorconfig compliance
+        uses: editorconfig-checker/action-editorconfig-checker@840e866d93b8e032123c23bac69dece044d4d84c  # v2.2.0
+
   version-sync:
     name: Version Sync
     runs-on: ubuntu-latest

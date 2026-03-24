@@ -73,6 +73,7 @@ node bin/install.mjs --help
 |-------|-----------------|
 | Symlink Integrity | No symlinks in repo (breaks npm pack) |
 | Hook Scripts | validate-udonsharp.sh is executable and valid bash |
+| EditorConfig | File formatting matches .editorconfig rules |
 | npm Pack Test | Package includes all required files, installer works |
 | Markdown Links | No broken links in documentation |
 
