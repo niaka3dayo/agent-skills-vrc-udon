@@ -7,11 +7,12 @@
  *   npx agent-skills-vrc-udon              Install skills to current directory
  *   npx agent-skills-vrc-udon --symlink    Install with symlinks for AI tools
  *   npx agent-skills-vrc-udon --list       List files that will be installed
+ *   npx agent-skills-vrc-udon --uninstall  Remove installed files
  *   npx agent-skills-vrc-udon --help       Show help
  *   npx agent-skills-vrc-udon --version    Show version
  */
 
-import { existsSync, cpSync, mkdirSync, symlinkSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, cpSync, mkdirSync, symlinkSync, readFileSync, writeFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +27,7 @@ const green = (s) => noColor ? s : `\x1b[32m${s}\x1b[0m`;
 const yellow = (s) => noColor ? s : `\x1b[33m${s}\x1b[0m`;
 const cyan = (s) => noColor ? s : `\x1b[36m${s}\x1b[0m`;
 const dim = (s) => noColor ? s : `\x1b[2m${s}\x1b[0m`;
+const red = (s) => noColor ? s : `\x1b[31m${s}\x1b[0m`;
 
 const pkg = JSON.parse(readFileSync(join(PKG_ROOT, 'package.json'), 'utf8'));
 
@@ -42,6 +44,7 @@ ${bold('Options:')}
   --symlink    Create symlinks for AI tool directories (.claude/, .agents/, etc.)
   --force      Overwrite existing files
   --list       List files that will be installed (dry run)
+  --uninstall  Remove all files installed by this package
   --help       Show this help message
   --version    Show version
 
@@ -54,6 +57,9 @@ ${bold('Examples:')}
 
   ${dim('# Force overwrite existing files')}
   npx agent-skills-vrc-udon --force
+
+  ${dim('# Remove installed files')}
+  npx agent-skills-vrc-udon --uninstall
 `;
 
 const args = process.argv.slice(2);
@@ -71,6 +77,16 @@ if (args.includes('--version') || args.includes('-v')) {
 const useSymlinks = args.includes('--symlink');
 const force = args.includes('--force');
 const listOnly = args.includes('--list');
+const uninstall = args.includes('--uninstall');
+
+const AGENT_DOCS_SRC = join(PKG_ROOT, 'skills');
+const DEST_DIR = join(TARGET, '.agent-skills');
+const AGENT_DOCS_DEST = join(DEST_DIR, 'skills');
+const VERSION_FILE = join(DEST_DIR, '.version');
+
+const TEMPLATES_DIR = join(PKG_ROOT, 'templates');
+const CONFIG_FILES = ['CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
+const AI_TOOL_DIRS = ['.claude', '.agents', '.codex', '.gemini'];
 
 /** Count files recursively */
 function countFiles(dir) {
@@ -103,13 +119,80 @@ function listFiles(dir, base) {
   return files;
 }
 
-const AGENT_DOCS_SRC = join(PKG_ROOT, 'skills');
-const DEST_DIR = join(TARGET, '.agent-skills');
-const AGENT_DOCS_DEST = join(DEST_DIR, 'skills');
+/** Check if a directory is empty */
+function isDirEmpty(dir) {
+  if (!existsSync(dir)) return true;
+  const entries = readdirSync(dir);
+  return entries.length === 0;
+}
 
-const TEMPLATES_DIR = join(PKG_ROOT, 'templates');
-const CONFIG_FILES = ['CLAUDE.md', 'AGENTS.md', 'GEMINI.md'];
-const AI_TOOL_DIRS = ['.claude', '.agents', '.codex', '.gemini'];
+/** Read installed version from .agent-skills/.version, or null if not present */
+function readInstalledVersion() {
+  if (!existsSync(VERSION_FILE)) return null;
+  try {
+    return readFileSync(VERSION_FILE, 'utf8').trim();
+  } catch {
+    return null;
+  }
+}
+
+/** Write current package version to .agent-skills/.version */
+function writeVersionFile() {
+  writeFileSync(VERSION_FILE, pkg.version, 'utf8');
+}
+
+// --uninstall: remove all installed files
+if (uninstall) {
+  console.log('');
+  console.log(bold('agent-skills-vrc-udon') + ` v${pkg.version}`);
+  console.log(dim('Uninstalling VRChat UdonSharp skills...\n'));
+
+  if (!existsSync(DEST_DIR)) {
+    console.log(yellow('  Nothing to uninstall.') + ` ${dim('.agent-skills/ does not exist.')}`);
+    console.log('');
+    process.exit(0);
+  }
+
+  let removed = 0;
+
+  // Remove skills/ subdirectory
+  if (existsSync(AGENT_DOCS_DEST)) {
+    const count = countFiles(AGENT_DOCS_DEST);
+    rmSync(AGENT_DOCS_DEST, { recursive: true, force: true });
+    removed += count;
+    console.log(red('  REMOVE') + ` .agent-skills/skills/ ${dim(`(${count} files)`)}`);
+  }
+
+  // Remove config reference files
+  for (const cf of CONFIG_FILES) {
+    const dest = join(DEST_DIR, cf);
+    if (existsSync(dest)) {
+      rmSync(dest, { force: true });
+      removed++;
+      console.log(red('  REMOVE') + ` .agent-skills/${cf}`);
+    }
+  }
+
+  // Remove version file
+  if (existsSync(VERSION_FILE)) {
+    rmSync(VERSION_FILE, { force: true });
+    console.log(red('  REMOVE') + ` .agent-skills/.version`);
+  }
+
+  // Remove .agent-skills/ itself if now empty
+  if (isDirEmpty(DEST_DIR)) {
+    rmSync(DEST_DIR, { recursive: true, force: true });
+    console.log(red('  REMOVE') + ` .agent-skills/ ${dim('(directory empty, removed)')}`);
+  } else {
+    console.log(yellow('  KEEP') + ` .agent-skills/ ${dim('(directory not empty, keeping)')}`);
+  }
+
+  console.log('');
+  console.log(bold('Done!'));
+  console.log(`  ${red(`${removed} files removed`)}`);
+  console.log('');
+  process.exit(0);
+}
 
 // --list: dry run
 if (listOnly) {
@@ -143,7 +226,19 @@ if (listOnly) {
 // Main install
 console.log('');
 console.log(bold('agent-skills-vrc-udon') + ` v${pkg.version}`);
-console.log(dim('Installing VRChat UdonSharp skills for AI agents...\n'));
+
+// Version detection: show upgrade/already-up-to-date message
+const installedVersion = readInstalledVersion();
+if (installedVersion !== null) {
+  if (installedVersion === pkg.version) {
+    console.log(dim(`Already up to date (v${pkg.version}).`));
+  } else {
+    console.log(cyan(`Upgrading from v${installedVersion} to v${pkg.version}...`));
+  }
+} else {
+  console.log(dim('Installing VRChat UdonSharp skills for AI agents...'));
+}
+console.log('');
 
 let copied = 0;
 let skipped = 0;
@@ -178,7 +273,10 @@ for (const cf of CONFIG_FILES) {
   }
 }
 
-// 3. Create symlinks if requested
+// 3. Write version file
+writeVersionFile();
+
+// 4. Create symlinks if requested
 if (useSymlinks) {
   console.log('');
 
