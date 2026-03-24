@@ -53,6 +53,33 @@ public class MyScript : UdonSharpBehaviour { }
 
 ---
 
+## Sync Strategy Decision Tree
+
+```
+Q1: Does data need to persist across sessions / per-player?
+  Yes -> PlayerData (SDK 3.7.4+) or PlayerObject
+  No  -> Q2
+
+Q2: Do all players need to see the same state (late joiners included)?
+  Yes -> [UdonSynced] variable (Manual or Continuous)
+  No  -> Q3
+
+Q3: Is it a one-shot action (fire-and-forget, no state needed)?
+  Yes -> SendCustomNetworkEvent / [NetworkCallable] (SDK 3.8.1+)
+  No  -> Keep it local (no sync needed)
+```
+
+| Scenario | Pattern |
+|----------|---------|
+| Per-player save data | `PlayerData` API |
+| Shared persistent state (score, phase) | `[UdonSynced]` + Manual + `RequestSerialization()` |
+| Continuous position/rotation | `[UdonSynced]` + Continuous |
+| One-shot effect (sound, animation) | `SendCustomNetworkEvent` |
+| Parameterized one-shot (SDK 3.8.1+) | `[NetworkCallable]` |
+| Personal effect (only local player sees) | Local only, no sync |
+
+---
+
 ## Networking Patterns
 
 ```csharp
