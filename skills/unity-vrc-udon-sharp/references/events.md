@@ -10,7 +10,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
+`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
 
 ### override Not Required (Standard Unity Callbacks)
 
@@ -269,6 +269,9 @@ public override void OnContactExit(ContactExitInfo info)
 |-------|-------------|
 | `void OnPhysBoneGrab(PhysBoneGrabInfo info)` | PhysBone grabbed |
 | `void OnPhysBoneRelease(PhysBoneReleaseInfo info)` | PhysBone released |
+| `void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
+| `void OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues to intersect the bone chain |
+| `void OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting the bone chain |
 
 ```csharp
 public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
@@ -279,6 +282,25 @@ public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
 public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
 {
     Debug.Log($"PhysBone released");
+}
+
+public override void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)
+{
+    // info.isAvatar — true if the collider belongs to an avatar
+    // info.player   — player reference (valid when isAvatar is true)
+    // info.bone     — the specific bone transform that was hit
+    Debug.Log($"PhysBone collider entered — bone: {info.bone?.name}, " +
+              $"avatar: {info.isAvatar}, player: {info.player?.displayName}");
+}
+
+public override void OnPhysBoneColliderStay(PhysBoneColliderInfo info)
+{
+    // Called every frame while the collider intersects. Keep this lightweight.
+}
+
+public override void OnPhysBoneColliderExit(PhysBoneColliderInfo info)
+{
+    Debug.Log($"PhysBone collider exited — bone: {info.bone?.name}");
 }
 ```
 

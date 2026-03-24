@@ -265,6 +265,87 @@ physBone.ForceReleaseGrab();  // Force release the grab
 physBone.ForceReleasePose();  // Force release the pose (reset bent PhysBone)
 ```
 
+### PhysBone Udon Callbacks (Collider Events)
+
+In addition to grab/release, VRC PhysBone fires Udon callbacks when **PhysBone Colliders** interact with the bone chain. These three events are raised on any UdonBehaviour attached to the **same GameObject as the VRC Phys Bone** component.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
+| `void OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues to intersect the bone chain |
+| `void OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting the bone chain |
+
+#### PhysBoneColliderInfo Struct
+
+```csharp
+public struct PhysBoneColliderInfo
+{
+    public VRCPhysBoneCollider collider; // The collider that intersected the bone chain
+    public bool isAvatar;               // True if the collider belongs to an avatar
+    public VRCPlayerApi player;         // Player reference (only valid if isAvatar is true)
+    public Transform bone;              // The specific bone transform that was hit
+}
+```
+
+#### Callback Example
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+public class PhysBoneColliderReactor : UdonSharpBehaviour
+{
+    public AudioSource touchSound;
+    public ParticleSystem touchEffect;
+
+    private int activeColliderCount = 0;
+
+    public override void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)
+    {
+        activeColliderCount++;
+
+        if (info.isAvatar && info.player != null)
+        {
+            Debug.Log($"PhysBone touched by avatar: {info.player.displayName}, bone: {info.bone?.name}");
+        }
+        else
+        {
+            Debug.Log($"PhysBone touched by world collider, bone: {info.bone?.name}");
+        }
+
+        if (activeColliderCount == 1)
+        {
+            // First contact — play feedback
+            touchSound.Play();
+            touchEffect.Play();
+        }
+    }
+
+    public override void OnPhysBoneColliderStay(PhysBoneColliderInfo info)
+    {
+        // Called every frame while the collider continues to intersect.
+        // Avoid heavy per-frame logic here; use OnPhysBoneColliderEnter
+        // and OnPhysBoneColliderExit for state changes instead.
+    }
+
+    public override void OnPhysBoneColliderExit(PhysBoneColliderInfo info)
+    {
+        activeColliderCount--;
+        if (activeColliderCount < 0) activeColliderCount = 0;
+
+        if (activeColliderCount == 0)
+        {
+            touchEffect.Stop();
+        }
+
+        Debug.Log($"PhysBone collider exited, bone: {info.bone?.name}");
+    }
+}
+```
+
+> **Note:** `OnPhysBoneColliderStay` fires every frame while a collider remains in contact and can generate significant callback overhead. Keep stay handlers lightweight or leave the body empty when you only need enter/exit transitions.
+
 ### PhysBone Dependency Sorting (SDK 3.8.0+)
 
 Since SDK 3.8.0, PhysBone components are **automatically sorted based on dependencies**. PhysBone chains with parent-child relationships are evaluated in the correct order, resolving the unstable behavior seen in previous versions.
