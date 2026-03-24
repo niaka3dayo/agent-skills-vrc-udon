@@ -332,11 +332,26 @@ public class SafeSyncedObject : UdonSharpBehaviour
 
 The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_isInitialized` flag pattern for late-joiner guards:
 
+##### DeserializationResult Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `sendTime` | `float` | Time (in seconds, server clock) when the owner sent this update |
+| `receiveTime` | `float` | Time (in seconds, server clock) when this client received the update |
+| `isFromStorage` | `bool` | True if the data was restored from persistent storage rather than sent live |
+
 ```csharp
 public override void OnDeserialization(DeserializationResult result)
 {
     // Update visuals (always safe)
     UpdateDisplay();
+
+    // Calculate network latency when valid timing data is available
+    if (result.receiveTime > result.sendTime)
+    {
+        float latencySeconds = result.receiveTime - result.sendTime;
+        Debug.Log($"Network latency: {latencySeconds * 1000f:F1} ms");
+    }
 
     // Guard side effects: skip on initial sync for late joiners
     // Note: DeserializationResult does not provide a late-joiner flag;
@@ -351,6 +366,8 @@ public override void OnDeserialization(DeserializationResult result)
     PlayTransitionEffects();
 }
 ```
+
+> **Guard**: Always check `receiveTime > sendTime` before computing latency. In edge cases (storage restore, clock skew), `sendTime` may be zero or greater than `receiveTime`.
 
 > **Common pitfall**: Without this guard, a late joiner entering a multiplayer game will hear all audio cues and see all animations replay simultaneously. This was a reported issue in real-world VRChat game development.
 
@@ -757,23 +774,23 @@ public class NetworkCallableExample : UdonSharpBehaviour
 
 ### Rate Limiting
 
-`[NetworkCallable]` has rate limiting options:
+`[NetworkCallable]` accepts an optional integer parameter that controls the maximum call rate (in calls per second) allowed for that method per behaviour instance. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
 
 ```csharp
-// Default: 5 times/sec/event
+// Default: 5 calls/sec per behaviour (no argument)
 [NetworkCallable]
 public void NormalEvent(int value) { }
 
-// Custom rate: 100 times/sec (maximum)
+// Custom rate: 100 calls/sec (maximum allowed)
 [NetworkCallable(100)]
 public void HighFrequencyEvent(float value) { }
 
-// Low rate: 1 time/sec
+// Low rate: 1 call/sec (minimal network cost)
 [NetworkCallable(1)]
 public void RareBroadcast(string message) { }
 ```
 
-**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per player**. Default is **5 times/sec**, configurable up to **100 times/sec**.
+**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per behaviour.
 
 ### Types Usable as Parameters
 

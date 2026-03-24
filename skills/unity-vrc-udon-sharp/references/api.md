@@ -122,6 +122,22 @@ string value = player.GetPlayerTag(string tagName);
 player.ClearPlayerTags();
 ```
 
+### PlayerObject Methods
+
+```csharp
+// Find a component in the player's PlayerObject instance
+// The reference parameter identifies which component type to find
+Transform matched = (Transform)player.FindComponentInPlayerObjects(referenceTransform);
+
+// Always validate before use
+if (Utilities.IsValid(matched))
+{
+    Debug.Log($"Found transform: {matched.name}");
+}
+```
+
+`FindComponentInPlayerObjects` searches the PlayerObject hierarchy belonging to `player` for a component that matches the type and identity of the reference. The return value must be cast to the target component type. Always check with `Utilities.IsValid()` before using the result, as the player's PlayerObject may not be loaded yet.
+
 ### Validity Check
 
 ```csharp
@@ -788,6 +804,66 @@ public class ContactButton : UdonSharpBehaviour
     {
         isPressed = false;
         buttonAnimator.SetTrigger("Release");
+    }
+}
+```
+
+## VRCDroneApi
+
+The drone that a player controls when in drone mode. Obtain the local player's drone via `Networking.LocalPlayer.GetDrone()`.
+
+### Getting the Drone
+
+```csharp
+// Get the drone associated with the local player
+VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
+
+// Always validate before use — returns null when the player is not in drone mode
+if (Utilities.IsValid(drone))
+{
+    // Safe to use drone
+}
+```
+
+### Methods
+
+```csharp
+// Teleport the drone to a world-space position and rotation
+drone.TeleportTo(Vector3 position, Quaternion rotation);
+
+// Set the drone's current velocity (world space, meters per second)
+drone.SetVelocity(Vector3 velocity);
+
+// Get the VRCPlayerApi of the player piloting this drone
+VRCPlayerApi pilot = drone.GetPlayer();
+```
+
+### Usage Example
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
+public class DroneCheckpoint : UdonSharpBehaviour
+{
+    [SerializeField] private Transform respawnPoint;
+
+    public override void OnDroneTriggerEnter(Collider other)
+    {
+        VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
+        if (!Utilities.IsValid(drone)) return;
+
+        // Teleport the drone back to the respawn point
+        drone.TeleportTo(respawnPoint.position, respawnPoint.rotation);
+        drone.SetVelocity(Vector3.zero);
+
+        VRCPlayerApi pilot = drone.GetPlayer();
+        if (Utilities.IsValid(pilot))
+        {
+            Debug.Log($"{pilot.displayName}'s drone hit a checkpoint");
+        }
     }
 }
 ```
