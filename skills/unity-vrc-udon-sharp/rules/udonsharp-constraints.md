@@ -4,6 +4,9 @@ UdonSharp compiles C# to Udon Assembly. Always adhere to these constraints, whic
 
 **SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
 
+> For detailed examples, SDK version availability, and compiler behavior explanations,
+> see `references/constraints.md`.
+
 ## Blocked Features
 
 | Feature | Alternative |
@@ -57,33 +60,18 @@ public class MyScript : UdonSharpBehaviour { }
 
 ### 2. Field Initialization
 
-Field initializers are evaluated at compile time. Scene-dependent references must be obtained in `Start()` or via Lazy Init.
+Field initializers are evaluated at compile time. Scene-dependent references must be obtained in `Start()` or via Lazy Init. See `references/constraints.md` for the lazy-init pattern.
 
 ```csharp
 // OK: Compile-time constant
 private int maxPlayers = 10;
 
-// NG: Runtime value in field initializer
-// private int rng = Random.Range(0, 100); // Same value for all instances!
+// NG: Runtime value in field initializer (same value for all instances!)
+// private int rng = Random.Range(0, 100);
 
 // OK: Initialize in Start()
 private int rng;
 void Start() { rng = Random.Range(0, 100); }
-```
-
-**Lazy Initialization Pattern** (for inactive objects):
-
-```csharp
-private Transform _target;
-private bool _init;
-
-private void EnsureInit()
-{
-    if (_init) return;
-    var go = GameObject.Find("Target");
-    if (go != null) _target = go.transform;
-    _init = true;
-}
 ```
 
 ### 3. Struct Mutation
@@ -92,7 +80,6 @@ Struct mutation methods do not modify the original value. Use the return value.
 
 ```csharp
 // NG: v is not modified
-Vector3 v = new Vector3(3, 4, 0);
 v.Normalize();
 
 // OK: Assign return value
@@ -110,7 +97,7 @@ UdonBehaviour ub = GetComponent<UdonBehaviour>();
 // OK
 UdonBehaviour ub = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
 
-// OK (SDK 3.8+): Generic retrieval works for UdonSharpBehaviour subclasses
+// OK (SDK 3.8+): Generic works for UdonSharpBehaviour subclasses
 MyScript s = GetComponent<MyScript>();
 ```
 
@@ -124,16 +111,12 @@ The `[RecursiveMethod]` attribute is required for recursive calls.
 
 ```csharp
 [RecursiveMethod]
-private int Factorial(int n)
-{
-    if (n <= 1) return 1;
-    return n * Factorial(n - 1);
-}
+private int Factorial(int n) { ... }
 ```
 
 ### 7. uGUI Button Events and Unity Callbacks
 
-- `Button.onClick.AddListener()` is not available -- configure OnClick via Inspector to call SendCustomEvent
+- `Button.onClick.AddListener()` is not available -- configure OnClick via Inspector to call `SendCustomEvent`
 - Unity callbacks (`OnTriggerEnter`, etc.) do **not** require `override` -- `override` is only for VRChat events
 
 ```csharp
@@ -177,22 +160,6 @@ Types that can be used with `[UdonSynced]`:
 `bool`, `byte`, `sbyte`, `char`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
 `float`, `double`, `string` (~50 character limit), `Vector2`, `Vector3`, `Vector4`,
 `Quaternion`, `Color`, `Color32`, `T[]` (arrays of the above types)
-
-## DataList / DataDictionary
-
-```csharp
-using VRC.SDK3.Data;
-
-// Alternative to List<string>
-DataList list = new DataList();
-list.Add("a");
-string first = list[0].String;
-
-// Alternative to Dictionary<string, int>
-DataDictionary dict = new DataDictionary();
-dict["key"] = 100;
-int val = dict["key"].Int;
-```
 
 ## Validation Checklist
 
