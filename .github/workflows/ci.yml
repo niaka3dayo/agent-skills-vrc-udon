@@ -104,3 +104,34 @@ jobs:
 
       - name: Test installer list
         run: node bin/install.mjs --list
+
+  version-sync:
+    name: Version Sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - name: Check version consistency
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "Package version: $PKG_VERSION"
+          ERRORS=0
+
+          for SKILL_FILE in skills/unity-vrc-udon-sharp/SKILL.md skills/unity-vrc-world-sdk-3/SKILL.md .claude/skills/unity-vrc-skills-renovator/SKILL.md; do
+            SKILL_VER=$(grep -oP 'version:\s*"?\K[0-9]+\.[0-9]+\.[0-9]+' "$SKILL_FILE" | head -1)
+            if [ "$SKILL_VER" != "$PKG_VERSION" ]; then
+              echo "ERROR: $SKILL_FILE has version $SKILL_VER, expected $PKG_VERSION"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          MKT_VER=$(node -p "require('./.claude-plugin/marketplace.json').version || 'missing'" 2>/dev/null)
+          if [ "$MKT_VER" != "$PKG_VERSION" ]; then
+            echo "ERROR: .claude-plugin/marketplace.json has version $MKT_VER, expected $PKG_VERSION"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "FAIL: $ERRORS version mismatch(es) found"
+            exit 1
+          fi
+          echo "PASS: All versions match $PKG_VERSION"
