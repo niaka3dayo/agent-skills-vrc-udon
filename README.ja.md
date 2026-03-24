@@ -1,4 +1,4 @@
-> **English version**: [README.md](README.md)
+[English](README.md) | **日本語** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
   <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.2-00b4d8?style=for-the-badge" alt="VRChat SDK" />
@@ -83,8 +83,8 @@ npx agent-skills-vrc-udon
 
 オプション:
 ```bash
-npx agent-skills-vrc-udon --force    # Overwrite existing files
-npx agent-skills-vrc-udon --list     # Preview files to install (dry run)
+npx agent-skills-vrc-udon --force    # 既存ファイルを上書き
+npx agent-skills-vrc-udon --list     # インストール対象ファイルをプレビュー（ドライラン）
 ```
 
 ### 方法 4: git clone
@@ -98,26 +98,26 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 <h2 id="structure">構成</h2>
 
 ```
-skills/                                  # All skills
-  unity-vrc-udon-sharp/                 # UdonSharp core skill
-    SKILL.md                              # Skill definition + frontmatter
-    LICENSE.txt                           # MIT License
-    CHEATSHEET.md                         # Quick reference (1 page)
-    rules/                               # Constraint rules
+skills/                                  # すべてのスキル
+  unity-vrc-udon-sharp/                 # UdonSharpコアスキル
+    SKILL.md                              # スキル定義 + フロントマター
+    LICENSE.txt                           # MITライセンス
+    CHEATSHEET.md                         # クイックリファレンス（1ページ）
+    rules/                               # 制約ルール
       udonsharp-constraints.md
       udonsharp-networking.md
       udonsharp-sync-selection.md
-    hooks/                               # PostToolUse validation
+    hooks/                               # PostToolUseバリデーション
       validate-udonsharp.sh
       validate-udonsharp.ps1
-    assets/templates/                    # Code templates (4 files)
-    references/                          # Detailed documentation (11 files)
-  unity-vrc-world-sdk-3/                # VRC World SDK skill
-    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
-templates/                               # AI tool config templates
-  CLAUDE.md  AGENTS.md  GEMINI.md        # Distributed to users via installer
-.claude-plugin/marketplace.json         # Claude Code plugin registration
-CLAUDE.md                               # Development guide (this repo only)
+    assets/templates/                    # コードテンプレート（4ファイル）
+    references/                          # 詳細ドキュメント（11ファイル）
+  unity-vrc-world-sdk-3/                # VRC World SDKスキル
+    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（7ファイル）
+templates/                               # AIツール設定テンプレート
+  CLAUDE.md  AGENTS.md  GEMINI.md        # インストーラー経由でユーザーに配布
+.claude-plugin/marketplace.json         # Claude Codeプラグイン登録
+CLAUDE.md                               # 開発ガイド（このリポジトリ専用）
 ```
 
 ---
