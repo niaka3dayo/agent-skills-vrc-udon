@@ -107,29 +107,46 @@ WebSearch: "error message UdonSharp site:github.com"
 
 ## References
 
-| File | Contents |
-|------|----------|
-| `constraints.md` | C# feature availability in UdonSharp |
-| `networking.md` | Networking pattern details (including NetworkCallable) |
-| `persistence.md` | PlayerData/PlayerObject (SDK 3.7.4+) |
-| `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) |
-| `patterns.md` | Buttons, pickups, player detection, object pools, etc. |
-| `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs |
-| `api.md` | VRCPlayerApi, Networking, enums reference |
-| `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) |
-| `editor-scripting.md` | Editor scripting and proxy system |
-| `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) |
-| `troubleshooting.md` | Common errors and solutions |
-| `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists |
+| File | Contents | Search Hints |
+|------|----------|--------------|
+| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes | List, async, try/catch, LINQ, generics, DataList, DataDictionary |
+| `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network events, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization |
+| `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
+| `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
+| `persistence.md` | PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data | PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt |
+| `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) | PhysBone, ContactReceiver, ContactSender, VRCConstraint, OnContactEnter |
+| `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo |
+| `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, delayed event debounce | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, debounce |
+| `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC |
+| `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray |
+| `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs | VRCStringDownloader, VRCImageDownloader, VRCJson, DataDictionary, VRCUrl |
+| `api.md` | VRCPlayerApi, Networking, enums reference | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity |
+| `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred |
+| `editor-scripting.md` | Editor scripting and proxy system | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject |
+| `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) | Continuous, Manual, NoVariableSync, sync example |
+| `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback |
+| `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |
 
 ## Templates (`assets/templates/`)
 
-| Template | Purpose | Path |
-|----------|---------|------|
-| `BasicInteraction.cs` | Interactive object | `assets/templates/BasicInteraction.cs` |
-| `SyncedObject.cs` | Network-synced object | `assets/templates/SyncedObject.cs` |
-| `PlayerSettings.cs` | Player movement settings | `assets/templates/PlayerSettings.cs` |
-| `CustomInspector.cs` | Custom editor inspector | `assets/templates/CustomInspector.cs` |
+| Template | Purpose |
+|----------|---------|
+| `BasicInteraction.cs` | Interactive object with `Interact()` handler |
+| `SyncedObject.cs` | Network-synced object (Manual sync, ownership guard, late-joiner init flag) |
+| `PlayerSettings.cs` | Per-player movement settings (walk/run/jump speed) |
+| `StateMachine.cs` | State machine with synced state and transitions |
+| `DataPersistence.cs` | PlayerData save/load with OnPlayerRestored (SDK 3.7.4+) |
+| `ContactReceiver.cs` | Contact receiver for world-side collision detection (SDK 3.10.0+) |
+| `CustomInspector.cs` | Custom editor inspector with UdonSharpEditor |
+| `MasterManagedPlayerPool.cs` | Master-managed player object pool; FIFO ring buffer; OnPlayerJoined/Left; VerifyAssignments after master handoff |
+| `EventBus.cs` | Subscriber list event bus (max 32 listeners); RegisterListener/UnregisterListener/RaiseEvent; in-place compaction |
+| `ArrayUtils.cs` | List\<T\> alternatives: Add, Contains, AddUnique, Remove, RemoveAt, Insert for GameObject[]; FindIndex/ShuffleArray for int[] |
+| `UndoableGameManager.cs` | History/undo sync with byte[] state history; NetworkCallable OwnerProcessMove/OwnerUndo/OwnerReset |
+| `PackedStateSync.cs` | Pack 3 ints into one Vector3 UdonSynced field; OnPreSerialization/OnDeserialization |
+| `RateLimitedSync.cs` | 0.15s sync cooldown with _syncLocked/_changeCounter; _OnSyncUnlock callback |
+| `DualCopySync.cs` | Local + synced copy with _dirty flag; strict OnPreSerialization/OnDeserialization separation |
+| `BatchedSync.cs` | Idempotent ScheduleBatchedSync with 0.2s BatchDelay; _FlushBatch delayed callback |
+| `CloggedRetrySync.cs` | Networking.IsClogged check; linear back-off (RetryDelay * retryCount); MaxRetries=5 |
 
 ## Hooks
 
