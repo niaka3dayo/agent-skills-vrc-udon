@@ -248,8 +248,6 @@ With 100 inactive gimmicks in a world:
 - Simple Update() with minimal overhead
 - When the extra component adds more complexity than benefit
 
-Reference template: `assets/templates/UpdateHandler.cs`
-
 ### Combining Both Patterns
 
 For complex gimmicks, combine Partial Class and Update Handler:

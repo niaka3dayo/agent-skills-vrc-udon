@@ -342,4 +342,5 @@ The following is a summary of synced data amounts for the patterns above. Use fo
 ## See Also
 
 - [networking.md](networking.md) - Sync mode selection, ownership rules, and bandwidth limits explained
+- [networking-bandwidth.md](networking-bandwidth.md) - Bandwidth throttling, bit packing, and data size optimization
 - [persistence.md](persistence.md) - Persisting player data across sessions with PlayerData and PlayerObject
