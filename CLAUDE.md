@@ -73,9 +73,18 @@ node bin/install.mjs --help
 |-------|-----------------|
 | Symlink Integrity | No symlinks in repo (breaks npm pack) |
 | Hook Scripts | validate-udonsharp.sh is executable and valid bash |
-| EditorConfig | File formatting matches .editorconfig rules |
+| EditorConfig | File formatting matches .editorconfig rules (indent_size check disabled; see below) |
 | npm Pack Test | Package includes all required files, installer works |
 | Markdown Links | No broken links in documentation |
+
+### EditorConfig Notes
+
+- **IndentSize check is intentionally disabled** in `.editorconfig-checker.json` (`Disable.IndentSize: true`).
+  C# uses 4-space indentation while JS/MJS uses 2-space; continuation lines and alignment patterns
+  in C# templates cause false positives. The `indent_style` check (tabs vs spaces) remains active.
+- **Editor setup**: Install an [EditorConfig plugin](https://editorconfig.org/#pre-installed) for your IDE
+  to automatically apply formatting rules from `.editorconfig`.
+- **Per-line exceptions**: Use `// editorconfig-checker-disable-line` for intentional deviations.
 
 ## Release Guide
 

@@ -2,7 +2,7 @@
   "Verbose": false,
   "IgnoreDefaults": false,
   "SpacesAfterTabs": false,
-  "NoColor": false,
+  "NoColor": true,
   "Exclude": [
     "\\.git/",
     "node_modules/",
