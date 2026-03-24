@@ -562,15 +562,94 @@ Displays avatars and allows switching.
 
 ## VRC_CameraDolly
 
-Applies camera dolly animations (SDK 3.9+).
+Moves the player's camera along a defined spline path (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
 
 ### Setup
 
 ```
-[Dolly Track]
+[Dolly Track Root]
 ├── VRC_CameraDolly
-├── Cinemachine Path / Spline
-└── Udon Controller
+│   ├── Path (SplineContainer or CinemachinePath reference)
+│   ├── Duration (float, seconds for a full traversal)
+│   └── Loop (bool)
+└── UdonController (UdonSharpBehaviour)
+```
+
+### VRC_CameraDolly Udon API
+
+```csharp
+VRCCameraDolly dolly = (VRCCameraDolly)GetComponent(typeof(VRCCameraDolly));
+
+// Start playback from position 0
+dolly.Play();
+
+// Stop playback and release camera control
+dolly.Stop();
+
+// Pause at the current position
+dolly.Pause();
+
+// Resume from paused position
+dolly.Resume();
+
+// Jump to a normalized position along the path (0.0 = start, 1.0 = end)
+dolly.SetPosition(float normalizedT);
+
+// Get current normalized position
+float t = dolly.GetPosition();
+
+// Set playback speed multiplier (1.0 = normal, 2.0 = double speed, -1.0 = reverse)
+dolly.SetSpeed(float speedMultiplier);
+
+// Check if currently playing
+bool isPlaying = dolly.IsPlaying;
+
+// Check if looping is enabled
+bool loops = dolly.Loop;
+```
+
+### Udon Control Example
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+public class DollyController : UdonSharpBehaviour
+{
+    [SerializeField] private VRCCameraDolly dolly;
+
+    // Call from UI button or trigger
+    public override void Interact()
+    {
+        if (dolly.IsPlaying)
+        {
+            dolly.Stop();
+        }
+        else
+        {
+            dolly.SetPosition(0f);
+            dolly.Play();
+        }
+    }
+
+    // Jump to midpoint on demand
+    public void JumpToMid()
+    {
+        dolly.SetPosition(0.5f);
+    }
+}
+```
+
+### Ownership and Network Notes
+
+```
+- VRC_CameraDolly only affects the local player's camera.
+- Play/Stop calls are local — no network sync is built in.
+- To sync a cinematic across all players, call Play() via
+  SendCustomNetworkEvent(NetworkEventTarget.All, nameof(StartDolly)).
+- Only one dolly can be active per player at a time.
+  Calling Play() on a second dolly automatically stops the first.
 ```
 
 ---
