@@ -1704,3 +1704,9 @@ public class UndoableGameManager : UdonSharpBehaviour
 | Managing initial state in a separate variable | Inconsistency on reset | history[0] = initial state |
 | Saving state before the operation | Undo goes back 2 steps instead of 1 | Save state after the operation |
 | Not making history synced | Undo results differ between players | Share history as synced variables |
+
+## See Also
+
+- [networking.md](networking.md) - Ownership model, sync modes, and `RequestSerialization` details
+- [api.md](api.md) - `VRCPlayerApi`, `Networking`, and `VRCObjectPool` API reference
+- [troubleshooting.md](troubleshooting.md) - Solutions for common pitfalls seen in these patterns

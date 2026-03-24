@@ -546,3 +546,8 @@ Settings tab:
 | VRChat Home | https://vrchat.com/home/ |
 | My Worlds | https://vrchat.com/home/worlds |
 | World Detail | https://vrchat.com/home/world/{worldId} |
+
+## See Also
+
+- [performance.md](performance.md) - Pre-upload performance checklist and Quest optimization requirements
+- [troubleshooting.md](troubleshooting.md) - Upload errors and common build failures

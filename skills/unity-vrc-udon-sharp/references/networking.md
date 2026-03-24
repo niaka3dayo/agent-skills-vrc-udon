@@ -1970,3 +1970,10 @@ public class ThrottledSync : UdonSharpBehaviour
 ```
 
 **Explanation**: Throttle `RequestSerialization()` to a maximum frequency appropriate for the data type (10Hz for position is generous; game state changes rarely need more than 1-2Hz). Combine throttling with a change threshold so unchanged values never trigger a sync. Check `Networking.IsClogged` before serializing and use `SendCustomEventDelayedSeconds` to retry rather than spinning in `Update`. See the [RequestSerialization Throttling Pattern](#requestserialization-throttling-pattern) section for a reusable implementation.
+
+## See Also
+
+- [sync-examples.md](sync-examples.md) - Concrete synced gimmick patterns with data budget reference
+- [troubleshooting.md](troubleshooting.md) - Debugging networking issues, ownership race conditions, and late-joiner problems
+- [patterns.md](patterns.md) - Reusable ownership, initialization, and state-machine patterns
+- [events.md](events.md) - Serialization and ownership event signatures (`OnDeserialization`, `OnOwnershipTransferred`)

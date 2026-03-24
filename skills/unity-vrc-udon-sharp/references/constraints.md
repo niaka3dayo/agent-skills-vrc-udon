@@ -512,3 +512,87 @@ Before compiling UdonSharp code, verify:
 - [ ] Unity callbacks (OnTriggerEnter, etc.) do not have `override`
 - [ ] VRChat event callbacks (OnPlayerJoined, etc.) do have `override`
 - [ ] `Button.onClick` not used; events configured in Inspector
+
+## Known Limitations and Caveats
+
+### Prefab Field Changes
+
+Changes to serialized fields on prefabs do NOT propagate to instances in the scene or other prefabs that reference them. This is a Unity limitation that affects UdonSharp as well.
+
+**Workaround**: After modifying a prefab, manually update instances or use `PrefabUtility.ApplyPrefabInstance` in editor scripts.
+
+### Field Initializers
+
+Field initializers are evaluated at **compile time**, not runtime. This means:
+
+```csharp
+// WRONG - Random.Range is evaluated once at compile time
+private int randomValue = Random.Range(0, 100); // Same value for all instances!
+
+// CORRECT - Initialize in Start()
+private int randomValue;
+
+void Start()
+{
+    randomValue = Random.Range(0, 100);
+}
+```
+
+### GetComponent and UdonBehaviour
+
+Generic `GetComponent<UdonBehaviour>()` is not directly exposed, but **SDK 3.8+** improved support for inherited types:
+
+```csharp
+// WRONG - Raw UdonBehaviour generic
+UdonBehaviour udon = GetComponent<UdonBehaviour>();
+
+// CORRECT - Cast syntax for raw UdonBehaviour
+UdonBehaviour udon = (UdonBehaviour)GetComponent(typeof(UdonBehaviour));
+
+// CORRECT (SDK 3.8+) - Generic works for UdonSharpBehaviour inheritance
+MyScript script = GetComponent<MyScript>(); // Works for UdonSharpBehaviour types
+
+// CORRECT (SDK 3.8+) - Works with inheritance hierarchy
+public class BaseGimmick : UdonSharpBehaviour { }
+public class DerivedGimmick : BaseGimmick { }
+
+// This now works correctly:
+BaseGimmick gimmick = GetComponent<BaseGimmick>();
+DerivedGimmick derived = GetComponent<DerivedGimmick>();
+```
+
+**Note:** SDK 3.8+ added proper handling for `GetComponent(s)<T>()` on UdonSharpBehaviour types using inheritance.
+
+### Struct Method Mutation (Reiterated)
+
+Methods that mutate structs do NOT modify the original:
+
+```csharp
+// WRONG
+Vector3 v = new Vector3(3, 4, 0);
+v.Normalize(); // v is UNCHANGED!
+
+// CORRECT
+v = v.normalized;
+```
+
+### uGUI Button Event Registration
+
+`Button.onClick.AddListener()` is not available (delegate-based). uGUI button events must be configured in the Unity Inspector.
+
+```csharp
+// WRONG - NotImplementedException at runtime
+button.onClick.AddListener(() => DoSomething());
+button.onClick.AddListener(DoSomething); // Also not possible
+
+// CORRECT - Configure in Unity Inspector:
+// 1. Add to the Button component's OnClick() list
+// 2. Drag the UdonBehaviour
+// 3. Select SendCustomEvent
+// 4. Enter the method name (e.g., "OnButtonClicked")
+```
+
+## See Also
+
+- [api.md](api.md) - VRChat-specific types and VRC Constraint API available in UdonSharp
+- [troubleshooting.md](troubleshooting.md) - Common compile and runtime errors with UdonSharp constraints
