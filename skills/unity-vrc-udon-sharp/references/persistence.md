@@ -116,7 +116,10 @@ string[] keys = PlayerData.GetKeys(player);
 
 ### Checking Data Usage (SDK 3.10.0+)
 
-Since SDK 3.10.0, PlayerData usage information is exposed. You can check how much Persistence data each player is using through the world's debug panel or SDK tools. Monitor usage against the 100 KB limit to prevent data write failures due to exceeding the limit.
+Since SDK 3.10.0, VRChat exposes runtime APIs to query storage usage programmatically via
+`VRCPlayerApi` methods and the `OnPersistenceUsageUpdated` event. See
+[Persistence Storage Information API](#persistence-storage-information-api-sdk-3100) for the
+full API reference and a complete monitoring example.
 
 ## PlayerObject
 
