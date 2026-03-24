@@ -1705,6 +1705,628 @@ public class UndoableGameManager : UdonSharpBehaviour
 | Saving state before the operation | Undo goes back 2 steps instead of 1 | Save state after the operation |
 | Not making history synced | Undo results differ between players | Share history as synced variables |
 
+## Array Utility Helpers
+
+UdonSharp does not support `List<T>`. The following static-style helpers use `System.Array.Copy` to provide list-like operations on plain arrays. Each operation returns a **new array**; the original is never modified.
+
+> **Performance warning:** Every call allocates a new array and copies elements. Do not call these in `Update()` or any hot path. Prefer pre-sized arrays with a manual count variable for high-frequency code.
+
+```csharp
+public class ArrayUtils : UdonSharpBehaviour
+{
+    // Add<T> - append one element, return a new array one element longer.
+    public GameObject[] AddGameObject(GameObject[] source, GameObject item)
+    {
+        GameObject[] result = new GameObject[source.Length + 1];
+        System.Array.Copy(source, result, source.Length);
+        result[source.Length] = item;
+        return result;
+    }
+
+    // Contains<T> - return true when the element is present.
+    public bool ContainsGameObject(GameObject[] source, GameObject item)
+    {
+        for (int i = 0; i < source.Length; i++)
+        {
+            if (source[i] == item) return true;
+        }
+        return false;
+    }
+
+    // AddUnique<T> - append only when the element is not already present.
+    public GameObject[] AddUniqueGameObject(GameObject[] source, GameObject item)
+    {
+        if (ContainsGameObject(source, item)) return source;
+        return AddGameObject(source, item);
+    }
+
+    // Remove<T> - remove first occurrence, return a new array one element shorter.
+    // Returns the original array unchanged when the element is not found.
+    public GameObject[] RemoveGameObject(GameObject[] source, GameObject item)
+    {
+        int removeIndex = -1;
+        for (int i = 0; i < source.Length; i++)
+        {
+            if (source[i] == item)
+            {
+                removeIndex = i;
+                break;
+            }
+        }
+        if (removeIndex < 0) return source;
+        return RemoveAtGameObject(source, removeIndex);
+    }
+
+    // RemoveAt<T> - remove the element at a given index.
+    public GameObject[] RemoveAtGameObject(GameObject[] source, int index)
+    {
+        if (index < 0 || index >= source.Length) return source;
+        GameObject[] result = new GameObject[source.Length - 1];
+        System.Array.Copy(source, 0, result, 0, index);
+        System.Array.Copy(source, index + 1, result, index, source.Length - index - 1);
+        return result;
+    }
+
+    // Insert<T> - insert an element before the given index.
+    public GameObject[] InsertGameObject(GameObject[] source, int index, GameObject item)
+    {
+        if (index < 0) index = 0;
+        if (index > source.Length) index = source.Length;
+        GameObject[] result = new GameObject[source.Length + 1];
+        System.Array.Copy(source, 0, result, 0, index);
+        result[index] = item;
+        System.Array.Copy(source, index, result, index + 1, source.Length - index);
+        return result;
+    }
+}
+```
+
+Repeat the same signatures for `UdonSharpBehaviour[]`, `int[]`, or any other element type you need — UdonSharp does not support generic methods, so one copy per type is required.
+
+---
+
+## Event Bus Pattern
+
+### Problem
+
+C# delegates and events are unavailable in UdonSharp. How can one behaviour notify several others when something changes?
+
+### Solution
+
+Maintain a `UdonSharpBehaviour[]` subscriber list. Raising an event iterates the list and calls `SendCustomEvent(methodName)` on each entry.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+/// <summary>
+/// A minimal event bus. Producers call RaiseEvent(); consumers register themselves
+/// and implement the matching handler method.
+/// </summary>
+public class EventBus : UdonSharpBehaviour
+{
+    // Internal listener registry
+    [SerializeField] private UdonSharpBehaviour[] _listeners = new UdonSharpBehaviour[0];
+    private int _listenerCount = 0;
+
+    // Maximum listeners before compaction is required
+    private const int MaxListeners = 32;
+
+    void Start()
+    {
+        _listeners = new UdonSharpBehaviour[MaxListeners];
+        _listenerCount = 0;
+    }
+
+    /// <summary>
+    /// Register a listener. The listener must implement the handler method by name.
+    /// </summary>
+    public void RegisterListener(UdonSharpBehaviour listener)
+    {
+        if (listener == null) return;
+        if (_listenerCount >= MaxListeners) return;
+
+        // Avoid duplicate registrations
+        for (int i = 0; i < _listenerCount; i++)
+        {
+            if (_listeners[i] == listener) return;
+        }
+
+        _listeners[_listenerCount] = listener;
+        _listenerCount++;
+    }
+
+    /// <summary>
+    /// Unregister a listener.
+    /// </summary>
+    public void UnregisterListener(UdonSharpBehaviour listener)
+    {
+        for (int i = 0; i < _listenerCount; i++)
+        {
+            if (_listeners[i] == listener)
+            {
+                // Compact: shift remaining entries left
+                _listenerCount--;
+                for (int j = i; j < _listenerCount; j++)
+                {
+                    _listeners[j] = _listeners[j + 1];
+                }
+                _listeners[_listenerCount] = null;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Raise an event. Every registered listener receives SendCustomEvent(eventMethodName).
+    /// Null or destroyed listeners are silently skipped and compacted out.
+    /// </summary>
+    public void RaiseEvent(string eventMethodName)
+    {
+        int writeIndex = 0;
+        for (int i = 0; i < _listenerCount; i++)
+        {
+            UdonSharpBehaviour listener = _listeners[i];
+
+            // Skip destroyed or null entries
+            if (listener == null) continue;
+
+            _listeners[writeIndex] = listener;
+            writeIndex++;
+
+            listener.SendCustomEvent(eventMethodName);
+        }
+
+        // Zero out stale tail slots after compaction
+        for (int i = writeIndex; i < _listenerCount; i++)
+        {
+            _listeners[i] = null;
+        }
+        _listenerCount = writeIndex;
+    }
+}
+```
+
+**Consumer example:**
+
+```csharp
+public class DoorController : UdonSharpBehaviour
+{
+    [SerializeField] private EventBus doorBus;
+    [SerializeField] private Animator doorAnimator;
+
+    void Start()
+    {
+        doorBus.RegisterListener(this);
+    }
+
+    // Called by EventBus.RaiseEvent("OnDoorOpened")
+    public void OnDoorOpened()
+    {
+        doorAnimator.SetTrigger("Open");
+    }
+}
+```
+
+**Producer example:**
+
+```csharp
+public class DoorTrigger : UdonSharpBehaviour
+{
+    [SerializeField] private EventBus doorBus;
+
+    public override void OnPlayerTriggerEnter(VRCPlayerApi player)
+    {
+        if (player.isLocal)
+        {
+            doorBus.RaiseEvent("OnDoorOpened");
+        }
+    }
+}
+```
+
+---
+
+## GameObject Relay Communication
+
+### Problem
+
+Direct references couple event producers tightly to their consumers. How can a behaviour react to a signal without the producer knowing its type?
+
+### Solution
+
+Use `GameObject.SetActive` as a signalling mechanism. The producer toggles a relay GameObject; any behaviour on that GameObject reacts in `OnEnable` or `OnDisable`.
+
+**Producer — sends the signal:**
+
+```csharp
+public class LightSwitchTrigger : UdonSharpBehaviour
+{
+    [SerializeField] private GameObject lightsOnRelay;
+    [SerializeField] private GameObject lightsOffRelay;
+
+    private bool _lightsOn = false;
+
+    public override void Interact()
+    {
+        _lightsOn = !_lightsOn;
+
+        if (_lightsOn)
+        {
+            // Pulse the relay: activate then deactivate next frame
+            lightsOnRelay.SetActive(true);
+            lightsOnRelay.SetActive(false);
+        }
+        else
+        {
+            lightsOffRelay.SetActive(true);
+            lightsOffRelay.SetActive(false);
+        }
+    }
+}
+```
+
+**Consumer — reacts to the signal:**
+
+```csharp
+/// <summary>
+/// Attach to the lightsOnRelay GameObject.
+/// OnEnable fires every time the producer calls SetActive(true).
+/// </summary>
+public class LightsOnResponder : UdonSharpBehaviour
+{
+    [SerializeField] private Light[] sceneLights;
+
+    void OnEnable()
+    {
+        for (int i = 0; i < sceneLights.Length; i++)
+        {
+            if (sceneLights[i] != null)
+            {
+                sceneLights[i].enabled = true;
+            }
+        }
+    }
+
+    void OnDisable()
+    {
+        // OnDisable is called immediately after OnEnable in the pulse pattern above.
+        // Use a separate relay GameObject for each signal direction to keep concerns clear.
+    }
+}
+```
+
+**When to prefer this over EventBus:**
+- Very simple one-shot signals where subscriber registration overhead is unnecessary
+- Signals that must persist across scene loads (relay GameObject survives)
+- Visual debugging: relay active state is visible in the Hierarchy
+
+---
+
+## Delayed Event Debounce
+
+### Problem
+
+`SendCustomEventDelayedSeconds` schedules a future event, but there is no cancellation API. If the same event is scheduled multiple times in quick succession (e.g., a rapid button tap), all enqueued callbacks fire.
+
+### Solution
+
+Use an integer generation counter. Each new schedule increments the counter and captures the current value. The callback checks whether the counter has advanced; if so, a newer schedule exists and this invocation is a no-op.
+
+```csharp
+public class DebouncedSearch : UdonSharpBehaviour
+{
+    [SerializeField] private float debounceDelay = 0.5f;
+
+    // Monotonically increasing; each new schedule captures the current value.
+    private int _scheduleGeneration = 0;
+
+    /// <summary>
+    /// Call this whenever input changes. Only the callback scheduled after the
+    /// last call within debounceDelay seconds will actually execute.
+    /// </summary>
+    public void OnInputChanged()
+    {
+        _scheduleGeneration++;
+        // Pass the current generation as a serialized field so the callback can read it.
+        // UdonSharp does not support lambda captures, so store in a member variable.
+        _pendingGeneration = _scheduleGeneration;
+        SendCustomEventDelayedSeconds(nameof(ExecuteSearch), debounceDelay);
+    }
+
+    // Captured generation for the most recently scheduled callback.
+    private int _pendingGeneration = 0;
+
+    public void ExecuteSearch()
+    {
+        // If _scheduleGeneration has moved past _pendingGeneration, a newer
+        // schedule supersedes this one — bail out.
+        if (_scheduleGeneration != _pendingGeneration) return;
+
+        // Safe to execute: this is the most recent scheduled callback.
+        PerformSearch();
+    }
+
+    private void PerformSearch()
+    {
+        Debug.Log("Executing debounced search");
+        // ... actual search logic
+    }
+}
+```
+
+> **Note:** This pattern ensures only the *last* scheduled event executes. It does not prevent intermediate callbacks from running their guard check — it only makes them return immediately.
+
+---
+
+## Lazy Initialization Guard
+
+### Problem
+
+`Start()` execution order between UdonBehaviours placed in a scene is not guaranteed. An external script may call a public method before the target behaviour's `Start()` has run, resulting in null-reference errors.
+
+### Solution
+
+Use a private `_initialized` flag and an explicit `Initialize()` method. Call `Initialize()` from both `Start()` and every public API entry point.
+
+```csharp
+public class ScoreBoard : UdonSharpBehaviour
+{
+    [SerializeField] private TextMeshProUGUI scoreText;
+
+    private bool _initialized = false;
+    private int _score = 0;
+
+    void Start()
+    {
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        if (_initialized) return;
+        _initialized = true;
+
+        // One-time setup that requires Unity component access
+        if (scoreText == null)
+        {
+            scoreText = GetComponentInChildren<TextMeshProUGUI>();
+        }
+        RefreshDisplay();
+    }
+
+    /// <summary>
+    /// May be called by other behaviours before this object's Start() runs.
+    /// The Initialize() guard ensures safety.
+    /// </summary>
+    public void AddScore(int points)
+    {
+        Initialize(); // Guard: idempotent, safe to call repeatedly
+        _score += points;
+        RefreshDisplay();
+    }
+
+    public void ResetScore()
+    {
+        Initialize();
+        _score = 0;
+        RefreshDisplay();
+    }
+
+    private void RefreshDisplay()
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = _score.ToString();
+        }
+    }
+}
+```
+
+**Key rules:**
+- `Initialize()` must be idempotent (guarded by `_initialized`).
+- Every `public` method that touches component references should call `Initialize()` first.
+- Do not reset `_initialized` to `false` unless you also repeat all setup work (use a dedicated `Reset()` method that sets `_initialized = false` and then calls `Initialize()`).
+
+---
+
+## Performance Optimization Patterns
+
+### PostLateUpdate for Camera-Dependent Effects
+
+`Update()` runs before the camera moves each frame. For effects that must track the VRChat camera — nameplate overlays, HUD elements, billboard sprites — use `PostLateUpdate()` instead. It runs after the camera's final position is resolved.
+
+Add change-detection to skip the GPU upload when the camera has not moved:
+
+```csharp
+public class CameraTracker : UdonSharpBehaviour
+{
+    [SerializeField] private Transform trackedTransform;
+
+    private Vector3 _lastCameraPosition;
+    private Quaternion _lastCameraRotation;
+
+    public override void PostLateUpdate()
+    {
+        VRCPlayerApi localPlayer = Networking.LocalPlayer;
+        if (localPlayer == null) return;
+
+        VRCPlayerApi.TrackingData head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+        Vector3 camPos = head.position;
+        Quaternion camRot = head.rotation;
+
+        // Skip update when camera has not moved (change detection)
+        if (camPos == _lastCameraPosition && camRot == _lastCameraRotation) return;
+
+        _lastCameraPosition = camPos;
+        _lastCameraRotation = camRot;
+
+        // Apply transform relative to camera
+        if (trackedTransform != null)
+        {
+            trackedTransform.position = camPos + camRot * Vector3.forward * 2f;
+            trackedTransform.rotation = camRot;
+        }
+    }
+}
+```
+
+### Bounds Pre-Check for Spatial Queries
+
+`Collider.ClosestPoint()` is expensive. When you have many potential colliders, compute a compound `Bounds` at startup that wraps all of them. Discard distant queries with a fast `Bounds.Contains()` before paying the full cost.
+
+```csharp
+public class SpatialQueryZone : UdonSharpBehaviour
+{
+    [SerializeField] private Collider[] zoneColliders;
+
+    private Bounds _compoundBounds;
+
+    void Start()
+    {
+        if (zoneColliders == null || zoneColliders.Length == 0) return;
+
+        // Build compound bounds from all colliders
+        _compoundBounds = zoneColliders[0].bounds;
+        for (int i = 1; i < zoneColliders.Length; i++)
+        {
+            if (zoneColliders[i] != null)
+            {
+                _compoundBounds.Encapsulate(zoneColliders[i].bounds);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns the closest point on any zone collider, or Vector3.zero if the
+    /// query point is clearly outside the compound bounds.
+    /// </summary>
+    public Vector3 GetClosestPoint(Vector3 queryPoint)
+    {
+        // Fast rejection: skip expensive ClosestPoint calls entirely
+        if (!_compoundBounds.Contains(queryPoint)) return Vector3.zero;
+
+        Vector3 closest = Vector3.zero;
+        float minDist = float.MaxValue;
+
+        for (int i = 0; i < zoneColliders.Length; i++)
+        {
+            if (zoneColliders[i] == null) continue;
+
+            Vector3 candidate = zoneColliders[i].ClosestPoint(queryPoint);
+            float dist = Vector3.Distance(queryPoint, candidate);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                closest = candidate;
+            }
+        }
+
+        return closest;
+    }
+}
+```
+
+### Animator Parameter Hash Caching
+
+`Animator.SetFloat(string, float)` resolves the string to an internal hash every call. Cache the hash in `Start()` and use the integer overload in `Update()`.
+
+```csharp
+public class AnimatedPlatform : UdonSharpBehaviour
+{
+    [SerializeField] private Animator platformAnimator;
+
+    // Cached hashes — computed once, reused every frame
+    private int _speedHash;
+    private int _isMovingHash;
+    private int _directionHash;
+
+    void Start()
+    {
+        _speedHash     = Animator.StringToHash("Speed");
+        _isMovingHash  = Animator.StringToHash("IsMoving");
+        _directionHash = Animator.StringToHash("Direction");
+    }
+
+    void Update()
+    {
+        float currentSpeed = GetPlatformSpeed();
+        bool moving = currentSpeed > 0.01f;
+
+        // Integer overloads: no string lookup at runtime
+        platformAnimator.SetFloat(_speedHash, currentSpeed);
+        platformAnimator.SetBool(_isMovingHash, moving);
+        platformAnimator.SetFloat(_directionHash, GetPlatformDirection());
+    }
+
+    private float GetPlatformSpeed()
+    {
+        // Platform-specific logic
+        return 0f;
+    }
+
+    private float GetPlatformDirection()
+    {
+        // Platform-specific logic
+        return 0f;
+    }
+}
+```
+
+**Rule of thumb:** Cache any string passed to `Animator.Set*` or `Animator.Get*` that is called more than once per second.
+
+### Platform Detection Pattern
+
+Use VRChat's runtime API to branch behaviour by platform. Check once in `Start()` and store results in fields rather than querying every frame.
+
+```csharp
+public class PlatformAdapter : UdonSharpBehaviour
+{
+    private bool _isVR = false;
+    private bool _isMobile = false;
+
+    void Start()
+    {
+        VRCPlayerApi localPlayer = Networking.LocalPlayer;
+        if (localPlayer == null) return;
+
+        _isVR = localPlayer.IsUserInVR();
+
+        // Mobile players use touch input as their last input method
+        _isMobile = InputManager.GetLastUsedInputMethod() == VRCInputMethod.Touch;
+
+        ApplyPlatformSettings();
+    }
+
+    private void ApplyPlatformSettings()
+    {
+        if (_isVR)
+        {
+            // Adjust interaction distances for VR reach
+            Debug.Log("VR mode: adjusting grab distances");
+        }
+        else if (_isMobile)
+        {
+            // Enlarge touch targets for mobile players
+            Debug.Log("Mobile mode: scaling up UI hit areas");
+        }
+        else
+        {
+            // Desktop mouse+keyboard defaults
+            Debug.Log("Desktop mode");
+        }
+    }
+
+    public bool IsVR => _isVR;
+    public bool IsMobile => _isMobile;
+    public bool IsDesktop => !_isVR && !_isMobile;
+}
+```
+
+> **Note:** `InputManager.GetLastUsedInputMethod()` reflects the last device the player used, not a fixed platform flag. It can change during a session if the player switches devices. For a stable platform classification, check only `IsUserInVR()` at `Start()` and treat everything else as flat-screen.
+
+---
+
 ## See Also
 
 - [networking.md](networking.md) - Ownership model, sync modes, and `RequestSerialization` details
