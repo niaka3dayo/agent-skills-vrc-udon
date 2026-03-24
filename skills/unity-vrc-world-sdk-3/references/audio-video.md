@@ -555,3 +555,7 @@ public override void OnVideoLoop() { }
 | BGM | Streaming | Vorbis | 70% |
 | SFX | Decompress | Vorbis | 50-70% |
 | Ambient | Compressed | Vorbis | 50% |
+
+## See Also
+
+- [components.md](components.md) - Full component reference including VRCAVProVideoPlayer and VRCUnityVideoPlayer setup

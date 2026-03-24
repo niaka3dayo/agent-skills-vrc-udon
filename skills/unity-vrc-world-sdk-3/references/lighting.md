@@ -284,3 +284,7 @@ Recommended shaders:
 | Lightmap Size | 2048 | 1024 |
 | Reflection Probe Res | 256 | 128 |
 | Realtime Lights | 0-1 | 0 |
+
+## See Also
+
+- [performance.md](performance.md) - Overall performance targets and Quest optimization checklist that governs lighting budgets

@@ -770,3 +770,8 @@ Unity standard components available in VRChat.
 ❌ Audio Sources on Avatar
 ❌ Unity Constraints (use VRC equivalents: VRCPositionConstraint, VRCRotationConstraint, VRCScaleConstraint, VRCParentConstraint, VRCAimConstraint, VRCLookAtConstraint)
 ```
+
+## See Also
+
+- [performance.md](performance.md) - Component-level performance budgets and Quest optimization checklist
+- [audio-video.md](audio-video.md) - VRCUnityVideoPlayer, AVPro, and VRCSpatialAudioSource component details

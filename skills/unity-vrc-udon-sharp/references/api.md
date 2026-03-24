@@ -791,3 +791,8 @@ public class ContactButton : UdonSharpBehaviour
     }
 }
 ```
+
+## See Also
+
+- [events.md](events.md) - Complete event list and execution-order diagrams
+- [networking.md](networking.md) - `Networking` class, ownership, and `RequestSerialization` patterns

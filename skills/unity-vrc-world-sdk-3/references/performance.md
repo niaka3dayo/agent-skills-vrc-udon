@@ -656,3 +656,8 @@ Verify all items below before uploading a Quest-compatible world build.
 □ All interactive elements (pickups, triggers) work correctly on Quest
 □ No crashes or memory warnings during extended play session
 ```
+
+## See Also
+
+- [components.md](components.md) - Component reference including Quest-incompatible components to avoid
+- [lighting.md](lighting.md) - Baked lighting settings and lightmap resolution guidelines for PC and Quest

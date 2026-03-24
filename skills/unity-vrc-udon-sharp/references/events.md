@@ -780,3 +780,8 @@ public override void OnPlayerJoined(VRCPlayerApi player)
     }
 }
 ```
+
+## See Also
+
+- [dynamics.md](dynamics.md) - PhysBone and Contact component setup for the events listed here
+- [networking.md](networking.md) - Serialization and ownership events in depth (`OnDeserialization`, `OnOwnershipTransferred`)
