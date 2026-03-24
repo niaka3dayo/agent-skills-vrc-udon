@@ -120,6 +120,7 @@ WebSearch: "error message UdonSharp site:github.com"
 | `editor-scripting.md` | Editor scripting and proxy system |
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) |
 | `troubleshooting.md` | Common errors and solutions |
+| `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists |
 
 ## Templates (`assets/templates/`)
 
