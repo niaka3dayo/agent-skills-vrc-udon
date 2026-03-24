@@ -349,6 +349,49 @@ public class MyScript : UdonSharpBehaviour
 }
 ```
 
+## DefaultExecutionOrder
+
+The `[DefaultExecutionOrder]` attribute controls the order in which Unity calls `Awake`, `OnEnable`, and `Start` across different `MonoBehaviour` (and `UdonSharpBehaviour`) scripts.
+
+Lower numbers run **earlier**. The default order is `0`. Use negative values for scripts that must initialize before everything else, and positive values for scripts that should run last.
+
+```csharp
+// Runs before all default-order scripts — ideal for world settings and global state
+[DefaultExecutionOrder(-1000)]
+public class WorldSettingsInitializer : UdonSharpBehaviour
+{
+    [SerializeField] private float gravityScale = 0.5f;
+
+    void Start()
+    {
+        // Apply world-wide gravity before any other script reads it
+        Networking.LocalPlayer.SetGravityStrength(gravityScale);
+    }
+}
+
+// Runs after default-order scripts — safe to read values set by initializers
+[DefaultExecutionOrder(100)]
+public class PlayerController : UdonSharpBehaviour
+{
+    void Start()
+    {
+        // WorldSettingsInitializer.Start() has already run
+        Debug.Log("Player controller initialized");
+    }
+}
+```
+
+**When to use `[DefaultExecutionOrder]`:**
+
+| Scenario | Recommended Order |
+|----------|-------------------|
+| World configuration (gravity, spawn zones, global flags) | `-1000` or lower |
+| Managers that other scripts depend on | `-500` to `-100` |
+| Default scripts | `0` (omit the attribute) |
+| Scripts that consume manager output | `100` to `1000` |
+
+> **Note**: `Awake()` is not available in UdonSharp. `Start()` is the first lifecycle hook; `[DefaultExecutionOrder]` controls when `Start()` runs relative to other behaviours.
+
 ## Best Practices
 
 ### 1. Always Use Undo
@@ -433,6 +476,12 @@ public class MyScript : UdonSharpBehaviour
 ```
 
 Note: `ExecuteInEditMode` can cause issues with UdonSharp. Use with caution.
+
+## See Also
+
+- [api.md](api.md) - VRChat API reference including types used in editor scripts
+- [constraints.md](constraints.md) - C# feature constraints that affect editor-time validation
+- [patterns-performance.md](patterns-performance.md) - DefaultExecutionOrder and performance patterns
 
 ## UdonSharpProgramAsset Auto-Generation
 

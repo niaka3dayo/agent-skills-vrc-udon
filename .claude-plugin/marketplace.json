@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "AI Agent Skills for VRChat UdonSharp world development",
-    "version": "1.0.0"
+    "version": "1.2.1"
   },
   "plugins": [
     {

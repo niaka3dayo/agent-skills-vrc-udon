@@ -122,6 +122,22 @@ string value = player.GetPlayerTag(string tagName);
 player.ClearPlayerTags();
 ```
 
+### PlayerObject Methods
+
+```csharp
+// Find a component in the player's PlayerObject instance
+// The reference parameter identifies which component type to find
+Transform matched = (Transform)player.FindComponentInPlayerObjects(referenceTransform);
+
+// Always validate before use
+if (Utilities.IsValid(matched))
+{
+    Debug.Log($"Found transform: {matched.name}");
+}
+```
+
+`FindComponentInPlayerObjects` searches the PlayerObject hierarchy belonging to `player` for a component that matches the type and identity of the reference. The return value must be cast to the target component type. Always check with `Utilities.IsValid()` before using the result, as the player's PlayerObject may not be loaded yet.
+
 ### Validity Check
 
 ```csharp
@@ -575,22 +591,94 @@ public class PersistentScore : UdonSharpBehaviour
 
 ## VRCCameraSettings API (SDK 3.9.0+)
 
-Control VRChat camera settings.
+Read-only access to VRChat's built-in camera parameters. Provides two static instances and an event callback when settings change.
+
+Namespace: `VRC.SDK3.Rendering`
+
+### Static Camera Instances
+
+| Instance | Description |
+|----------|-------------|
+| `VRCCameraSettings.ScreenCamera` | The player's main view (desktop window or VR headset) |
+| `VRCCameraSettings.PhotoCamera` | The handheld in-game photo camera |
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `PixelWidth` | `int` | Render target width in pixels |
+| `PixelHeight` | `int` | Render target height in pixels |
+| `FieldOfView` | `float` | Horizontal field of view in degrees |
+| `Active` | `bool` | True if this camera is currently active |
 
 ```csharp
-// Get camera settings component
-VRCCameraSettings cameraSettings = GetComponent<VRCCameraSettings>();
+using VRC.SDK3.Rendering;
 
-// Near/Far clip planes
-cameraSettings.nearClipPlane = 0.01f;
-cameraSettings.farClipPlane = 1000f;
+// Read main screen camera properties
+VRCCameraSettings screen = VRCCameraSettings.ScreenCamera;
+int w = screen.PixelWidth;
+int h = screen.PixelHeight;
+float fov = screen.FieldOfView;
+bool active = screen.Active;
 
-// Field of view
-cameraSettings.fieldOfView = 60f;
+// Read photo camera properties
+VRCCameraSettings photo = VRCCameraSettings.PhotoCamera;
+bool photoOpen = photo.Active;
+```
 
-// Background color/skybox
-cameraSettings.clearFlags = CameraClearFlags.Skybox;
-cameraSettings.backgroundColor = Color.black;
+### Event Callback
+
+`OnVRCCameraSettingsChanged` fires whenever any camera property changes (resolution, FOV, active state). Override it on any `UdonSharpBehaviour`.
+
+```csharp
+// Signature
+public override void OnVRCCameraSettingsChanged(VRCCameraSettings camera) { }
+```
+
+### Usage Example
+
+```csharp
+using TMPro;
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Rendering;
+using VRC.SDKBase;
+
+public class CameraMonitor : UdonSharpBehaviour
+{
+    [SerializeField] private TextMeshProUGUI infoText;
+
+    void Start()
+    {
+        // Initialize display with current values
+        UpdateDisplay(VRCCameraSettings.ScreenCamera);
+    }
+
+    public override void OnVRCCameraSettingsChanged(VRCCameraSettings camera)
+    {
+        // Skip changes from the photo camera
+        if (camera != VRCCameraSettings.ScreenCamera) return;
+
+        UpdateDisplay(camera);
+    }
+
+    private void UpdateDisplay(VRCCameraSettings camera)
+    {
+        infoText.text = $"Resolution: {camera.PixelWidth}x{camera.PixelHeight}\n" +
+                        $"FOV: {camera.FieldOfView:F1} deg\n" +
+                        $"Photo cam: {VRCCameraSettings.PhotoCamera.Active}";
+    }
+}
+```
+
+### Notes
+
+```
+- All properties are read-only from Udon. Camera settings cannot be set via this API.
+- OnVRCCameraSettingsChanged fires for both ScreenCamera and PhotoCamera changes;
+  filter by comparing the parameter with VRCCameraSettings.ScreenCamera.
+- PixelWidth / PixelHeight reflect the actual render resolution, which changes when
+  the player resizes the window or toggles the photo camera.
 ```
 
 ## VRChat Dynamics API (SDK 3.10.0+)
@@ -719,3 +807,69 @@ public class ContactButton : UdonSharpBehaviour
     }
 }
 ```
+
+## VRCDroneApi
+
+The drone that a player controls when in drone mode. Obtain the local player's drone via `Networking.LocalPlayer.GetDrone()`.
+
+### Getting the Drone
+
+```csharp
+// Get the drone associated with the local player
+VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
+
+// Always validate before use — returns null when the player is not in drone mode
+if (Utilities.IsValid(drone))
+{
+    // Safe to use drone
+}
+```
+
+### Methods
+
+```csharp
+// Teleport the drone to a world-space position and rotation
+drone.TeleportTo(Vector3 position, Quaternion rotation);
+
+// Set the drone's current velocity (world space, meters per second)
+drone.SetVelocity(Vector3 velocity);
+
+// Get the VRCPlayerApi of the player piloting this drone
+VRCPlayerApi pilot = drone.GetPlayer();
+```
+
+### Usage Example
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
+public class DroneCheckpoint : UdonSharpBehaviour
+{
+    [SerializeField] private Transform respawnPoint;
+
+    public override void OnDroneTriggerEnter(Collider other)
+    {
+        VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
+        if (!Utilities.IsValid(drone)) return;
+
+        // Teleport the drone back to the respawn point
+        drone.TeleportTo(respawnPoint.position, respawnPoint.rotation);
+        drone.SetVelocity(Vector3.zero);
+
+        VRCPlayerApi pilot = drone.GetPlayer();
+        if (Utilities.IsValid(pilot))
+        {
+            Debug.Log($"{pilot.displayName}'s drone hit a checkpoint");
+        }
+    }
+}
+```
+
+## See Also
+
+- [constraints.md](constraints.md) - C# feature availability in UdonSharp that affects which APIs can be used
+- [events.md](events.md) - Complete event list and execution-order diagrams
+- [networking.md](networking.md) - `Networking` class, ownership, and `RequestSerialization` patterns

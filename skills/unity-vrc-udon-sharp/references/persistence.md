@@ -116,103 +116,308 @@ string[] keys = PlayerData.GetKeys(player);
 
 ### Checking Data Usage (SDK 3.10.0+)
 
-Since SDK 3.10.0, PlayerData usage information is exposed. You can check how much Persistence data each player is using through the world's debug panel or SDK tools. Monitor usage against the 100 KB limit to prevent data write failures due to exceeding the limit.
+Since SDK 3.10.0, VRChat exposes runtime APIs to query storage usage programmatically via
+`VRCPlayerApi` methods and the `OnPersistenceUsageUpdated` event. See
+[Persistence Storage Information API](#persistence-storage-information-api-sdk-3100) for the
+full API reference and a complete monitoring example.
 
 ## PlayerObject
 
 ### Basic Concept
 
-PlayerObject is a more powerful system for per-player state management:
+PlayerObject is a more powerful system for per-player state management. When a player joins a world, VRChat automatically instantiates one copy of a designated prefab for each player and assigns that instance to them:
 
-- Each player gets their own instance of a prefab
-- Supports **synced variables** (`[UdonSynced]`)
-- Supports **multiple UdonBehaviours** (more storage)
-- Better for **frequently changing data**
-- Up to **100 KB** per player
+- Each player gets their own auto-instantiated instance of the PlayerObject prefab
+- Instances are **owned by the player they belong to**
+- Supports **synced variables** (`[UdonSynced]`) for real-time visibility to all players
+- Supports **multiple UdonBehaviours** on the same prefab (combines toward the 100 KB limit)
+- Better for **frequently changing data** that must also be visible to others
+- Up to **100 KB** per player (separate quota from PlayerData's 100 KB)
+- Data stored on VRChat servers and is accessible cross-platform and cross-instance
+
+### Required Components
+
+All three components must be on the same root GameObject of your prefab:
+
+| Component | Purpose |
+|-----------|---------|
+| `VRCPlayerObject` | Marks the prefab as a per-player object; triggers auto-instantiation |
+| `UdonBehaviour` | Holds `[UdonSynced]` variables and logic |
+| `VRCEnablePersistence` | Opts the UdonBehaviour's synced data into cloud persistence |
+
+> Note: `VRCEnablePersistence` must be placed on the **same GameObject** as each `UdonBehaviour` whose data you want persisted. A PlayerObject prefab with no `VRCEnablePersistence` still instantiates per-player but does not persist data.
 
 ### Setup
 
-1. Create a prefab with UdonBehaviour(s)
-2. Add `VRC Player Object` component to the prefab
-3. Enable `VRC Enable Persistence` on each UdonBehaviour
-4. Place the prefab in the scene (it will be instantiated per player)
+1. Create a prefab in your project
+2. Add `VRC Player Object` component to the root of the prefab
+3. Add your `UdonSharpBehaviour` script as an `UdonBehaviour` component
+4. Add `VRC Enable Persistence` component to the same root GameObject
+5. Place **one instance** of the prefab in the scene — VRChat handles instantiation for all players automatically
 
-### Usage Example: Player Stats
+### OnPlayerRestored on PlayerObjects
+
+`OnPlayerRestored` fires on the PlayerObject's UdonBehaviour when that player's persistent data has been loaded from the cloud. It fires **once per player** and is your signal that the `[UdonSynced]` fields contain the restored values.
+
+Key behaviors:
+- Fires on **all PlayerObject instances** in the scene, not just the local player's
+- `player` argument identifies which player's data was loaded
+- The instance is **not valid for gameplay use** until `OnPlayerRestored` has fired for it
+- Late-joining players will have `OnPlayerRestored` fire for all already-present players
+
+### Usage Example: Basic PlayerObject with Persistence
 
 ```csharp
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
+// VRCPlayerObject + VRCEnablePersistence must be on this same GameObject in Inspector
+// Note: Networking.SetOwner() is NOT needed here — VRChat automatically assigns
+// ownership of each PlayerObject instance to the player it belongs to.
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class PlayerStats : UdonSharpBehaviour
 {
-    // Owner of this PlayerObject
-    public VRCPlayerApi Owner { get; private set; }
-
-    // Persisted synced variables
     [UdonSynced] public int level = 1;
     [UdonSynced] public int experience = 0;
     [UdonSynced] public int gold = 100;
 
-    // Called when the PlayerObject is assigned to a player
+    private bool dataRestored = false;
+    private VRCPlayerApi ownerPlayer;
+
+    // Fires when this player's persistent data has been loaded from the cloud
     public override void OnPlayerRestored(VRCPlayerApi player)
     {
-        Owner = player;
+        // Each PlayerObject instance only holds data for its own player.
+        // Networking.GetOwner returns the player this instance belongs to.
+        if (!Networking.IsOwner(player, gameObject)) return;
+
+        ownerPlayer = player;
+        dataRestored = true;
 
         if (player.isLocal)
         {
-            Debug.Log($"My stats loaded: Level {level}, XP {experience}");
+            Debug.Log($"My stats loaded: Level {level}, XP {experience}, Gold {gold}");
         }
     }
 
+    // Only the owning player should modify their own synced variables
     public void AddExperience(int xp)
     {
         if (!Networking.IsOwner(gameObject)) return;
+        if (!dataRestored) return;
 
         experience += xp;
 
-        // Level up check
-        while (experience >= GetXPForLevel(level + 1))
+        // Simple level threshold: 100 XP per level
+        int threshold = level * 100;
+        if (experience >= threshold)
         {
             level++;
+            experience -= threshold;
             Debug.Log($"Level up! Now level {level}");
         }
 
-        RequestSerialization(); // Sync and persist
+        RequestSerialization(); // Sync to all clients and persist to cloud
     }
 
-    private int GetXPForLevel(int lvl)
+    public void SpendGold(int amount)
     {
-        return lvl * 100;
+        if (!Networking.IsOwner(gameObject)) return;
+        if (!dataRestored) return;
+        if (gold < amount) return;
+
+        gold -= amount;
+        RequestSerialization();
+    }
+}
+```
+
+### Usage Example: OnPlayerRestored with Late-Joiner Safety
+
+A late joiner receives `OnPlayerRestored` for **all** players already in the instance. Guard
+against acting on other players' data if you only care about the local player.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+// VRChat automatically assigns ownership of each PlayerObject to its player.
+// Networking.SetOwner() is not required for PlayerObject behaviours.
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class PlayerBadge : UdonSharpBehaviour
+{
+    [UdonSynced] public int prestigeRank = 0;
+    [UdonSynced] public bool hasBetaBadge = false;
+
+    private bool initialized = false;
+
+    public override void OnPlayerRestored(VRCPlayerApi player)
+    {
+        // This fires for every player's PlayerObject, not just the local one.
+        // Always check ownership so you don't act on another player's instance.
+        if (!Networking.IsOwner(player, gameObject)) return;
+
+        initialized = true;
+
+        if (player.isLocal)
+        {
+            // Safe to read own restored data here
+            Debug.Log($"Badge loaded — Prestige: {prestigeRank}, Beta: {hasBetaBadge}");
+            ApplyBadgeVisuals();
+        }
+        else
+        {
+            // Another player's object was restored; update their visible badge
+            ApplyBadgeVisuals();
+        }
+    }
+
+    // Called by world logic when the local player earns prestige
+    public void GrantPrestige()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        if (!initialized) return;
+
+        prestigeRank++;
+        RequestSerialization();
+        ApplyBadgeVisuals();
+    }
+
+    private void ApplyBadgeVisuals()
+    {
+        // Update badge renderer, UI, etc. based on current field values
+        Debug.Log($"Applying badge visuals: rank={prestigeRank}");
     }
 }
 ```
 
 ## PlayerData vs PlayerObject
 
-| Feature | PlayerData | PlayerObject |
-|---------|------------|--------------|
-| Storage limit | 100 KB | 100 KB |
-| Sync mode | No auto-sync | Synced variables |
-| Update frequency | On-demand | Continuous/Manual |
-| Complexity | Simple key-value | Full UdonBehaviour |
-| Use case | Settings, unlocks | Active game state |
-| Access pattern | Static methods | Component on prefab |
+| Aspect | PlayerData | PlayerObject |
+|--------|-----------|-------------|
+| Type | Key-value store | Synced UdonBehaviour on auto-instantiated prefab |
+| Storage quota | 100 KB per player | 100 KB per player (separate from PlayerData) |
+| API access | `PlayerData.SetInt()` / `TryGetInt()` static methods | Direct `[UdonSynced]` field access |
+| Visibility to others | Not synced (local read of others' data via API) | Fully synced via `[UdonSynced]` + `RequestSerialization()` |
+| Data format | Typed key-value pairs | Arbitrary serializable fields |
+| Update cost | Per-write cloud write | Normal UdonSynced bandwidth (~11 KB/s total) |
+| Complexity | Low — simple method calls | Higher — requires prefab setup and ownership logic |
+| Best for | Settings, scores, unlocks that rarely change | Per-player game state visible to all, frequent updates |
+| Requires `OnPlayerRestored` guard | Yes | Yes |
+| Available since | SDK 3.7.4 | SDK 3.7.4 |
 
 ### Selection Guidelines
 
-**Use PlayerData:**
-- Player preferences (volume, graphics)
-- One-time unlocks (achievements, skins)
-- High scores and statistics
-- Data rarely changes during play
+**Use PlayerData when:**
+- Storing player preferences (volume, graphics quality)
+- Recording one-time unlocks (achievements, cosmetics)
+- Saving high scores and statistics
+- Data changes infrequently (not every frame)
+- You do not need other players to see the values in real time
 
-**Use PlayerObject:**
-- Real-time player stats (health, inventory)
-- Frequently synced data
-- Complex state with multiple variables
-- Data that needs to be visible to others
+**Use PlayerObject when:**
+- Managing real-time player stats (health, inventory, currency)
+- Data must be visible and synced to other players
+- State is complex enough to benefit from full UdonBehaviour logic
+- You need multiple tightly-coupled variables updated together atomically
+
+## Persistence Storage Information API (SDK 3.10.0+)
+
+Since SDK 3.10.0, VRChat exposes methods to query how much persistence storage each player is using. This applies to **both** PlayerData and PlayerObject data combined.
+
+### API Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `player.GetPlayerDataStorageUsage()` | `int` (bytes) | Current persistence bytes used by this player |
+| `player.GetPlayerDataStorageLimit()` | `int` (bytes) | Maximum bytes allowed (typically 102400 = 100 KB) |
+| `player.RequestStorageUsageUpdate()` | `void` | Requests a fresh usage value from the server |
+
+### OnPersistenceUsageUpdated Event
+
+`OnPersistenceUsageUpdated` fires on the local player's UdonBehaviours when updated storage
+usage data is available (e.g., after a `RequestStorageUsageUpdate()` call or after a write).
+The event signature takes the player whose usage changed.
+
+### Storage Monitoring Example
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+using VRC.SDK3.Persistence;
+
+public class StorageMonitor : UdonSharpBehaviour
+{
+    [SerializeField] private UnityEngine.UI.Text usageLabel;
+
+    // How often (seconds) to request a fresh usage figure
+    private const float RefreshInterval = 30f;
+
+    private bool dataReady = false;
+
+    public override void OnPlayerRestored(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        dataReady = true;
+
+        // Show initial usage and schedule periodic refresh
+        ShowUsage(player);
+        SendCustomEventDelayedSeconds(nameof(RequestRefresh), RefreshInterval);
+    }
+
+    // Called by VRChat when fresh storage usage data is available for a player
+    public override void OnPersistenceUsageUpdated(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+        ShowUsage(player);
+    }
+
+    // Periodic refresh event
+    public void RequestRefresh()
+    {
+        VRCPlayerApi local = Networking.LocalPlayer;
+        if (local == null || !local.IsValid()) return;
+
+        local.RequestStorageUsageUpdate();
+
+        // Schedule next refresh
+        SendCustomEventDelayedSeconds(nameof(RequestRefresh), RefreshInterval);
+    }
+
+    private void ShowUsage(VRCPlayerApi player)
+    {
+        if (player == null || !player.IsValid()) return;
+
+        int used = player.GetPlayerDataStorageUsage();
+        int limit = player.GetPlayerDataStorageLimit();
+        float percent = limit > 0 ? (used / (float)limit) * 100f : 0f;
+
+        string text = $"Storage: {used} / {limit} bytes ({percent:F1}%)";
+        Debug.Log(text);
+
+        if (usageLabel != null)
+        {
+            usageLabel.text = text;
+        }
+
+        if (used > limit * 0.9f)
+        {
+            Debug.LogWarning("[StorageMonitor] Approaching persistence storage limit!");
+        }
+    }
+}
+```
+
+### When to Use the Storage API
+
+- Display a storage usage meter in a settings or debug UI
+- Warn players before they hit the 100 KB limit
+- Gate "save" actions if usage is critically high
+- Debug storage growth during development
 
 ## Storage Limits
 
@@ -393,3 +598,9 @@ public void DebugPrintAllData()
 5. **Test with fresh data** - clear persistence during development
 6. **Document your keys** - maintain a list of all used keys
 7. **Version your data** - include a version key for migration
+
+## See Also
+
+- [sync-examples.md](sync-examples.md) - Practical patterns for syncing persistent state with other players
+- [networking.md](networking.md) - Ownership and serialization needed for PlayerObject sync
+- [events.md](events.md) - `OnPlayerRestored` and `OnPersistenceUsageUpdated` event reference

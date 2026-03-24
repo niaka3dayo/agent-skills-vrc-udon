@@ -7,6 +7,7 @@ Complete guide for audio and video configuration.
 - [Audio Overview](#audio-overview)
 - [VRC_SpatialAudioSource](#vrc_spatialaudiosource)
 - [Voice Settings](#voice-settings)
+- [Steam Audio Integration](#steam-audio-integration)
 - [Video Players](#video-players)
 - [AVPro vs Unity Video Player](#avpro-vs-unity-video-player)
 - [Video Player Setup](#video-player-setup)
@@ -185,6 +186,91 @@ public class VoiceZone : UdonSharpBehaviour
     }
 }
 ```
+
+---
+
+## Steam Audio Integration
+
+> **Status**: Open Beta since March 2025. Not yet the default audio system.
+
+### ONSP → Steam Audio Transition
+
+VRChat is migrating its spatial audio backend from **ONSP (Oculus Native Spatializer Plugin)** to **Steam Audio (Valve/Improbable)**.
+
+| Aspect | ONSP (current default) | Steam Audio (Open Beta) |
+|--------|----------------------|-------------------------|
+| Spatializer | HRTF-based (Oculus) | HRTF-based (Steam Audio) |
+| Reverb | Basic | Room acoustics (future) |
+| Occlusion | None | Physics-based (future) |
+| Opt-in | — | World descriptor setting |
+
+The initial Steam Audio release is designed to **match ONSP behavior**. Advanced features (room reverb, occlusion) are not yet available to world creators and will come in later releases.
+
+### What Changes for World Creators
+
+For the initial release, behavior is intentionally preserved:
+
+```
+Initial Steam Audio release:
+├── Same Near/Far attenuation curves as ONSP
+├── Same VRC_SpatialAudioSource property semantics
+├── Same Gain/Volumetric Radius behavior
+└── No new required configuration
+```
+
+When Steam Audio becomes the default, existing worlds should continue to work without modification. The transition is designed to be transparent.
+
+### Current Udon Audio APIs
+
+All existing player voice APIs remain compatible under Steam Audio. These are the APIs to use for dynamic voice zone control:
+
+```csharp
+// VRCPlayerApi voice control — compatible with both ONSP and Steam Audio
+player.SetVoiceGain(float gain);              // 0-24 dB, default 15
+player.SetVoiceDistanceNear(float distance);  // Default: 0
+player.SetVoiceDistanceFar(float distance);   // Default: 25
+player.SetVoiceVolumetricRadius(float radius); // Default: 0
+player.SetVoiceLowpass(bool enabled);         // Default: true
+```
+
+These APIs control per-player voice spatialization and remain the correct way to implement voice zones regardless of which audio backend is active.
+
+### Migration Checklist
+
+When Steam Audio becomes the default (no action required before then):
+
+```
+VRC_SpatialAudioSource components:
+□ Verify Near/Far values still achieve the intended effect
+□ Check Gain values — behavior is preserved but double-check critical audio
+□ Volumetric Radius sources (waterfalls, crowds) should behave identically
+
+Reverb zones:
+□ Unity Reverb Zones are unaffected (they are separate from the spatializer)
+□ Audio Mixer reverb effects are unaffected
+□ Steam Audio room reverb is a future feature — no setup needed now
+
+Audio occlusion:
+□ No occlusion was applied by ONSP — none is applied by Steam Audio initially
+□ If you implemented manual occlusion (e.g., volume scripting), it continues to work
+□ Physics-based occlusion via Steam Audio is a future feature
+
+Testing in Open Beta:
+□ Opt in via the VRChat client beta settings
+□ Walk through your world and compare audio to ONSP behavior
+□ Pay special attention to wide Volumetric Radius sources
+```
+
+### Opting Into the Beta
+
+To test your world under Steam Audio before it becomes the default:
+
+1. Open VRChat client settings
+2. Navigate to **Audio** settings
+3. Enable the **Steam Audio Open Beta** toggle
+4. Re-enter your world and test audio
+
+No world-side changes are required to test in the beta.
 
 ---
 
@@ -555,3 +641,7 @@ public override void OnVideoLoop() { }
 | BGM | Streaming | Vorbis | 70% |
 | SFX | Decompress | Vorbis | 50-70% |
 | Ambient | Compressed | Vorbis | 50% |
+
+## See Also
+
+- [components.md](components.md) - Full component reference including VRCAVProVideoPlayer and VRCUnityVideoPlayer setup

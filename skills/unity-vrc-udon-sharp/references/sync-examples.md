@@ -338,3 +338,9 @@ The following is a summary of synced data amounts for the patterns above. Use fo
 | Game state (Pattern 3b) | Shooting management | 4 | bool x2 + string + int | ~38 |
 
 > **Guideline**: For small to medium worlds, the total across all behaviours typically stays **under 100 bytes**.
+
+## See Also
+
+- [networking.md](networking.md) - Sync mode selection, ownership rules, and bandwidth limits explained
+- [networking-bandwidth.md](networking-bandwidth.md) - Bandwidth throttling, bit packing, and data size optimization
+- [persistence.md](persistence.md) - Persisting player data across sessions with PlayerData and PlayerObject

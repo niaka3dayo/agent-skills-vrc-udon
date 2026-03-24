@@ -10,7 +10,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
+`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnDroneTriggerEnter`, `OnDroneTriggerExit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
 
 ### override Not Required (Standard Unity Callbacks)
 
@@ -269,6 +269,9 @@ public override void OnContactExit(ContactExitInfo info)
 |-------|-------------|
 | `void OnPhysBoneGrab(PhysBoneGrabInfo info)` | PhysBone grabbed |
 | `void OnPhysBoneRelease(PhysBoneReleaseInfo info)` | PhysBone released |
+| `void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
+| `void OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues to intersect the bone chain |
+| `void OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting the bone chain |
 
 ```csharp
 public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
@@ -279,6 +282,25 @@ public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
 public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
 {
     Debug.Log($"PhysBone released");
+}
+
+public override void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)
+{
+    // info.isAvatar — true if the collider belongs to an avatar
+    // info.player   — player reference (valid when isAvatar is true)
+    // info.bone     — the specific bone transform that was hit
+    Debug.Log($"PhysBone collider entered — bone: {info.bone?.name}, " +
+              $"avatar: {info.isAvatar}, player: {info.player?.displayName}");
+}
+
+public override void OnPhysBoneColliderStay(PhysBoneColliderInfo info)
+{
+    // Called every frame while the collider intersects. Keep this lightweight.
+}
+
+public override void OnPhysBoneColliderExit(PhysBoneColliderInfo info)
+{
+    Debug.Log($"PhysBone collider exited — bone: {info.bone?.name}");
 }
 ```
 
@@ -324,6 +346,38 @@ public override void OnPlayerTriggerEnter(VRCPlayerApi player)
 **Requirements:**
 - GameObject must have Collider with "Is Trigger" checked
 - For collision events, Collider must NOT be trigger
+
+## Drone Events
+
+Called when a player's drone enters or exits a trigger collider attached to the same GameObject as this behaviour.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnDroneTriggerEnter(Collider other)` | Drone enters the trigger |
+| `void OnDroneTriggerExit(Collider other)` | Drone exits the trigger |
+
+```csharp
+public override void OnDroneTriggerEnter(Collider other)
+{
+    VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
+    if (!Utilities.IsValid(drone)) return;
+
+    VRCPlayerApi pilot = drone.GetPlayer();
+    if (Utilities.IsValid(pilot))
+    {
+        Debug.Log($"{pilot.displayName}'s drone entered the zone");
+    }
+}
+
+public override void OnDroneTriggerExit(Collider other)
+{
+    Debug.Log("Drone exited the trigger zone");
+}
+```
+
+**Requirements:**
+- GameObject must have a Collider with "Is Trigger" checked
+- Events fire only on the local client
 
 ## Networking Events
 
@@ -560,15 +614,161 @@ void OnTriggerEnter(Collider other)
 
 ## Event Execution Order
 
-1. `Awake()` - Not available in UdonSharp
-2. `OnEnable()`
-3. `Start()` - First frame
-4. `FixedUpdate()` - Physics tick
-5. `Update()` - Every frame
-6. `LateUpdate()` - After all Updates
-7. `PostLateUpdate()` - VRChat-specific, after LateUpdate
+Reference: [VRChat Official Docs — Event Execution Order](https://creators.vrchat.com/worlds/udon/event-execution-order/)
 
-**Networking events** can occur at any time between frames.
+### Per-Frame Lifecycle
+
+The Unity/VRChat per-frame execution order (steady state, every frame):
+
+| Step | Event | Notes |
+|------|-------|-------|
+| 1 | `OnEnable()` | Only on the frame the behaviour becomes enabled |
+| 2 | `Start()` | Only on the first frame the behaviour is active |
+| 3 | `FixedUpdate()` | Physics tick (~50 Hz); may run 0 or more times per frame |
+| 4 | `Update()` | Every render frame |
+| 5 | `LateUpdate()` | After all `Update` calls |
+| 6 | `PostLateUpdate()` | VRChat-specific; after `LateUpdate`, before render |
+
+> **Note**: `Awake()` is **not available** in UdonSharp. Use `Start()` for one-time initialization instead.
+
+**Networking events** (`OnDeserialization`, `OnPreSerialization`, etc.) are dispatched between frames and can fire at any point outside the per-frame order above.
+
+---
+
+### Initialization Guarantee
+
+`OnEnable` and `Start` are guaranteed to run **before any other event** fires on the behaviour, and they run with **no gap between them** on the initial activation. This means:
+
+- You can safely access component references set up in `Start()` from any event handler.
+- No VRChat event (player join, deserialization, etc.) will interrupt `OnEnable`/`Start`.
+
+---
+
+### Scenario: Instance Creator (First Player)
+
+When you are the first player to enter an instance:
+
+```
+_onEnable → _start
+    ↓
+OnPlayerJoined(self)          ← fires for yourself
+    ↓
+OnMasterChanged               ← master transferred from nobody to you
+```
+
+- You are immediately both Master and Owner of scene objects.
+- No `OnDeserialization` fires because there is no prior state to receive.
+
+---
+
+### Scenario: Late Joiner
+
+When you join an existing instance:
+
+```
+_onEnable → _start
+    ↓
+OnPlayerJoined(player A)      ← for each player already in the instance
+OnPlayerJoined(player B)      ← (order matches instance join order)
+OnPlayerJoined(self)          ← last: your own join event
+    ↓
+OnDeserialization             ← receives synced variable state from owner
+```
+
+> **Note**: `OnPlayerJoined` fires for **every** player currently in the instance, including yourself. You will always be the last entry in this sequence.
+
+> **Note**: Synced variable values are **not guaranteed to be initialized** before `OnDeserialization` fires. Do not read synced variables in `Start()` for late joiners — they may still be at default values.
+
+#### Edge Case: Owner Calls RequestSerialization Near OnPlayerJoined
+
+If the current owner calls `RequestSerialization()` at or very close to the time a late joiner's `OnPlayerJoined` fires (for example, in their own `OnPlayerJoined` handler), the following race condition can occur on the **late joiner's client**:
+
+1. Synced variable value arrives and changes.
+2. `OnVariableChanged` fires for the changed variable.
+3. `OnDeserialization` fires immediately after.
+
+In this specific edge case (most likely when the late joiner is the **first instance** on its client), `OnVariableChanged` can fire **before** `Start()` has returned. Guard against this with an initialization flag (see pattern below).
+
+---
+
+### Scenario: Another Player Joins Your Instance
+
+When a new player joins while you are already in the instance:
+
+```
+OnPlayerJoined(newPlayer)     ← fires only for the newly joined player
+```
+
+If you are the owner of synced objects, this is the correct place to call `RequestSerialization()` to push current state to the late joiner:
+
+```csharp
+public override void OnPlayerJoined(VRCPlayerApi player)
+{
+    if (Networking.IsOwner(gameObject))
+    {
+        RequestSerialization();
+    }
+}
+```
+
+---
+
+### Practical Patterns
+
+#### Do Not Access Synced State in Start()
+
+```csharp
+// WRONG: syncedScore may still be 0 (default) for a late joiner
+void Start()
+{
+    UpdateScoreDisplay(syncedScore);
+}
+
+// CORRECT: wait for OnDeserialization before reading synced state
+public override void OnDeserialization()
+{
+    UpdateScoreDisplay(syncedScore);
+}
+```
+
+#### Initialization Flag Guard
+
+Use a `_isInitialized` flag to ensure setup code runs exactly once after the first `OnDeserialization`, and to guard against `OnVariableChanged` firing before `Start()` completes:
+
+```csharp
+[UdonSynced] private int _syncedScore;
+private bool _isInitialized;
+
+void Start()
+{
+    _isInitialized = false;
+}
+
+public override void OnDeserialization()
+{
+    if (!_isInitialized)
+    {
+        _isInitialized = true;
+        InitializeFromSyncedState();
+    }
+    UpdateDisplay();
+}
+
+// OnVariableChanged can fire before Start() in edge cases — guard with the flag
+public override void OnVariableChanged()
+{
+    if (!_isInitialized) return;
+    UpdateDisplay();
+}
+
+private void InitializeFromSyncedState()
+{
+    UpdateDisplay();
+    // Perform any one-time setup that depends on synced variables
+}
+```
+
+> **Note**: On the **instance creator's client**, `OnDeserialization` never fires on initial load (there is no prior state). Initialize with default values in `Start()` and let `OnDeserialization` handle updates from that point on.
 
 ## Best Practices
 
@@ -612,3 +812,9 @@ public override void OnPlayerJoined(VRCPlayerApi player)
     }
 }
 ```
+
+## See Also
+
+- [api.md](api.md) - VRCPlayerApi and Networking class reference for types used in event handlers
+- [dynamics.md](dynamics.md) - PhysBone and Contact component setup for the events listed here
+- [networking.md](networking.md) - Serialization and ownership events in depth (`OnDeserialization`, `OnOwnershipTransferred`)
