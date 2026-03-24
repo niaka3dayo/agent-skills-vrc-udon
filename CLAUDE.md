@@ -10,6 +10,10 @@ skills/                          # Skill content (distributed to users)
   unity-vrc-udon-sharp/          # UdonSharp constraints, networking, templates
   unity-vrc-world-sdk-3/         # World SDK components, optimization
 .claude/
+  rules/
+    doc-sync.md                  # Documentation sync rule (repo maintenance)
+  hooks/
+    doc-sync-reminder.sh         # PostToolUse hook: reminds about doc updates
   skills/
     unity-vrc-skills-renovator/  # Meta-skill for maintaining skills (dev only, not distributed)
 templates/                       # AI tool config templates (distributed to users)
@@ -142,3 +146,7 @@ When modifying skill content in `skills/`:
 - Update SDK version tables if adding new API coverage
 - Run the validate-udonsharp hook against any `.cs` code examples
 - Keep `templates/` in sync if skills table or rules paths change
+
+### Documentation Sync
+
+A PostToolUse hook (`.claude/hooks/doc-sync-reminder.sh`) automatically reminds you to update documentation when editing files under `skills/` or `templates/`. See `.claude/rules/doc-sync.md` for the full sync checklist and trigger conditions.
