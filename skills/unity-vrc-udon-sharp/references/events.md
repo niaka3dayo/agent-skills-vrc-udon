@@ -10,7 +10,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
+`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnDroneTriggerEnter`, `OnDroneTriggerExit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
 
 ### override Not Required (Standard Unity Callbacks)
 
@@ -346,6 +346,38 @@ public override void OnPlayerTriggerEnter(VRCPlayerApi player)
 **Requirements:**
 - GameObject must have Collider with "Is Trigger" checked
 - For collision events, Collider must NOT be trigger
+
+## Drone Events
+
+Called when a player's drone enters or exits a trigger collider attached to the same GameObject as this behaviour.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnDroneTriggerEnter(Collider other)` | Drone enters the trigger |
+| `void OnDroneTriggerExit(Collider other)` | Drone exits the trigger |
+
+```csharp
+public override void OnDroneTriggerEnter(Collider other)
+{
+    VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
+    if (!Utilities.IsValid(drone)) return;
+
+    VRCPlayerApi pilot = drone.GetPlayer();
+    if (Utilities.IsValid(pilot))
+    {
+        Debug.Log($"{pilot.displayName}'s drone entered the zone");
+    }
+}
+
+public override void OnDroneTriggerExit(Collider other)
+{
+    Debug.Log("Drone exited the trigger zone");
+}
+```
+
+**Requirements:**
+- GameObject must have a Collider with "Is Trigger" checked
+- Events fire only on the local client
 
 ## Networking Events
 
