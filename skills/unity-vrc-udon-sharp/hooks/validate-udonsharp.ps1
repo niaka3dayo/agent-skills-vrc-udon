@@ -145,6 +145,33 @@ if ($FileContent -match 'NoVariableSync' -and $FileContent -match '\[UdonSynced\
     $Warnings += "[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode."
 }
 
+# Check for ref parameter in method declaration
+if ($FileContent -match '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bref\s+\w') {
+    $Warnings += "[UdonSharp] BLOCKED: ref parameters not supported in UdonSharp. Use return values or synced fields instead."
+}
+
+# Check for out parameter in method declaration
+if ($FileContent -match '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bout\s+\w') {
+    $Warnings += "[UdonSharp] BLOCKED: out parameters not supported in UdonSharp. Use return values instead."
+}
+
+# Check for multi-dimensional arrays (T[,])
+if ($FileContent -match '\w+\s*\[,') {
+    $Warnings += "[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead."
+}
+
+# Check for method overloading (same name, different signatures)
+$MethodMatches = [regex]::Matches(
+    $FileContent,
+    '(?m)^\s*(?:public|private|protected|internal|override|virtual|static|\s)+\s+(?:void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\('
+)
+$MethodNames = $MethodMatches | ForEach-Object { $_.Groups[1].Value }
+$OverloadedNames = $MethodNames | Group-Object | Where-Object { $_.Count -gt 1 } | Select-Object -ExpandProperty Name
+if ($OverloadedNames.Count -gt 0) {
+    $OverloadList = $OverloadedNames -join ', '
+    $Warnings += "[UdonSharp] WARNING: Method overloading detected for: $OverloadList. Only simple overloads may work; prefer unique method names."
+}
+
 # Output warnings
 if ($Warnings.Count -gt 0) {
     $SavedErrorAction = $ErrorActionPreference

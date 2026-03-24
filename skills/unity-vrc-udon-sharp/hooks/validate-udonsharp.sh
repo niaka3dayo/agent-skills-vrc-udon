@@ -133,6 +133,30 @@ if grep -qE 'NoVariableSync' "$file_path" && \
     warnings+=("[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode.")
 fi
 
+# ref parameter in method declaration
+if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bref\s+\w' "$file_path"; then
+    warnings+=("[UdonSharp] BLOCKED: ref parameters not supported in UdonSharp. Use return values or synced fields instead.")
+fi
+
+# out parameter in method declaration
+if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bout\s+\w' "$file_path"; then
+    warnings+=("[UdonSharp] BLOCKED: out parameters not supported in UdonSharp. Use return values instead.")
+fi
+
+# Multi-dimensional arrays (T[,])
+if grep -qE '\w+\s*\[,' "$file_path"; then
+    warnings+=("[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead.")
+fi
+
+# Method overloading (same name, different signatures)
+overloaded=$(grep -oE '^\s*(public|private|protected|internal|override|virtual|static|public\s+override|private\s+static|public\s+static)(\s+(public|private|protected|internal|override|virtual|static))?\s+(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(' "$file_path" \
+    | grep -oE '[A-Za-z_][A-Za-z0-9_]*\s*\($' \
+    | sed 's/[[:space:]]*($//' \
+    | sort | uniq -d)
+if [[ -n "$overloaded" ]]; then
+    warnings+=("[UdonSharp] WARNING: Method overloading detected for: $(echo "$overloaded" | tr '\n' ' '). Only simple overloads may work; prefer unique method names.")
+fi
+
 # Output warnings
 if [[ ${#warnings[@]} -gt 0 ]]; then
     echo "" >&2
