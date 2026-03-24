@@ -82,7 +82,6 @@ npx agent-skills-vrc-udon
 ```
 
 選項：
-
 ```bash
 npx agent-skills-vrc-udon --force    # 覆寫現有檔案
 npx agent-skills-vrc-udon --list     # 預覽待安裝檔案（模擬執行）
@@ -98,7 +97,7 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 
 <h2 id="structure">專案結構</h2>
 
-```text
+```
 skills/                                  # 所有技能
   unity-vrc-udon-sharp/                 # UdonSharp 核心技能
     SKILL.md                              # 技能定義 + frontmatter
@@ -167,7 +166,7 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 
 ### 同步決策樹
 
-```text
+```
 Q1: 其他玩家是否需要看到？
     否  --> 不需同步（0 位元組）
     是  --> Q2

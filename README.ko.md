@@ -82,7 +82,6 @@ npx agent-skills-vrc-udon
 ```
 
 옵션:
-
 ```bash
 npx agent-skills-vrc-udon --force    # 기존 파일 덮어쓰기
 npx agent-skills-vrc-udon --list     # 설치될 파일 미리보기 (드라이런)
@@ -98,7 +97,7 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 
 <h2 id="structure">구조</h2>
 
-```text
+```
 skills/                                  # 모든 스킬
   unity-vrc-udon-sharp/                 # UdonSharp 핵심 스킬
     SKILL.md                              # 스킬 정의 + 프론트매터
@@ -167,7 +166,7 @@ UdonSharp 스크립팅 핵심 스킬. 컴파일 제약, 네트워킹, 이벤트,
 
 ### 동기화 의사 결정 트리
 
-```text
+```
 Q1: 다른 플레이어에게 보여야 하나요?
     아니오 --> 동기화 불필요 (0 bytes)
     예    --> Q2
