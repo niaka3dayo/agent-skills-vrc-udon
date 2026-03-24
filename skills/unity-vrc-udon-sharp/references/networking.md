@@ -1988,6 +1988,539 @@ public class ThrottledSync : UdonSharpBehaviour
 
 **Explanation**: Throttle `RequestSerialization()` to a maximum frequency appropriate for the data type (10Hz for position is generous; game state changes rarely need more than 1-2Hz). Combine throttling with a change threshold so unchanged values never trigger a sync. Check `Networking.IsClogged` before serializing and use `SendCustomEventDelayedSeconds` to retry rather than spinning in `Update`. See the [RequestSerialization Throttling Pattern](#requestserialization-throttling-pattern) section for a reusable implementation.
 
+## Advanced Networking Patterns
+
+Techniques for reducing sync variable count, controlling serialization timing, and surviving network congestion.
+
+---
+
+### 1. Packed Sync Data
+
+**Problem**: Each `[UdonSynced]` variable consumes sync budget independently. A behaviour with many small values wastes budget on per-variable overhead.
+
+**Solution**: Pack multiple independent values into a single variable using the natural layout of numeric types.
+
+- `Vector3` stores 3 independent floats — use each component for a different purpose (e.g., `x` = question index, `y` = game type, `z` = category).
+- `int` stores 32 bits — encode multiple small integers via bit shifting.
+- A single `int` used as a bit field replaces a group of `bool` variables.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Demonstrates packing three independent game-state values into one Vector3
+/// synced variable, reducing per-variable overhead.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class PackedStateSync : UdonSharpBehaviour
+{
+    // --- Three logically independent state values ---
+    private int _questionIndex; // 0-255 range is safe as a float mantissa value
+    private int _gameType;      // small enum (0-15)
+    private int _category;      // small enum (0-31)
+
+    /// <summary>Single synced variable carries all three values.</summary>
+    [UdonSynced] private Vector3 _packedState;
+
+    // -----------------------------------------------
+    // Packing: owner writes local values into Vector3
+    // -----------------------------------------------
+
+    private void PackState()
+    {
+        // Each component holds one value; cast to float is exact for small integers
+        _packedState = new Vector3(_questionIndex, _gameType, _category);
+    }
+
+    // -----------------------------------------------
+    // Unpacking: non-owners read from Vector3
+    // -----------------------------------------------
+
+    private void UnpackState()
+    {
+        _questionIndex = Mathf.RoundToInt(_packedState.x);
+        _gameType      = Mathf.RoundToInt(_packedState.y);
+        _category      = Mathf.RoundToInt(_packedState.z);
+    }
+
+    // -----------------------------------------------
+    // Serialization hooks
+    // -----------------------------------------------
+
+    public override void OnPreSerialization()
+    {
+        PackState();
+    }
+
+    public override void OnDeserialization()
+    {
+        UnpackState();
+        ApplyStateLocally();
+    }
+
+    // -----------------------------------------------
+    // Public API — owner calls these to change state
+    // -----------------------------------------------
+
+    public void SetQuestion(int index, int gameType, int category)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _questionIndex = index;
+        _gameType      = gameType;
+        _category      = category;
+        RequestSerialization();
+    }
+
+    private void ApplyStateLocally()
+    {
+        // React to the newly unpacked values (update UI, enable objects, etc.)
+        Debug.Log($"[PackedStateSync] Q={_questionIndex} Type={_gameType} Cat={_category}");
+    }
+}
+```
+
+**Key constraints**:
+- `float` has 24-bit mantissa precision — integers up to 16,777,216 round-trip exactly through `Vector3`.
+- Use `Mathf.RoundToInt` on unpack to absorb any floating-point noise.
+- Do not use this technique for values that need interpolation; use separate synced floats for those.
+
+---
+
+### 2. Rate-Limited Serialization
+
+**Problem**: Rapid user interactions (dragging a slider, scrubbing a seek bar) can fire dozens of change events per second. Calling `RequestSerialization()` on every event floods the ~11 KB/s Udon network budget.
+
+**Solution**: Use a `_syncLocked` flag and `SendCustomEventDelayedSeconds` to enforce a minimum cooldown between serializations. Only the value present at the end of the cooldown window is sent, so fast-moving values coalesce naturally.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Rate-limits serialization so that rapid changes (e.g., slider drag)
+/// produce at most one sync per cooldown window. The last value written
+/// during the window is always the one that gets sent.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class RateLimitedSync : UdonSharpBehaviour
+{
+    // How long to wait before allowing the next serialization (seconds).
+    private const float SyncCooldown = 0.15f;
+
+    [UdonSynced] private float _syncedValue;
+
+    // Local working copy — always authoritative on the owner.
+    private float _localValue;
+
+    // True while a delayed sync is already scheduled.
+    private bool _syncLocked;
+
+    // Counts how many times _localValue changed during the current lock.
+    // Used to detect whether a final sync is needed after unlock.
+    private int _changeCounterAtLock;
+    private int _changeCounter;
+
+    // -----------------------------------------------
+    // Public API — called by UI events, etc.
+    // -----------------------------------------------
+
+    /// <summary>Owner calls this whenever the controlled value changes.</summary>
+    public void OnValueChanged(float newValue)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _localValue = newValue;
+        _changeCounter++;
+
+        if (_syncLocked)
+        {
+            // A send is already scheduled; the updated _localValue will be
+            // picked up when the lock expires.
+            return;
+        }
+
+        // First change in a new window: lock immediately and schedule unlock.
+        _syncLocked = true;
+        _changeCounterAtLock = _changeCounter;
+        SendCustomEventDelayedSeconds(nameof(_OnSyncUnlock), SyncCooldown);
+    }
+
+    // -----------------------------------------------
+    // Delayed callback — called by SendCustomEventDelayedSeconds
+    // -----------------------------------------------
+
+    /// <summary>Invoked after the cooldown; serializes the latest value.</summary>
+    public void _OnSyncUnlock()
+    {
+        _syncLocked = false;
+
+        // Always serialize once on unlock to capture the final value.
+        ExecuteSync();
+
+        // If the value kept changing while we were locked, one more
+        // delayed sync guarantees the very last write is transmitted.
+        if (_changeCounter != _changeCounterAtLock)
+        {
+            _syncLocked = true;
+            _changeCounterAtLock = _changeCounter;
+            SendCustomEventDelayedSeconds(nameof(_OnSyncUnlock), SyncCooldown);
+        }
+    }
+
+    // -----------------------------------------------
+    // Serialization helpers
+    // -----------------------------------------------
+
+    private void ExecuteSync()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        _syncedValue = _localValue;
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        _localValue = _syncedValue;
+        ApplyValue(_localValue);
+    }
+
+    private void ApplyValue(float value)
+    {
+        // Apply the synced value (e.g., set audio volume, seek position, etc.)
+        Debug.Log($"[RateLimitedSync] Applied value: {value}");
+    }
+}
+```
+
+**How it works**:
+1. The first change within a cooldown window locks further serializations and schedules `_OnSyncUnlock`.
+2. Subsequent changes during the lock update `_localValue` but do not schedule additional events.
+3. When the lock expires, `_OnSyncUnlock` serializes the current (latest) value.
+4. The `_changeCounter` comparison ensures one extra window fires if the value was still moving at unlock time, guaranteeing the last write reaches the network.
+
+---
+
+### 3. Dual-Copy Sync Variables
+
+**Problem**: Writing directly to `[UdonSynced]` variables from non-owner code is silently discarded at the next `OnDeserialization`. Code that freely mixes reads and writes to synced variables is error-prone and hard to reason about.
+
+**Solution**: Maintain a *local working copy* alongside each synced variable. The local copy is the single source of truth for all in-world logic. `OnPreSerialization` copies local → synced; `OnDeserialization` copies synced → local. A dirty flag prevents unnecessary serializations.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Dual-copy pattern: a local working variable drives all in-world logic
+/// while its synced counterpart handles network transport only.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class DualCopySync : UdonSharpBehaviour
+{
+    // ------------------------------------------------------------------
+    // Local working copy — read/write freely from any in-world code.
+    // Initialized to a sensible default; set by the owner at runtime.
+    // ------------------------------------------------------------------
+    public float volume = 0.5f;
+
+    // ------------------------------------------------------------------
+    // Synced copy — touched only in OnPreSerialization / OnDeserialization.
+    // Never write to this directly outside of those two methods.
+    // ------------------------------------------------------------------
+    [UdonSynced] private float _syncedVolume;
+
+    // True when the local copy differs from what was last serialized.
+    private bool _dirty;
+
+    // ------------------------------------------------------------------
+    // Public API — any code (owner only) calls this to change volume.
+    // ------------------------------------------------------------------
+
+    public void SetVolume(float newVolume)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (Mathf.Approximately(newVolume, volume)) return; // No change — skip
+
+        volume = newVolume;
+        _dirty = true;
+        RequestSerialization();
+    }
+
+    // ------------------------------------------------------------------
+    // Serialization hooks
+    // ------------------------------------------------------------------
+
+    public override void OnPreSerialization()
+    {
+        if (!_dirty) return; // Nothing changed since last sync
+
+        // Copy local → synced immediately before the packet is built.
+        _syncedVolume = volume;
+        _dirty = false;
+    }
+
+    public override void OnDeserialization()
+    {
+        // Copy synced → local so the rest of the world uses the new value.
+        volume = _syncedVolume;
+        ApplyVolume(volume);
+    }
+
+    // ------------------------------------------------------------------
+    // Internal application of the value
+    // ------------------------------------------------------------------
+
+    private void ApplyVolume(float v)
+    {
+        // Drive audio sources, UI sliders, etc. from the local copy only.
+        Debug.Log($"[DualCopySync] Volume applied: {v:F2}");
+    }
+}
+```
+
+**Benefits**:
+- All game logic reads `volume` — no conditional owner checks scattered throughout the codebase.
+- `_syncedVolume` is never written outside the two serialization hooks, making networking logic easy to audit.
+- The dirty flag ensures `RequestSerialization()` produces a packet only when the value genuinely changed, avoiding spurious traffic.
+
+---
+
+### 4. Delayed Serialization Batching
+
+**Problem**: Multiple rapid events (several players joining in quick succession, multi-field form submission) each call `RequestSerialization()` independently, producing redundant packets that carry nearly identical payloads.
+
+**Solution**: Instead of serializing immediately, set a *pending* flag and schedule a single delayed serialization. All changes that arrive before the delay fires are batched into one packet.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Batches rapid state changes into a single serialization call by
+/// deferring the actual RequestSerialization() by a short delay.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class BatchedSync : UdonSharpBehaviour
+{
+    // Delay before the batched serialization fires (seconds).
+    private const float BatchDelay = 0.2f;
+
+    [UdonSynced] private int  _playerCount;
+    [UdonSynced] private int  _readyFlags;   // Bit field: one bit per player slot
+    [UdonSynced] private int  _roundNumber;
+
+    // True while a delayed serialization is already scheduled.
+    private bool _syncPending;
+
+    // ------------------------------------------------------------------
+    // State mutation methods — each marks dirty and schedules one batch.
+    // ------------------------------------------------------------------
+
+    public void OnPlayerJoined(int slotIndex)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _playerCount++;
+        _readyFlags &= ~(1 << slotIndex); // New player is not ready yet
+        ScheduleBatchedSync();
+    }
+
+    public void OnPlayerReady(int slotIndex)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _readyFlags |= (1 << slotIndex);
+        ScheduleBatchedSync();
+    }
+
+    public void AdvanceRound()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _roundNumber++;
+        _playerCount = 0;
+        _readyFlags  = 0;
+        ScheduleBatchedSync();
+    }
+
+    // ------------------------------------------------------------------
+    // Batching logic
+    // ------------------------------------------------------------------
+
+    private void ScheduleBatchedSync()
+    {
+        if (_syncPending) return; // Batch already queued — do nothing
+
+        _syncPending = true;
+        SendCustomEventDelayedSeconds(nameof(_FlushBatch), BatchDelay);
+    }
+
+    /// <summary>Delayed callback: serialize all accumulated changes at once.</summary>
+    public void _FlushBatch()
+    {
+        _syncPending = false;
+
+        if (!Networking.IsOwner(gameObject)) return;
+
+        RequestSerialization();
+    }
+
+    // ------------------------------------------------------------------
+    // Deserialization
+    // ------------------------------------------------------------------
+
+    public override void OnDeserialization()
+    {
+        UpdateGameUI(_playerCount, _readyFlags, _roundNumber);
+    }
+
+    private void UpdateGameUI(int count, int flags, int round)
+    {
+        Debug.Log($"[BatchedSync] Round={round} Players={count} Ready=0b{System.Convert.ToString(flags, 2)}");
+    }
+}
+```
+
+**Key points**:
+- `ScheduleBatchedSync` is idempotent: calling it multiple times before the delay fires has no effect beyond the first call.
+- All three fields (`_playerCount`, `_readyFlags`, `_roundNumber`) are serialized together in one packet, regardless of how many mutation methods were called during the batch window.
+- Tune `BatchDelay` to balance latency against packet reduction. 100–300 ms is typically invisible to players for non-positional state.
+
+---
+
+### 5. IsClogged Retry Pattern
+
+**Problem**: When the Udon network is congested, `RequestSerialization()` calls may be silently dropped. There is no built-in retry or acknowledgement.
+
+**Solution**: Check `Networking.IsClogged` before serializing. If the network is congested, skip the call and schedule a retry via `SendCustomEventDelayedSeconds`. Cap total retry attempts to prevent infinite retry storms during extended outages.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Wraps RequestSerialization() with a congestion-aware retry loop.
+/// Retries up to MaxRetries times before giving up to avoid infinite loops
+/// during sustained network outages.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class CloggedRetrySync : UdonSharpBehaviour
+{
+    // Seconds to wait between retry attempts when the network is clogged.
+    private const float RetryDelay   = 1.5f;
+
+    // Maximum number of consecutive retry attempts before abandoning the sync.
+    private const int   MaxRetries   = 5;
+
+    [UdonSynced] private int _gameScore;
+    [UdonSynced] private int _gameState; // 0=Idle, 1=Playing, 2=Ended
+
+    // Tracks how many retries have been attempted for the current pending sync.
+    private int _retryCount;
+
+    // True while a retry is scheduled so we don't double-schedule.
+    private bool _retryPending;
+
+    // ------------------------------------------------------------------
+    // Public API
+    // ------------------------------------------------------------------
+
+    public void UpdateScore(int score)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _gameScore = score;
+        TrySerialize();
+    }
+
+    public void SetGameState(int state)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _gameState = state;
+        TrySerialize();
+    }
+
+    // ------------------------------------------------------------------
+    // Serialization with IsClogged check
+    // ------------------------------------------------------------------
+
+    private void TrySerialize()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (Networking.IsClogged)
+        {
+            ScheduleRetry();
+            return;
+        }
+
+        // Network is clear — reset retry state and serialize.
+        _retryCount   = 0;
+        _retryPending = false;
+        RequestSerialization();
+    }
+
+    private void ScheduleRetry()
+    {
+        if (_retryPending) return; // Already waiting — do not stack retries
+
+        if (_retryCount >= MaxRetries)
+        {
+            Debug.LogWarning(
+                $"[CloggedRetrySync] Gave up after {MaxRetries} retries. " +
+                "Network congestion is severe or persistent.");
+            _retryCount   = 0;
+            _retryPending = false;
+            return;
+        }
+
+        _retryCount++;
+        _retryPending = true;
+
+        float delay = RetryDelay * _retryCount; // Back off linearly per attempt
+        SendCustomEventDelayedSeconds(nameof(_RetrySerialize), delay);
+    }
+
+    /// <summary>Delayed retry callback.</summary>
+    public void _RetrySerialize()
+    {
+        _retryPending = false;
+        TrySerialize(); // Checks IsClogged again; may schedule another retry
+    }
+
+    // ------------------------------------------------------------------
+    // Deserialization
+    // ------------------------------------------------------------------
+
+    public override void OnDeserialization()
+    {
+        ApplyState(_gameScore, _gameState);
+    }
+
+    private void ApplyState(int score, int state)
+    {
+        Debug.Log($"[CloggedRetrySync] Score={score} State={state}");
+    }
+}
+```
+
+**Design notes**:
+- `_retryPending` prevents multiple overlapping `SendCustomEventDelayedSeconds` chains from accumulating if `TrySerialize` is called again while a retry is already queued.
+- Linear back-off (`RetryDelay * _retryCount`) reduces pressure on an already-congested network rather than hammering it at a fixed interval.
+- `MaxRetries` caps total attempts. In practice, VRChat network congestion resolves within a few seconds; five retries at 1.5 s increments covers ~22 s of congestion before giving up.
+- After an abandonment, the next call to `UpdateScore` or `SetGameState` resets the counter and starts fresh.
+
+---
+
 ## See Also
 
 - [sync-examples.md](sync-examples.md) - Concrete synced gimmick patterns with data budget reference
