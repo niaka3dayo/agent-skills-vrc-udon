@@ -938,5 +938,5 @@ public class DynamicsDebug : UdonSharpBehaviour
 ## See Also
 
 - [events.md](events.md) - Full reference for `OnContactEnter/Stay/Exit` and `OnPhysBoneGrab/Release` signatures
-- [patterns.md](patterns.md) - Common patterns for interactive objects using Contacts and PhysBones
+- [patterns-core.md](patterns-core.md) - Common patterns for interactive objects using Contacts and PhysBones
 - [networking.md](networking.md) - Syncing contact/grab state across players with `[UdonSynced]`
