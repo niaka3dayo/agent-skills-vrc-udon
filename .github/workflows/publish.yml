@@ -40,7 +40,7 @@ jobs:
             const fs = require('fs');
             const p = '.claude-plugin/marketplace.json';
             const d = JSON.parse(fs.readFileSync(p, 'utf8'));
-            d.version = '$VERSION';
+            d.metadata.version = '$VERSION';
             fs.writeFileSync(p, JSON.stringify(d, null, 2) + '\n');
           "
 

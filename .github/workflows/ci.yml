@@ -124,7 +124,7 @@ jobs:
             fi
           done
 
-          MKT_VER=$(node -p "require('./.claude-plugin/marketplace.json').version || 'missing'" 2>/dev/null)
+          MKT_VER=$(node -p "require('./.claude-plugin/marketplace.json').metadata?.version || 'missing'" 2>/dev/null)
           if [ "$MKT_VER" != "$PKG_VERSION" ]; then
             echo "ERROR: .claude-plugin/marketplace.json has version $MKT_VER, expected $PKG_VERSION"
             ERRORS=$((ERRORS + 1))
