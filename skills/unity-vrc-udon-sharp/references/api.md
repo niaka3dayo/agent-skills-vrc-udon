@@ -575,22 +575,94 @@ public class PersistentScore : UdonSharpBehaviour
 
 ## VRCCameraSettings API (SDK 3.9.0+)
 
-Control VRChat camera settings.
+Read-only access to VRChat's built-in camera parameters. Provides two static instances and an event callback when settings change.
+
+Namespace: `VRC.SDK3.Rendering`
+
+### Static Camera Instances
+
+| Instance | Description |
+|----------|-------------|
+| `VRCCameraSettings.ScreenCamera` | The player's main view (desktop window or VR headset) |
+| `VRCCameraSettings.PhotoCamera` | The handheld in-game photo camera |
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `PixelWidth` | `int` | Render target width in pixels |
+| `PixelHeight` | `int` | Render target height in pixels |
+| `FieldOfView` | `float` | Horizontal field of view in degrees |
+| `Active` | `bool` | True if this camera is currently active |
 
 ```csharp
-// Get camera settings component
-VRCCameraSettings cameraSettings = GetComponent<VRCCameraSettings>();
+using VRC.SDK3.Rendering;
 
-// Near/Far clip planes
-cameraSettings.nearClipPlane = 0.01f;
-cameraSettings.farClipPlane = 1000f;
+// Read main screen camera properties
+VRCCameraSettings screen = VRCCameraSettings.ScreenCamera;
+int w = screen.PixelWidth;
+int h = screen.PixelHeight;
+float fov = screen.FieldOfView;
+bool active = screen.Active;
 
-// Field of view
-cameraSettings.fieldOfView = 60f;
+// Read photo camera properties
+VRCCameraSettings photo = VRCCameraSettings.PhotoCamera;
+bool photoOpen = photo.Active;
+```
 
-// Background color/skybox
-cameraSettings.clearFlags = CameraClearFlags.Skybox;
-cameraSettings.backgroundColor = Color.black;
+### Event Callback
+
+`OnVRCCameraSettingsChanged` fires whenever any camera property changes (resolution, FOV, active state). Override it on any `UdonSharpBehaviour`.
+
+```csharp
+// Signature
+public override void OnVRCCameraSettingsChanged(VRCCameraSettings camera) { }
+```
+
+### Usage Example
+
+```csharp
+using TMPro;
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Rendering;
+using VRC.SDKBase;
+
+public class CameraMonitor : UdonSharpBehaviour
+{
+    [SerializeField] private TextMeshProUGUI infoText;
+
+    void Start()
+    {
+        // Initialize display with current values
+        UpdateDisplay(VRCCameraSettings.ScreenCamera);
+    }
+
+    public override void OnVRCCameraSettingsChanged(VRCCameraSettings camera)
+    {
+        // Skip changes from the photo camera
+        if (camera != VRCCameraSettings.ScreenCamera) return;
+
+        UpdateDisplay(camera);
+    }
+
+    private void UpdateDisplay(VRCCameraSettings camera)
+    {
+        infoText.text = $"Resolution: {camera.PixelWidth}x{camera.PixelHeight}\n" +
+                        $"FOV: {camera.FieldOfView:F1} deg\n" +
+                        $"Photo cam: {VRCCameraSettings.PhotoCamera.Active}";
+    }
+}
+```
+
+### Notes
+
+```
+- All properties are read-only from Udon. Camera settings cannot be set via this API.
+- OnVRCCameraSettingsChanged fires for both ScreenCamera and PhotoCamera changes;
+  filter by comparing the parameter with VRCCameraSettings.ScreenCamera.
+- PixelWidth / PixelHeight reflect the actual render resolution, which changes when
+  the player resizes the window or toggles the photo camera.
 ```
 
 ## VRChat Dynamics API (SDK 3.10.0+)
