@@ -10,6 +10,11 @@ set -euo pipefail
 # Read tool input from stdin
 INPUT=$(cat)
 
+# Require jq for JSON parsing; silently skip if unavailable
+if ! command -v jq &>/dev/null; then
+    exit 0
+fi
+
 # Extract the file path from the tool input
 # Works for both Write and Edit tools
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
