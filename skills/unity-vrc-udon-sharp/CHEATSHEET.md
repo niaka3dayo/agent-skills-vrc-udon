@@ -364,33 +364,3 @@ if (VRCJson.TryDeserializeFromJson(result.Result, out DataToken json))
 **Dynamic VRCUrl generation: Not possible** -- `new VRCUrl(stringVar)` is blocked by the Udon VM at runtime.
 For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` array (predefined), (3) server-side routing
 
----
-
-## Official Documentation & Error Investigation (WebSearch)
-
-When you need the latest information or error investigation:
-
-```text
-# Official documentation search
-WebSearch: "API name or feature site:creators.vrchat.com"
-
-# UdonSharp API reference
-WebSearch: "API name site:udonsharp.docs.vrchat.com"
-
-# Forum search
-WebSearch: "error message site:ask.vrchat.com"
-
-# Known bug search
-WebSearch: "error message site:feedback.vrchat.com"
-
-# GitHub Issues
-WebSearch: "error message site:github.com/vrchat-community/UdonSharp"
-```
-
-| Site | Purpose |
-|------|---------|
-| creators.vrchat.com | Official Udon / SDK documentation |
-| udonsharp.docs.vrchat.com | UdonSharp API reference |
-| ask.vrchat.com | Q&A, solutions |
-| feedback.vrchat.com | Bug reports, status |
-| GitHub | UdonSharp-specific bugs |

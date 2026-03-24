@@ -76,11 +76,64 @@ node bin/install.mjs --help
 | npm Pack Test | Package includes all required files, installer works |
 | Markdown Links | No broken links in documentation |
 
-## Publishing
+## Release Guide
 
-1. Merge dev -> main via PR
-2. Create GitHub Release with `v*` tag
-3. `publish.yml` auto-publishes to npm with provenance
+### Overview
+
+```
+dev ──release PR──> main ──Release Drafter draft──> publish ──> npm
+```
+
+Version numbers and changelogs are **fully automated** by Release Drafter.
+Do NOT manually edit `package.json` version — `publish.yml` sets it from the release tag.
+
+### Step-by-step
+
+1. **Create a release PR from `dev` to `main`**
+   ```bash
+   gh pr create --base main --head dev \
+     --title "Release vX.Y.Z" \
+     --body "Merge dev into main for release"
+   ```
+   - Title should include the expected version (check the draft release for the resolved version)
+   - Wait for CI to pass and CodeRabbit approval
+
+2. **Merge the release PR**
+   - Merge (do NOT squash — preserve commit history)
+   - This triggers Release Drafter to update the draft release on `main`
+
+3. **Publish the GitHub Release draft**
+   ```bash
+   # List draft releases
+   gh release list --exclude-drafts=false
+
+   # Review and publish the draft (edit title/notes if needed)
+   gh release edit vX.Y.Z --draft=false
+   ```
+   - The `published` event triggers `publish.yml`
+   - `publish.yml` reads the tag, sets `npm version`, and runs `npm publish --provenance`
+   - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret)
+
+### Version resolution (automatic)
+
+Release Drafter resolves the version bump from PR labels:
+
+| Label | Bump |
+|-------|------|
+| `release: breaking` | major |
+| `release: feature` | minor |
+| `release: fix` | patch |
+| `release: docs` | patch |
+| `release: maintenance` | patch |
+
+If no label matches, defaults to **patch**.
+
+### What NOT to do
+
+- Do NOT manually bump `package.json` version (publish.yml handles it)
+- Do NOT create tags manually (Release Drafter creates them)
+- Do NOT push directly to `main` (branch protection blocks it)
+- Do NOT merge feature branches directly to `main` (always go through `dev`)
 
 ## Editing Skills
 
