@@ -870,5 +870,6 @@ public class DroneCheckpoint : UdonSharpBehaviour
 
 ## See Also
 
+- [constraints.md](constraints.md) - C# feature availability in UdonSharp that affects which APIs can be used
 - [events.md](events.md) - Complete event list and execution-order diagrams
 - [networking.md](networking.md) - `Networking` class, ownership, and `RequestSerialization` patterns

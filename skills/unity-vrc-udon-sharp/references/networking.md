@@ -1109,5 +1109,6 @@ void Update()
 - [networking-bandwidth.md](networking-bandwidth.md) - Bandwidth throttling, bit packing, owner-centric architecture, debugging
 - [networking-antipatterns.md](networking-antipatterns.md) - 6 anti-patterns and 5 advanced patterns
 - [patterns-networking.md](patterns-networking.md) - Object pooling, game state management, NetworkCallable patterns
+- [persistence.md](persistence.md) - PlayerData/PlayerObject API for persisting data across sessions
 - [sync-examples.md](sync-examples.md) - Concrete synced gimmick patterns with data budget reference
 - [troubleshooting.md](troubleshooting.md) - Debugging networking issues, ownership race conditions
