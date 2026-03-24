@@ -1570,3 +1570,403 @@ public override void OnDeserialization()
 ```
 
 **Note:** Delta sync does not handle late joiners. If full state restoration is needed for initial connections, maintain full state in a synced array as well.
+
+## Networking Anti-Patterns
+
+Common mistakes in UdonSharp networking that cause silent failures, data loss, or undefined behavior. Each pattern includes the problem, a wrong implementation, and the correct fix.
+
+---
+
+### 1. Ownership Race Condition
+
+**Problem**: Two clients call `Networking.SetOwner` simultaneously for the same object. There is no built-in conflict resolution — the last-processed `SetOwner` wins, which is non-deterministic. Whichever client "loses" the race will have its synced variable writes silently discarded because `RequestSerialization()` is called before ownership is confirmed.
+
+**Wrong:**
+
+```csharp
+// Client A and Client B both execute this at the same time
+public void TryCapture()
+{
+    Networking.SetOwner(Networking.LocalPlayer, gameObject);
+    capturedBy = Networking.LocalPlayer.playerId; // May be overwritten by Client B
+    RequestSerialization();                        // May be dropped — not owner yet
+}
+```
+
+**Correct:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class CapturePoint : UdonSharpBehaviour
+{
+    [UdonSynced] private int capturedBy = -1;
+    private int _pendingCaptureId = -1;
+
+    public void TryCapture()
+    {
+        // Store intent, then request ownership
+        _pendingCaptureId = Networking.LocalPlayer.playerId;
+        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        // Do NOT write synced variables here — ownership is not confirmed yet
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        // Only write + serialize after confirmed ownership
+        capturedBy = _pendingCaptureId;
+        RequestSerialization();
+    }
+}
+```
+
+**Explanation**: `Networking.SetOwner` is asynchronous. The previous owner must acknowledge the transfer before `OnOwnershipTransferred` fires on the new owner. Writing synced variables before that callback means the write may come from a non-owner and will be silently ignored by VRChat. Use `OnOwnershipTransferred` as the commit point.
+
+---
+
+### 2. Synced String Silent Truncation
+
+**Problem**: A synced `string` in a `Continuous` sync behaviour is bounded by the ~200-byte serialization budget. UTF-16 encodes each character as 2 bytes, so a string exceeding ~100 characters will be silently truncated with no runtime error or warning. The receiving client sees a shorter, corrupted string.
+
+**Wrong:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
+public class PlayerTag : UdonSharpBehaviour
+{
+    // A user could enter a 200-character message — truncated silently
+    [UdonSynced] public string displayMessage;
+
+    public void SetMessage(string msg)
+    {
+        displayMessage = msg; // No length check
+    }
+}
+```
+
+**Correct:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
+public class PlayerTag : UdonSharpBehaviour
+{
+    // UTF-16: 2 bytes/char. Budget ~200 bytes total for ALL synced vars.
+    // Reserve headroom for other fields; keep strings short.
+    private const int MaxMessageBytes = 80; // ~40 characters safe margin
+    private const int BytesPerChar = 2;     // UTF-16
+    private const int MaxMessageChars = MaxMessageBytes / BytesPerChar;
+
+    [UdonSynced] public string displayMessage;
+
+    public void SetMessage(string msg)
+    {
+        if (msg == null) msg = string.Empty;
+
+        // Detect potential truncation before it happens
+        if (msg.Length > MaxMessageChars)
+        {
+            Debug.LogWarning(
+                $"[PlayerTag] Message too long ({msg.Length} chars, max {MaxMessageChars}). Truncating.");
+            msg = msg.Substring(0, MaxMessageChars);
+        }
+
+        displayMessage = msg;
+    }
+}
+```
+
+**Explanation**: VRChat does not throw an error when a synced string exceeds the serialization budget — it simply stops writing at the byte limit. Always enforce a character budget before assigning to `[UdonSynced] string`, especially in `Continuous` mode where the per-behaviour budget is only ~200 bytes shared among all synced variables. Use `Manual` sync mode if you need longer strings (up to ~280KB).
+
+---
+
+### 3. Sync Buffer Overflow
+
+**Problem**: `Manual` sync allows up to ~280KB per serialization, but it is still possible to exceed the buffer with large arrays. When the serialized payload exceeds the limit, VRChat silently drops the entire sync packet — no partial delivery, no error. Recipients see stale data.
+
+**Wrong:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class MapData : UdonSharpBehaviour
+{
+    // 512 x 512 grid as ints = 512 * 512 * 4 bytes = 1,048,576 bytes (~1MB) — exceeds limit!
+    [UdonSynced] private int[] tiles = new int[512 * 512];
+
+    public void SaveAndSync()
+    {
+        // Packet silently dropped — recipients never update
+        RequestSerialization();
+    }
+}
+```
+
+**Correct:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class MapData : UdonSharpBehaviour
+{
+    // Manual sync budget: ~280KB = 286,720 bytes
+    // byte[] uses 1 byte/element vs int[] at 4 bytes/element
+    // 256 x 256 as byte = 65,536 bytes — well within budget
+    private const int MapSize = 256;
+    private const int MaxSyncBytes = 280 * 1024; // 286,720 bytes
+
+    [UdonSynced] private byte[] tiles = new byte[MapSize * MapSize];
+
+    public void SaveAndSync()
+    {
+        // Check estimated size before serializing
+        int estimatedBytes = tiles.Length; // 1 byte per element
+        if (estimatedBytes > MaxSyncBytes)
+        {
+            Debug.LogError(
+                $"[MapData] Sync payload too large: {estimatedBytes} bytes (max {MaxSyncBytes}). Aborting.");
+            return;
+        }
+
+        RequestSerialization();
+    }
+
+    // For very large maps: chunk into multiple behaviours or use delta sync
+    // See: Delta Sync section above
+}
+```
+
+**Explanation**: Use `OnPostSerialization(SerializationResult result)` to measure actual byte usage in the editor, then enforce a budget at runtime. Prefer `byte` over `int` for tile data, and consider delta sync (send only changes) for maps larger than ~64KB. Never assume the packet was delivered — use a `moveCounter` or version field to detect missed updates.
+
+---
+
+### 4. Mixing Continuous and Manual Sync
+
+**Problem**: Setting `BehaviourSyncMode` to both `Continuous` and `Manual` on the same behaviour is not valid — `BehaviourSyncMode` is a single enum value. However, a common mistake is adding `RequestSerialization()` calls inside a `Continuous` behaviour, or annotating a `Manual` behaviour with interpolation modes (`UdonSyncMode.Linear`/`Smooth`) expecting automatic 10Hz updates. Neither combination produces the intended result.
+
+**Wrong:**
+
+```csharp
+// Attempting to get both automatic 10Hz sync AND explicit sync control
+[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
+public class BadSyncMix : UdonSharpBehaviour
+{
+    [UdonSynced(UdonSyncMode.Linear)] private Vector3 position;
+    [UdonSynced] private int score; // Discrete value in Continuous mode — wastes bandwidth
+
+    void Update()
+    {
+        if (Networking.IsOwner(gameObject))
+        {
+            position = transform.position;
+            score = CalculateScore();
+            RequestSerialization(); // Redundant in Continuous mode; called every frame
+        }
+    }
+}
+```
+
+**Correct:**
+
+```csharp
+// Behaviour A: Continuous — position only, no RequestSerialization
+[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
+public class PositionSync : UdonSharpBehaviour
+{
+    [UdonSynced(UdonSyncMode.Linear)] private Vector3 position;
+
+    void Update()
+    {
+        if (Networking.IsOwner(gameObject))
+        {
+            position = transform.position;
+            // No RequestSerialization() — Continuous mode handles transmission automatically
+        }
+        else
+        {
+            transform.position = position;
+        }
+    }
+}
+
+// Behaviour B: Manual — score only, explicit sync on change
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class ScoreSync : UdonSharpBehaviour
+{
+    [UdonSynced] private int score;
+
+    public void UpdateScore(int newScore)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        score = newScore;
+        RequestSerialization(); // Explicit sync only when value changes
+    }
+
+    public override void OnDeserialization()
+    {
+        UpdateScoreDisplay();
+    }
+
+    private void UpdateScoreDisplay() { /* Update UI */ }
+}
+```
+
+**Explanation**: Separate concerns by sync mode. `Continuous` is for values that change every frame (position, rotation); `Manual` is for discrete state changes (score, game phase). Mixing them on one behaviour wastes bandwidth (`Continuous` on score data) or loses features (`RequestSerialization()` is a no-op on `None` mode and has redundant effect on `Continuous`). Keep each behaviour focused on one sync mode.
+
+---
+
+### 5. Sync Without Ownership
+
+**Problem**: Modifying a `[UdonSynced]` variable without being the owner causes the change to be silently reverted on the next deserialization. VRChat does not throw an error — the local variable appears to change, but the change is never broadcast and will be overwritten when the actual owner next serializes.
+
+**Wrong:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class GameFlag : UdonSharpBehaviour
+{
+    [UdonSynced] public bool isCaptured;
+
+    public override void OnTriggerEnter(Collider other)
+    {
+        // Any player can run this, but only the owner's write will persist
+        isCaptured = true;
+        RequestSerialization(); // Silently fails if not owner — isCaptured reverts next sync
+    }
+}
+```
+
+**Correct:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class GameFlag : UdonSharpBehaviour
+{
+    [UdonSynced] public bool isCaptured;
+
+    public override void OnTriggerEnter(Collider other)
+    {
+        if (!Networking.IsOwner(gameObject))
+        {
+            // Become owner first, then write in OnOwnershipTransferred
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            return;
+        }
+
+        SetCaptured(true);
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        // Ownership confirmed — safe to write and serialize
+        SetCaptured(true);
+    }
+
+    private void SetCaptured(bool value)
+    {
+        isCaptured = value;
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        UpdateFlagVisual();
+    }
+
+    private void UpdateFlagVisual() { /* Update flag appearance */ }
+}
+```
+
+**Explanation**: In UdonSharp, only the current owner's `RequestSerialization()` calls are transmitted. Non-owner writes to `[UdonSynced]` variables are purely local and will be overwritten by the next deserialization from the actual owner. Always guard synced writes with `Networking.IsOwner(gameObject)` and use the `SetOwner` + `OnOwnershipTransferred` pattern when ownership transfer is needed.
+
+---
+
+### 6. Excessive RequestSerialization
+
+**Problem**: Calling `RequestSerialization()` every frame (or on every `Update` tick) floods the network. VRChat's Udon network budget is approximately **11KB/sec**. A 60Hz `Update` calling `RequestSerialization()` can consume that budget alone, causing "Death Run" congestion for all other network operations in the world.
+
+**Wrong:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class FrequentSync : UdonSharpBehaviour
+{
+    [UdonSynced] private Vector3 trackedPosition;
+
+    void Update()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        trackedPosition = transform.position;
+        RequestSerialization(); // Called ~60 times/sec — severe bandwidth waste
+    }
+}
+```
+
+**Correct:**
+
+```csharp
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class ThrottledSync : UdonSharpBehaviour
+{
+    [UdonSynced] private Vector3 trackedPosition;
+
+    private const float SyncInterval = 0.1f;       // Max 10 syncs/sec
+    private const float PositionThreshold = 0.01f; // Skip if barely moved
+    private const float RetryInterval = 1.0f;
+
+    private float _lastSyncTime = float.MinValue;
+    private bool _isPendingSync = false;
+
+    void Update()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        Vector3 current = transform.position;
+
+        // Skip if position has not changed meaningfully
+        if (Vector3.Distance(current, trackedPosition) < PositionThreshold) return;
+
+        trackedPosition = current;
+        RequestSync();
+    }
+
+    private void RequestSync()
+    {
+        if (_isPendingSync) return;
+
+        float now = Time.time;
+        float remaining = (_lastSyncTime + SyncInterval) - now;
+
+        if (remaining <= 0f)
+        {
+            ExecuteSync();
+        }
+        else
+        {
+            // Schedule a single deferred sync — coalesces rapid changes
+            SendCustomEventDelayedSeconds(nameof(ExecuteSync), remaining + 0.001f);
+            _isPendingSync = true;
+        }
+    }
+
+    public void ExecuteSync()
+    {
+        _isPendingSync = false;
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (Networking.IsClogged)
+        {
+            // Back off and retry during congestion
+            SendCustomEventDelayedSeconds(nameof(ExecuteSync), RetryInterval);
+            _isPendingSync = true;
+            return;
+        }
+
+        RequestSerialization();
+        _lastSyncTime = Time.time;
+    }
+}
+```
+
+**Explanation**: Throttle `RequestSerialization()` to a maximum frequency appropriate for the data type (10Hz for position is generous; game state changes rarely need more than 1-2Hz). Combine throttling with a change threshold so unchanged values never trigger a sync. Check `Networking.IsClogged` before serializing and use `SendCustomEventDelayedSeconds` to retry rather than spinning in `Update`. See the [RequestSerialization Throttling Pattern](#requestserialization-throttling-pattern) section for a reusable implementation.
