@@ -6,7 +6,8 @@ description: >
     Covers compile constraints (List<T>/async/await/try/catch/LINQ blocked),
     network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
     persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts),
-    Web Loading, and event handling. SDK 3.7.1 - 3.10.2 coverage.
+    Web Loading, VRAM management (texture lifecycle, Dispose vs Destroy),
+    and event handling. SDK 3.7.1 - 3.10.2 coverage.
     Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
     NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
     synced variables, VRChat world scripting, C# to Udon.
@@ -120,6 +121,7 @@ WebSearch: "error message UdonSharp site:github.com"
 | `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC |
 | `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray |
 | `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs | VRCStringDownloader, VRCImageDownloader, VRCJson, DataDictionary, VRCUrl |
+| `image-loading-vram.md` | Advanced VRAM management for image loading: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias | VRAM, texture memory, memory leak, Destroy, Dispose, double buffer, fade, mipmap, TextureInfo |
 | `api.md` | VRCPlayerApi, Networking, enums reference | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, Drone, VRCDroneApi |
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred |
 | `editor-scripting.md` | Editor scripting and proxy system | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject |
