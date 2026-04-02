@@ -705,6 +705,13 @@ public class UrlLoadScheduler : UdonSharpBehaviour
 
     private bool _drainPending = false;
 
+    void Start()
+    {
+        // Enforce the VRChat rate-limit lower bound at runtime regardless of
+        // what the Inspector field was set to.
+        if (_intervalSeconds < 5.0f) _intervalSeconds = 5.0f;
+    }
+
     // ── Public API ────────────────────────────────────────────────────────
 
     /// <summary>
@@ -803,10 +810,15 @@ public class ManagedVideoLoader : UdonSharpBehaviour
     [SerializeField] private UrlLoadScheduler _scheduler;
 
     // Written by UrlLoadScheduler before the callback fires.
+    // The field name must match the string constant used in UrlLoadScheduler._DrainNext
+    // ("ScheduledUrl"). Use FIELD_SCHEDULED_URL when calling SetProgramVariable from
+    // custom code to avoid silent mismatches.
+    public const string FIELD_SCHEDULED_URL = "ScheduledUrl";
     [HideInInspector] public VRCUrl ScheduledUrl;
 
     public void RequestLoad(VRCUrl url)
     {
+        if (_scheduler == null) { Debug.LogError("[ManagedVideoLoader] Scheduler not assigned"); return; }
         _scheduler.ScheduleLoad(this, nameof(OnScheduledLoad), url);
     }
 

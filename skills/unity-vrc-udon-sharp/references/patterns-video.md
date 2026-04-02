@@ -188,6 +188,8 @@ This formula is drift-resistant: a late joiner receives the same `syncClockTime`
 > integer. It wraps after ~24.8 days of uptime. For sessions shorter than a few hours this is
 > irrelevant, but for always-on worlds consider using the difference modulo `int.MaxValue` or
 > switching to `GetServerTimeInSeconds()` (double) to avoid overflow.
+> **The examples below use `int` for simplicity; production code should convert to `long` or
+> `double` for sessions exceeding 24 hours.**
 
 ### Drift Correction
 
