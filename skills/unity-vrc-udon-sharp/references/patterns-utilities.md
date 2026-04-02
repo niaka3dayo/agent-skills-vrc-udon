@@ -500,6 +500,355 @@ public class MyResultHandler : ProcessCallbackBase
 
 ---
 
+## Cancellable Delayed Event
+
+### Problem
+
+`SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The generation-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
+
+### Solution
+
+Instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
+
+**Trade-off:** Allocates a `GameObject` per timer instance. Use the generation-counter pattern for high-frequency debounce; use this pattern only when the callback truly must not fire.
+
+**When to use:**
+- Retry timers that must be cancelled when the user changes their action before the retry fires
+- Load timeout timers where a successful load must cleanly suppress the "timed out" callback
+- Any case where the callback has irreversible side effects (network events, audio, state mutation)
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+/// <summary>
+/// Tiny helper behaviour instantiated per timer.
+/// Destroying its GameObject before the delay expires cancels the callback.
+/// </summary>
+[AddComponentMenu("")]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class CancellableTimer : UdonSharpBehaviour
+{
+    // Written by the factory before the delay is scheduled.
+    [HideInInspector] public UdonSharpBehaviour CallbackTarget;
+    [HideInInspector] public string              CallbackMethod;
+
+    /// <summary>
+    /// Called by SendCustomEventDelayedSeconds on this behaviour.
+    /// Fires CallbackTarget.SendCustomEvent(CallbackMethod) and then
+    /// destroys the helper GameObject.
+    /// </summary>
+    public void _Fire()
+    {
+        if (CallbackTarget != null)
+        {
+            CallbackTarget.SendCustomEvent(CallbackMethod);
+        }
+
+        // Clean up the helper object after firing.
+        Destroy(gameObject);
+    }
+}
+```
+
+**Usage — create and cancel a timer:**
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class RetryController : UdonSharpBehaviour
+{
+    [SerializeField] private GameObject _timerPrefab; // Prefab with CancellableTimer attached
+    [SerializeField] private float      _retryDelay = 5f;
+
+    private GameObject _pendingTimer;
+
+    /// <summary>
+    /// Schedules a retry. Cancels any previously pending retry first.
+    /// </summary>
+    public void ScheduleRetry()
+    {
+        CancelPendingRetry();
+
+        _pendingTimer = VRCInstantiate(_timerPrefab);
+        CancellableTimer timer = _pendingTimer.GetComponent<CancellableTimer>();
+        timer.CallbackTarget = this;
+        timer.CallbackMethod = nameof(OnRetryFired);
+
+        // The callback fires on the helper; destroying _pendingTimer before
+        // retryDelay seconds cancels it without any generation-counter bookkeeping.
+        timer.SendCustomEventDelayedSeconds(nameof(CancellableTimer._Fire), _retryDelay);
+    }
+
+    /// <summary>
+    /// Cancels the pending retry if one is scheduled.
+    /// </summary>
+    public void CancelPendingRetry()
+    {
+        if (_pendingTimer != null)
+        {
+            Destroy(_pendingTimer);
+            _pendingTimer = null;
+        }
+    }
+
+    /// <summary>
+    /// Invoked by the timer when the delay expires without cancellation.
+    /// </summary>
+    public void OnRetryFired()
+    {
+        _pendingTimer = null;
+        Debug.Log("[RetryController] Retry timer fired — executing retry logic.");
+        // ... retry logic here
+    }
+}
+```
+
+---
+
+## Re-Entrance Guard
+
+### Problem
+
+During an event broadcast loop — `RaiseEvent` iterating a subscriber array and calling `SendCustomEvent` on each listener — a listener's handler may itself call `RaiseEvent` on the same event bus. This creates either infinite recursion (stack overflow in Udon) or corrupted iteration (the array is modified while being iterated).
+
+### Solution
+
+Add a `bool _isEmitting` guard to the event bus. Set it `true` immediately before the iteration and `false` immediately after. If `RaiseEvent` is called while `_isEmitting` is already `true`, skip the call (log a warning in development builds). This mirrors the pattern used in most production event systems.
+
+**Cross-reference:** See the [Event Bus Pattern](#event-bus-pattern) in this file for the base implementation that this guard extends.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+/// <summary>
+/// Event bus with re-entrance guard.
+/// Prevents recursive RaiseEvent calls from corrupting the subscriber iteration.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class GuardedEventBus : UdonSharpBehaviour
+{
+    private const int MaxListeners = 32;
+
+    [SerializeField] private UdonSharpBehaviour[] _listeners
+        = new UdonSharpBehaviour[MaxListeners];
+    private int _listenerCount = 0;
+
+    // Re-entrance guard: true while RaiseEvent is iterating _listeners.
+    private bool _isEmitting = false;
+
+    public void RegisterListener(UdonSharpBehaviour listener)
+    {
+        if (listener == null) return;
+
+        // Duplicate check
+        for (int i = 0; i < _listenerCount; i++)
+        {
+            if (_listeners[i] == listener) return;
+        }
+
+        if (_listenerCount >= MaxListeners)
+        {
+            Debug.LogWarning("[GuardedEventBus] Listener limit reached.");
+            return;
+        }
+
+        _listeners[_listenerCount] = listener;
+        _listenerCount++;
+    }
+
+    public void UnregisterListener(UdonSharpBehaviour listener)
+    {
+        for (int i = 0; i < _listenerCount; i++)
+        {
+            if (_listeners[i] == listener)
+            {
+                // Compact in place
+                _listeners[i] = _listeners[_listenerCount - 1];
+                _listeners[_listenerCount - 1] = null;
+                _listenerCount--;
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Raises <paramref name="eventMethodName"/> on all registered listeners.
+    /// Re-entrant calls (from within a listener handler) are silently dropped.
+    /// </summary>
+    public void RaiseEvent(string eventMethodName)
+    {
+        if (_isEmitting)
+        {
+            // A listener is calling RaiseEvent from inside its own handler.
+            // Dropping this call prevents infinite recursion and iteration corruption.
+            Debug.LogWarning(
+                $"[GuardedEventBus] Re-entrant RaiseEvent('{eventMethodName}') dropped.");
+            return;
+        }
+
+        _isEmitting = true;
+
+        for (int i = 0; i < _listenerCount; i++)
+        {
+            if (_listeners[i] != null)
+            {
+                _listeners[i].SendCustomEvent(eventMethodName);
+            }
+        }
+
+        _isEmitting = false;
+    }
+}
+```
+
+**Notes:**
+- If you need deferred re-entrant events (fire after the current broadcast completes), capture the call in a small pending-event queue (a `string[]` with a head/tail counter) and drain it after `_isEmitting = false`.
+- `_isEmitting` does not need `[UdonSynced]`; it is a local execution-flow flag with no network meaning.
+
+---
+
+## UdonEvent Pseudo-Delegate
+
+### Problem
+
+C# delegates are blocked in UdonSharp. When a system needs a runtime-swappable, one-to-one callback — for example, a Strategy pattern where an external module overrides a hook point — there is no built-in mechanism.
+
+**Difference from Event Bus:** The [Event Bus Pattern](#event-bus-pattern) is one-to-many broadcast; `UdonAction` is one-to-one and reassignable at runtime.
+
+**Difference from Abstract Callback:** The [Abstract Class Callback Pattern](#abstract-class-callback-pattern) provides compile-time typed signatures via an abstract base class; `UdonAction` is stringly-typed but lighter weight (no mediator class required) and can be swapped by external code at any time.
+
+### Solution
+
+Store `{ UdonSharpBehaviour target, string eventName }` as a two-element `object[]` and cast it through the pseudo-struct double-cast technique (see [Pseudo-Struct via object\[\] Double-Cast](#pseudo-struct-via-object-double-cast)) to give it a named type. A companion class provides `New()`, `Invoke()`, and `SetTarget()` factory/extension methods.
+
+**When to use:**
+- Strategy pattern: swap the algorithm at runtime without changing the caller
+- Hook points that external modules (loaded after world init) can register for
+- Single-subscriber callbacks that must be reassigned without re-wiring Inspector references
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+/// <summary>
+/// Pseudo-delegate type: wraps a (target, eventName) pair.
+/// Not a real MonoBehaviour — never attach directly to a GameObject.
+/// </summary>
+[AddComponentMenu("")]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class UdonAction : UdonSharpBehaviour
+{
+    // Field layout indices
+    public const int IdxTarget    = 0;
+    public const int IdxEventName = 1;
+}
+```
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+/// <summary>
+/// Factory and extension methods for UdonAction.
+/// </summary>
+[AddComponentMenu("")]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class UdonActionExt : UdonSharpBehaviour
+{
+    /// <summary>
+    /// Creates a new UdonAction pointing to target.eventName.
+    /// </summary>
+    public static UdonAction New(UdonSharpBehaviour target, string eventName)
+    {
+        return (UdonAction)(object)(new object[] { target, eventName });
+    }
+
+    /// <summary>
+    /// Invokes the callback. No-op if action or target is null.
+    /// </summary>
+    public static void Invoke(UdonAction action)
+    {
+        if (action == null) return;
+
+        object[] raw = (object[])(object)action;
+        UdonSharpBehaviour target    = (UdonSharpBehaviour)raw[UdonAction.IdxTarget];
+        string             eventName = (string)raw[UdonAction.IdxEventName];
+
+        if (target == null || string.IsNullOrEmpty(eventName)) return;
+
+        target.SendCustomEvent(eventName);
+    }
+
+    /// <summary>
+    /// Returns a new UdonAction with the same event name but a different target.
+    /// (UdonAction instances are immutable; reassignment creates a new instance.)
+    /// </summary>
+    public static UdonAction SetTarget(UdonAction action, UdonSharpBehaviour newTarget)
+    {
+        if (action == null) return UdonActionExt.New(newTarget, "");
+
+        object[] raw = (object[])(object)action;
+        string eventName = (string)raw[UdonAction.IdxEventName];
+
+        return UdonActionExt.New(newTarget, eventName);
+    }
+
+    /// <summary>
+    /// Returns the event name stored in the action (useful for debugging).
+    /// </summary>
+    public static string GetEventName(UdonAction action)
+    {
+        if (action == null) return "";
+        return (string)(((object[])(object)action)[UdonAction.IdxEventName]);
+    }
+}
+```
+
+**Usage — Strategy pattern with swappable callback:**
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class LoadOrchestrator : UdonSharpBehaviour
+{
+    // The active success handler — can be reassigned by external modules.
+    private UdonAction _onSuccess;
+
+    void Start()
+    {
+        // Default handler: show a simple status label.
+        _onSuccess = UdonActionExt.New(this, nameof(DefaultSuccessHandler));
+    }
+
+    /// <summary>
+    /// External modules call this to override the success hook.
+    /// </summary>
+    public void SetSuccessCallback(UdonSharpBehaviour target, string methodName)
+    {
+        _onSuccess = UdonActionExt.New(target, methodName);
+    }
+
+    public void SimulateLoad()
+    {
+        Debug.Log("[LoadOrchestrator] Load complete — invoking success callback.");
+        UdonActionExt.Invoke(_onSuccess);
+    }
+
+    public void DefaultSuccessHandler()
+    {
+        Debug.Log("[LoadOrchestrator] Default success handler called.");
+    }
+}
+```
+
+---
+
 
 ## See Also
 
