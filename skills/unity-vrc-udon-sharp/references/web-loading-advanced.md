@@ -54,7 +54,7 @@ A single downloaded string must carry:
 
 ### Format Layout
 
-```
+```text
 [VERSION_HEADER]\n[JSON_LENGTH_DECIMAL]\n[JSON_METADATA_BLOCK][BASE64_BLOCK_0][BASE64_BLOCK_1]...
 ```
 

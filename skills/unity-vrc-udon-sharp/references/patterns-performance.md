@@ -638,6 +638,7 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
 - `SendCustomEventDelayedFrames` is documented in [events.md](events.md).
 - The `BranchByBudget` helper is checked **after each unit of work**, not before, so the final unit in a budget window may slightly exceed the target. Keep individual work units small (single array element, single string operation) to minimise overshoot.
 - Do not share a single `Stopwatch` instance across two simultaneous processing pipelines — each pipeline needs its own instance and its own `_processBudgetMs` field.
+- **Important:** `Stopwatch` measures wall-clock time continuously, including idle time between frames. When `BranchByBudget` defers work to the next frame via `SendCustomEventDelayedFrames`, the stopwatch is reset and restarted in `BranchByBudget` so the next frame begins with a fresh budget. If you restructure this pattern, always reset the stopwatch at the start of each new frame's work — otherwise the elapsed time will include the inter-frame gap and the budget will appear instantly exhausted.
 
 **When to use:**
 
