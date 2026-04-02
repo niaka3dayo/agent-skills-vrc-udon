@@ -156,6 +156,11 @@ public class VideoPlayerStateMachine : UdonSharpBehaviour
 
 > **Note on non-owner state**: Non-owners do not call `SetState` directly — they receive state changes via `FieldChangeCallback` on deserialization. Between `OnVideoStart` firing locally and the next deserialization, a non-owner's `_playerState` may be stale. UI components should check `activeHandler.IsPlaying` / `activeHandler.IsPaused` in addition to `_playerState` for accurate local display.
 
+> **Rate limit coordination**: The examples in this document call `_videoPlayer.PlayURL()` directly
+> for clarity. In production worlds with multiple video players, wrap all `PlayURL` calls through
+> a shared rate limit scheduler to avoid VRChat's 5-second rate limit collision.
+> See the [Rate Limit Resolver](patterns-performance.md#rate-limit-resolver) pattern.
+
 ---
 
 ## 2. Server-Time Playback Position Sync
@@ -355,6 +360,7 @@ public class LateJoinerVideoSync : UdonSharpBehaviour
 
         _pendingSeek = true;
         _currentUrl  = _syncUrl;
+        // In production, route through UrlLoadScheduler (see Rate Limit Resolver pattern)
         _videoPlayer.PlayURL(_syncUrl);
         // Seek is deferred to OnVideoReady
     }
@@ -592,6 +598,7 @@ public class VideoErrorHandler : UdonSharpBehaviour
     public void RetryLoad()
     {
         if (_currentUrl == null || string.IsNullOrEmpty(_currentUrl.Get())) return;
+        // In production, route through UrlLoadScheduler (see Rate Limit Resolver pattern)
         _activePlayer.PlayURL(_currentUrl);
     }
 
@@ -818,6 +825,7 @@ public class PlatformUrlSelector : UdonSharpBehaviour
     public void PlayByIndex(int index)
     {
         if (index < 0 || index >= _platformUrls.Length) return;
+        // In production, route through UrlLoadScheduler (see Rate Limit Resolver pattern)
         _videoPlayer.PlayURL(_platformUrls[index]);
     }
 
@@ -831,6 +839,7 @@ public class PlatformUrlSelector : UdonSharpBehaviour
 #endif
         if (selected != null && !string.IsNullOrEmpty(selected.Get()))
         {
+            // In production, route through UrlLoadScheduler (see Rate Limit Resolver pattern)
             _videoPlayer.PlayURL(selected);
         }
     }

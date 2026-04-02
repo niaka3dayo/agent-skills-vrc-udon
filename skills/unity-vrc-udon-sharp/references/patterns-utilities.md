@@ -570,9 +570,9 @@ public class RetryController : UdonSharpBehaviour
     /// </summary>
     public void ScheduleRetry()
     {
-        if (_timerPrefab == null) { Debug.LogError("[RetryController] Timer prefab not assigned"); return; }
-
         CancelPendingRetry();
+
+        if (_timerPrefab == null) { Debug.LogError("[RetryController] Timer prefab not assigned"); return; }
 
         _pendingTimer = VRCInstantiate(_timerPrefab);
         CancellableTimer timer = _pendingTimer.GetComponent<CancellableTimer>();
