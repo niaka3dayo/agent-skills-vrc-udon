@@ -649,6 +649,201 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
 
 ---
 
+## Rate Limit Resolver
+
+### Problem
+
+VRChat enforces a **5-second rate limit** on video URL loads shared across the entire scene. Multiple behaviours in the same world that independently trigger URL loads will collide: the second request within the 5-second window is silently rejected, leaving the requester waiting indefinitely with no error callback.
+
+**Cross-reference:** The same 5-second rate limit applies to `VRCStringDownloader` and image-loading requests. See [web-loading.md](web-loading.md) for details on string/image downloads.
+
+### Solution
+
+A singleton `UrlLoadScheduler` behaviour serialised into every world that needs video URL loading. It owns an array-based queue of pending load requests. Each request stores the requester behaviour reference and a callback method name. The scheduler drains one request per 5.05-second cycle (5.05 s adds a small margin above the hard limit), ensuring no two loads collide.
+
+All video-loading behaviours in the world hold a `[SerializeField]` reference to the same `UrlLoadScheduler` instance rather than triggering loads directly.
+
+**Architecture:**
+
+```
+VideoPlayerA ──ScheduleLoad──▶ UrlLoadScheduler
+VideoPlayerB ──ScheduleLoad──▶  (shared singleton)
+                                     │
+                          every 5.05s │ drain one request
+                                     ▼
+                          requester.SendCustomEvent(callbackName)
+```
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Singleton scheduler that enforces the VRChat 5-second URL-load rate limit.
+/// Place one instance in the scene and wire all video-loading behaviours to it
+/// via SerializeField.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class UrlLoadScheduler : UdonSharpBehaviour
+{
+    [Header("Rate Limit")]
+    [Tooltip("Minimum seconds between URL loads. Must be >= 5.0.")]
+    [SerializeField] private float _intervalSeconds = 5.05f;
+
+    // Queue storage — parallel arrays act as a struct-of-arrays queue.
+    private const int MaxQueueDepth = 16;
+
+    private UdonSharpBehaviour[] _queueRequesters
+        = new UdonSharpBehaviour[MaxQueueDepth];
+    private string[] _queueCallbacks = new string[MaxQueueDepth];
+    private VRCUrl[] _queueUrls      = new VRCUrl[MaxQueueDepth];
+
+    private int _queueHead  = 0; // index of oldest item (dequeue from here)
+    private int _queueTail  = 0; // index of next free slot (enqueue here)
+    private int _queueCount = 0;
+
+    private bool _drainPending = false;
+
+    void Start()
+    {
+        // Enforce the VRChat rate-limit lower bound at runtime regardless of
+        // what the Inspector field was set to.
+        if (_intervalSeconds < 5.0f) _intervalSeconds = 5.0f;
+    }
+
+    // ── Public API ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Enqueues a URL load request. When the scheduler drains this request,
+    /// it calls requester.SendCustomEvent(callbackName).
+    /// The requester is expected to perform the actual VRCUrl load inside
+    /// that callback.
+    /// </summary>
+    public void ScheduleLoad(
+        UdonSharpBehaviour requester,
+        string callbackName,
+        VRCUrl url)
+    {
+        if (requester == null || string.IsNullOrEmpty(callbackName)) return;
+
+        if (_queueCount >= MaxQueueDepth)
+        {
+            Debug.LogWarning("[UrlLoadScheduler] Queue full — dropping load request.");
+            return;
+        }
+
+        _queueRequesters[_queueTail] = requester;
+        _queueCallbacks[_queueTail]  = callbackName;
+        _queueUrls[_queueTail]       = url;
+
+        _queueTail  = (_queueTail + 1) % MaxQueueDepth;
+        _queueCount++;
+
+        // Start the drain loop if it is not already running.
+        if (!_drainPending)
+        {
+            _drainPending = true;
+            SendCustomEvent(nameof(_DrainNext));
+        }
+    }
+
+    // ── Internal drain loop ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Dequeues and dispatches one request, then schedules itself again
+    /// if the queue is still non-empty.
+    /// </summary>
+    public void _DrainNext()
+    {
+        if (_queueCount == 0)
+        {
+            _drainPending = false;
+            return;
+        }
+
+        // Dequeue the oldest request.
+        UdonSharpBehaviour requester = _queueRequesters[_queueHead];
+        string callbackName          = _queueCallbacks[_queueHead];
+        // VRCUrl is written to the requester's public field before the callback.
+        VRCUrl url                   = _queueUrls[_queueHead];
+
+        // Clear the slot.
+        _queueRequesters[_queueHead] = null;
+        _queueCallbacks[_queueHead]  = null;
+        _queueUrls[_queueHead]       = null;
+        _queueHead  = (_queueHead + 1) % MaxQueueDepth;
+        _queueCount--;
+
+        // Deliver the URL to the requester via a public field, then fire the callback.
+        if (requester != null)
+        {
+            requester.SetProgramVariable("ScheduledUrl", url);
+            // IMPORTANT: Consumer must have a public field named exactly "ScheduledUrl" (VRCUrl type).
+            // If the field is renamed, this call silently fails at runtime.
+            requester.SendCustomEvent(callbackName);
+        }
+
+        // Schedule the next drain after the rate-limit interval.
+        if (_queueCount > 0)
+        {
+            SendCustomEventDelayedSeconds(nameof(_DrainNext), _intervalSeconds);
+        }
+        else
+        {
+            _drainPending = false;
+        }
+    }
+}
+```
+
+**Consumer — how a video-loading behaviour uses the scheduler:**
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class ManagedVideoLoader : UdonSharpBehaviour
+{
+    [SerializeField] private UrlLoadScheduler _scheduler;
+
+    // Written by UrlLoadScheduler before the callback fires.
+    // The field name must match the string constant used in UrlLoadScheduler._DrainNext
+    // ("ScheduledUrl"). Use FIELD_SCHEDULED_URL when calling SetProgramVariable from
+    // custom code to avoid silent mismatches.
+    public const string FIELD_SCHEDULED_URL = "ScheduledUrl";
+    [HideInInspector] public VRCUrl ScheduledUrl;
+
+    public void RequestLoad(VRCUrl url)
+    {
+        if (_scheduler == null) { Debug.LogError("[ManagedVideoLoader] Scheduler not assigned"); return; }
+        _scheduler.ScheduleLoad(this, nameof(OnScheduledLoad), url);
+    }
+
+    /// <summary>
+    /// Called by UrlLoadScheduler when it is safe to load.
+    /// ScheduledUrl is already set at this point.
+    /// </summary>
+    public void OnScheduledLoad()
+    {
+        if (ScheduledUrl == null) return;
+        Debug.Log($"[ManagedVideoLoader] Loading URL: {ScheduledUrl}");
+        // Perform the actual VRCUrl load here (e.g. videoPlayer.LoadURL(ScheduledUrl)).
+    }
+}
+```
+
+**Notes:**
+- `_intervalSeconds` defaults to 5.05 s. Do not set it below 5.0.
+- If two behaviours call `ScheduleLoad` in the same frame, only the first starts the drain loop; the second is queued and will fire after 5.05 s.
+- The queue depth is 16 by default. Increase `MaxQueueDepth` if the world can have more concurrent requesters than that.
+- `ScheduledUrl` on the consumer must be declared `public` (not `[HideInInspector]` alone) for `SetProgramVariable` to write it; the `[HideInInspector]` attribute hides it from the Inspector while keeping it accessible to the scheduler.
+- **`SetProgramVariable` field-name contract**: The scheduler writes to the field named `"ScheduledUrl"` by string at runtime. If the consumer renames that field, `SetProgramVariable` silently no-ops and the callback receives `null`. Always keep the field name in sync with the string literal in `_DrainNext`.
+
+---
+
 
 ## See Also
 

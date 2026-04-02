@@ -614,6 +614,151 @@ public class DebouncedSearch : UdonSharpBehaviour
 
 ---
 
+## String Join for Array Sync
+
+### Problem
+
+Syncing `string[]` via `[UdonSynced]` serialises each element individually with per-element overhead. For arrays that change together as a logical unit — playlist titles, display names, ordered slot labels — this wastes bandwidth and produces multiple `OnDeserialization` callbacks if the array is written element-by-element in a loop.
+
+### Solution
+
+Join the entire array into a single `[UdonSynced] string` using a separator character that virtually never appears in natural text or URLs, then split on deserialization. The recommended separator is **U+2029 PARAGRAPH SEPARATOR** (`\u2029`): it is invisible, not present on any keyboard, and absent from VRCUrl strings, display names, and common user text.
+
+**Size consideration:** The joined string must fit within VRChat's synced-data limits. See [networking-bandwidth.md](networking-bandwidth.md) for per-variable and per-behaviour size caps. For large playlists, prefer pagination (sync a window of N entries at a time) over a single huge string.
+
+**Alternative:** Declare a fixed number of separate `[UdonSynced] string` fields — one per playlist slot. Simpler but limited to a known maximum count and does not scale beyond ~10–20 slots without cluttering the behaviour.
+
+**When to use:**
+- Playlist titles where the full list changes on every shuffle or load
+- User display names collected by the master and broadcast to late joiners
+- Any variable-length `string[]` that logically changes as a unit
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SyncedPlaylist : UdonSharpBehaviour
+{
+    // U+2029 PARAGRAPH SEPARATOR — rare enough to be a safe delimiter.
+    private const string Separator = "\u2029";
+
+    [UdonSynced]
+    private string _syncedTitles = "";
+
+    // Local working copy — split from _syncedTitles on deserialization.
+    private string[] _titles = new string[0];
+
+    // ── Helper methods ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Joins a string array into a single sync-safe string.
+    /// Empty or null items are preserved as empty strings so indices are stable.
+    /// </summary>
+    private string JoinForSync(string[] items)
+    {
+        if (items == null || items.Length == 0) return "";
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (i > 0) sb.Append(Separator);
+
+            string item = items[i];
+            // Guard: strip any accidental separator characters from content.
+            if (!string.IsNullOrEmpty(item) && item.Contains(Separator))
+            {
+                item = item.Replace(Separator, " ");
+            }
+
+            sb.Append(item ?? "");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Splits a sync string back into a string array.
+    /// Returns an empty array for an empty or null input.
+    /// </summary>
+    private string[] SplitFromSync(string joined)
+    {
+        if (string.IsNullOrEmpty(joined)) return new string[0];
+
+        // UdonSharp does not support string.Split(string[], StringSplitOptions).
+        // Manual split on the single-character separator.
+        int separatorChar = Separator[0];
+        int count = 1;
+        for (int i = 0; i < joined.Length; i++)
+        {
+            if (joined[i] == separatorChar) count++;
+        }
+
+        string[] result = new string[count];
+        int startIndex = 0;
+        int resultIndex = 0;
+
+        for (int i = 0; i <= joined.Length; i++)
+        {
+            bool atSeparator = (i < joined.Length && joined[i] == separatorChar);
+            bool atEnd       = (i == joined.Length);
+
+            if (atSeparator || atEnd)
+            {
+                result[resultIndex] = joined.Substring(startIndex, i - startIndex);
+                resultIndex++;
+                startIndex = i + 1;
+            }
+        }
+
+        return result;
+    }
+
+    // ── Owner-side write ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sets the playlist titles (owner only) and serializes.
+    /// </summary>
+    public void SetTitles(string[] titles)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _titles       = titles ?? new string[0];
+        _syncedTitles = JoinForSync(_titles);
+        RequestSerialization();
+    }
+
+    // ── Late-joiner / deserialization ─────────────────────────────────────
+
+    public override void OnDeserialization()
+    {
+        _titles = SplitFromSync(_syncedTitles);
+        OnPlaylistUpdated();
+    }
+
+    // ── Consumer hook ─────────────────────────────────────────────────────
+
+    private void OnPlaylistUpdated()
+    {
+        Debug.Log($"[SyncedPlaylist] Received {_titles.Length} title(s).");
+        for (int i = 0; i < _titles.Length; i++)
+        {
+            Debug.Log($"  [{i}] {_titles[i]}");
+        }
+    }
+
+    public string[] GetTitles() => _titles;
+}
+```
+
+**Notes:**
+- The manual split loop avoids `string.Split(char[])`, which is blocked in some UdonSharp SDK versions. If your SDK version supports `string.Split(new char[]{ '\u2029' })`, you may use it instead.
+- The `Replace(Separator, " ")` guard in `JoinForSync` sanitises content that somehow contains the separator character. In practice U+2029 will never appear in VRCUrl strings or player display names, but the guard is cheap insurance.
+- `_titles` is a local field only — it is not `[UdonSynced]` and is rebuilt from `_syncedTitles` on every `OnDeserialization`. Late joiners receive the correct full list without any extra synchronisation logic.
+
+---
+
 
 ## See Also
 
@@ -622,6 +767,7 @@ public class DebouncedSearch : UdonSharpBehaviour
 - [patterns-core.md](patterns-core.md) - Initialization, interaction, timer, audio, pickup, animation, UI
 - [patterns-performance.md](patterns-performance.md) - Partial class, update handler, PostLateUpdate, spatial query
 - [patterns-utilities.md](patterns-utilities.md) - Array helpers, event bus, relay communication
+- [patterns-video.md](patterns-video.md) - Video player state machine, server-time playback sync, late joiner sync, synced playlist
 - [networking.md](networking.md) - Sync modes, ownership, bandwidth throttling, anti-patterns
 - [persistence.md](persistence.md) - PlayerData/PlayerObject full reference (SDK 3.7.4+)
 - [dynamics.md](dynamics.md) - PhysBones, Contacts, VRC Constraints full reference (SDK 3.10.0+)

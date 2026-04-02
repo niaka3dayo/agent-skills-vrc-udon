@@ -645,3 +645,4 @@ public override void OnVideoLoop() { }
 ## See Also
 
 - [components.md](components.md) - Full component reference including VRCAVProVideoPlayer and VRCUnityVideoPlayer setup
+- [UdonSharp Video Player Patterns](../../unity-vrc-udon-sharp/references/patterns-video.md) - Advanced video player implementation patterns (state machine, playback sync, error retry, playlist management)
