@@ -925,3 +925,4 @@ public class StaggeredImageLoader : UdonSharpBehaviour
 - [api.md](api.md) — Quick reference for `VRCUrl`, `TextureInfo`, `IVRCImageDownload` properties
 - [troubleshooting.md](troubleshooting.md) — Web loading error table and HTTP error code reference
 - [patterns-performance.md](patterns-performance.md) — Update Handler Pattern (disable per-frame polling when not needed)
+- [web-loading-advanced.md](web-loading-advanced.md) - Advanced data loading via StringDownloader with Base64 textures

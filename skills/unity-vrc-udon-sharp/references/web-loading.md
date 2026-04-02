@@ -617,3 +617,4 @@ private void OnAllDownloadsComplete()
 - [api.md](api.md) - `VRCUrl`, `VRCStringDownloader`, and `VRCImageDownloader` API quick reference
 - [troubleshooting.md](troubleshooting.md) - Web loading error table and debugging tips
 - [image-loading-vram.md](image-loading-vram.md) - Advanced VRAM management: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias
+- [web-loading-advanced.md](web-loading-advanced.md) - Advanced data loading: Base64 texture embedding, cross-platform compression, LRU cache
