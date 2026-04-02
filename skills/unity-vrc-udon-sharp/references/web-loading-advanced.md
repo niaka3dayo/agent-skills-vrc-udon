@@ -304,7 +304,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
 
 The server must maintain separate pack files per platform:
 
-```
+```text
 data_pc.bin       — DXT1/DXT5-compressed texture data
 data_android.bin  — ETC2-compressed texture data
 ```
@@ -582,6 +582,11 @@ public class PackedResourceLoader : UdonSharpBehaviour
     // may reference resources from the same pack file.
     private int  _pendingSlotIndex  = -1;   // which UI slot triggered the download
 
+    // Tracks which UI slots have a runtime-loaded sprite (vs. an Inspector-assigned sprite).
+    // Only destroy the old texture when _hasRuntimeSprite[slot] is true, to avoid
+    // destroying Inspector-assigned or shared textures that this script did not create.
+    private bool[] _hasRuntimeSprite = new bool[0];
+
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     void Start()
@@ -596,6 +601,8 @@ public class PackedResourceLoader : UdonSharpBehaviour
         {
             _cacheKeys[i] = -1;
         }
+
+        _hasRuntimeSprite = new bool[_uiSlots.Length];
 
         // Download resource index first
         VRCStringDownloader.LoadUrl(_indexUrl, (IUdonEventReceiver)this);
@@ -726,6 +733,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
         if (!int.TryParse(lenStr, out int jsonLen) || jsonLen <= 0) return;
 
         int jsonStart = secondNl + 1;
+        if (jsonStart + jsonLen > raw.Length) return;
         string jsonText = raw.Substring(jsonStart, jsonLen);
 
         if (!VRCJson.TryDeserializeFromJson(jsonText, out DataToken metaToken)) return;
@@ -743,6 +751,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
             DataDictionary entry = entries[i].DataDictionary;
             int dataStart  = (int)entry["dataStart"].Double;
             int dataLength = (int)entry["dataLength"].Double;
+            if (dataStart < 0 || blockRegionStart + dataStart + dataLength > raw.Length) return;
             blocks[i] = raw.Substring(blockRegionStart + dataStart, dataLength);
         }
 
@@ -797,8 +806,14 @@ public class PackedResourceLoader : UdonSharpBehaviour
         if (innerIdx < 0 || innerIdx >= blocks.Length) return;
         if (_uiSlots[slotIdx] == null) return;
 
+        // Validate Base64 string before decoding.
+        // UdonSharp does not support try/catch, so FormatException from Convert.FromBase64String
+        // cannot be caught. A minimal guard: valid Base64 length must be a multiple of 4.
+        string base64String = blocks[innerIdx];
+        if (base64String.Length == 0 || base64String.Length % 4 != 0) return;
+
         // Decode Base64 to raw bytes
-        byte[] rawBytes = Convert.FromBase64String(blocks[innerIdx]);
+        byte[] rawBytes = Convert.FromBase64String(base64String);
         if (rawBytes == null || rawBytes.Length == 0) return;
 
         // Select platform-appropriate raw GPU format for LoadRawTextureData
@@ -813,11 +828,15 @@ public class PackedResourceLoader : UdonSharpBehaviour
         tex.LoadRawTextureData(rawBytes);
         tex.Apply();
 
-        // Destroy old texture if any (VRAM cleanup)
-        Sprite oldSprite = _uiSlots[slotIdx].sprite;
-        if (oldSprite != null)
+        // Destroy old texture only if it was created at runtime by this script.
+        // Destroying Inspector-assigned or shared textures would break other references.
+        if (_hasRuntimeSprite.Length > slotIdx && _hasRuntimeSprite[slotIdx])
         {
-            Destroy(oldSprite.texture);
+            Sprite oldSprite = _uiSlots[slotIdx].sprite;
+            if (oldSprite != null)
+            {
+                Destroy(oldSprite.texture);
+            }
         }
 
         _uiSlots[slotIdx].sprite = Sprite.Create(
@@ -826,6 +845,12 @@ public class PackedResourceLoader : UdonSharpBehaviour
             new Vector2(0.5f, 0.5f),
             100f
         );
+
+        // Mark this slot as owning a runtime sprite so future updates can safely destroy it.
+        if (_hasRuntimeSprite.Length > slotIdx)
+        {
+            _hasRuntimeSprite[slotIdx] = true;
+        }
     }
 }
 ```
