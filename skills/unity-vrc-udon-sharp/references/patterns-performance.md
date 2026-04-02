@@ -288,7 +288,6 @@ This gives you:
 - Organized code across multiple files (Partial Class)
 - Controlled Update() execution (Update Handler)
 - Best possible performance for both active and inactive states
-```
 
 ## Performance Optimization Patterns
 
@@ -487,6 +486,168 @@ public class PlatformAdapter : UdonSharpBehaviour
 
 ---
 
+### Frame Budget Stopwatch
+
+#### Problem
+
+Heavy synchronous operations — parsing large downloaded strings, decoding Base64 data, building UI elements from network payloads — can stall the main thread for tens of milliseconds. UdonSharp has no `async`/`await` and no coroutines. If the entire operation runs in a single frame, VR users will see a visible hitch.
+
+#### Solution
+
+Use `System.Diagnostics.Stopwatch` to measure how much time has elapsed within the current frame. After each processing step, call a `BranchByBudget` helper:
+
+- If the elapsed time is **under the budget** (default 20 ms), call the next step immediately via `SendCustomEvent` — no frame boundary is crossed.
+- If the elapsed time **meets or exceeds the budget**, defer to the next frame via `SendCustomEventDelayedFrames(nextMethodName, 1)` and restart the stopwatch.
+
+Each deferred frame resets the stopwatch so the next step gets a full fresh budget.
+
+#### Why 20 ms?
+
+VR targets 90 FPS (≈11.1 ms per frame). A 20 ms budget is deliberately looser than one frame: it allows small overruns without dropping two frames in a row, while still yielding control before a second heavy step can compound the problem. Adjust `_processBudgetMs` in the Inspector to match your target framerate and workload.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using System.Diagnostics;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class FrameBudgetProcessor : UdonSharpBehaviour
+{
+    [Header("Processing Data")]
+    [SerializeField] private string[] _inputLines;
+
+    [Header("Budget Settings")]
+    [SerializeField] private float _processBudgetMs = 20f;
+
+    // Internal state
+    private Stopwatch _stopwatch;
+    private int _currentIndex;
+    private string[] _results;
+
+    void Start()
+    {
+        _stopwatch = new Stopwatch();
+    }
+
+    // ── Public entry point ────────────────────────────────────────────────
+
+    public void BeginProcessing()
+    {
+        if (_inputLines == null || _inputLines.Length == 0) return;
+
+        _currentIndex = 0;
+        _results = new string[_inputLines.Length];
+
+        // Start the stopwatch fresh for this batch
+        _stopwatch.Reset();
+        _stopwatch.Start();
+
+        SendCustomEvent(nameof(Step1_Parse));
+    }
+
+    // ── Processing pipeline ───────────────────────────────────────────────
+
+    public void Step1_Parse()
+    {
+        while (_currentIndex < _inputLines.Length)
+        {
+            // Simulate per-line work (replace with real parsing logic)
+            _results[_currentIndex] = _inputLines[_currentIndex].Trim();
+            _currentIndex++;
+
+            // Yield if the frame budget is spent
+            if (BranchByBudget(nameof(Step1_Parse))) return;
+        }
+
+        // All lines parsed — move to next stage via SendCustomEvent (not BranchByBudget).
+        // BranchByBudget is for within-stage iteration only; using it for stage transitions
+        // causes a deadlock because the freshly-reset stopwatch always reads 0 ms elapsed,
+        // so BranchByBudget never defers and Step2 runs in the same frame budget window.
+        _currentIndex = 0;
+        SendCustomEvent(nameof(Step2_Transform));
+    }
+
+    public void Step2_Transform()
+    {
+        // Reset the stopwatch at the start of each stage so the budget is fresh
+        _stopwatch.Reset();
+        _stopwatch.Start();
+
+        while (_currentIndex < _results.Length)
+        {
+            // Simulate transform work
+            _results[_currentIndex] = _results[_currentIndex].ToUpper();
+            _currentIndex++;
+
+            if (BranchByBudget(nameof(Step2_Transform))) return;
+        }
+
+        // Move to next stage — use SendCustomEvent, not BranchByBudget (same reason as above)
+        _currentIndex = 0;
+        SendCustomEvent(nameof(Step3_BuildUI));
+    }
+
+    public void Step3_BuildUI()
+    {
+        // Reset the stopwatch at the start of each stage so the budget is fresh
+        _stopwatch.Reset();
+        _stopwatch.Start();
+
+        while (_currentIndex < _results.Length)
+        {
+            // Simulate UI construction work per entry
+            _currentIndex++;
+
+            if (BranchByBudget(nameof(Step3_BuildUI))) return;
+        }
+
+        SendCustomEvent(nameof(OnProcessingComplete));
+    }
+
+    public void OnProcessingComplete()
+    {
+        _stopwatch.Stop();
+        UnityEngine.Debug.Log("[FrameBudgetProcessor] Processing complete.");
+    }
+
+    // ── Budget helper ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns true and defers <paramref name="nextMethodName"/> to the next frame
+    /// if the current frame budget is exhausted.  Returns false if the budget has
+    /// not yet been spent (caller should continue its loop).
+    /// </summary>
+    private bool BranchByBudget(string nextMethodName)
+    {
+        if (_stopwatch.Elapsed.TotalMilliseconds >= _processBudgetMs)
+        {
+            // Budget spent — hand back control and resume next frame
+            SendCustomEventDelayedFrames(nextMethodName, 1);
+            _stopwatch.Reset();
+            _stopwatch.Start();
+            return true;
+        }
+        return false;
+    }
+}
+```
+
+**Notes:**
+
+- `System.Diagnostics.Stopwatch` is available in UdonSharp (verified in SDK 3.7.1+; not explicitly listed in the official allowlist but confirmed working in production worlds).
+- `SendCustomEventDelayedFrames` is documented in [events.md](events.md).
+- The `BranchByBudget` helper is checked **after each unit of work**, not before, so the final unit in a budget window may slightly exceed the target. Keep individual work units small (single array element, single string operation) to minimise overshoot.
+- Do not share a single `Stopwatch` instance across two simultaneous processing pipelines — each pipeline needs its own instance and its own `_processBudgetMs` field.
+
+**When to use:**
+
+- Parsing large strings received from `VRCUrl` or `VRCStringDownloader` downloads
+- Batch texture or colour decoding from Base64 data
+- Building UI panels from multi-entry data arrays
+- Any single-threaded operation that may take more than 5 ms in isolation
+
+---
+
 
 ## See Also
 
@@ -494,3 +655,4 @@ public class PlatformAdapter : UdonSharpBehaviour
 - [patterns-networking.md](patterns-networking.md) - Object pooling, game state, NetworkCallable
 - [patterns-utilities.md](patterns-utilities.md) - Array helpers, event bus, relay communication
 - [networking.md](networking.md) - Network bandwidth throttling and sync optimization
+- [web-loading-advanced.md](web-loading-advanced.md) - Packed resource loading, Base64 texture decode, LRU cache
