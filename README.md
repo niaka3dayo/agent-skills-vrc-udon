@@ -1,4 +1,4 @@
-> **日本語版**: [README.ja.md](README.ja.md)
+**English** | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
   <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.2-00b4d8?style=for-the-badge" alt="VRChat SDK" />
@@ -111,7 +111,7 @@ skills/                                  # All skills
       validate-udonsharp.sh
       validate-udonsharp.ps1
     assets/templates/                    # Code templates (4 files)
-    references/                          # Detailed documentation (11 files)
+    references/                          # Detailed documentation (20 files)
   unity-vrc-world-sdk-3/                # VRC World SDK skill
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
 templates/                               # AI tool config templates

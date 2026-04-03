@@ -288,7 +288,6 @@ This gives you:
 - Organized code across multiple files (Partial Class)
 - Controlled Update() execution (Update Handler)
 - Best possible performance for both active and inactive states
-```
 
 ## Performance Optimization Patterns
 
@@ -487,6 +486,364 @@ public class PlatformAdapter : UdonSharpBehaviour
 
 ---
 
+### Frame Budget Stopwatch
+
+#### Problem
+
+Heavy synchronous operations — parsing large downloaded strings, decoding Base64 data, building UI elements from network payloads — can stall the main thread for tens of milliseconds. UdonSharp has no `async`/`await` and no coroutines. If the entire operation runs in a single frame, VR users will see a visible hitch.
+
+#### Solution
+
+Use `System.Diagnostics.Stopwatch` to measure how much time has elapsed within the current frame. After each processing step, call a `BranchByBudget` helper:
+
+- If the elapsed time is **under the budget** (default 20 ms), call the next step immediately via `SendCustomEvent` — no frame boundary is crossed.
+- If the elapsed time **meets or exceeds the budget**, defer to the next frame via `SendCustomEventDelayedFrames(nextMethodName, 1)` and restart the stopwatch.
+
+Each deferred frame resets the stopwatch so the next step gets a full fresh budget.
+
+#### Why 20 ms?
+
+VR targets 90 FPS (≈11.1 ms per frame). A 20 ms budget is deliberately looser than one frame: it allows small overruns without dropping two frames in a row, while still yielding control before a second heavy step can compound the problem. Adjust `_processBudgetMs` in the Inspector to match your target framerate and workload.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using System.Diagnostics;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class FrameBudgetProcessor : UdonSharpBehaviour
+{
+    [Header("Processing Data")]
+    [SerializeField] private string[] _inputLines;
+
+    [Header("Budget Settings")]
+    [SerializeField] private float _processBudgetMs = 20f;
+
+    // Internal state
+    private Stopwatch _stopwatch;
+    private int _currentIndex;
+    private string[] _results;
+
+    void Start()
+    {
+        _stopwatch = new Stopwatch();
+    }
+
+    // ── Public entry point ────────────────────────────────────────────────
+
+    public void BeginProcessing()
+    {
+        if (_inputLines == null || _inputLines.Length == 0) return;
+
+        _currentIndex = 0;
+        _results = new string[_inputLines.Length];
+
+        // Start the stopwatch fresh for this batch
+        _stopwatch.Reset();
+        _stopwatch.Start();
+
+        SendCustomEvent(nameof(Step1_Parse));
+    }
+
+    // ── Processing pipeline ───────────────────────────────────────────────
+
+    public void Step1_Parse()
+    {
+        while (_currentIndex < _inputLines.Length)
+        {
+            // Simulate per-line work (replace with real parsing logic)
+            _results[_currentIndex] = _inputLines[_currentIndex].Trim();
+            _currentIndex++;
+
+            // Yield if the frame budget is spent
+            if (BranchByBudget(nameof(Step1_Parse))) return;
+        }
+
+        // All lines parsed — move to next stage via SendCustomEvent (not BranchByBudget).
+        // BranchByBudget is for within-stage iteration only; using it for stage transitions
+        // causes a deadlock because the freshly-reset stopwatch always reads 0 ms elapsed,
+        // so BranchByBudget never defers and Step2 runs in the same frame budget window.
+        _currentIndex = 0;
+        SendCustomEvent(nameof(Step2_Transform));
+    }
+
+    public void Step2_Transform()
+    {
+        // Reset the stopwatch at the start of each stage so the budget is fresh
+        _stopwatch.Reset();
+        _stopwatch.Start();
+
+        while (_currentIndex < _results.Length)
+        {
+            // Simulate transform work
+            _results[_currentIndex] = _results[_currentIndex].ToUpper();
+            _currentIndex++;
+
+            if (BranchByBudget(nameof(Step2_Transform))) return;
+        }
+
+        // Move to next stage — use SendCustomEvent, not BranchByBudget (same reason as above)
+        _currentIndex = 0;
+        SendCustomEvent(nameof(Step3_BuildUI));
+    }
+
+    public void Step3_BuildUI()
+    {
+        // Reset the stopwatch at the start of each stage so the budget is fresh
+        _stopwatch.Reset();
+        _stopwatch.Start();
+
+        while (_currentIndex < _results.Length)
+        {
+            // Simulate UI construction work per entry
+            _currentIndex++;
+
+            if (BranchByBudget(nameof(Step3_BuildUI))) return;
+        }
+
+        SendCustomEvent(nameof(OnProcessingComplete));
+    }
+
+    public void OnProcessingComplete()
+    {
+        _stopwatch.Stop();
+        UnityEngine.Debug.Log("[FrameBudgetProcessor] Processing complete.");
+    }
+
+    // ── Budget helper ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns true and defers <paramref name="nextMethodName"/> to the next frame
+    /// if the current frame budget is exhausted.  Returns false if the budget has
+    /// not yet been spent (caller should continue its loop).
+    /// </summary>
+    private bool BranchByBudget(string nextMethodName)
+    {
+        if (_stopwatch.Elapsed.TotalMilliseconds >= _processBudgetMs)
+        {
+            // Budget spent — hand back control and resume next frame
+            SendCustomEventDelayedFrames(nextMethodName, 1);
+            _stopwatch.Reset();
+            _stopwatch.Start();
+            return true;
+        }
+        return false;
+    }
+}
+```
+
+**Notes:**
+
+- `System.Diagnostics.Stopwatch` is available in UdonSharp (verified in SDK 3.7.1+; not explicitly listed in the official allowlist but confirmed working in production worlds).
+- `SendCustomEventDelayedFrames` is documented in [events.md](events.md).
+- The `BranchByBudget` helper is checked **after each unit of work**, not before, so the final unit in a budget window may slightly exceed the target. Keep individual work units small (single array element, single string operation) to minimise overshoot.
+- Do not share a single `Stopwatch` instance across two simultaneous processing pipelines — each pipeline needs its own instance and its own `_processBudgetMs` field.
+- **Important:** `Stopwatch` measures wall-clock time continuously, including idle time between frames. When `BranchByBudget` defers work to the next frame via `SendCustomEventDelayedFrames`, the stopwatch is reset and restarted in `BranchByBudget` so the next frame begins with a fresh budget. If you restructure this pattern, always reset the stopwatch at the start of each new frame's work — otherwise the elapsed time will include the inter-frame gap and the budget will appear instantly exhausted.
+
+**When to use:**
+
+- Parsing large strings received from `VRCUrl` or `VRCStringDownloader` downloads
+- Batch texture or colour decoding from Base64 data
+- Building UI panels from multi-entry data arrays
+- Any single-threaded operation that may take more than 5 ms in isolation
+
+---
+
+## Rate Limit Resolver
+
+### Problem
+
+VRChat enforces a **5-second rate limit** on video URL loads shared across the entire scene. Multiple behaviours in the same world that independently trigger URL loads will collide: the second request within the 5-second window is silently rejected, leaving the requester waiting indefinitely with no error callback.
+
+**Cross-reference:** The same 5-second rate limit applies to `VRCStringDownloader` and image-loading requests. See [web-loading.md](web-loading.md) for details on string/image downloads.
+
+### Solution
+
+A singleton `UrlLoadScheduler` behaviour serialised into every world that needs video URL loading. It owns an array-based queue of pending load requests. Each request stores the requester behaviour reference and a callback method name. The scheduler drains one request per 5.05-second cycle (5.05 s adds a small margin above the hard limit), ensuring no two loads collide.
+
+All video-loading behaviours in the world hold a `[SerializeField]` reference to the same `UrlLoadScheduler` instance rather than triggering loads directly.
+
+**Architecture:**
+
+```
+VideoPlayerA ──ScheduleLoad──▶ UrlLoadScheduler
+VideoPlayerB ──ScheduleLoad──▶  (shared singleton)
+                                     │
+                          every 5.05s │ drain one request
+                                     ▼
+                          requester.SendCustomEvent(callbackName)
+```
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Singleton scheduler that enforces the VRChat 5-second URL-load rate limit.
+/// Place one instance in the scene and wire all video-loading behaviours to it
+/// via SerializeField.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class UrlLoadScheduler : UdonSharpBehaviour
+{
+    [Header("Rate Limit")]
+    [Tooltip("Minimum seconds between URL loads. Must be >= 5.0.")]
+    [SerializeField] private float _intervalSeconds = 5.05f;
+
+    // Queue storage — parallel arrays act as a struct-of-arrays queue.
+    private const int MaxQueueDepth = 16;
+
+    private UdonSharpBehaviour[] _queueRequesters
+        = new UdonSharpBehaviour[MaxQueueDepth];
+    private string[] _queueCallbacks = new string[MaxQueueDepth];
+    private VRCUrl[] _queueUrls      = new VRCUrl[MaxQueueDepth];
+
+    private int _queueHead  = 0; // index of oldest item (dequeue from here)
+    private int _queueTail  = 0; // index of next free slot (enqueue here)
+    private int _queueCount = 0;
+
+    private bool _drainPending = false;
+
+    void Start()
+    {
+        // Enforce the VRChat rate-limit lower bound at runtime regardless of
+        // what the Inspector field was set to.
+        if (_intervalSeconds < 5.0f) _intervalSeconds = 5.0f;
+    }
+
+    // ── Public API ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Enqueues a URL load request. When the scheduler drains this request,
+    /// it calls requester.SendCustomEvent(callbackName).
+    /// The requester is expected to perform the actual VRCUrl load inside
+    /// that callback.
+    /// </summary>
+    public void ScheduleLoad(
+        UdonSharpBehaviour requester,
+        string callbackName,
+        VRCUrl url)
+    {
+        if (requester == null || string.IsNullOrEmpty(callbackName)) return;
+
+        if (_queueCount >= MaxQueueDepth)
+        {
+            Debug.LogWarning("[UrlLoadScheduler] Queue full — dropping load request.");
+            return;
+        }
+
+        _queueRequesters[_queueTail] = requester;
+        _queueCallbacks[_queueTail]  = callbackName;
+        _queueUrls[_queueTail]       = url;
+
+        _queueTail  = (_queueTail + 1) % MaxQueueDepth;
+        _queueCount++;
+
+        // Start the drain loop if it is not already running.
+        if (!_drainPending)
+        {
+            _drainPending = true;
+            SendCustomEvent(nameof(_DrainNext));
+        }
+    }
+
+    // ── Internal drain loop ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Dequeues and dispatches one request, then schedules itself again
+    /// if the queue is still non-empty.
+    /// </summary>
+    public void _DrainNext()
+    {
+        if (_queueCount == 0)
+        {
+            _drainPending = false;
+            return;
+        }
+
+        // Dequeue the oldest request.
+        UdonSharpBehaviour requester = _queueRequesters[_queueHead];
+        string callbackName          = _queueCallbacks[_queueHead];
+        // VRCUrl is written to the requester's public field before the callback.
+        VRCUrl url                   = _queueUrls[_queueHead];
+
+        // Clear the slot.
+        _queueRequesters[_queueHead] = null;
+        _queueCallbacks[_queueHead]  = null;
+        _queueUrls[_queueHead]       = null;
+        _queueHead  = (_queueHead + 1) % MaxQueueDepth;
+        _queueCount--;
+
+        // Deliver the URL to the requester via a public field, then fire the callback.
+        if (requester != null)
+        {
+            requester.SetProgramVariable("ScheduledUrl", url);
+            // IMPORTANT: Consumer must have a public field named exactly "ScheduledUrl" (VRCUrl type).
+            // If the field is renamed, this call silently fails at runtime.
+            requester.SendCustomEvent(callbackName);
+        }
+
+        // Schedule the next drain after the rate-limit interval.
+        if (_queueCount > 0)
+        {
+            SendCustomEventDelayedSeconds(nameof(_DrainNext), _intervalSeconds);
+        }
+        else
+        {
+            _drainPending = false;
+        }
+    }
+}
+```
+
+**Consumer — how a video-loading behaviour uses the scheduler:**
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class ManagedVideoLoader : UdonSharpBehaviour
+{
+    [SerializeField] private UrlLoadScheduler _scheduler;
+
+    // Written by UrlLoadScheduler before the callback fires.
+    // The field name must match the string constant used in UrlLoadScheduler._DrainNext
+    // ("ScheduledUrl"). Use FIELD_SCHEDULED_URL when calling SetProgramVariable from
+    // custom code to avoid silent mismatches.
+    public const string FIELD_SCHEDULED_URL = "ScheduledUrl";
+    [HideInInspector] public VRCUrl ScheduledUrl;
+
+    public void RequestLoad(VRCUrl url)
+    {
+        if (_scheduler == null) { Debug.LogError("[ManagedVideoLoader] Scheduler not assigned"); return; }
+        _scheduler.ScheduleLoad(this, nameof(OnScheduledLoad), url);
+    }
+
+    /// <summary>
+    /// Called by UrlLoadScheduler when it is safe to load.
+    /// ScheduledUrl is already set at this point.
+    /// </summary>
+    public void OnScheduledLoad()
+    {
+        if (ScheduledUrl == null) return;
+        Debug.Log($"[ManagedVideoLoader] Loading URL: {ScheduledUrl}");
+        // Perform the actual VRCUrl load here (e.g. videoPlayer.LoadURL(ScheduledUrl)).
+    }
+}
+```
+
+**Notes:**
+- `_intervalSeconds` defaults to 5.05 s. Do not set it below 5.0.
+- If two behaviours call `ScheduleLoad` in the same frame, only the first starts the drain loop; the second is queued and will fire after 5.05 s.
+- The queue depth is 16 by default. Increase `MaxQueueDepth` if the world can have more concurrent requesters than that.
+- `ScheduledUrl` on the consumer must be declared `public` (not `[HideInInspector]` alone) for `SetProgramVariable` to write it; the `[HideInInspector]` attribute hides it from the Inspector while keeping it accessible to the scheduler.
+- **`SetProgramVariable` field-name contract**: The scheduler writes to the field named `"ScheduledUrl"` by string at runtime. If the consumer renames that field, `SetProgramVariable` silently no-ops and the callback receives `null`. Always keep the field name in sync with the string literal in `_DrainNext`.
+
+---
+
 
 ## See Also
 
@@ -494,3 +851,4 @@ public class PlatformAdapter : UdonSharpBehaviour
 - [patterns-networking.md](patterns-networking.md) - Object pooling, game state, NetworkCallable
 - [patterns-utilities.md](patterns-utilities.md) - Array helpers, event bus, relay communication
 - [networking.md](networking.md) - Network bandwidth throttling and sync optimization
+- [web-loading-advanced.md](web-loading-advanced.md) - Packed resource loading, Base64 texture decode, LRU cache

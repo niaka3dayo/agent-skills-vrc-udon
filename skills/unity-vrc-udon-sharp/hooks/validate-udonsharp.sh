@@ -120,7 +120,7 @@ fi
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
 if grep -qE '\[UdonSynced\]' "$file_path" && \
-   grep -qE '(int|float)\[\]' "$file_path"; then
+    grep -qE '(int|float)\[\]' "$file_path"; then
     # Check if the array declaration is near [UdonSynced]
     if grep -B1 '(int|float)\[\]' "$file_path" | grep -qE '\[UdonSynced\]'; then
         warnings+=("[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows.")
@@ -129,7 +129,7 @@ fi
 
 # NoVariableSync + [UdonSynced] conflict
 if grep -qE 'NoVariableSync' "$file_path" && \
-   grep -qE '\[UdonSynced\]' "$file_path"; then
+    grep -qE '\[UdonSynced\]' "$file_path"; then
     warnings+=("[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode.")
 fi
 

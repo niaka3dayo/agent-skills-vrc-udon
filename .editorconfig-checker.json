@@ -1,0 +1,14 @@
+{
+  "Verbose": false,
+  "IgnoreDefaults": false,
+  "SpacesAfterTabs": false,
+  "NoColor": true,
+  "Exclude": [
+    "\\.git/",
+    "node_modules/",
+    "package-lock\\.json"
+  ],
+  "Disable": {
+    "IndentSize": true
+  }
+}

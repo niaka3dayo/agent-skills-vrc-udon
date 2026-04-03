@@ -10,6 +10,10 @@ skills/                          # Skill content (distributed to users)
   unity-vrc-udon-sharp/          # UdonSharp constraints, networking, templates
   unity-vrc-world-sdk-3/         # World SDK components, optimization
 .claude/
+  rules/
+    doc-sync.md                  # Documentation sync rule (repo maintenance)
+  hooks/
+    doc-sync-reminder.sh         # PostToolUse hook: reminds about doc updates
   skills/
     unity-vrc-skills-renovator/  # Meta-skill for maintaining skills (dev only, not distributed)
 templates/                       # AI tool config templates (distributed to users)
@@ -73,8 +77,18 @@ node bin/install.mjs --help
 |-------|-----------------|
 | Symlink Integrity | No symlinks in repo (breaks npm pack) |
 | Hook Scripts | validate-udonsharp.sh is executable and valid bash |
+| EditorConfig | File formatting matches .editorconfig rules (indent_size check disabled; see below) |
 | npm Pack Test | Package includes all required files, installer works |
 | Markdown Links | No broken links in documentation |
+
+### EditorConfig Notes
+
+- **IndentSize check is intentionally disabled** in `.editorconfig-checker.json` (`Disable.IndentSize: true`).
+  C# uses 4-space indentation while JS/MJS uses 2-space; continuation lines and alignment patterns
+  in C# templates cause false positives. The `indent_style` check (tabs vs spaces) remains active.
+- **Editor setup**: Install an [EditorConfig plugin](https://editorconfig.org/#pre-installed) for your IDE
+  to automatically apply formatting rules from `.editorconfig`.
+- **Per-line exceptions**: Use `// editorconfig-checker-disable-line` for intentional deviations.
 
 ## Release Guide
 
@@ -142,3 +156,7 @@ When modifying skill content in `skills/`:
 - Update SDK version tables if adding new API coverage
 - Run the validate-udonsharp hook against any `.cs` code examples
 - Keep `templates/` in sync if skills table or rules paths change
+
+### Documentation Sync
+
+A PostToolUse hook (`.claude/hooks/doc-sync-reminder.sh`) automatically reminds you to update documentation when editing files under `skills/` or `templates/`. See `.claude/rules/doc-sync.md` for the full sync checklist and trigger conditions.

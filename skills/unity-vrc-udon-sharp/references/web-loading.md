@@ -303,7 +303,12 @@ In UdonGraph, the current UdonBehaviour is used when omitted, but in UdonSharp i
 ### Memory Management (Important)
 
 Memory is consumed each time an image is downloaded.
-When replacing old images, **always release with `Dispose()`**. Leaving them unreleased can cause memory leaks and crashes.
+When replacing old images, **always release with `Dispose()`** to free VRC internal state.
+
+> **Important**: `Dispose()` only frees the VRC download wrapper — it does NOT release the GPU memory
+> (VRAM) of textures already applied to materials. To free VRAM, call `Destroy(texture)` on the old
+> texture before applying a new one. For detailed guidance on VRAM management, double-buffer fading,
+> and other advanced patterns, see [image-loading-vram.md](image-loading-vram.md).
 
 ```csharp
 // Dispose individual download results
@@ -611,3 +616,5 @@ private void OnAllDownloadsComplete()
 
 - [api.md](api.md) - `VRCUrl`, `VRCStringDownloader`, and `VRCImageDownloader` API quick reference
 - [troubleshooting.md](troubleshooting.md) - Web loading error table and debugging tips
+- [image-loading-vram.md](image-loading-vram.md) - Advanced VRAM management: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias
+- [web-loading-advanced.md](web-loading-advanced.md) - Advanced data loading: Base64 texture embedding, cross-platform compression, LRU cache

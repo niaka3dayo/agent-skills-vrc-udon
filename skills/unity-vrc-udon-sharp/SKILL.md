@@ -6,7 +6,8 @@ description: >
     Covers compile constraints (List<T>/async/await/try/catch/LINQ blocked),
     network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
     persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts),
-    Web Loading, and event handling. SDK 3.7.1 - 3.10.2 coverage.
+    Web Loading, VRAM management (texture lifecycle, Dispose vs Destroy),
+    and event handling. SDK 3.7.1 - 3.10.2 coverage.
     Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
     NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
     synced variables, VRChat world scripting, C# to Udon.
@@ -116,10 +117,13 @@ WebSearch: "error message UdonSharp site:github.com"
 | `persistence.md` | PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data | PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt |
 | `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) | PhysBone, ContactReceiver, ContactSender, VRCConstraint, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo |
-| `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, delayed event debounce | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, debounce, state machine |
-| `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC |
-| `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray |
+| `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
+| `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization, frame budget Stopwatch, rate limit resolver | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rate limit, URL scheduler, video load queue |
+| `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, abstract class callback, cancellable delayed event, re-entrance guard, UdonEvent pseudo-delegate | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray, object array, pseudo struct, double cast, abstract class, callback, interface alternative, cancellable timer, re-entrance, emitting guard, UdonEvent, pseudo delegate |
+| `patterns-video.md` | Video player state machine, server-time playback sync, late joiner sync, AVPro Blit buffering, error retry with fallback, synced playlist/queue, platform URL selection | video player, AVPro, VRCUnityVideoPlayer, BaseVRCVideoPlayer, playback sync, server time, GetServerTimeInMilliseconds, late joiner, VRCGraphics.Blit, OnVideoReady, OnVideoError, retry, fallback, playlist, queue, shuffle, repeat, Quest URL |
 | `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs | VRCStringDownloader, VRCImageDownloader, VRCJson, DataDictionary, VRCUrl |
+| `image-loading-vram.md` | Advanced VRAM management for image loading: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias | VRAM, texture memory, memory leak, Destroy, Dispose, double buffer, fade, mipmap, TextureInfo |
+| `web-loading-advanced.md` | Advanced data loading: Base64 texture embedding via StringDownloader, cross-platform compression, URL double-key indexing, LRU decode cache | Base64, LoadRawTextureData, StringDownloader texture, DXT1, ETC_RGB4, UNITY_ANDROID, LRU cache, packed resources, binary format |
 | `api.md` | VRCPlayerApi, Networking, enums reference | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, Drone, VRCDroneApi |
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred |
 | `editor-scripting.md` | Editor scripting and proxy system | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject |

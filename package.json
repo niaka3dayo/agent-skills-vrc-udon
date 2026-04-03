@@ -22,6 +22,9 @@
     "templates/",
     "README.md",
     "README.ja.md",
+    "README.zh-CN.md",
+    "README.zh-TW.md",
+    "README.ko.md",
     "LICENSE"
   ],
   "keywords": [
