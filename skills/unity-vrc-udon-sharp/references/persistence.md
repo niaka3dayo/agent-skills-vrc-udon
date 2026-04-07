@@ -561,6 +561,205 @@ public class DailyReward : UdonSharpBehaviour
 }
 ```
 
+### Data Aging / Pruning
+
+When using PlayerData to accumulate records over time (visit logs, event history, activity
+timestamps), the stored JSON can grow unbounded and eventually hit the **100 KB per-player
+storage limit**. A date-based pruning strategy trims old entries on each session start so
+the data footprint stays predictable.
+
+**Algorithm overview:**
+
+1. Read the JSON dictionary from PlayerData in `OnPlayerRestored`
+2. Group entries by calendar date (derived from Unix-timestamp keys)
+3. Sort the date groups in descending order (newest first)
+4. Keep only the most recent N days of data (e.g., 7 days)
+5. Rebuild the dictionary with retained entries only
+6. Write the pruned JSON back to PlayerData
+
+```csharp
+using System;
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Data;
+using VRC.SDK3.Persistence;
+using VRC.SDKBase;
+
+/// <summary>
+/// Demonstrates date-based pruning of accumulated PlayerData entries.
+/// Each entry is keyed by a Unix timestamp (seconds). On restore, entries
+/// older than <see cref="retainDays"/> calendar days are discarded.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class DataAgingExample : UdonSharpBehaviour
+{
+    /// <summary>How many calendar days of data to keep.</summary>
+    [SerializeField] private int retainDays = 7;
+
+    // Use a GUID suffix in real projects to avoid key collisions
+    private const string DataKey = "AppName_ActivityLog_a1b2c3d4";
+
+    private bool dataReady = false;
+
+    public override void OnPlayerRestored(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        dataReady = true;
+
+        // Initialize with an empty JSON object if no data exists yet
+        if (!PlayerData.HasKey(player, DataKey))
+        {
+            PlayerData.SetString(player, DataKey, "{}");
+            return;
+        }
+
+        if (!PlayerData.TryGetString(player, DataKey, out string json))
+        {
+            return;
+        }
+
+        PruneOldEntries(player, json);
+    }
+
+    /// <summary>
+    /// Groups entries by local calendar date, keeps the most recent
+    /// <see cref="retainDays"/> days, and writes the trimmed data back.
+    /// </summary>
+    private void PruneOldEntries(VRCPlayerApi player, string json)
+    {
+        if (!VRCJson.TryDeserializeFromJson(json, out DataToken rootToken))
+        {
+            Debug.LogWarning("[DataAging] Failed to parse stored JSON");
+            return;
+        }
+
+        DataDictionary allEntries = rootToken.DataDictionary;
+        DataList entryKeys = allEntries.GetKeys();
+
+        if (entryKeys.Count == 0) return;
+
+        // --- Step 1: Group entry keys by calendar date ---
+        // dateGroups maps "date-as-unix-string" -> DataList of original keys
+        DataDictionary dateGroups = new DataDictionary();
+
+        for (int i = 0; i < entryKeys.Count; i++)
+        {
+            string keyStr = entryKeys[i].String;
+
+            if (!long.TryParse(keyStr, out long unixSeconds))
+            {
+                continue;
+            }
+
+            // Normalize to midnight of that calendar day using arithmetic.
+            // Avoids fragile DateTime-to-DateTimeOffset explicit cast in UdonSharp.
+            // Note: this produces a UTC-midnight bucket; all entries use the same
+            // reference frame so date grouping remains consistent.
+            long dayStartSeconds = (unixSeconds / 86400L) * 86400L;
+            string dateKey = dayStartSeconds.ToString();
+
+            if (!dateGroups.ContainsKey(dateKey))
+            {
+                dateGroups[dateKey] = new DataList();
+            }
+
+            dateGroups[dateKey].DataList.Add(entryKeys[i]);
+        }
+
+        // --- Step 2: Sort dates descending (newest first) ---
+        DataList dateList = dateGroups.GetKeys().DeepClone();
+        dateList.Sort();
+        dateList.Reverse();
+
+        // Account for whether today's date is already present in the data.
+        // If today is included, keep retainDays entries; otherwise keep
+        // retainDays - 1 so that today (once recorded) stays within budget.
+        // Compute today's midnight Unix timestamp using arithmetic (avoids cast fragility)
+        long nowSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long todayStartSeconds = (nowSeconds / 86400L) * 86400L;
+        string todayKey = todayStartSeconds.ToString();
+
+        bool todayPresent = dateGroups.ContainsKey(todayKey);
+        int safeRetainDays = Mathf.Max(1, retainDays);
+        int keepCount = Mathf.Max(1, todayPresent ? safeRetainDays : safeRetainDays - 1);
+
+        // No pruning needed if the date count is within limits
+        if (dateList.Count <= keepCount) return;
+
+        // --- Step 3: Rebuild dictionary with only the retained days ---
+        DataDictionary pruned = new DataDictionary();
+
+        for (int d = 0; d < keepCount; d++)
+        {
+            DataList keys = dateGroups[dateList[d].String].DataList;
+
+            for (int k = 0; k < keys.Count; k++)
+            {
+                string origKey = keys[k].String;
+                pruned[origKey] = allEntries[origKey];
+            }
+        }
+
+        // --- Step 4: Serialize and write back ---
+        if (VRCJson.TrySerializeToJson(pruned, JsonExportType.Minify, out DataToken result))
+        {
+            PlayerData.SetString(player, DataKey, result.String);
+
+            int removed = entryKeys.Count - pruned.Count;
+            Debug.Log($"[DataAging] Pruned {removed} entries, kept {pruned.Count}");
+        }
+    }
+
+    // ----- Public helpers for adding new entries -----
+
+    /// <summary>
+    /// Records the current UTC time as a new entry with the given payload.
+    /// Call this from gameplay logic to accumulate data over sessions.
+    /// </summary>
+    public void RecordEntry(string payload)
+    {
+        if (!dataReady) return;
+
+        VRCPlayerApi local = Networking.LocalPlayer;
+        if (local == null || !local.IsValid()) return;
+
+        if (!PlayerData.TryGetString(local, DataKey, out string json))
+        {
+            json = "{}";
+        }
+
+        if (!VRCJson.TryDeserializeFromJson(json, out DataToken token))
+        {
+            return;
+        }
+
+        DataDictionary dict = token.DataDictionary;
+        string nowKey = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        dict[nowKey] = payload;
+
+        if (VRCJson.TrySerializeToJson(dict, JsonExportType.Minify, out DataToken updated))
+        {
+            PlayerData.SetString(local, DataKey, updated.String);
+        }
+    }
+}
+```
+
+**When to use:**
+
+- Visit/session logs that accumulate one or more entries per day
+- Activity history (e.g., items collected, quests completed) stored as timestamped JSON
+- Any PlayerData string that grows with each session and risks hitting the 100 KB limit
+
+**Key considerations:**
+
+- PlayerData has a **100 KB total limit per player per world** -- pruning prevents silent write failures when the budget is exhausted
+- Prune in `OnPlayerRestored` (session start) so the cost is paid once, not on every write
+- Use **GUID-suffixed key names** (`"MyApp_DataKey_<guid>"`) to avoid collisions with other scripts in the same world
+- The retain window is measured in **calendar days**, not a rolling 24-hour period, so partial days at the boundary are kept intact
+- Combine with the [Persistence Storage Information API](#persistence-storage-information-api-sdk-3100) to monitor actual byte usage at runtime
+
 ## Debugging
 
 ### Checking Saved Data

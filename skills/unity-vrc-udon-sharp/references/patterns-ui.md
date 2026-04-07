@@ -2,7 +2,8 @@
 
 Immobilize guard, avatar-scale-aware UI, FOV-responsive positioning, platform-adaptive layout,
 dynamic player list, scroll input abstraction, lookup-table localization, toggle-animator bridge,
-settings persistence via PlayerObject, and listener-based menu event system.
+settings persistence via PlayerObject, listener-based menu event system, finger-based touch
+interaction for canvas UI, and modular app architecture with plugin lifecycle.
 
 ## 1. Immobilize Guard Pattern
 
@@ -953,11 +954,1002 @@ public class MenuEventBroadcaster : UdonSharpBehaviour
 
 ---
 
+## 11. Finger-Based Touch Interaction for Canvas UI
+
+VR users can interact with world-space Canvas UI by physically touching buttons with their
+fingertips. This pattern tracks index finger bone positions, extrapolates the fingertip,
+detects push events against the canvas plane, fires pointer events (Down/Drag/Up/Click),
+provides haptic feedback, and falls back to raycast-based interaction for desktop users.
+
+The system consists of two behaviours: `FingerPointer` tracks a single hand's finger state,
+and `FingerTouchCanvas` manages the canvas, pointer events, and desktop fallback.
+
+### FingerPointer (per-hand finger tracker)
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Tracks a single hand's index finger position and provides the extrapolated
+/// fingertip world position. Attach one instance per hand (left and right).
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class FingerPointer : UdonSharpBehaviour
+{
+    [Header("Hand Configuration")]
+    [Tooltip("Which hand this pointer tracks")]
+    [SerializeField] private bool isLeftHand = true;
+
+    [Header("Fingertip Extrapolation")]
+    [Tooltip("Lerp factor beyond the distal bone to estimate fingertip (1.0 = distal, 1.8 = typical fingertip)")]
+    [SerializeField] private float tipExtrapolation = 1.8f;
+
+    [Header("Haptic Feedback")]
+    [SerializeField] private float hapticDuration = 0.05f;
+    [SerializeField] private float hapticAmplitude = 0.5f;
+    [SerializeField] private float hapticFrequency = 150.0f;
+
+    private VRCPlayerApi _localPlayer;
+    private HumanBodyBones _intermediateBone;
+    private HumanBodyBones _distalBone;
+    private bool _isVR = false;
+    private bool _initialized = false;
+
+    /// <summary>
+    /// Current extrapolated fingertip position in world space.
+    /// </summary>
+    [System.NonSerialized] public Vector3 FingertipPosition;
+
+    /// <summary>
+    /// Whether this pointer has valid tracking data this frame.
+    /// </summary>
+    [System.NonSerialized] public bool IsTracking;
+
+    void Start()
+    {
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        if (_initialized) return;
+        _initialized = true;
+
+        _localPlayer = Networking.LocalPlayer;
+        if (!Utilities.IsValid(_localPlayer)) return;
+
+        _isVR = _localPlayer.IsUserInVR();
+
+        if (isLeftHand)
+        {
+            _intermediateBone = HumanBodyBones.LeftIndexIntermediate;
+            _distalBone = HumanBodyBones.LeftIndexDistal;
+        }
+        else
+        {
+            _intermediateBone = HumanBodyBones.RightIndexIntermediate;
+            _distalBone = HumanBodyBones.RightIndexDistal;
+        }
+    }
+
+    /// <summary>
+    /// Call once per frame from the canvas manager to update finger position.
+    /// </summary>
+    public void UpdateTracking()
+    {
+        IsTracking = false;
+
+        if (!_isVR) return;
+        if (!Utilities.IsValid(_localPlayer)) return;
+
+        Vector3 intermediate = _localPlayer.GetBonePosition(_intermediateBone);
+        Vector3 distal = _localPlayer.GetBonePosition(_distalBone);
+
+        // Zero vectors indicate missing tracking data
+        if (intermediate == Vector3.zero && distal == Vector3.zero) return;
+
+        FingertipPosition = Vector3.LerpUnclamped(intermediate, distal, tipExtrapolation);
+        IsTracking = true;
+    }
+
+    /// <summary>
+    /// Trigger haptic feedback on this hand.
+    /// </summary>
+    public void PlayHaptic()
+    {
+        if (!Utilities.IsValid(_localPlayer)) return;
+        if (!_isVR) return;
+
+        VRC_Pickup.PickupHand hand = isLeftHand
+            ? VRC_Pickup.PickupHand.Left
+            : VRC_Pickup.PickupHand.Right;
+
+        _localPlayer.PlayHapticEventInHand(hand, hapticDuration, hapticAmplitude, hapticFrequency);
+    }
+
+    /// <summary>
+    /// Returns true if this pointer is configured for the left hand.
+    /// </summary>
+    public bool GetIsLeftHand()
+    {
+        return isLeftHand;
+    }
+
+    /// <summary>
+    /// Returns true if the local player is in VR.
+    /// </summary>
+    public bool GetIsVR()
+    {
+        return _isVR;
+    }
+}
+```
+
+### FingerTouchCanvas (canvas touch detection and event dispatch)
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+using VRC.SDKBase;
+
+/// <summary>
+/// Detects finger touch and desktop raycast interactions against a world-space Canvas.
+/// Fires pointer events (Down, BeginDrag, Drag, EndDrag, Up, Click) on UdonSharpBehaviour listeners.
+/// The Canvas must be in World Space render mode.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class FingerTouchCanvas : UdonSharpBehaviour
+{
+    [Header("References")]
+    [SerializeField] private RectTransform canvasRect;
+    [SerializeField] private FingerPointer leftPointer;
+    [SerializeField] private FingerPointer rightPointer;
+
+    [Header("Touch Detection")]
+    [Tooltip("Maximum distance in local Z from canvas surface to register a touch")]
+    [SerializeField] private float pushDistanceLimit = 0.05f;
+
+    [Tooltip("Minimum XY movement in local space to trigger a drag event")]
+    [SerializeField] private float dragThreshold = 5.0f;
+
+    [Header("Canvas Push Effect")]
+    [Tooltip("Optional transform to push toward finger on press")]
+    [SerializeField] private Transform pushTarget;
+
+    [Tooltip("Maximum push offset in local Z")]
+    [SerializeField] private float maxPushOffset = 0.01f;
+
+    [Header("Desktop Fallback")]
+    [Tooltip("Maximum raycast distance for desktop interaction")]
+    [SerializeField] private float desktopRayDistance = 5.0f;
+
+    [Tooltip("Layer mask for desktop raycast")]
+    [SerializeField] private LayerMask desktopRayMask = ~0;
+
+    [Header("Event Listeners")]
+    [Tooltip("UdonBehaviours that receive OnPointerDown/OnPointerBeginDrag/OnPointerDrag/OnPointerEndDrag/OnPointerUp/OnPointerClick events")]
+    [SerializeField] private UdonSharpBehaviour[] eventListeners = new UdonSharpBehaviour[0];
+
+    /// <summary>
+    /// The pointer index (0 = left, 1 = right, 2 = desktop) that last triggered an event.
+    /// Listeners can read this to determine which pointer fired the event.
+    /// </summary>
+    [HideInInspector] public int lastPointerIndex;
+
+    // Per-pointer state (index 0 = left, 1 = right, 2 = desktop)
+    private bool[] _isPressed = new bool[3];
+    private Vector2[] _pressStartLocalXY = new Vector2[3];
+    private bool[] _isDragging = new bool[3];
+
+    private VRCPlayerApi _localPlayer;
+    private bool _isVR = false;
+    private bool _initialized = false;
+    private Vector3 _pushTargetBasePos;
+
+    void Start()
+    {
+        Initialize();
+    }
+
+    private void Initialize()
+    {
+        if (_initialized) return;
+        _initialized = true;
+
+        _localPlayer = Networking.LocalPlayer;
+        if (!Utilities.IsValid(_localPlayer)) return;
+
+        _isVR = _localPlayer.IsUserInVR();
+
+        if (pushTarget != null)
+        {
+            _pushTargetBasePos = pushTarget.localPosition;
+        }
+    }
+
+    void Update()
+    {
+        if (canvasRect == null) return;
+
+        if (_isVR)
+        {
+            if (leftPointer != null)
+            {
+                leftPointer.UpdateTracking();
+                ProcessFingerPointer(leftPointer, 0);
+            }
+            if (rightPointer != null)
+            {
+                rightPointer.UpdateTracking();
+                ProcessFingerPointer(rightPointer, 1);
+            }
+        }
+        else
+        {
+            ProcessDesktopRaycast();
+        }
+
+        UpdatePushEffect();
+    }
+
+    private void ProcessFingerPointer(FingerPointer pointer, int pointerIndex)
+    {
+        if (!pointer.IsTracking)
+        {
+            if (_isPressed[pointerIndex])
+            {
+                if (_isDragging[pointerIndex])
+                {
+                    FirePointerEndDrag(pointerIndex);
+                }
+                FirePointerUp(pointerIndex);
+                _isPressed[pointerIndex] = false;
+                _isDragging[pointerIndex] = false;
+            }
+            return;
+        }
+
+        // Convert fingertip world position to canvas local space
+        Vector3 localPos = canvasRect.InverseTransformPoint(pointer.FingertipPosition);
+
+        // Check XY bounds against canvas rect
+        bool inBoundsXY = canvasRect.rect.Contains(new Vector2(localPos.x, localPos.y));
+
+        // Check Z depth: localPos.z < 0 means finger is in front of canvas,
+        // and we treat crossing Z=0 as the touch plane
+        bool inDepth = localPos.z >= -pushDistanceLimit && localPos.z <= pushDistanceLimit;
+        bool isTouching = inBoundsXY && inDepth && localPos.z <= 0.0f;
+
+        if (isTouching && !_isPressed[pointerIndex])
+        {
+            // Pointer Down
+            _isPressed[pointerIndex] = true;
+            _isDragging[pointerIndex] = false;
+            _pressStartLocalXY[pointerIndex] = new Vector2(localPos.x, localPos.y);
+            pointer.PlayHaptic();
+            FirePointerDown(pointerIndex);
+        }
+        else if (!isTouching && _isPressed[pointerIndex])
+        {
+            // Pointer Up
+            if (_isDragging[pointerIndex])
+            {
+                FirePointerEndDrag(pointerIndex);
+            }
+            if (!_isDragging[pointerIndex] && inBoundsXY)
+            {
+                // Click: released on canvas without significant drag
+                FirePointerClick(pointerIndex);
+            }
+            FirePointerUp(pointerIndex);
+            _isPressed[pointerIndex] = false;
+            _isDragging[pointerIndex] = false;
+        }
+        else if (isTouching && _isPressed[pointerIndex])
+        {
+            // Check for drag
+            Vector2 currentXY = new Vector2(localPos.x, localPos.y);
+            float dist = Vector2.Distance(currentXY, _pressStartLocalXY[pointerIndex]);
+            if (dist >= dragThreshold)
+            {
+                if (!_isDragging[pointerIndex])
+                {
+                    FirePointerBeginDrag(pointerIndex);
+                }
+                _isDragging[pointerIndex] = true;
+                FirePointerDrag(pointerIndex);
+            }
+        }
+    }
+
+    private void ProcessDesktopRaycast()
+    {
+        if (!Utilities.IsValid(_localPlayer)) return;
+
+        VRCPlayerApi.TrackingData headData =
+            _localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+        Vector3 origin = headData.position;
+        Vector3 forward = headData.rotation * Vector3.forward;
+
+        RaycastHit hit;
+        bool didHit = Physics.Raycast(origin, forward, out hit, desktopRayDistance, desktopRayMask);
+
+        if (!didHit || hit.collider == null)
+        {
+            if (_isPressed[2])
+            {
+                if (_isDragging[2])
+                {
+                    FirePointerEndDrag(2);
+                }
+                FirePointerUp(2);
+                _isPressed[2] = false;
+                _isDragging[2] = false;
+            }
+            return;
+        }
+
+        // Check if the hit object is part of this canvas hierarchy
+        bool isCanvasHit = false;
+        Transform hitTransform = hit.collider.transform;
+        Transform canvasTransform = canvasRect.transform;
+        Transform check = hitTransform;
+        for (int i = 0; i < 20; i++)
+        {
+            if (check == null) break;
+            if (check == canvasTransform)
+            {
+                isCanvasHit = true;
+                break;
+            }
+            check = check.parent;
+        }
+
+        if (!isCanvasHit)
+        {
+            if (_isPressed[2])
+            {
+                if (_isDragging[2])
+                {
+                    FirePointerEndDrag(2);
+                }
+                FirePointerUp(2);
+                _isPressed[2] = false;
+                _isDragging[2] = false;
+            }
+            return;
+        }
+
+        // Desktop uses InputUse (left mouse / VR trigger) via Input
+        bool usePressed = Input.GetMouseButton(0);
+
+        Vector3 localPos = canvasRect.InverseTransformPoint(hit.point);
+        Vector2 localXY = new Vector2(localPos.x, localPos.y);
+
+        if (usePressed && !_isPressed[2])
+        {
+            _isPressed[2] = true;
+            _isDragging[2] = false;
+            _pressStartLocalXY[2] = localXY;
+            FirePointerDown(2);
+        }
+        else if (!usePressed && _isPressed[2])
+        {
+            if (_isDragging[2])
+            {
+                FirePointerEndDrag(2);
+            }
+            if (!_isDragging[2])
+            {
+                FirePointerClick(2);
+            }
+            FirePointerUp(2);
+            _isPressed[2] = false;
+            _isDragging[2] = false;
+        }
+        else if (usePressed && _isPressed[2])
+        {
+            float dist = Vector2.Distance(localXY, _pressStartLocalXY[2]);
+            if (dist >= dragThreshold)
+            {
+                if (!_isDragging[2])
+                {
+                    FirePointerBeginDrag(2);
+                }
+                _isDragging[2] = true;
+                FirePointerDrag(2);
+            }
+        }
+    }
+
+    private void UpdatePushEffect()
+    {
+        if (pushTarget == null) return;
+
+        bool anyPressed = _isPressed[0] || _isPressed[1] || _isPressed[2];
+        Vector3 targetPos = _pushTargetBasePos;
+
+        if (anyPressed)
+        {
+            targetPos = _pushTargetBasePos + new Vector3(0.0f, 0.0f, maxPushOffset);
+        }
+
+        pushTarget.localPosition = Vector3.Lerp(
+            pushTarget.localPosition,
+            targetPos,
+            Time.deltaTime * 10.0f
+        );
+    }
+
+    private void FirePointerDown(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerDown");
+    }
+
+    private void FirePointerUp(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerUp");
+    }
+
+    private void FirePointerClick(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerClick");
+    }
+
+    private void FirePointerDrag(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerDrag");
+    }
+
+    private void FirePointerBeginDrag(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerBeginDrag");
+    }
+
+    private void FirePointerEndDrag(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerEndDrag");
+    }
+
+    private void BroadcastEvent(string eventName)
+    {
+        if (eventListeners == null) return;
+
+        for (int i = 0; i < eventListeners.Length; i++)
+        {
+            if (Utilities.IsValid(eventListeners[i]))
+            {
+                eventListeners[i].SendCustomEvent(eventName);
+            }
+        }
+    }
+}
+```
+
+**When to use:**
+- Building interactive panels (keyboards, control panels, menus) that VR players touch with their fingers.
+- Creating immersive UI that responds to physical hand presence rather than laser pointers.
+- Tablet or kiosk-style in-world devices where direct touch feels natural.
+
+> **Key notes:**
+> - `GetBonePosition()` returns `Vector3.zero` when tracking data is unavailable (e.g., on desktop or when the avatar lacks the bone). Always check for zero vectors before using the result.
+> - `LerpUnclamped` with a factor of ~1.8 extends the segment from intermediate to distal bone to approximate the fingertip, since VRChat does not expose a dedicated fingertip bone.
+> - `InverseTransformPoint` converts from world space to the canvas's local coordinate system, where `rect.Contains()` checks XY bounds and the Z axis represents push depth.
+> - Haptic feedback via `PlayHapticEventInHand()` fires only for the local player and only in VR.
+> - The desktop fallback uses `Physics.Raycast` from head tracking data and `Input.GetMouseButton(0)` for click detection. Ensure the canvas or its children have colliders on the correct layer.
+> - The push effect lerps the `pushTarget` transform forward when any pointer is pressed, giving tactile visual feedback.
+
+---
+
+## 12. Modular App Architecture (Plugin Lifecycle)
+
+When building a device with multiple screens or applications (e.g., an in-world tablet,
+control panel, or information kiosk), a modular app architecture keeps each feature isolated
+while a central manager handles app switching, transitions, and event forwarding.
+
+Each app extends `AppModule` and receives lifecycle callbacks. The `AppManager` discovers
+apps at startup, manages CanvasGroup-based transitions, syncs the active app across the
+network, and forwards pickup/interaction events to the current app.
+
+### AppModule (base class for each app screen)
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+/// <summary>
+/// Base class for modular app screens. Subclass this for each app
+/// and override the lifecycle hooks as needed. Requires a CanvasGroup
+/// on the same GameObject for transition alpha control.
+/// </summary>
+[RequireComponent(typeof(CanvasGroup))]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class AppModule : UdonSharpBehaviour
+{
+    [Header("App Metadata")]
+    [Tooltip("Display name shown in the app launcher")]
+    public string appName = "Unnamed App";
+
+    [Tooltip("Icon texture shown in the app launcher")]
+    public Texture2D appIcon;
+
+    /// <summary>
+    /// Called when this app becomes the active app.
+    /// </summary>
+    public virtual void OnAppOpen()
+    {
+    }
+
+    /// <summary>
+    /// Called when this app is being replaced by another app or the home screen.
+    /// </summary>
+    public virtual void OnAppClose()
+    {
+    }
+
+    /// <summary>
+    /// Called when the device is picked up while this app is active.
+    /// </summary>
+    public virtual void OnDevicePickup()
+    {
+    }
+
+    /// <summary>
+    /// Called when the device use button is pressed while this app is active.
+    /// </summary>
+    public virtual void OnDeviceUseDown()
+    {
+    }
+
+    /// <summary>
+    /// Called when the device use button is released while this app is active.
+    /// </summary>
+    public virtual void OnDeviceUseUp()
+    {
+    }
+
+    /// <summary>
+    /// Called when the device is dropped while this app is active.
+    /// </summary>
+    public virtual void OnDeviceDrop()
+    {
+    }
+
+    /// <summary>
+    /// Called when a pointer press occurs on this app's UI.
+    /// </summary>
+    public virtual void OnAppPointerDown()
+    {
+    }
+
+    /// <summary>
+    /// Called when a pointer release occurs on this app's UI.
+    /// </summary>
+    public virtual void OnAppPointerUp()
+    {
+    }
+}
+```
+
+### AppManager (discovery, switching, sync, and event forwarding)
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using VRC.SDKBase;
+
+/// <summary>
+/// Manages a collection of AppModule instances. Handles auto-discovery,
+/// CanvasGroup-based transitions, synced app selection, and pickup event forwarding.
+/// Place all app GameObjects as children of the appsParent transform.
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class AppManager : UdonSharpBehaviour
+{
+    [Header("References")]
+    [Tooltip("Parent transform whose children contain AppModule components")]
+    [SerializeField] private Transform appsParent;
+
+    [Tooltip("Optional: parent transform for dynamically created app icons in the launcher")]
+    [SerializeField] private Transform iconListParent;
+
+    [Tooltip("Optional: prefab for app icon buttons (must exist in scene, not an asset)")]
+    [SerializeField] private GameObject iconButtonTemplate;
+
+    [Header("Transition")]
+    [Tooltip("Speed of CanvasGroup alpha fade transitions")]
+    [SerializeField] private float transitionSpeed = 8.0f;
+
+    [Header("Synced State")]
+    [UdonSynced, FieldChangeCallback(nameof(SyncedAppIndex))]
+    private int _syncedAppIndex = -1;
+
+    // Discovered apps
+    private AppModule[] _apps = new AppModule[0];
+    private CanvasGroup[] _canvasGroups = new CanvasGroup[0];
+    private int _appCount = 0;
+
+    // Transition state
+    private int _currentAppIndex = -1;
+    private int _targetAppIndex = -1;
+    private bool _isTransitioning = false;
+    private int _previousAppIndex = -1;
+
+    // Pending open state (used when ownership transfer is in progress)
+    // -2 = no pending operation, -1 = pending close, >= 0 = pending open index
+    private int _pendingOpenIndex = -2;
+
+    /// <summary>
+    /// Synced property: when the synced value changes, trigger a transition.
+    /// </summary>
+    public int SyncedAppIndex
+    {
+        get => _syncedAppIndex;
+        set
+        {
+            _syncedAppIndex = value;
+            BeginTransition(value);
+        }
+    }
+
+    void Start()
+    {
+        DiscoverApps();
+        InitializeAllAppsHidden();
+
+        if (iconButtonTemplate != null)
+        {
+            iconButtonTemplate.SetActive(false);
+        }
+
+        BuildIconList();
+    }
+
+    private void DiscoverApps()
+    {
+        if (appsParent == null) return;
+
+        int childCount = appsParent.childCount;
+
+        // First pass: count valid apps
+        int count = 0;
+        for (int i = 0; i < childCount; i++)
+        {
+            Transform child = appsParent.GetChild(i);
+            AppModule app = child.GetComponent<AppModule>();
+            if (Utilities.IsValid(app))
+            {
+                count++;
+            }
+        }
+
+        _apps = new AppModule[count];
+        _canvasGroups = new CanvasGroup[count];
+        _appCount = count;
+
+        // Second pass: collect references
+        int idx = 0;
+        for (int i = 0; i < childCount; i++)
+        {
+            Transform child = appsParent.GetChild(i);
+            AppModule app = child.GetComponent<AppModule>();
+            if (Utilities.IsValid(app))
+            {
+                _apps[idx] = app;
+                _canvasGroups[idx] = child.GetComponent<CanvasGroup>();
+                idx++;
+            }
+        }
+    }
+
+    private void InitializeAllAppsHidden()
+    {
+        for (int i = 0; i < _appCount; i++)
+        {
+            if (Utilities.IsValid(_canvasGroups[i]))
+            {
+                _canvasGroups[i].alpha = 0.0f;
+                _canvasGroups[i].interactable = false;
+                _canvasGroups[i].blocksRaycasts = false;
+            }
+        }
+    }
+
+    private void BuildIconList()
+    {
+        if (iconListParent == null) return;
+        if (iconButtonTemplate == null) return;
+
+        for (int i = 0; i < _appCount; i++)
+        {
+            GameObject iconObj = Object.Instantiate(iconButtonTemplate);
+            iconObj.transform.SetParent(iconListParent, false);
+            iconObj.SetActive(true);
+            iconObj.name = "AppIcon_" + i.ToString();
+
+            // Set icon texture if a RawImage is present on the template
+            RawImage rawImage =
+                iconObj.GetComponentInChildren<RawImage>();
+            if (rawImage != null && Utilities.IsValid(_apps[i]) && _apps[i].appIcon != null)
+            {
+                rawImage.texture = _apps[i].appIcon;
+            }
+
+            // Set label if a Text component is present
+            TextMeshProUGUI label =
+                iconObj.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null && Utilities.IsValid(_apps[i]))
+            {
+                label.text = _apps[i].appName;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Open an app by index. Call from icon button OnClick events.
+    /// The button name must contain the index (e.g., "AppIcon_2").
+    /// </summary>
+    public void OpenApp(int appIndex)
+    {
+        if (appIndex < 0 || appIndex >= _appCount) return;
+
+        VRCPlayerApi local = Networking.LocalPlayer;
+        if (local == null) return;
+
+        if (!Networking.IsOwner(local, gameObject))
+        {
+            _pendingOpenIndex = appIndex;
+            Networking.SetOwner(local, gameObject);
+            return;
+        }
+
+        ExecuteOpenApp(appIndex);
+    }
+
+    /// <summary>
+    /// Close the current app and return to the home state (no app active).
+    /// </summary>
+    public void CloseCurrentApp()
+    {
+        VRCPlayerApi local = Networking.LocalPlayer;
+        if (local == null) return;
+
+        if (!Networking.IsOwner(local, gameObject))
+        {
+            _pendingOpenIndex = -1;
+            Networking.SetOwner(local, gameObject);
+            return;
+        }
+
+        ExecuteOpenApp(-1);
+    }
+
+    private void ExecuteOpenApp(int appIndex)
+    {
+        SyncedAppIndex = appIndex;
+        RequestSerialization();
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        if (_pendingOpenIndex != -2)
+        {
+            int idx = _pendingOpenIndex;
+            _pendingOpenIndex = -2;
+            ExecuteOpenApp(idx);
+        }
+    }
+
+    /// <summary>
+    /// Called by icon buttons. Parse the button name to extract the app index.
+    /// Button name format: "AppIcon_N" where N is the app index.
+    /// </summary>
+    public void OnIconButtonClicked(string buttonName)
+    {
+        if (buttonName == null) return;
+
+        string prefix = "AppIcon_";
+        if (buttonName.Length <= prefix.Length) return;
+
+        string idxStr = buttonName.Substring(prefix.Length);
+
+        // Manual int parse
+        int result = 0;
+        bool valid = true;
+        for (int i = 0; i < idxStr.Length; i++)
+        {
+            char c = idxStr[i];
+            if (c < '0' || c > '9')
+            {
+                valid = false;
+                break;
+            }
+            result = result * 10 + (c - '0');
+        }
+
+        if (valid && idxStr.Length > 0)
+        {
+            OpenApp(result);
+        }
+    }
+
+    private void BeginTransition(int targetIndex)
+    {
+        if (targetIndex == _currentAppIndex) return;
+
+        _previousAppIndex = _currentAppIndex;
+        _targetAppIndex = targetIndex;
+        _isTransitioning = true;
+
+        // Notify the previous app that it is closing
+        if (_previousAppIndex >= 0 && _previousAppIndex < _appCount)
+        {
+            if (Utilities.IsValid(_apps[_previousAppIndex]))
+            {
+                _apps[_previousAppIndex].OnAppClose();
+            }
+        }
+
+        // Prepare the target app's CanvasGroup
+        if (_targetAppIndex >= 0 && _targetAppIndex < _appCount)
+        {
+            if (Utilities.IsValid(_canvasGroups[_targetAppIndex]))
+            {
+                // Enable raycasts immediately so it can receive input once visible
+                _canvasGroups[_targetAppIndex].blocksRaycasts = true;
+            }
+        }
+    }
+
+    void Update()
+    {
+        if (!_isTransitioning) return;
+
+        float step = transitionSpeed * Time.deltaTime;
+        bool fadeOutDone = true;
+        bool fadeInDone = true;
+
+        // Fade out previous app
+        if (_previousAppIndex >= 0 && _previousAppIndex < _appCount)
+        {
+            CanvasGroup prevCg = _canvasGroups[_previousAppIndex];
+            if (Utilities.IsValid(prevCg))
+            {
+                prevCg.alpha = Mathf.MoveTowards(prevCg.alpha, 0.0f, step);
+                if (prevCg.alpha > 0.001f)
+                {
+                    fadeOutDone = false;
+                }
+                else
+                {
+                    prevCg.alpha = 0.0f;
+                    prevCg.interactable = false;
+                    prevCg.blocksRaycasts = false;
+                }
+            }
+        }
+
+        // Fade in target app
+        if (_targetAppIndex >= 0 && _targetAppIndex < _appCount)
+        {
+            CanvasGroup targetCg = _canvasGroups[_targetAppIndex];
+            if (Utilities.IsValid(targetCg))
+            {
+                targetCg.alpha = Mathf.MoveTowards(targetCg.alpha, 1.0f, step);
+                if (targetCg.alpha < 0.999f)
+                {
+                    fadeInDone = false;
+                }
+                else
+                {
+                    targetCg.alpha = 1.0f;
+                    targetCg.interactable = true;
+                }
+            }
+        }
+
+        bool done = fadeOutDone && fadeInDone;
+
+        if (done)
+        {
+            _isTransitioning = false;
+            _currentAppIndex = _targetAppIndex;
+
+            // Notify the new app that it is now active
+            if (_currentAppIndex >= 0 && _currentAppIndex < _appCount)
+            {
+                if (Utilities.IsValid(_apps[_currentAppIndex]))
+                {
+                    _apps[_currentAppIndex].OnAppOpen();
+                }
+            }
+        }
+    }
+
+    // ----- Pickup/Interaction event forwarding -----
+
+    public override void OnPickup()
+    {
+        ForwardToCurrentApp("OnDevicePickup");
+    }
+
+    public override void OnDrop()
+    {
+        ForwardToCurrentApp("OnDeviceDrop");
+    }
+
+    public override void OnPickupUseDown()
+    {
+        ForwardToCurrentApp("OnDeviceUseDown");
+    }
+
+    public override void OnPickupUseUp()
+    {
+        ForwardToCurrentApp("OnDeviceUseUp");
+    }
+
+    private void ForwardToCurrentApp(string eventName)
+    {
+        if (_currentAppIndex < 0 || _currentAppIndex >= _appCount) return;
+
+        AppModule currentApp = _apps[_currentAppIndex];
+        if (Utilities.IsValid(currentApp))
+        {
+            currentApp.SendCustomEvent(eventName);
+        }
+    }
+
+    /// <summary>
+    /// Returns the number of discovered apps.
+    /// </summary>
+    public int GetAppCount()
+    {
+        return _appCount;
+    }
+
+    /// <summary>
+    /// Returns the currently active app index (-1 if none).
+    /// </summary>
+    public int GetCurrentAppIndex()
+    {
+        return _currentAppIndex;
+    }
+}
+```
+
+**When to use:**
+- Building a multi-screen device (tablet, kiosk, terminal) where each screen is a self-contained feature.
+- Creating a plugin-style architecture where new apps can be added by placing a new child GameObject under the apps parent.
+- Any scenario requiring CanvasGroup-based animated transitions between UI panels with network sync.
+
+> **Key notes:**
+> - `AppModule` uses `virtual` lifecycle methods. Subclasses override only the hooks they need (e.g., a clock app only overrides `OnAppOpen` to start its timer).
+> - `CanvasGroup.alpha` controls visibility, `interactable` controls whether UI elements respond to input, and `blocksRaycasts` controls whether the panel intercepts pointer events. All three must be managed together for correct transitions.
+> - The `[FieldChangeCallback]` attribute on `SyncedAppIndex` ensures the property setter runs on all clients when the synced value changes, triggering the transition on remote players.
+> - App discovery iterates `appsParent` children at `Start()`. Adding or removing apps at runtime is not supported — all apps must be present in the scene hierarchy at load time.
+> - Pickup events (`OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`) are forwarded from the manager to the active app via `SendCustomEvent`, allowing each app to respond to device interactions independently.
+> - Icon buttons are instantiated from a scene template at startup. Wire each button's OnClick to call `OnIconButtonClicked` with the button's name.
+
+---
+
 ## See Also
 
 - [patterns-core.md](patterns-core.md) - Basic UI patterns (button handler, slider display), initialization, interaction
-- [patterns-networking.md](patterns-networking.md) - Synced game state, object pooling, NetworkCallable
+- [patterns-networking.md](patterns-networking.md) - Synced game state, object pooling, NetworkCallable (see also: Pattern 12 synced app selection)
 - [patterns-utilities.md](patterns-utilities.md) - Array helpers, event bus, relay communication
-- [patterns-performance.md](patterns-performance.md) - Update handler, platform optimization
+- [patterns-performance.md](patterns-performance.md) - Update handler, platform optimization (see also: Pattern 11 per-frame finger tracking)
 - [persistence.md](persistence.md) - PlayerData/PlayerObject API details
-- [api.md](api.md) - VRCPlayerApi, VRCCameraSettings reference
+- [api.md](api.md) - VRCPlayerApi, VRCCameraSettings, GetBonePosition, PlayHapticEventInHand reference

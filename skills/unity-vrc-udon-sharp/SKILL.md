@@ -89,6 +89,8 @@ Six pattern files cover different domains. Use this quick routing to pick the ri
 
 ```
 Building a UI, menu, or HUD?           -> patterns-ui.md
+VR finger/touch interaction on Canvas? -> patterns-ui.md
+Modular app with multiple screens?     -> patterns-ui.md
 Syncing state across players?           -> patterns-networking.md
 Optimizing Update() or heavy loops?     -> patterns-performance.md
 Playing or streaming video?             -> patterns-video.md
@@ -206,17 +208,17 @@ WebSearch: "error message UdonSharp site:github.com"
 
 | File | Contents | Search Hints |
 |------|----------|--------------|
-| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes | List, async, try/catch, LINQ, generics, DataList, DataDictionary |
+| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; advanced workarounds (object array pseudo-struct, VRCUrl array sync) | List, async, try/catch, LINQ, generics, DataList, DataDictionary, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
 | `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network events, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, master leave, ownership cascade |
 | `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
 | `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
-| `persistence.md` | PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data | PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt |
+| `persistence.md` | PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data; storage usage query API (SDK 3.10.0+) | PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage |
 | `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) | PhysBone, ContactReceiver, ContactSender, VRCConstraint, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo |
 | `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
 | `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization, frame budget Stopwatch, rate limit resolver | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rate limit, URL scheduler, video load queue |
 | `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, abstract class callback, cancellable delayed event, re-entrance guard, UdonEvent pseudo-delegate | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray, object array, pseudo struct, double cast, abstract class, callback, interface alternative, cancellable timer, re-entrance, emitting guard, UdonEvent, pseudo delegate |
-| `patterns-ui.md` | UI/Canvas patterns: immobilize guard, avatar-scale-aware UI, FOV-responsive positioning, platform-adaptive layout, dynamic player list, scroll input abstraction, lookup-table localization, toggle-animator bridge, settings persistence via PlayerObject, listener-based menu events | Canvas, UI, menu, Immobilize, avatar scale, FOV, platform, Quest, VR, desktop, player list, scroll, localization, language, Toggle, Animator, PlayerObject, settings, persistence, listener, broadcast |
+| `patterns-ui.md` | UI/Canvas patterns: immobilize guard, avatar-scale-aware UI, FOV-responsive positioning, platform-adaptive layout, dynamic player list, scroll input abstraction, lookup-table localization, toggle-animator bridge, settings persistence via PlayerObject, listener-based menu events, finger touch interaction, modular app architecture | Canvas, UI, menu, Immobilize, avatar scale, FOV, platform, Quest, VR, desktop, player list, scroll, localization, language, Toggle, Animator, PlayerObject, settings, persistence, listener, broadcast, finger touch, fingertip, haptic, FingerPointer, FingerTouchCanvas, touch canvas, app architecture, AppModule, AppManager, plugin lifecycle, CanvasGroup transition |
 | `patterns-video.md` | Video player state machine, server-time playback sync, late joiner sync, AVPro Blit buffering, error retry with fallback, synced playlist/queue, platform URL selection | video player, AVPro, VRCUnityVideoPlayer, BaseVRCVideoPlayer, playback sync, server time, GetServerTimeInMilliseconds, late joiner, VRCGraphics.Blit, OnVideoReady, OnVideoError, retry, fallback, playlist, queue, shuffle, repeat, Quest URL |
 | `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs | VRCStringDownloader, VRCImageDownloader, VRCJson, DataDictionary, VRCUrl |
 | `image-loading-vram.md` | Advanced VRAM management for image loading: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias | VRAM, texture memory, memory leak, Destroy, Dispose, double buffer, fade, mipmap, TextureInfo |
