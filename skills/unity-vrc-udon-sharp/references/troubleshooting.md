@@ -954,6 +954,105 @@ public class StationZoneCheckPolling : UdonSharpBehaviour
 
 ---
 
+### Workaround 3: Follow-Target Collider
+
+When neither static bounds check nor position polling is suitable — e.g., avatar stations on moving platforms where the zone itself also moves, or when you need standard Unity trigger events (`OnTriggerEnter`/`OnTriggerExit`) rather than manual polling.
+
+**Concept:** Spawn or enable a hidden GameObject with a trigger collider that follows the seated player's position every frame. This "proxy collider" enters trigger zones on behalf of the seated player, restoring normal trigger-based detection.
+
+> **Note:** This script manages a single seated player. Attach one instance per VRCStation.
+> The trigger zone's own UdonBehaviour receives standard `OnTriggerEnter`/`OnTriggerExit`
+> from the proxy collider.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+/// <summary>
+/// Enables a hidden trigger collider that follows the seated player every frame.
+/// The proxy enters trigger zones on behalf of the player, restoring normal
+/// OnTriggerEnter / OnTriggerExit detection while the player is seated.
+///
+/// Setup:
+///   1. Create a child GameObject with a trigger Collider (e.g., SphereCollider).
+///   2. Place that collider on a layer that interacts with your trigger zone layer
+///      (avoid PlayerLocal — it is disabled during station use).
+///   3. Assign the child's Collider to followCollider in the Inspector.
+///   4. Disable the child GameObject by default (the script enables it on seat).
+/// </summary>
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class PlayerFollowCollider : UdonSharpBehaviour
+{
+    [Header("References")]
+    [Tooltip("Trigger collider on a child GameObject (disabled by default).")]
+    [SerializeField] private Collider followCollider;
+
+    private VRCPlayerApi _trackedPlayer;
+    private bool _isTracking = false;
+
+    public override void OnStationEntered(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+
+        _trackedPlayer = player;
+        _isTracking = true;
+
+        // Place at current position before enabling to avoid a frame of stale position
+        followCollider.transform.position = player.GetPosition();
+        followCollider.gameObject.SetActive(true);
+    }
+
+    public override void OnStationExited(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+
+        StopTracking();
+    }
+
+    public override void OnPlayerLeft(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+
+        // OnStationExited may NOT fire when a seated player leaves the instance
+        if (_isTracking && _trackedPlayer.playerId == player.playerId)
+        {
+            StopTracking();
+        }
+    }
+
+    void Update()
+    {
+        if (!_isTracking) return;
+
+        if (!Utilities.IsValid(_trackedPlayer))
+        {
+            // Player reference became invalid — clean up
+            StopTracking();
+            return;
+        }
+
+        followCollider.transform.position = _trackedPlayer.GetPosition();
+    }
+
+    private void StopTracking()
+    {
+        _isTracking = false;
+        _trackedPlayer = null;
+        followCollider.gameObject.SetActive(false);
+    }
+}
+```
+
+**Key considerations:**
+- The follow collider **must not** be on the PlayerLocal layer (Layer 10) — that layer is disabled for seated players. Use a dedicated interaction layer.
+- Always validate with `Utilities.IsValid()` before accessing player data.
+- Performance: one moving collider per seated player is lightweight compared to polling multiple players against bounds.
+- Cleanup on `OnPlayerLeft` is essential — `OnStationExited` is not guaranteed when a player disconnects.
+- The trigger zone's UdonBehaviour receives standard `OnTriggerEnter`/`OnTriggerExit` from the proxy collider, so existing trigger logic works without modification.
+
+---
+
 ### OnPlayerLeft Failsafe (Important)
 
 `OnStationExited` may **not fire** when a seated player leaves the instance. Always pair station tracking with `OnPlayerLeft` cleanup to prevent stale data.
