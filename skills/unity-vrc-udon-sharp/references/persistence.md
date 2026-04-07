@@ -590,7 +590,7 @@ using VRC.SDKBase;
 /// Each entry is keyed by a Unix timestamp (seconds). On restore, entries
 /// older than <see cref="retainDays"/> calendar days are discarded.
 /// </summary>
-[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class DataAgingExample : UdonSharpBehaviour
 {
     /// <summary>How many calendar days of data to keep.</summary>
@@ -610,7 +610,7 @@ public class DataAgingExample : UdonSharpBehaviour
         // Initialize with an empty JSON object if no data exists yet
         if (!PlayerData.HasKey(player, DataKey))
         {
-            PlayerData.SetString(DataKey, "{}");
+            PlayerData.SetString(player, DataKey, "{}");
             return;
         }
 
@@ -619,14 +619,14 @@ public class DataAgingExample : UdonSharpBehaviour
             return;
         }
 
-        PruneOldEntries(json);
+        PruneOldEntries(player, json);
     }
 
     /// <summary>
     /// Groups entries by local calendar date, keeps the most recent
     /// <see cref="retainDays"/> days, and writes the trimmed data back.
     /// </summary>
-    private void PruneOldEntries(string json)
+    private void PruneOldEntries(VRCPlayerApi player, string json)
     {
         if (!VRCJson.TryDeserializeFromJson(json, out DataToken rootToken))
         {
@@ -681,7 +681,8 @@ public class DataAgingExample : UdonSharpBehaviour
         string todayKey = todayStartSeconds.ToString();
 
         bool todayPresent = dateGroups.ContainsKey(todayKey);
-        int keepCount = todayPresent ? retainDays : retainDays - 1;
+        int safeRetainDays = Mathf.Max(1, retainDays);
+        int keepCount = Mathf.Max(1, todayPresent ? safeRetainDays : safeRetainDays - 1);
 
         // No pruning needed if the date count is within limits
         if (dateList.Count <= keepCount) return;
@@ -703,7 +704,7 @@ public class DataAgingExample : UdonSharpBehaviour
         // --- Step 4: Serialize and write back ---
         if (VRCJson.TrySerializeToJson(pruned, JsonExportType.Minify, out DataToken result))
         {
-            PlayerData.SetString(DataKey, result.String);
+            PlayerData.SetString(player, DataKey, result.String);
 
             int removed = entryKeys.Count - pruned.Count;
             Debug.Log($"[DataAging] Pruned {removed} entries, kept {pruned.Count}");
@@ -739,7 +740,7 @@ public class DataAgingExample : UdonSharpBehaviour
 
         if (VRCJson.TrySerializeToJson(dict, JsonExportType.Minify, out DataToken updated))
         {
-            PlayerData.SetString(DataKey, updated.String);
+            PlayerData.SetString(local, DataKey, updated.String);
         }
     }
 }

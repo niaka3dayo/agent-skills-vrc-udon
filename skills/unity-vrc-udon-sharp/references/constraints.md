@@ -851,6 +851,13 @@ public class SyncedUrlList : UdonSharpBehaviour
     // Local cache of parsed metadata
     private DataList _metadataList;
 
+    // Pending operation state (used when ownership transfer is in progress)
+    private bool _pendingAdd = false;
+    private VRCUrl _pendingAddUrl;
+    private int _pendingAddType;
+    private bool _pendingRemove = false;
+    private int _pendingRemoveIndex;
+
     // --- Index-to-Field Accessor (Set) ---
 
     private void SetUrlAtIndex(int index, VRCUrl url)
@@ -906,8 +913,23 @@ public class SyncedUrlList : UdonSharpBehaviour
 
         if (!Networking.IsOwner(gameObject))
         {
+            // Defer until ownership is confirmed
+            _pendingAdd = true;
+            _pendingAddUrl = url;
+            _pendingAddType = contentType;
+            _pendingRemove = false;
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            return true;
         }
+
+        ExecuteAddUrl(url, contentType);
+        return true;
+    }
+
+    private void ExecuteAddUrl(VRCUrl url, int contentType)
+    {
+        if (!ParseMetadata()) return;
+        if (_metadataList.Count >= MaxUrls) return;
 
         // Build metadata entry: [timestamp, contentType, senderName]
         long timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -925,10 +947,9 @@ public class SyncedUrlList : UdonSharpBehaviour
         SetUrlAtIndex(newIndex, url);
 
         // Serialize metadata to JSON
-        if (!SerializeMetadata()) return false;
+        if (!SerializeMetadata()) return;
 
         RequestSerialization();
-        return true;
     }
 
     /// <summary>
@@ -941,8 +962,22 @@ public class SyncedUrlList : UdonSharpBehaviour
 
         if (!Networking.IsOwner(gameObject))
         {
+            // Defer until ownership is confirmed
+            _pendingRemove = true;
+            _pendingRemoveIndex = removeIndex;
+            _pendingAdd = false;
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            return true;
         }
+
+        ExecuteRemoveUrl(removeIndex);
+        return true;
+    }
+
+    private void ExecuteRemoveUrl(int removeIndex)
+    {
+        if (!ParseMetadata()) return;
+        if (removeIndex < 0 || removeIndex >= _metadataList.Count) return;
 
         _metadataList.RemoveAt(removeIndex);
 
@@ -954,10 +989,25 @@ public class SyncedUrlList : UdonSharpBehaviour
         // Clear the last slot
         SetUrlAtIndex(_metadataList.Count, VRCUrl.Empty);
 
-        if (!SerializeMetadata()) return false;
+        if (!SerializeMetadata()) return;
 
         RequestSerialization();
-        return true;
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        if (_pendingAdd)
+        {
+            _pendingAdd = false;
+            ExecuteAddUrl(_pendingAddUrl, _pendingAddType);
+        }
+        else if (_pendingRemove)
+        {
+            _pendingRemove = false;
+            ExecuteRemoveUrl(_pendingRemoveIndex);
+        }
     }
 
     /// <summary>
@@ -1028,6 +1078,7 @@ public class SyncedUrlList : UdonSharpBehaviour
 | `[UdonSynced] string` for metadata | JSON-encoded array of `[timestamp, type, sender]` entries |
 | `VRCJson.TrySerializeToJson` / `TryDeserializeFromJson` | Serialization of structured metadata into a single synced string |
 | `OnDeserialization` | Handles incoming sync data on non-owner clients |
+| Pending-operation + `OnOwnershipTransferred` | Defers synced writes until ownership is confirmed, avoiding SetOwner race conditions |
 
 **Bandwidth and Performance Considerations:**
 

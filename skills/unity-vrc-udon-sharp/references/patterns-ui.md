@@ -1097,7 +1097,7 @@ using VRC.SDKBase;
 
 /// <summary>
 /// Detects finger touch and desktop raycast interactions against a world-space Canvas.
-/// Fires pointer events (Down, Drag, Up, Click) on UdonSharpBehaviour listeners.
+/// Fires pointer events (Down, BeginDrag, Drag, EndDrag, Up, Click) on UdonSharpBehaviour listeners.
 /// The Canvas must be in World Space render mode.
 /// </summary>
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
@@ -1130,7 +1130,7 @@ public class FingerTouchCanvas : UdonSharpBehaviour
     [SerializeField] private LayerMask desktopRayMask = ~0;
 
     [Header("Event Listeners")]
-    [Tooltip("UdonBehaviours that receive OnPointerDown/OnPointerUp/OnPointerClick/OnPointerDrag events")]
+    [Tooltip("UdonBehaviours that receive OnPointerDown/OnPointerBeginDrag/OnPointerDrag/OnPointerEndDrag/OnPointerUp/OnPointerClick events")]
     [SerializeField] private UdonSharpBehaviour[] eventListeners = new UdonSharpBehaviour[0];
 
     /// <summary>
@@ -1201,6 +1201,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
         {
             if (_isPressed[pointerIndex])
             {
+                if (_isDragging[pointerIndex])
+                {
+                    FirePointerEndDrag(pointerIndex);
+                }
                 FirePointerUp(pointerIndex);
                 _isPressed[pointerIndex] = false;
                 _isDragging[pointerIndex] = false;
@@ -1231,6 +1235,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
         else if (!isTouching && _isPressed[pointerIndex])
         {
             // Pointer Up
+            if (_isDragging[pointerIndex])
+            {
+                FirePointerEndDrag(pointerIndex);
+            }
             if (!_isDragging[pointerIndex] && inBoundsXY)
             {
                 // Click: released on canvas without significant drag
@@ -1247,6 +1255,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
             float dist = Vector2.Distance(currentXY, _pressStartLocalXY[pointerIndex]);
             if (dist >= dragThreshold)
             {
+                if (!_isDragging[pointerIndex])
+                {
+                    FirePointerBeginDrag(pointerIndex);
+                }
                 _isDragging[pointerIndex] = true;
                 FirePointerDrag(pointerIndex);
             }
@@ -1269,6 +1281,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
         {
             if (_isPressed[2])
             {
+                if (_isDragging[2])
+                {
+                    FirePointerEndDrag(2);
+                }
                 FirePointerUp(2);
                 _isPressed[2] = false;
                 _isDragging[2] = false;
@@ -1296,6 +1312,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
         {
             if (_isPressed[2])
             {
+                if (_isDragging[2])
+                {
+                    FirePointerEndDrag(2);
+                }
                 FirePointerUp(2);
                 _isPressed[2] = false;
                 _isDragging[2] = false;
@@ -1318,6 +1338,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
         }
         else if (!usePressed && _isPressed[2])
         {
+            if (_isDragging[2])
+            {
+                FirePointerEndDrag(2);
+            }
             if (!_isDragging[2])
             {
                 FirePointerClick(2);
@@ -1331,6 +1355,10 @@ public class FingerTouchCanvas : UdonSharpBehaviour
             float dist = Vector2.Distance(localXY, _pressStartLocalXY[2]);
             if (dist >= dragThreshold)
             {
+                if (!_isDragging[2])
+                {
+                    FirePointerBeginDrag(2);
+                }
                 _isDragging[2] = true;
                 FirePointerDrag(2);
             }
@@ -1378,6 +1406,18 @@ public class FingerTouchCanvas : UdonSharpBehaviour
     {
         lastPointerIndex = pointerIndex;
         BroadcastEvent("OnPointerDrag");
+    }
+
+    private void FirePointerBeginDrag(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerBeginDrag");
+    }
+
+    private void FirePointerEndDrag(int pointerIndex)
+    {
+        lastPointerIndex = pointerIndex;
+        BroadcastEvent("OnPointerEndDrag");
     }
 
     private void BroadcastEvent(string eventName)
@@ -1546,6 +1586,10 @@ public class AppManager : UdonSharpBehaviour
     private bool _isTransitioning = false;
     private int _previousAppIndex = -1;
 
+    // Pending open state (used when ownership transfer is in progress)
+    // -2 = no pending operation, -1 = pending close, >= 0 = pending open index
+    private int _pendingOpenIndex = -2;
+
     /// <summary>
     /// Synced property: when the synced value changes, trigger a transition.
     /// </summary>
@@ -1663,9 +1707,14 @@ public class AppManager : UdonSharpBehaviour
         VRCPlayerApi local = Networking.LocalPlayer;
         if (local == null) return;
 
-        Networking.SetOwner(local, gameObject);
-        SyncedAppIndex = appIndex;
-        RequestSerialization();
+        if (!Networking.IsOwner(local, gameObject))
+        {
+            _pendingOpenIndex = appIndex;
+            Networking.SetOwner(local, gameObject);
+            return;
+        }
+
+        ExecuteOpenApp(appIndex);
     }
 
     /// <summary>
@@ -1676,9 +1725,32 @@ public class AppManager : UdonSharpBehaviour
         VRCPlayerApi local = Networking.LocalPlayer;
         if (local == null) return;
 
-        Networking.SetOwner(local, gameObject);
-        SyncedAppIndex = -1;
+        if (!Networking.IsOwner(local, gameObject))
+        {
+            _pendingOpenIndex = -1;
+            Networking.SetOwner(local, gameObject);
+            return;
+        }
+
+        ExecuteOpenApp(-1);
+    }
+
+    private void ExecuteOpenApp(int appIndex)
+    {
+        SyncedAppIndex = appIndex;
         RequestSerialization();
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        if (_pendingOpenIndex != -2)
+        {
+            int idx = _pendingOpenIndex;
+            _pendingOpenIndex = -2;
+            ExecuteOpenApp(idx);
+        }
     }
 
     /// <summary>
