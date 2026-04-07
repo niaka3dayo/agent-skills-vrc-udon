@@ -52,6 +52,21 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 | 10 | Use `Button.onClick.AddListener()` | Not available in Udon — no runtime delegate support | Configure `SendCustomEvent` via Inspector OnClick |
 | 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
 | 12 | Write synced variables before `OnOwnershipTransferred` confirms ownership | `SetOwner` is async — writes before confirmation are silently discarded | Store intent locally, write + serialize in `OnOwnershipTransferred` callback |
+| 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Attribute compiles but is **silently ignored** — methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
+| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Events and components do not exist for worlds — code compiles but callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
+| 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | `PlayerData`, `PlayerObject`, `OnPlayerRestored` do not exist — compile or silent runtime failure | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
+
+## Sync Mode Quick Decision
+
+```
+Changing every frame (position, rotation)?    -> Continuous sync
+Changing on user action (toggle, score)?      -> Manual sync + RequestSerialization()
+No sync needed (local UI, effects)?           -> NoVariableSync
+Need reliable one-shot calls with params?     -> [NetworkCallable] (SDK 3.8.1+)
+Temporary effect for all players, no state?   -> SendCustomNetworkEvent (no synced vars)
+```
+
+> For detailed decision trees, data budget, and minimization principles, see `rules/udonsharp-sync-selection.md`.
 
 ## Reference Loading Guide
 
@@ -84,6 +99,36 @@ Basic interactions, timers, audio,      -> patterns-core.md
 ```
 
 > Multiple concerns? Load the primary pattern file plus its dependencies. For example, a synced video player needs both `patterns-video.md` and `patterns-networking.md`.
+
+## Template Selection Guide
+
+16 templates cover common starting points. Pick the closest match and adapt:
+
+| Starting Point | Template | Key Feature |
+|---|---|---|
+| **Interaction & Objects** | | |
+| Interactive object (click/use) | `BasicInteraction.cs` | Cooldown, toggle, audio feedback |
+| Synced toggle / shared object | `SyncedObject.cs` | Ownership guard, FieldChangeCallback, late-joiner init |
+| Per-player movement settings | `PlayerSettings.cs` | Walk/run/jump speed via trigger zone |
+| Contact-based collision detection | `ContactReceiver.cs` | OnContactEnter/Exit, avatar vs world, debounce (SDK 3.10.0+) |
+| **State & Game Logic** | | |
+| State machine / game flow | `StateMachine.cs` | Timed transitions, synced state, late-joiner safety |
+| Game with undo/history | `UndoableGameManager.cs` | byte[] history, NetworkCallable OwnerProcessMove/Undo/Reset |
+| Object pool (player slots) | `MasterManagedPlayerPool.cs` | FIFO ring buffer, master-managed, OnPlayerJoined/Left |
+| **Persistence & Data** | | |
+| Save/load player data | `DataPersistence.cs` | PlayerData API, OnPlayerRestored, auto-save (SDK 3.7.4+) |
+| **Networking Patterns** | | |
+| Rate-limited sync (slider drag) | `RateLimitedSync.cs` | 0.15s cooldown, last-write-wins |
+| Batched sync (rapid events) | `BatchedSync.cs` | Idempotent schedule, 0.2s delay, single packet |
+| Congestion-aware retry | `CloggedRetrySync.cs` | IsClogged check, linear back-off, MaxRetries |
+| Dual local+synced copy | `DualCopySync.cs` | Local working copy + synced transport, dirty flag |
+| Pack multiple values into one field | `PackedStateSync.cs` | 3 ints in one Vector3, reduced sync overhead |
+| **Utilities** | | |
+| Array helpers (List\<T\> alternative) | `ArrayUtils.cs` | Add, Remove, Contains, FindIndex, Shuffle for arrays |
+| Event bus (pub/sub) | `EventBus.cs` | Subscriber list (max 32), RegisterListener/RaiseEvent |
+| Custom editor inspector | `CustomInspector.cs` | UdonSharpGUI, Undo, proxy sync |
+
+> **Multiple needs?** Start with the template closest to your primary concern, then pull patterns from others. For example, a synced game with undo needs `UndoableGameManager.cs` as the base plus patterns from `RateLimitedSync.cs` for throttling.
 
 ## Overview
 
