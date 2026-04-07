@@ -111,7 +111,7 @@ skills/                                  # すべてのスキル
       validate-udonsharp.sh
       validate-udonsharp.ps1
     assets/templates/                    # コードテンプレート（4ファイル）
-    references/                          # 詳細ドキュメント（20ファイル）
+    references/                          # 詳細ドキュメント（21ファイル）
   unity-vrc-world-sdk-3/                # VRC World SDKスキル
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（7ファイル）
 templates/                               # AIツール設定テンプレート
