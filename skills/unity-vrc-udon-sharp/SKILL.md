@@ -34,6 +34,57 @@ Every rule in this skill exists because UdonSharp's default behavior is to **fai
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
 5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()`.
 
+## Common Mistakes (NEVER List)
+
+These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior. Check this list before writing any UdonSharp code.
+
+| # | NEVER do this | Why it fails silently | Use instead |
+|---|---------------|----------------------|-------------|
+| 1 | Use `List<T>`, `Dictionary<T,K>`, or any generic collection | Compile error — blocked by Udon compiler | `T[]` arrays, `DataList`, `DataDictionary` |
+| 2 | Use `async`/`await`, `System.Threading`, or coroutines | Udon is single-threaded; these features do not exist | `SendCustomEventDelayedSeconds()` |
+| 3 | Modify `[UdonSynced]` fields without owning the object | Change appears local but is **silently reverted** on next deserialization | `Networking.SetOwner()` before modify, then `RequestSerialization()` |
+| 4 | Forget `RequestSerialization()` after modifying synced fields (Manual sync) | State changes never leave the local client — no error, no warning | Always call `RequestSerialization()` after modifying `[UdonSynced]` fields |
+| 5 | Use `try`/`catch`/`finally`/`throw` | Compile error — exception handling is blocked | Defensive null checks + early return |
+| 6 | Access `Networking.LocalPlayer` in field initializers | Field initializers run at compile time — `LocalPlayer` is null | Initialize in `Start()` or use lazy-init guard |
+| 7 | Use `static` fields for per-instance state | Static fields are shared across all instances on the same client and are not synced | Instance fields with `[UdonSynced]` if sync is needed |
+| 8 | Call `RequestSerialization()` every frame in Manual sync | Floods the ~11 KB/s network budget, causing congestion for the entire world | Throttle to 1-10 Hz with change detection; check `Networking.IsClogged` |
+| 9 | Use LINQ (`.Where`, `.Select`, etc.) or lambda expressions | Compile error — not supported by Udon compiler | Manual `for` loops with named methods |
+| 10 | Use `Button.onClick.AddListener()` | Not available in Udon — no runtime delegate support | Configure `SendCustomEvent` via Inspector OnClick |
+| 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
+| 12 | Write synced variables before `OnOwnershipTransferred` confirms ownership | `SetOwner` is async — writes before confirmation are silently discarded | Store intent locally, write + serialize in `OnOwnershipTransferred` callback |
+
+## Reference Loading Guide
+
+Load only what you need. Over-loading wastes tokens; under-loading causes critical mistakes.
+
+| Task | MANDATORY READ | Optional | Do NOT Load |
+|------|---------------|----------|-------------|
+| Writing networking/sync code | `networking.md`, `networking-antipatterns.md` | `networking-bandwidth.md`, `sync-examples.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
+| Building UI/menus | `patterns-ui.md`, `events.md` | `patterns-core.md`, `api.md` | `networking-bandwidth.md`, `dynamics.md`, `web-loading.md` |
+| Implementing persistence (save/load) | `persistence.md` | `patterns-networking.md`, `events.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
+| Downloading strings/images from web | `web-loading.md` | `web-loading-advanced.md`, `image-loading-vram.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
+| Using PhysBones/Contacts/Constraints | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
+| Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
+| Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
+| Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
+
+## Pattern Selection Guide
+
+Six pattern files cover different domains. Use this quick routing to pick the right one:
+
+```
+Building a UI, menu, or HUD?           -> patterns-ui.md
+Syncing state across players?           -> patterns-networking.md
+Optimizing Update() or heavy loops?     -> patterns-performance.md
+Playing or streaming video?             -> patterns-video.md
+Need array helpers, event bus, or       -> patterns-utilities.md
+  pseudo-delegates?
+Basic interactions, timers, audio,      -> patterns-core.md
+  pickups, or teleportation?
+```
+
+> Multiple concerns? Load the primary pattern file plus its dependencies. For example, a synced video player needs both `patterns-video.md` and `patterns-networking.md`.
+
 ## Overview
 
 **SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
