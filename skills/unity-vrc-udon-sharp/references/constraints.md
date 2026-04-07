@@ -56,7 +56,7 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 | User-defined methods | Supported | 3.0+ | Parameters and return values work |
 | `out`/`ref` parameters | Supported | 3.0+ | |
 | `params` keyword | Supported | 3.0+ | Variable arguments |
-| Extension methods | Blocked | — | Use static methods with explicit first parameter |
+| Extension methods | Supported | 1.0+ | Works in UdonSharp 1.0+; static methods also valid |
 | Properties (get/set) | Supported | 3.0+ | |
 | Virtual methods | Supported | 3.0+ | For inheritance |
 | `[RecursiveMethod]` | Required | 3.0+ | Attribute required for recursive calls |
