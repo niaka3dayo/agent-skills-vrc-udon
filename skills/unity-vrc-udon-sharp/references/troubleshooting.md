@@ -12,6 +12,7 @@ Common errors, causes, and solutions for VRChat UdonSharp development.
 - [NetworkCallable Issues (SDK 3.8.1+)](#networkcallable-issues-sdk-381)
 - [Persistence Issues (SDK 3.7.4+)](#persistence-issues-sdk-374)
 - [Dynamics Issues (SDK 3.10.0+)](#dynamics-issues-sdk-3100)
+- [VRCStation + Trigger Detection Issues](#vrcstation--trigger-detection-issues)
 - [Editor Issues](#editor-issues)
 - [Performance Issues](#performance-issues)
 - [Common Pitfalls](#common-pitfalls)
@@ -724,6 +725,272 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 ---
 
+## VRCStation + Trigger Detection Issues
+
+When a player sits in a VRCStation, the **PlayerLocal (Layer 10) capsule collider is effectively disabled**. This causes `OnPlayerTriggerEnter`, `OnPlayerTriggerExit`, and `OnPlayerTriggerStay` to **not fire** for seated players.
+
+This is a [known unresolved issue since 2019](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations). No SDK version between 3.7.0 and 3.10.2 has fixed it.
+
+### Symptoms
+
+| Symptom | Likely Cause |
+|---------|-------------|
+| Trigger zone works for walking players but not seated | PlayerLocal collider disabled in station |
+| OnPlayerTriggerExit fires when player sits down inside zone | Collider state change triggers exit event |
+| Area effects don't activate when avatar station moves into zone | Same root cause |
+
+---
+
+### Workaround 1: Immobilize Station + Static Zone Check (Recommended)
+
+For stations with `PlayerMobility = Immobilize`, the seated position is fixed. Compare the station Transform position to the zone Bounds at seating time. No polling is needed.
+
+> **Note:** This script tracks a single seated player. Attach one instance per VRCStation.
+> For tracking multiple stations, use the polling approach (Workaround 2) or instantiate
+> one script per station.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class StationZoneCheckStatic : UdonSharpBehaviour
+{
+    [Header("References")]
+    [SerializeField] private Collider zoneCollider;
+    [SerializeField] private VRCStation station;
+
+    private bool _isPlayerInZone = false;
+    private int _seatedPlayerId = -1;
+
+    public override void OnStationEntered(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+
+        _seatedPlayerId = player.playerId;
+
+        Bounds bounds = zoneCollider.bounds;
+        // VRCStation inherits Component; explicit cast needed for UdonSharp .transform access
+        Vector3 stationPosition = ((Component)station).transform.position;
+
+        if (bounds.Contains(stationPosition))
+        {
+            _isPlayerInZone = true;
+            OnPlayerEnteredZone(player);
+        }
+    }
+
+    public override void OnStationExited(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+
+        if (_isPlayerInZone)
+        {
+            _isPlayerInZone = false;
+            OnPlayerExitedZone(player);
+        }
+        _seatedPlayerId = -1;
+    }
+
+    public override void OnPlayerLeft(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+
+        // OnStationExited may NOT fire when a seated player leaves
+        if (player.playerId == _seatedPlayerId)
+        {
+            if (_isPlayerInZone)
+            {
+                _isPlayerInZone = false;
+            }
+            _seatedPlayerId = -1;
+        }
+    }
+
+    private void OnPlayerEnteredZone(VRCPlayerApi player)
+    {
+        Debug.Log($"[StationZoneCheck] {player.displayName} entered zone (seated)");
+    }
+
+    private void OnPlayerExitedZone(VRCPlayerApi player)
+    {
+        Debug.Log($"[StationZoneCheck] {player.displayName} exited zone (unseated)");
+    }
+}
+```
+
+---
+
+### Workaround 2: Position Polling for Mobile Stations
+
+For stations that can move (avatar stations, moving platforms), poll seated player positions periodically. This approach checks every 0.5 seconds instead of every frame to reduce overhead.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class StationZoneCheckPolling : UdonSharpBehaviour
+{
+    [Header("References")]
+    [SerializeField] private Collider zoneCollider;
+
+    [Header("Settings")]
+    [SerializeField] private int maxTrackedPlayers = 40;
+    [SerializeField] private float pollInterval = 0.5f;
+
+    private int[] _seatedPlayerIds;
+    private bool[] _isInZone;
+    private int _seatedCount = 0;
+    private float _lastPollTime = 0f;
+
+    void Start()
+    {
+        _seatedPlayerIds = new int[maxTrackedPlayers];
+        _isInZone = new bool[maxTrackedPlayers];
+    }
+
+    public override void OnStationEntered(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+        if (_seatedCount >= maxTrackedPlayers) return;
+
+        // Avoid duplicates
+        for (int i = 0; i < _seatedCount; i++)
+        {
+            if (_seatedPlayerIds[i] == player.playerId) return;
+        }
+
+        _seatedPlayerIds[_seatedCount] = player.playerId;
+        _isInZone[_seatedCount] = false;
+        _seatedCount++;
+    }
+
+    public override void OnStationExited(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+        RemoveSeatedPlayer(player.playerId, player);
+    }
+
+    public override void OnPlayerLeft(VRCPlayerApi player)
+    {
+        if (!Utilities.IsValid(player)) return;
+        RemoveSeatedPlayer(player.playerId, null);
+    }
+
+    private void RemoveSeatedPlayer(int playerId, VRCPlayerApi player)
+    {
+        for (int i = 0; i < _seatedCount; i++)
+        {
+            if (_seatedPlayerIds[i] == playerId)
+            {
+                if (_isInZone[i])
+                {
+                    _isInZone[i] = false;
+                    if (Utilities.IsValid(player))
+                    {
+                        OnPlayerExitedZone(player);
+                    }
+                }
+
+                // Swap with last element
+                _seatedCount--;
+                _seatedPlayerIds[i] = _seatedPlayerIds[_seatedCount];
+                _isInZone[i] = _isInZone[_seatedCount];
+                return;
+            }
+        }
+    }
+
+    void Update()
+    {
+        if (_seatedCount == 0) return;
+        if (Time.time - _lastPollTime < pollInterval) return;
+        _lastPollTime = Time.time;
+
+        Bounds bounds = zoneCollider.bounds;
+
+        for (int i = 0; i < _seatedCount; i++)
+        {
+            VRCPlayerApi player = VRCPlayerApi.GetPlayerById(_seatedPlayerIds[i]);
+            if (!Utilities.IsValid(player))
+            {
+                // Player left without event — clean up
+                _seatedCount--;
+                _seatedPlayerIds[i] = _seatedPlayerIds[_seatedCount];
+                _isInZone[i] = _isInZone[_seatedCount];
+                i--;
+                continue;
+            }
+
+            bool currentlyInZone = bounds.Contains(player.GetPosition());
+
+            if (currentlyInZone && !_isInZone[i])
+            {
+                _isInZone[i] = true;
+                OnPlayerEnteredZone(player);
+            }
+            else if (!currentlyInZone && _isInZone[i])
+            {
+                _isInZone[i] = false;
+                OnPlayerExitedZone(player);
+            }
+        }
+    }
+
+    private void OnPlayerEnteredZone(VRCPlayerApi player)
+    {
+        Debug.Log($"[StationZonePoll] {player.displayName} entered zone");
+    }
+
+    private void OnPlayerExitedZone(VRCPlayerApi player)
+    {
+        Debug.Log($"[StationZonePoll] {player.displayName} exited zone");
+    }
+}
+```
+
+---
+
+### OnPlayerLeft Failsafe (Important)
+
+`OnStationExited` may **not fire** when a seated player leaves the instance. Always pair station tracking with `OnPlayerLeft` cleanup to prevent stale data.
+
+```csharp
+public override void OnPlayerLeft(VRCPlayerApi player)
+{
+    if (!Utilities.IsValid(player)) return;
+
+    // Clean up any station-related state for this player
+    if (player.playerId == _seatedPlayerId)
+    {
+        _seatedPlayerId = -1;
+        _isPlayerInZone = false;
+    }
+}
+```
+
+---
+
+### Station Disable Behavior
+
+| Action | Effect |
+|--------|--------|
+| Disable the station's **Collider** | Prevents new players from sitting, but does **not** eject seated players |
+| Disable the station's **GameObject** | Force ejects the seated player (`station.gameObject.SetActive(false)`) |
+| Call `station.ExitStation(player)` | Only works for the **local player** (`Networking.LocalPlayer`) |
+
+---
+
+### See Also
+
+- [events.md — OnStationEntered/OnStationExited](events.md#station-events) — Station event signatures and usage
+- [patterns-core.md — Trigger Zone Detection](patterns-core.md#trigger-zone) — Standard trigger zone pattern for walking players
+
+---
+
 ## Editor Issues
 
 ### UdonSharpBehaviour Displays as UdonBehaviour in Inspector
@@ -1163,6 +1430,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | **PlayerData empty** | Wait for `OnPlayerRestored` first |
 | **OnContactEnter not firing** | UdonBehaviour must be on same GameObject |
 | **Contact player is null** | Check `info.isAvatar` before accessing |
+| **Trigger not firing for seated players** | PlayerLocal collider disabled in station — use position check workaround |
 
 ---
 

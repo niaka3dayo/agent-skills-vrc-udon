@@ -98,6 +98,7 @@ Need array helpers, event bus, or       -> patterns-utilities.md
   pseudo-delegates?
 Basic interactions, timers, audio,      -> patterns-core.md
   pickups, or teleportation?
+Station + trigger zone detection?       -> troubleshooting.md
 ```
 
 > Multiple concerns? Load the primary pattern file plus its dependencies. For example, a synced video player needs both `patterns-video.md` and `patterns-networking.md`.
@@ -227,7 +228,7 @@ WebSearch: "error message UdonSharp site:github.com"
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred |
 | `editor-scripting.md` | Editor scripting and proxy system | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject |
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) | Continuous, Manual, NoVariableSync, sync example |
-| `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback |
+| `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback, VRCStation, seated player, trigger zone, OnPlayerTriggerEnter not firing, station collider, position polling, OnStationEntered |
 | `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |
 
 ## Templates (`assets/templates/`)
