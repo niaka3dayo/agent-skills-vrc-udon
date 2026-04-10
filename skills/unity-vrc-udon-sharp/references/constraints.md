@@ -56,7 +56,7 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 | User-defined methods | Supported | 3.0+ | Parameters and return values work |
 | `out`/`ref` parameters | Supported | 3.0+ | |
 | `params` keyword | Supported | 3.0+ | Variable arguments |
-| Extension methods | Supported | 3.0+ | |
+| Extension methods | Supported | 1.0+ | Works in UdonSharp 1.0+; static methods also valid |
 | Properties (get/set) | Supported | 3.0+ | |
 | Virtual methods | Supported | 3.0+ | For inheritance |
 | `[RecursiveMethod]` | Required | 3.0+ | Attribute required for recursive calls |
@@ -89,6 +89,8 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 | Generic type parameters | Blocked | — | Use concrete types |
 
 **DataList / DataDictionary (SDK 3.7.1+):**
+
+> **When to use:** Prefer fixed-size `T[]` arrays for most cases — they are faster, type-safe at compile time, and work with `[UdonSynced]`. Use `DataList` / `DataDictionary` only when: (1) the collection size is truly unknown at compile time and varies at runtime, (2) you need heterogeneous value types in a single container (via `DataToken`), or (3) you are parsing JSON with `VRCJson` (which returns `DataDictionary` / `DataList` natively). Do not adopt DataList just because it feels more familiar than manual array resizing — the `ArrayUtils` helper pattern (see [patterns-utilities.md](patterns-utilities.md)) covers `Add` / `Remove` / `FindIndex` for typed arrays with no boxing overhead.
 
 ```csharp
 using VRC.SDK3.Data;
@@ -591,6 +593,512 @@ button.onClick.AddListener(DoSomething); // Also not possible
 // 3. Select SendCustomEvent
 // 4. Enter the method name (e.g., "OnButtonClicked")
 ```
+
+## Advanced Constraint Workarounds
+
+### Object Array Pseudo-Struct (Multi-Field State Container)
+
+UdonSharp lacks custom constructors, user-defined structs, and generics. When you need a reusable data object
+that holds multiple typed fields per slot (e.g., per-pointer touch state, per-player session data), there is no
+direct equivalent of a C# struct or class constructor.
+
+> **Cross-reference**: The full pseudo-struct pattern with additional usage examples is also documented in
+> [patterns-utilities.md](patterns-utilities.md).
+
+**Workaround**: Pack multiple typed arrays into an `object[]`, then cast the whole array to an `UdonSharpBehaviour`
+type. This exploits the fact that UdonVM stores UdonSharpBehaviour references as plain objects at runtime, allowing
+the cast chain `(MyType)(object)objectArray` to succeed. Each index in the `object[]` represents a "field" of the
+pseudo-struct, and each element is a typed array where the array index represents the slot (instance).
+
+**Why this works**: UdonVM does not perform strict type checking on `object` casts at the level that standard CLR
+does. The `UdonSharpBehaviour` type reference becomes a handle to the underlying `object[]`, which can be cast back
+to access the typed arrays inside.
+
+**Complete Example -- Multi-Pointer Touch State Container:**
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+using VRC.SDKBase;
+
+// The "struct" type -- the class body contains only the factory method.
+// No fields are declared here; all state lives in the object[] created by New().
+[AddComponentMenu("")]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class PointerState : UdonSharpBehaviour
+{
+    /// <summary>
+    /// Creates a new pseudo-struct with per-slot arrays for the given capacity.
+    /// Each slot represents one pointer/finger that can interact simultaneously.
+    /// </summary>
+    public static PointerState New(int slotCount)
+    {
+        // Field 0: the UI element each pointer is currently touching
+        Graphic[] activeGraphics = new Graphic[slotCount];
+        // Field 1: world-space position where the pointer first made contact
+        Vector3[] startPositions = new Vector3[slotCount];
+        // Field 2: cumulative drag distance for each pointer
+        float[] dragDistances = new float[slotCount];
+        // Field 3: whether each slot is currently active
+        bool[] isActive = new bool[slotCount];
+
+        object[] buffer = new object[]
+        {
+            activeGraphics,   // index 0
+            startPositions,   // index 1
+            dragDistances,    // index 2
+            isActive          // index 3
+        };
+
+        // Cast the object[] to the UdonSharpBehaviour type.
+        // This is the key trick: UdonVM allows this reinterpret cast.
+        return (PointerState)(object)buffer;
+    }
+}
+
+// Typed accessors are defined as static methods in a separate UdonSharpBehaviour.
+// UdonSharp does not support static classes or extension methods (this T syntax),
+// so plain static methods with an explicit first parameter are used instead.
+[AddComponentMenu("")]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class PointerStateExt : UdonSharpBehaviour
+{
+    // --- Field 0: ActiveGraphic ---
+
+    public static Graphic GetActiveGraphic(PointerState self, int slot)
+    {
+        return ((Graphic[])((object[])(object)self)[0])[slot];
+    }
+
+    public static void SetActiveGraphic(PointerState self, int slot, Graphic graphic)
+    {
+        ((Graphic[])((object[])(object)self)[0])[slot] = graphic;
+    }
+
+    // --- Field 1: StartPosition ---
+
+    public static Vector3 GetStartPosition(PointerState self, int slot)
+    {
+        return ((Vector3[])((object[])(object)self)[1])[slot];
+    }
+
+    public static void SetStartPosition(PointerState self, int slot, Vector3 position)
+    {
+        ((Vector3[])((object[])(object)self)[1])[slot] = position;
+    }
+
+    // --- Field 2: DragDistance ---
+
+    public static float GetDragDistance(PointerState self, int slot)
+    {
+        return ((float[])((object[])(object)self)[2])[slot];
+    }
+
+    public static void SetDragDistance(PointerState self, int slot, float distance)
+    {
+        ((float[])((object[])(object)self)[2])[slot] = distance;
+    }
+
+    // --- Field 3: IsActive ---
+
+    public static bool GetIsActive(PointerState self, int slot)
+    {
+        return ((bool[])((object[])(object)self)[3])[slot];
+    }
+
+    public static void SetIsActive(PointerState self, int slot, bool active)
+    {
+        ((bool[])((object[])(object)self)[3])[slot] = active;
+    }
+
+    // --- Lifecycle Methods ---
+
+    /// <summary>
+    /// Initializes a slot when a pointer begins interaction.
+    /// </summary>
+    public static void InitSlot(PointerState self, int slot, Graphic graphic, Vector3 worldPosition)
+    {
+        ClearSlot(self, slot);
+        SetActiveGraphic(self, slot, graphic);
+        SetStartPosition(self, slot, worldPosition);
+        SetDragDistance(self, slot, 0f);
+        SetIsActive(self, slot, true);
+    }
+
+    /// <summary>
+    /// Resets all fields for a slot to default values.
+    /// </summary>
+    public static void ClearSlot(PointerState self, int slot)
+    {
+        SetActiveGraphic(self, slot, null);
+        SetStartPosition(self, slot, Vector3.zero);
+        SetDragDistance(self, slot, 0f);
+        SetIsActive(self, slot, false);
+    }
+}
+
+// Usage in a manager script
+public class InputManager : UdonSharpBehaviour
+{
+    private PointerState _pointerState;
+    private const int MaxPointers = 16;
+
+    void Start()
+    {
+        // Create the pseudo-struct with capacity for 16 simultaneous pointers
+        _pointerState = PointerState.New(MaxPointers);
+    }
+
+    public void OnPointerDown(int pointerIndex, Graphic hitGraphic, Vector3 worldPos)
+    {
+        if (pointerIndex < 0 || pointerIndex >= MaxPointers) return;
+        PointerStateExt.InitSlot(_pointerState, pointerIndex, hitGraphic, worldPos);
+    }
+
+    public void OnPointerUp(int pointerIndex)
+    {
+        if (pointerIndex < 0 || pointerIndex >= MaxPointers) return;
+        if (!PointerStateExt.GetIsActive(_pointerState, pointerIndex)) return;
+
+        float totalDrag = PointerStateExt.GetDragDistance(_pointerState, pointerIndex);
+        Debug.Log($"[InputManager] Pointer {pointerIndex} released after {totalDrag:F2} units of drag");
+
+        PointerStateExt.ClearSlot(_pointerState, pointerIndex);
+    }
+
+    public void OnPointerMove(int pointerIndex, Vector3 currentWorldPos)
+    {
+        if (pointerIndex < 0 || pointerIndex >= MaxPointers) return;
+        if (!PointerStateExt.GetIsActive(_pointerState, pointerIndex)) return;
+
+        Vector3 startPos = PointerStateExt.GetStartPosition(_pointerState, pointerIndex);
+        float distance = Vector3.Distance(startPos, currentWorldPos);
+        PointerStateExt.SetDragDistance(_pointerState, pointerIndex, distance);
+    }
+}
+```
+
+**Pattern Summary:**
+
+| Element | Purpose |
+|---------|---------|
+| `UdonSharpBehaviour` subclass | Type identity for the pseudo-struct; holds only the `New()` factory |
+| `New(int count)` static method | Factory that creates the `object[]` and casts it to the type |
+| `object[]` buffer | Holds one typed array per "field" at each index |
+| `(T)(object)buffer` cast | Reinterprets the `object[]` as the UdonSharpBehaviour type |
+| Static methods in `PointerStateExt` | Provide typed get/set accessors with the reverse cast chain |
+| `InitSlot` / `ClearSlot` | Lifecycle methods to set up and tear down per-slot state |
+
+**Caveats:**
+
+- **Cast chain performance**: Each accessor performs `(object) -> object[] -> T[] -> element`. This involves
+  multiple unboxing steps per access. Avoid calling accessors in tight per-frame loops over large arrays.
+  If performance is critical, cache the inner typed array locally:
+  ```csharp
+  // Cache for hot-path iteration
+  float[] distances = (float[])((object[])(object)_pointerState)[2];
+  for (int i = 0; i < MaxPointers; i++)
+  {
+      if (distances[i] > threshold) { /* ... */ }
+  }
+  ```
+- **Debugging difficulty**: The pseudo-struct does not appear in the Unity Inspector. You cannot inspect field
+  values through the normal UdonSharp variable display. Add explicit `Debug.Log` calls during development.
+- **No compile-time safety on field indices**: Using integer indices (`[0]`, `[1]`, etc.) for field access is
+  error-prone. Keep the mapping documented in the `New()` method comments and never access the `object[]`
+  directly outside the static accessor methods.
+- **Not serializable**: The pseudo-struct cannot be saved to the scene or synced over the network. It is
+  purely a runtime data structure.
+
+---
+
+### VRCUrl Array Sync Workaround
+
+`VRCUrl[]` arrays cannot be marked with `[UdonSynced]`. UdonSharp's sync system only supports syncing individual
+`VRCUrl` fields, not arrays of them. This is a known limitation of the Udon serialization layer -- the sync
+system does not handle `VRCUrl` as a syncable array element type.
+
+**Workaround**: Declare each URL as a separate `[UdonSynced]` field (`SyncedUrl_0` through `SyncedUrl_N`), then
+use `switch` statements to map a runtime index to the correct field for reading and writing. Metadata (sender
+name, timestamp, content type, etc.) can be synced as a single JSON string via `VRCJson` serialization.
+
+**Complete Example -- Synced URL List with Metadata:**
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Data;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SyncedUrlList : UdonSharpBehaviour
+{
+    private const int MaxUrls = 8;
+
+    // Each VRCUrl must be synced individually -- arrays are not supported.
+    [UdonSynced] private VRCUrl SyncedUrl_0;
+    [UdonSynced] private VRCUrl SyncedUrl_1;
+    [UdonSynced] private VRCUrl SyncedUrl_2;
+    [UdonSynced] private VRCUrl SyncedUrl_3;
+    [UdonSynced] private VRCUrl SyncedUrl_4;
+    [UdonSynced] private VRCUrl SyncedUrl_5;
+    [UdonSynced] private VRCUrl SyncedUrl_6;
+    [UdonSynced] private VRCUrl SyncedUrl_7;
+
+    // Metadata for all URLs synced as a single JSON string.
+    // Format: [[timestamp, typeId, "senderName"], ...]
+    [UdonSynced] private string SyncedMetadataJson = "[]";
+
+    // Local cache of parsed metadata
+    private DataList _metadataList;
+
+    // Pending operation state (used when ownership transfer is in progress)
+    private bool _pendingAdd = false;
+    private VRCUrl _pendingAddUrl;
+    private int _pendingAddType;
+    private bool _pendingRemove = false;
+    private int _pendingRemoveIndex;
+
+    // --- Index-to-Field Accessor (Set) ---
+
+    private void SetUrlAtIndex(int index, VRCUrl url)
+    {
+        switch (index)
+        {
+            case 0: SyncedUrl_0 = url; break;
+            case 1: SyncedUrl_1 = url; break;
+            case 2: SyncedUrl_2 = url; break;
+            case 3: SyncedUrl_3 = url; break;
+            case 4: SyncedUrl_4 = url; break;
+            case 5: SyncedUrl_5 = url; break;
+            case 6: SyncedUrl_6 = url; break;
+            case 7: SyncedUrl_7 = url; break;
+            default:
+                Debug.LogWarning($"[SyncedUrlList] Index {index} out of range (max {MaxUrls - 1})");
+                break;
+        }
+    }
+
+    // --- Index-to-Field Accessor (Get) ---
+
+    private VRCUrl GetUrlAtIndex(int index)
+    {
+        switch (index)
+        {
+            case 0: return SyncedUrl_0;
+            case 1: return SyncedUrl_1;
+            case 2: return SyncedUrl_2;
+            case 3: return SyncedUrl_3;
+            case 4: return SyncedUrl_4;
+            case 5: return SyncedUrl_5;
+            case 6: return SyncedUrl_6;
+            case 7: return SyncedUrl_7;
+            default: return VRCUrl.Empty;
+        }
+    }
+
+    // --- Public API ---
+
+    /// <summary>
+    /// Adds a URL with metadata. Takes ownership, updates synced state, and requests serialization.
+    /// </summary>
+    public bool AddUrl(VRCUrl url, int contentType)
+    {
+        if (!ParseMetadata()) return false;
+
+        if (_metadataList.Count >= MaxUrls)
+        {
+            Debug.LogWarning("[SyncedUrlList] URL list is full");
+            return false;
+        }
+
+        if (!Networking.IsOwner(gameObject))
+        {
+            // Defer until ownership is confirmed
+            _pendingAdd = true;
+            _pendingAddUrl = url;
+            _pendingAddType = contentType;
+            _pendingRemove = false;
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            return true;
+        }
+
+        ExecuteAddUrl(url, contentType);
+        return true;
+    }
+
+    private void ExecuteAddUrl(VRCUrl url, int contentType)
+    {
+        if (!ParseMetadata()) return;
+        if (_metadataList.Count >= MaxUrls) return;
+
+        // Build metadata entry: [timestamp, contentType, senderName]
+        long timestamp = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        string senderName = Networking.LocalPlayer.displayName;
+
+        DataList entry = new DataList();
+        entry.Add(timestamp);
+        entry.Add(contentType);
+        entry.Add(senderName);
+
+        _metadataList.Add(entry);
+
+        // Store URL at the new index
+        int newIndex = _metadataList.Count - 1;
+        SetUrlAtIndex(newIndex, url);
+
+        // Serialize metadata to JSON
+        if (!SerializeMetadata()) return;
+
+        RequestSerialization();
+    }
+
+    /// <summary>
+    /// Removes a URL by index. Shifts subsequent URLs down to fill the gap.
+    /// </summary>
+    public bool RemoveUrl(int removeIndex)
+    {
+        if (!ParseMetadata()) return false;
+        if (removeIndex < 0 || removeIndex >= _metadataList.Count) return false;
+
+        if (!Networking.IsOwner(gameObject))
+        {
+            // Defer until ownership is confirmed
+            _pendingRemove = true;
+            _pendingRemoveIndex = removeIndex;
+            _pendingAdd = false;
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+            return true;
+        }
+
+        ExecuteRemoveUrl(removeIndex);
+        return true;
+    }
+
+    private void ExecuteRemoveUrl(int removeIndex)
+    {
+        if (!ParseMetadata()) return;
+        if (removeIndex < 0 || removeIndex >= _metadataList.Count) return;
+
+        _metadataList.RemoveAt(removeIndex);
+
+        // Shift URL fields down to fill the gap
+        for (int i = removeIndex; i < _metadataList.Count; i++)
+        {
+            SetUrlAtIndex(i, GetUrlAtIndex(i + 1));
+        }
+        // Clear the last slot
+        SetUrlAtIndex(_metadataList.Count, VRCUrl.Empty);
+
+        if (!SerializeMetadata()) return;
+
+        RequestSerialization();
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
+    {
+        if (!player.isLocal) return;
+
+        if (_pendingAdd)
+        {
+            _pendingAdd = false;
+            ExecuteAddUrl(_pendingAddUrl, _pendingAddType);
+        }
+        else if (_pendingRemove)
+        {
+            _pendingRemove = false;
+            ExecuteRemoveUrl(_pendingRemoveIndex);
+        }
+    }
+
+    /// <summary>
+    /// Returns the VRCUrl at the given index.
+    /// </summary>
+    public VRCUrl GetUrl(int index)
+    {
+        return GetUrlAtIndex(index);
+    }
+
+    /// <summary>
+    /// Returns the current number of stored URLs.
+    /// </summary>
+    public int GetCount()
+    {
+        if (!ParseMetadata()) return 0;
+        return _metadataList.Count;
+    }
+
+    // --- Deserialization (receiving sync from owner) ---
+
+    public override void OnDeserialization()
+    {
+        if (!ParseMetadata())
+        {
+            Debug.LogWarning("[SyncedUrlList] Failed to parse metadata on deserialization");
+            return;
+        }
+
+        // URLs are automatically synced via their individual [UdonSynced] fields.
+        // Metadata is parsed from the JSON string above.
+        // Notify listeners or update UI here.
+        Debug.Log($"[SyncedUrlList] Received {_metadataList.Count} URLs");
+    }
+
+    // --- Internal Helpers ---
+
+    private bool ParseMetadata()
+    {
+        if (VRCJson.TryDeserializeFromJson(SyncedMetadataJson, out DataToken token))
+        {
+            _metadataList = token.DataList;
+            return true;
+        }
+        Debug.LogError("[SyncedUrlList] Failed to deserialize metadata JSON");
+        return false;
+    }
+
+    private bool SerializeMetadata()
+    {
+        if (VRCJson.TrySerializeToJson(_metadataList, JsonExportType.Minify, out DataToken token))
+        {
+            SyncedMetadataJson = token.String;
+            return true;
+        }
+        Debug.LogError("[SyncedUrlList] Failed to serialize metadata JSON");
+        return false;
+    }
+}
+```
+
+**Pattern Summary:**
+
+| Element | Purpose |
+|---------|---------|
+| Individual `[UdonSynced] VRCUrl` fields | Each URL synced as its own field (array sync not supported) |
+| `switch`-based get/set methods | Maps runtime index to the correct field |
+| `[UdonSynced] string` for metadata | JSON-encoded array of `[timestamp, type, sender]` entries |
+| `VRCJson.TrySerializeToJson` / `TryDeserializeFromJson` | Serialization of structured metadata into a single synced string |
+| `OnDeserialization` | Handles incoming sync data on non-owner clients |
+| Pending-operation + `OnOwnershipTransferred` | Defers synced writes until ownership is confirmed, avoiding SetOwner race conditions |
+
+**Bandwidth and Performance Considerations:**
+
+- **Each `[UdonSynced]` field contributes to sync payload size.** VRCUrl fields are serialized as strings
+  (the full URL text). With Manual sync mode, all synced fields are sent together in one `RequestSerialization`
+  call, even if only one URL changed.
+- **Recommended capacity: 8-16 fields** for most use cases. Going beyond 16 significantly increases the per-sync
+  payload. At 64 fields, the sync payload can become large enough to cause noticeable latency, especially in
+  worlds with many synced objects.
+- **Metadata as JSON is bandwidth-efficient**: A single `[UdonSynced] string` holding structured JSON is far
+  cheaper than syncing individual metadata fields (sender, timestamp, type) per URL slot.
+- **Deletion requires shifting**: When removing a URL from the middle, all subsequent URL fields must be
+  reassigned (shifted down). This is an O(n) operation on synced fields. For frequently modified lists, consider
+  using a "soft delete" flag in the metadata instead of physically shifting.
+- **Late-joiner sync**: All `[UdonSynced]` fields are automatically sent to late joiners. No special handling
+  is needed beyond calling `RequestSerialization()` in `OnPlayerJoined` if the owner needs to push current state.
+
+---
 
 ## See Also
 

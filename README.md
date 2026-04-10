@@ -110,8 +110,8 @@ skills/                                  # All skills
     hooks/                               # PostToolUse validation
       validate-udonsharp.sh
       validate-udonsharp.ps1
-    assets/templates/                    # Code templates (4 files)
-    references/                          # Detailed documentation (20 files)
+    assets/templates/                    # Code templates (17 files)
+    references/                          # Detailed documentation (21 files)
   unity-vrc-world-sdk-3/                # VRC World SDK skill
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7 files)
 templates/                               # AI tool config templates
@@ -136,7 +136,7 @@ UdonSharp scripting core skill. Covers compile constraints, networking, events, 
 | **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
 | **Dynamics** | SDK 3.10.0+ PhysBones, Contacts, VRC Constraints for Worlds |
 | **Web Loading** | String/Image download, VRCJson, VRCUrl constraints |
-| **Templates** | 4 starter templates (BasicInteraction, SyncedObject, PlayerSettings, CustomInspector) |
+| **Templates** | 17 templates (interactions, sync patterns, persistence, editor utilities, and more) |
 
 ### unity-vrc-world-sdk-3
 

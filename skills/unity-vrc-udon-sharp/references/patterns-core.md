@@ -910,5 +910,6 @@ public class ScoreBoard : UdonSharpBehaviour
 - [dynamics.md](dynamics.md) - PhysBones, Contacts, and VRC Constraints for physics-based interactions
 - [patterns-networking.md](patterns-networking.md) - Object pooling, game state, NetworkCallable, persistence, dynamics
 - [patterns-performance.md](patterns-performance.md) - Partial class, update handler, PostLateUpdate, spatial query
+- [patterns-ui.md](patterns-ui.md) - UI/Canvas patterns, immobilize guard, localization, settings persistence
 - [patterns-utilities.md](patterns-utilities.md) - Array helpers, event bus, relay communication
 - [networking.md](networking.md) - Ownership model, sync modes, and RequestSerialization details

@@ -111,8 +111,8 @@ skills/                                  # 모든 스킬
     hooks/                               # PostToolUse 검증
       validate-udonsharp.sh
       validate-udonsharp.ps1
-    assets/templates/                    # 코드 템플릿 (4개 파일)
-    references/                          # 상세 문서 (20개 파일)
+    assets/templates/                    # 코드 템플릿 (17개 파일)
+    references/                          # 상세 문서 (21개 파일)
   unity-vrc-world-sdk-3/                # VRC World SDK 스킬
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7개 파일)
 templates/                               # AI 도구 설정 템플릿
@@ -137,7 +137,7 @@ UdonSharp 스크립팅 핵심 스킬. 컴파일 제약, 네트워킹, 이벤트,
 | **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
 | **Dynamics** | SDK 3.10.0+ PhysBones, Contacts, VRC Constraints for Worlds |
 | **웹 로딩** | String/Image 다운로드, VRCJson, VRCUrl 제약 |
-| **템플릿** | 4개의 스타터 템플릿 (BasicInteraction, SyncedObject, PlayerSettings, CustomInspector) |
+| **템플릿** | 17개 템플릿 (인터랙션, 동기화 패턴, 지속성, 에디터 유틸리티 등) |
 
 ### unity-vrc-world-sdk-3
 
