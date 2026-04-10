@@ -59,7 +59,7 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 
 ## Sync Mode Quick Decision
 
-```
+```text
 Changing every frame (position, rotation)?    -> Continuous sync
 Changing on user action (toggle, score)?      -> Manual sync + RequestSerialization()
 No sync needed (local UI, effects)?           -> NoVariableSync
@@ -89,7 +89,7 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 
 Six pattern files cover different domains. Use this quick routing to pick the right one:
 
-```
+```text
 Building a UI, menu, or HUD?           -> patterns-ui.md
 VR finger/touch interaction on Canvas? -> patterns-ui.md
 Modular app with multiple screens?     -> patterns-ui.md

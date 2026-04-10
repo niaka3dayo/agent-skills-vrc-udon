@@ -603,7 +603,7 @@ that holds multiple typed fields per slot (e.g., per-pointer touch state, per-pl
 direct equivalent of a C# struct or class constructor.
 
 > **Cross-reference**: The full pseudo-struct pattern with additional usage examples is also documented in
-> `patterns-utilities.md`.
+> [patterns-utilities.md](patterns-utilities.md).
 
 **Workaround**: Pack multiple typed arrays into an `object[]`, then cast the whole array to an `UdonSharpBehaviour`
 type. This exploits the fact that UdonVM stores UdonSharpBehaviour references as plain objects at runtime, allowing
