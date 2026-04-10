@@ -13,6 +13,52 @@ VRChat Persistence allows saving data across sessions. There are two main system
 | **PlayerData** | Key-value storage per player | Settings, scores, unlocks |
 | **PlayerObject** | Synced UdonBehaviour per player | Complex player state, frequent updates |
 
+## Storage Layer Decision Tree
+
+Before choosing an API, decide which storage layer fits your data. UdonSharp offers five layers with different scope and lifetime:
+
+```
+Does another player need to see this value?
+├─ No ─── Does it need to survive a rejoin / session change?
+│         ├─ No ──→ Non-synced field (plain private field on UdonSharpBehaviour)
+│         └─ Yes ─→ PlayerData (key-value, per-player, cross-session)
+│
+└─ Yes ── Is it tied to a specific player, or shared by the world?
+          │
+          ├─ Per-player ─── Does the player need a synced GameObject in the scene?
+          │                 ├─ No ──→ PlayerData (other players read via OnPlayerDataUpdated;
+          │                 │          late joiners receive it via OnPlayerRestored)
+          │                 └─ Yes ─→ PlayerObject (synced UdonBehaviour per player)
+          │
+          └─ Shared ─────── Does a late joiner need to see the current value?
+                            ├─ No ──→ SendCustomNetworkEvent (fire-and-forget, no payload)
+                            └─ Yes ─→ [UdonSynced] variable (Continuous or Manual)
+```
+
+### Quick Reference Table
+
+| Layer | Scope | Lifetime | Capacity | Typical use |
+|-------|-------|----------|----------|-------------|
+| **Non-synced field** | Self only | Until scene reload | Unlimited | UI state, timers, cooldown flags |
+| **[UdonSynced]** | All players in instance | Instance lifetime (late joiners receive current value) | ~200 B continuous / ~282 KB manual per behaviour | Shared game state, scores, toggles |
+| **SendCustomNetworkEvent** | All players in instance | Instant (no persistence, late joiners miss it) | Event name only (no payload) | Sound effects, particle triggers, one-shot notifications |
+| **PlayerData** | Per player, readable by all | Cross-session (permanent until deleted) | 100 KB per player per world | Settings, unlocks, high scores |
+| **PlayerObject** | Per player, synced behaviour | Instance lifetime (+ cross-session if `VRCEnablePersistence` is on) | One UdonBehaviour per player | Complex per-player state with frequent updates |
+
+### Common Mistakes
+
+| Mistake | Why it fails | Fix |
+|---------|-------------|-----|
+| Using `[UdonSynced]` for data that only the local player needs | Wastes sync bandwidth, adds ownership complexity | Use a non-synced field |
+| Using `SendCustomNetworkEvent` for state that late joiners need | Late joiners never receive past events | Use `[UdonSynced]` for the state, events for one-shot effects |
+| Duplicating the same value in both `[UdonSynced]` and `PlayerData` | Two sources of truth drift apart; hard to debug | Pick one: synced for real-time shared state, PlayerData for cross-session |
+| Writing PlayerData before `OnPlayerRestored` fires | Write is silently ignored | Always guard writes with a `_dataReady` flag set in `OnPlayerRestored` |
+| Changing a PlayerObject prefab or scene wiring without checking saved Network IDs | Persistence keys are bound to Network IDs; breaking the mapping loses saved data | Audit Network IDs before restructuring; keep a mapping document |
+
+> **Cross-reference:** For choosing between Continuous, Manual, and NoVariableSync *within* the synced layer, see the sync selection rule in [../rules/udonsharp-sync-selection.md](../rules/udonsharp-sync-selection.md). For bandwidth budgeting, see [networking-bandwidth.md](networking-bandwidth.md).
+
+---
+
 ## PlayerData
 
 ### Basic Concept
