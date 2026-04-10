@@ -17,7 +17,7 @@ VRChat Persistence allows saving data across sessions. There are two main system
 
 Before choosing an API, decide which storage layer fits your data. UdonSharp offers five layers with different scope and lifetime:
 
-```
+```text
 Does another player need to see this value?
 ├─ No ─── Does it need to survive a rejoin / session change?
 │         ├─ No ──→ Non-synced field (plain private field on UdonSharpBehaviour)

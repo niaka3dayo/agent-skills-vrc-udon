@@ -729,7 +729,7 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 When a player sits in a VRCStation, the **PlayerLocal (Layer 10) capsule collider is effectively disabled**. This causes `OnPlayerTriggerEnter`, `OnPlayerTriggerExit`, and `OnPlayerTriggerStay` to **not fire** for seated players.
 
-This is a [known unresolved issue since 2019](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations). No SDK version between 3.7.0 and 3.10.2 has fixed it.
+This is a [known long-standing issue](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations). As of SDK 3.10.2, no fix has been released.
 
 ### Symptoms
 
@@ -1143,6 +1143,8 @@ EditorUtility.SetDirty(behaviour);
 4. **If the `.asset` file is missing**: Install `UdonSharpProgramAssetAutoGenerator.cs` (from `assets/templates/`) into your `Assets/Editor/` folder
 5. Reimport each affected `.cs` file (right-click -> Reimport, or make a trivial edit and save) to trigger domain reload and auto-generation
 6. Confirm the matching `.asset` file is created, then re-add the component if needed. See [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for details
+
+> **Note**: The auto-generator skips scripts that have compile errors, are `abstract`, do not inherit from `UdonSharpBehaviour`, or already have a registered `.asset`. If the `.asset` is still not generated after reimport, check the Console for error messages.
 
 ---
 
