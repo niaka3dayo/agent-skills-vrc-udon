@@ -649,6 +649,217 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
 
 ---
 
+### Heavy Processing Architecture
+
+#### Problem
+
+The Frame Budget Stopwatch above solves *when to yield* — but large-scale systems (world builders, replay-based games, procedural generators) also need to answer *what to process*, *how to rebuild*, and *how to cancel safely*. Without a clear separation between authoritative data and derived visuals, a reset or late-joiner sync can leave the world in an inconsistent state.
+
+#### Core Principle: Authoritative Data vs Derived State
+
+Split every heavy system into two layers:
+
+| Layer | Holds | Examples | Survives reset? |
+|-------|-------|----------|----------------|
+| **Authoritative** | Minimal data that fully describes the current state | Operation log (`byte[]`), config arrays, placement indices | Yes — this IS the state |
+| **Derived** | Visuals / physics / UI generated from authoritative data | Instantiated GameObjects, UI text, material colours | No — regenerated on demand |
+
+The rebuild contract: given only the authoritative layer, the system can regenerate all derived state from scratch. This makes reset, undo, and late-joiner sync straightforward — replay the authoritative data through the same generation pipeline.
+
+#### Pattern: Cursor-Based Rebuild
+
+When derived state involves many objects (e.g., 200+ placed blocks), rebuilding in a single frame causes a VR hitch. Combine the authoritative/derived split with the `BranchByBudget` stopwatch:
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using System.Diagnostics;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class RebuildableWorld : UdonSharpBehaviour
+{
+    // Pool size and synced array size must match.
+    private const int MaxPlacements = 256;
+
+    [Header("Authoritative Data")]
+    [UdonSynced] private int[] _placementIds = new int[MaxPlacements];
+    [UdonSynced] private Vector3[] _placementPositions = new Vector3[MaxPlacements];
+    [UdonSynced] private int _placementCount;
+
+    [Header("Derived State — pre-allocate MaxPlacements objects in the scene")]
+    [SerializeField] private GameObject[] _blockPool;
+    private int _rebuildCursor;
+    private bool _isRebuilding;
+
+    [Header("Budget")]
+    [SerializeField] private float _budgetMs = 16f;
+    private Stopwatch _sw;
+
+    void Start()
+    {
+        _sw = new Stopwatch();
+    }
+
+    // --- Authoritative mutation (owner only) ---
+
+    public void AddPlacement(int blockId, Vector3 position)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        if (_placementCount >= MaxPlacements) return;
+        // Block incremental adds while a full rebuild is in flight
+        // to avoid double-applying the new entry.
+        if (_isRebuilding) return;
+
+        _placementIds[_placementCount] = blockId;
+        _placementPositions[_placementCount] = position;
+        _placementCount++;
+
+        // Instant local feedback for the single new block
+        ApplyOnePlacement(_placementCount - 1);
+        RequestSerialization();
+    }
+
+    // --- Full rebuild (reset, undo, late-joiner) ---
+
+    public void BeginFullRebuild()
+    {
+        // Hide all derived objects before rebuilding
+        for (int i = 0; i < _blockPool.Length; i++)
+        {
+            _blockPool[i].SetActive(false);
+        }
+
+        _rebuildCursor = 0;
+        _isRebuilding = true;
+        _sw.Reset();
+        _sw.Start();
+        SendCustomEvent(nameof(_RebuildStep));
+    }
+
+    public void _RebuildStep()
+    {
+        // Guard: if cancelled or a new BeginFullRebuild was called while
+        // a previous deferred _RebuildStep was still pending, bail out.
+        if (!_isRebuilding) return;
+
+        while (_rebuildCursor < _placementCount)
+        {
+            ApplyOnePlacement(_rebuildCursor);
+            _rebuildCursor++;
+
+            if (_sw.Elapsed.TotalMilliseconds >= _budgetMs)
+            {
+                SendCustomEventDelayedFrames(nameof(_RebuildStep), 1);
+                _sw.Reset();
+                _sw.Start();
+                return;
+            }
+        }
+
+        _sw.Stop();
+        _isRebuilding = false;
+    }
+
+    private void ApplyOnePlacement(int index)
+    {
+        if (index < 0 || index >= _blockPool.Length) return;
+        _blockPool[index].SetActive(true);
+        _blockPool[index].transform.position = _placementPositions[index];
+        // blockId lookup omitted for brevity
+    }
+
+    // --- Sync ---
+
+    public override void OnDeserialization()
+    {
+        // Late joiner or owner change: full rebuild from authoritative data.
+        // If a previous rebuild is mid-flight, BeginFullRebuild resets the
+        // cursor and sets _isRebuilding = true; the stale deferred callback
+        // from the old rebuild bails out at the guard in _RebuildStep.
+        BeginFullRebuild();
+    }
+}
+```
+
+**Key points:**
+
+- `AddPlacement` mutates the authoritative arrays and applies instant local feedback for one block — no full rebuild needed for incremental changes. It is blocked while `_isRebuilding` is true to avoid double-applying entries.
+- `BeginFullRebuild` is the universal entry point for reset, undo, and late-joiner sync. It clears all derived state and walks the authoritative data with a cursor. If called while a previous rebuild is in progress, the stale deferred `_RebuildStep` callback safely exits via the `_isRebuilding` guard.
+- The `_blockPool` is pre-allocated in the scene (UdonSharp cannot instantiate at runtime). The pool size must equal `MaxPlacements`; both the synced arrays and the pool share this constant.
+- `Vector3[]` sync is valid but costs 12 bytes per element. For large placement counts consider packing positions into `int[]` with fixed-point encoding — see [networking-bandwidth.md](networking-bandwidth.md).
+
+#### Pattern: Operation Log with Replay
+
+For systems where the *sequence of actions* matters (board games, drawing tools), store an operation log rather than final state. This enables undo, replay, and late-joiner catch-up:
+
+```csharp
+// Authoritative layer: operation log
+[UdonSynced] private byte[] _opLog;       // Packed operations
+[UdonSynced] private int _opCount;         // Number of valid entries
+
+// Each operation is a fixed-size record (e.g., 4 bytes):
+//   byte 0: operation type (place=0, remove=1, move=2)
+//   byte 1: target slot index
+//   byte 2-3: parameter (e.g., colour index, position index)
+
+private void ReplayFromScratch()
+{
+    ResetDerivedState();
+    for (int i = 0; i < _opCount; i++)
+    {
+        int offset = i * 4;
+        byte opType = _opLog[offset];
+        byte slot   = _opLog[offset + 1];
+        int param   = (_opLog[offset + 2] << 8) | _opLog[offset + 3];
+        ApplyOperation(opType, slot, param);
+    }
+}
+```
+
+**Cross-reference:** The `UndoableGameManager.cs` template uses **full-state snapshots** rather than operation logs — each move saves the complete `currentState` array via `System.Array.Copy`. Use snapshots when state is small and replay is expensive; use the operation-log approach when state is large but individual operations are compact. See [assets/templates/UndoableGameManager.cs](../assets/templates/UndoableGameManager.cs).
+
+> **Note:** The operation-log snippet above is a fragment showing the data layout and replay loop. In a full implementation, wrap it in an `UdonSharpBehaviour` class with `[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]` and add an initialized array (e.g., `private byte[] _opLog = new byte[4000];` for up to 1000 four-byte operations — 4 KB, well within the ~282 KB Manual sync limit).
+
+#### Reset vs Cancel
+
+These are distinct operations — conflating them causes bugs:
+
+| Operation | Meaning | Authoritative data | Derived state | In-progress work |
+|-----------|---------|-------------------|---------------|-----------------|
+| **Reset** | Return to a known initial state | Revert to snapshot (e.g., `_opCount = 0` or restore `history[0]`) | Full rebuild from reverted data | Abort and discard |
+| **Cancel** | Abort an in-progress multi-frame operation | Keep current authoritative data unchanged | Stop rebuild cursor, keep whatever is already rendered | Abort only the pending steps |
+
+```csharp
+// Cancel: stop an in-progress rebuild without touching authoritative data
+public void CancelRebuild()
+{
+    _isRebuilding = false;
+    // Derived state is partially rebuilt — acceptable for cancel.
+    // Next user action or sync will trigger a fresh full rebuild if needed.
+}
+
+// Reset: revert authoritative data, then rebuild
+public void ResetToInitial()
+{
+    if (!Networking.IsOwner(gameObject)) return;
+    _placementCount = 0;
+    BeginFullRebuild();
+    RequestSerialization();
+}
+```
+
+#### Guidelines
+
+| Guideline | Rationale |
+|-----------|-----------|
+| Keep authoritative data in synced arrays, derived state in local references | Late joiners receive authoritative data via `OnDeserialization` and rebuild locally |
+| One rebuild entry point (`BeginFullRebuild`) for all triggers | Reset, undo, late-joiner sync, and error recovery all use the same path — fewer edge cases |
+| Do not mix rebuild progress with sync serialization | If `RequestSerialization` fires mid-rebuild, the partial derived state is irrelevant — only authoritative data is transmitted |
+| Cap operation logs with a maximum size | `byte[]` sync has a ~282 KB Manual sync limit; a 4-byte-per-op log with 1000 ops = 4 KB — well within budget |
+| Use cancel for user-initiated abort, reset for state revert | Cancel preserves partial visual progress; reset guarantees a clean starting state |
+
+---
+
 ## Rate Limit Resolver
 
 ### Problem

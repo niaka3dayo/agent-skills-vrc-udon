@@ -90,6 +90,8 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 
 **DataList / DataDictionary (SDK 3.7.1+):**
 
+> **When to use:** Prefer fixed-size `T[]` arrays for most cases — they are faster, type-safe at compile time, and work with `[UdonSynced]`. Use `DataList` / `DataDictionary` only when: (1) the collection size is truly unknown at compile time and varies at runtime, (2) you need heterogeneous value types in a single container (via `DataToken`), or (3) you are parsing JSON with `VRCJson` (which returns `DataDictionary` / `DataList` natively). Do not adopt DataList just because it feels more familiar than manual array resizing — the `ArrayUtils` helper pattern (see [patterns-utilities.md](patterns-utilities.md)) covers `Add` / `Remove` / `FindIndex` for typed arrays with no boxing overhead.
+
 ```csharp
 using VRC.SDK3.Data;
 
