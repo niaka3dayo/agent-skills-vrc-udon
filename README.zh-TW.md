@@ -111,7 +111,7 @@ skills/                                  # 所有技能
     hooks/                               # PostToolUse 驗證
       validate-udonsharp.sh
       validate-udonsharp.ps1
-    assets/templates/                    # 程式碼範本（4 個檔案）
+    assets/templates/                    # 程式碼範本（17 個檔案）
     references/                          # 詳細文件（21 個檔案）
   unity-vrc-world-sdk-3/                # VRC World SDK 技能
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（7 個檔案）
@@ -137,7 +137,7 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 | **持久化** | SDK 3.7.4+ PlayerData/PlayerObject API |
 | **動態元件** | SDK 3.10.0+ PhysBones、Contacts、VRC Constraints for Worlds |
 | **網頁載入** | String/Image 下載、VRCJson、VRCUrl 限制 |
-| **範本** | 4 個入門範本（BasicInteraction、SyncedObject、PlayerSettings、CustomInspector） |
+| **範本** | 17 個範本（互動、同步模式、持久化、編輯器工具等） |
 
 ### unity-vrc-world-sdk-3
 
