@@ -1140,7 +1140,9 @@ EditorUtility.SetDirty(behaviour);
 1. Fix all compile errors first
 2. Check the Console for detailed error messages
 3. Remove the UdonBehaviour and re-add the UdonSharpBehaviour
-4. **If the `.asset` file is missing**: Install `UdonSharpProgramAssetAutoGenerator.cs` (from `assets/templates/`) into your `Assets/Editor/` folder. This auto-generates `.asset` files for new UdonSharp scripts on import. See [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for details
+4. **If the `.asset` file is missing**: Install `UdonSharpProgramAssetAutoGenerator.cs` (from `assets/templates/`) into your `Assets/Editor/` folder
+5. Reimport each affected `.cs` file (right-click -> Reimport, or make a trivial edit and save) to trigger domain reload and auto-generation
+6. Confirm the matching `.asset` file is created, then re-add the component if needed. See [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for details
 
 ---
 
@@ -1534,7 +1536,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | **OnContactEnter not firing** | UdonBehaviour must be on same GameObject |
 | **Contact player is null** | Check `info.isAvatar` before accessing |
 | **Trigger not firing for seated players** | PlayerLocal collider disabled in station — use position check workaround |
-| **.asset missing / script not loaded** | Install `UdonSharpProgramAssetAutoGenerator.cs` in `Assets/Editor/` |
+| **.asset missing / script not loaded** | Install auto-generator in `Assets/Editor/`, then reimport the affected `.cs` |
 
 ---
 

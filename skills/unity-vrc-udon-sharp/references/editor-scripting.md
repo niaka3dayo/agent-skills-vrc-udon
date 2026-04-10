@@ -653,7 +653,6 @@ public class UdonSharpProgramAssetAutoGenerator : AssetPostprocessor
 ```
 
 > **Credit**: Based on [nemurigi's AssetPostprocessor pattern](https://gist.github.com/nemurigi/dea7c0a1fb94f7b9cf1c36481a459ded) (MIT License).
-
 > **Template**: A ready-to-use version is available at `assets/templates/UdonSharpProgramAssetAutoGenerator.cs`.
 
 ### Setup Instructions
