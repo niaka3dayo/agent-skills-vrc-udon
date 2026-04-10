@@ -698,6 +698,13 @@ public class RebuildableWorld : UdonSharpBehaviour
     void Start()
     {
         _sw = new Stopwatch();
+
+        // Fail-fast: detect Inspector misconfiguration before any rebuild
+        if (_blockPool == null || _blockPool.Length < MaxPlacements)
+        {
+            Debug.LogError($"[RebuildableWorld] _blockPool must have at least {MaxPlacements} entries.");
+            return;
+        }
     }
 
     // --- Authoritative mutation (owner only) ---
@@ -763,6 +770,7 @@ public class RebuildableWorld : UdonSharpBehaviour
     private void ApplyOnePlacement(int index)
     {
         if (index < 0 || index >= _blockPool.Length) return;
+        if (_blockPool[index] == null) return;
         _blockPool[index].SetActive(true);
         _blockPool[index].transform.position = _placementPositions[index];
         // blockId lookup omitted for brevity
