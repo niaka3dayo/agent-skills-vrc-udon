@@ -128,6 +128,10 @@ public void OnTriggerEnter(Collider other) { }
 public override void OnPlayerJoined(VRCPlayerApi player) { }
 ```
 
+### 8. UdonSharpProgramAsset Requirement
+
+Every `.cs` UdonSharpBehaviour needs a corresponding `.asset` (UdonSharpProgramAsset). Without it, the script won't compile to Udon. When creating new scripts outside Unity's "Create > U# Script" menu, recommend the auto-generator template (`UdonSharpProgramAssetAutoGenerator.cs`) in an `Editor` folder. See `references/editor-scripting.md` for details.
+
 ## Attribute Quick Reference
 
 ### Class Level
@@ -174,3 +178,4 @@ Types that can be used with `[UdonSynced]`:
 - [ ] Using return values for struct methods
 - [ ] Not using `AddListener()`
 - [ ] Unity callbacks (OnTriggerEnter, etc.) do not have override
+- [ ] New scripts have corresponding `.asset` files (or auto-generator is installed)

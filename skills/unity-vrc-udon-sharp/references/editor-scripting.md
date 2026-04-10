@@ -502,70 +502,169 @@ When creating scripts through the Unity Editor (Assets > Create > U# Script), bo
 
 ### Auto-Generation via AssetPostprocessor
 
-Use `AssetPostprocessor.OnPostprocessAllAssets()` to detect newly imported UdonSharp scripts and auto-generate their program assets:
+Use `AssetPostprocessor.OnPostprocessAllAssets()` to detect newly imported UdonSharp scripts and auto-generate their program assets. The implementation below handles edge cases such as abstract classes, compile errors, and concurrent asset creation:
 
 ```csharp
 #if UNITY_EDITOR
+using System;
+using System.IO;
+using System.Reflection;
+using UdonSharp;
+using UdonSharp.Compiler;
+using UdonSharpEditor;
 using UnityEditor;
 using UnityEngine;
-using UdonSharp;
-using UdonSharpEditor;
 
 /// <summary>
-/// Automatically generates UdonSharpProgramAsset for new UdonSharp scripts.
+/// Automatically generates UdonSharpProgramAsset for newly imported UdonSharpBehaviour scripts.
 /// Place this file in an Editor folder (e.g., Assets/Editor/).
 /// </summary>
-public class UdonSharpAutoAssetGenerator : AssetPostprocessor
+public class UdonSharpProgramAssetAutoGenerator : AssetPostprocessor
 {
+    /// <summary>
+    /// Reads UdonSharpSettings.autoCompileOnModify via reflection
+    /// to avoid hard dependency on internal editor types.
+    /// </summary>
+    private static bool GetAutoCompileOnModify()
+    {
+        try
+        {
+            Assembly udonSharpEditorAssembly = typeof(UdonSharpEditorUtility).Assembly;
+            Type settingsType = udonSharpEditorAssembly.GetType(
+                "UdonSharpEditor.UdonSharpSettings");
+            if (settingsType == null) return false;
+
+            MethodInfo getSettingsMethod = settingsType.GetMethod(
+                "GetSettings", BindingFlags.Public | BindingFlags.Static);
+            if (getSettingsMethod == null) return false;
+
+            object settingsInstance = getSettingsMethod.Invoke(null, null);
+            if (settingsInstance == null) return false;
+
+            FieldInfo autoCompileField = settingsType.GetField(
+                "autoCompileOnModify",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (autoCompileField == null) return false;
+
+            object fieldValue = autoCompileField.GetValue(settingsInstance);
+            return fieldValue is bool enabled && enabled;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError(
+                $"[UdonSharp AutoGenerator] Failed to read autoCompileOnModify.\n{ex}");
+            return false;
+        }
+    }
+
     private static void OnPostprocessAllAssets(
         string[] importedAssets,
         string[] deletedAssets,
         string[] movedAssets,
-        string[] movedFromAssetPaths)
+        string[] movedFromAssetPaths,
+        bool didDomainReload)
     {
-        foreach (string assetPath in importedAssets)
-        {
-            if (!assetPath.EndsWith(".cs")) continue;
+        // Only run after domain reload (avoids running on every asset import)
+        if (!didDomainReload) return;
 
-            MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
+        bool createdAny = false;
+
+        foreach (string importedAssetPath in importedAssets)
+        {
+            if (string.IsNullOrEmpty(importedAssetPath)) continue;
+
+            MonoScript script =
+                AssetDatabase.LoadAssetAtPath<MonoScript>(importedAssetPath);
             if (script == null) continue;
 
-            System.Type scriptType = script.GetClass();
-            if (scriptType == null) continue;
-            if (!scriptType.IsSubclassOf(typeof(UdonSharpBehaviour))) continue;
+            Type scriptClass = script.GetClass();
 
-            // Check if program asset already exists
-            string assetFilePath = assetPath.Replace(".cs", ".asset");
-            UdonSharpProgramAsset existingAsset =
-                AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(assetFilePath);
+            // Skip null (compile errors), abstract classes, non-UdonSharpBehaviour
+            if (scriptClass == null
+                || scriptClass.IsAbstract
+                || !typeof(UdonSharpBehaviour).IsAssignableFrom(scriptClass))
+                continue;
 
-            if (existingAsset != null) continue;
+            // Check Udon registration (not just file existence)
+            if (UdonSharpEditorUtility.GetUdonSharpProgramAsset(scriptClass) != null)
+                continue;
 
-            // Create new UdonSharpProgramAsset
+            string programAssetPath = Path.ChangeExtension(importedAssetPath, ".asset")
+                ?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(programAssetPath)
+                || !programAssetPath.StartsWith("Assets/", StringComparison.Ordinal))
+                continue;
+
+            if (AssetDatabase.LoadMainAssetAtPath(programAssetPath) != null)
+                continue;
+
             UdonSharpProgramAsset programAsset =
                 ScriptableObject.CreateInstance<UdonSharpProgramAsset>();
             programAsset.sourceCsScript = script;
 
-            AssetDatabase.CreateAsset(programAsset, assetFilePath);
-            Debug.Log($"[UdonSharp] Auto-generated ProgramAsset: {assetFilePath}");
+            try
+            {
+                AssetDatabase.CreateAsset(programAsset, programAssetPath);
+                AssetDatabase.ImportAsset(
+                    programAssetPath, ImportAssetOptions.ForceSynchronousImport);
+
+                if (AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(
+                    programAssetPath) == null)
+                {
+                    Debug.LogError(
+                        $"[UdonSharp AutoGenerator] Failed to create asset at " +
+                        $"'{programAssetPath}' for '{importedAssetPath}'.");
+                    continue;
+                }
+
+                Debug.Log(
+                    $"[UdonSharp AutoGenerator] Created ProgramAsset: {programAssetPath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError(
+                    $"[UdonSharp AutoGenerator] Exception creating asset at " +
+                    $"'{programAssetPath}' for '{importedAssetPath}'.\n{ex}");
+                continue;
+            }
+
+            createdAny = true;
         }
 
-        AssetDatabase.SaveAssets();
+        if (!createdAny) return;
+
+        AssetDatabase.Refresh();
+
+        // Trigger UdonSharp compilation if auto-compile is enabled
+        if (!GetAutoCompileOnModify()) return;
+
+        try
+        {
+            UdonSharpCompilerV1.CompileSync();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError(
+                $"[UdonSharp AutoGenerator] Compile failed after generating assets.\n{ex}");
+        }
     }
 }
 #endif
 ```
 
-> **Credit**: This approach is based on [nemurigi's AssetPostprocessor pattern](https://gist.github.com/nemurigi/dea7c0a1fb94f7b9cf1c36481a459ded) (MIT License).
+> **Credit**: Based on [nemurigi's AssetPostprocessor pattern](https://gist.github.com/nemurigi/dea7c0a1fb94f7b9cf1c36481a459ded) (MIT License).
+> **Template**: A ready-to-use version is available at `assets/templates/UdonSharpProgramAssetAutoGenerator.cs`.
 
 ### Setup Instructions
 
 1. Create an `Editor` folder in your Unity project (e.g., `Assets/Editor/`)
-2. Place the `UdonSharpAutoAssetGenerator.cs` file inside it
-3. New UdonSharp scripts will automatically get their `.asset` files on import
+2. Copy `UdonSharpProgramAssetAutoGenerator.cs` into the `Editor` folder
+3. New UdonSharp scripts will automatically get their `.asset` files after domain reload
+4. If `autoCompileOnModify` is enabled in UdonSharp settings, compilation triggers automatically
 
 ### Limitations
 
-- The script must compile successfully before the asset can be generated
-- `scriptType.GetClass()` returns `null` if the script has compile errors
+- The script must compile successfully before the asset can be generated (`GetClass()` returns `null` for scripts with compile errors)
+- Abstract classes are intentionally skipped (they cannot have their own UdonSharpProgramAsset)
 - The `Editor` folder placement is required (scripts in `Editor` are not compiled by UdonSharp)
+- Generation only runs after domain reload (`didDomainReload`), not on every asset import
