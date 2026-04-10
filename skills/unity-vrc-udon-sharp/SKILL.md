@@ -55,6 +55,7 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 | 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Attribute compiles but is **silently ignored** — methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
 | 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Events and components do not exist for worlds — code compiles but callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | `PlayerData`, `PlayerObject`, `OnPlayerRestored` do not exist — compile or silent runtime failure | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
+| 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | Install `UdonSharpProgramAssetAutoGenerator.cs` template in an `Editor` folder, or create scripts via Unity's Assets > Create > U# Script |
 
 ## Sync Mode Quick Decision
 
@@ -82,6 +83,7 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
+| Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 
 ## Pattern Selection Guide
 
@@ -106,7 +108,7 @@ Station + trigger zone detection?       -> troubleshooting.md
 
 ## Template Selection Guide
 
-16 templates cover common starting points. Pick the closest match and adapt:
+17 templates cover common starting points. Pick the closest match and adapt:
 
 | Starting Point | Template | Key Feature |
 |---|---|---|
@@ -131,6 +133,7 @@ Station + trigger zone detection?       -> troubleshooting.md
 | Array helpers (List\<T\> alternative) | `ArrayUtils.cs` | Add, Remove, Contains, FindIndex, Shuffle for arrays |
 | Event bus (pub/sub) | `EventBus.cs` | Subscriber list (max 32), RegisterListener/RaiseEvent |
 | Custom editor inspector | `CustomInspector.cs` | UdonSharpGUI, Undo, proxy sync |
+| Auto-generate .asset for new scripts | `UdonSharpProgramAssetAutoGenerator.cs` | AssetPostprocessor, domain-reload-only, auto-compile |
 
 > **Multiple needs?** Start with the template closest to your primary concern, then pull patterns from others. For example, a synced game with undo needs `UndoableGameManager.cs` as the base plus patterns from `RateLimitedSync.cs` for throttling.
 
@@ -227,7 +230,7 @@ WebSearch: "error message UdonSharp site:github.com"
 | `web-loading-advanced.md` | Advanced data loading: Base64 texture embedding via StringDownloader, cross-platform compression, URL double-key indexing, LRU decode cache | Base64, LoadRawTextureData, StringDownloader texture, DXT1, ETC_RGB4, UNITY_ANDROID, LRU cache, packed resources, binary format |
 | `api.md` | VRCPlayerApi, Networking, enums reference | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, Drone, VRCDroneApi |
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred |
-| `editor-scripting.md` | Editor scripting and proxy system | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject |
+| `editor-scripting.md` | Editor scripting, proxy system, and UdonSharpProgramAsset auto-generation | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject, UdonSharpProgramAsset, auto-generate, AssetPostprocessor, .asset missing |
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) | Continuous, Manual, NoVariableSync, sync example |
 | `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback, VRCStation, seated player, trigger zone, OnPlayerTriggerEnter not firing, station collider, position polling, OnStationEntered |
 | `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |
@@ -252,6 +255,7 @@ WebSearch: "error message UdonSharp site:github.com"
 | `DualCopySync.cs` | Local + synced copy with _dirty flag; strict OnPreSerialization/OnDeserialization separation |
 | `BatchedSync.cs` | Idempotent ScheduleBatchedSync with 0.2s BatchDelay; _FlushBatch delayed callback |
 | `CloggedRetrySync.cs` | Networking.IsClogged check; linear back-off (RetryDelay * retryCount); MaxRetries=5 |
+| `UdonSharpProgramAssetAutoGenerator.cs` | AssetPostprocessor that auto-creates UdonSharpProgramAsset for new scripts |
 
 ## Hooks
 

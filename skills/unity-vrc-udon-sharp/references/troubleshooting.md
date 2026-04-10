@@ -1126,17 +1126,21 @@ EditorUtility.SetDirty(behaviour);
 
 ### "The associated script cannot be loaded"
 
+**Symptoms:**
+- Inspector shows "The associated script cannot be loaded" on UdonBehaviour
+- UdonBehaviour component shows no linked program
+- Script compiles in IDE but doesn't run as Udon in Unity
+
 **Causes:**
 1. Script has compile errors
-2. Script GUID mismatch
-3. UdonSharpProgramAsset is missing
+2. Script GUID mismatch (meta file conflict)
+3. **UdonSharpProgramAsset (`.asset`) is missing** — most common when scripts are created by AI or outside Unity's "Create > U# Script" menu
 
 **Solution:**
-1. Fix all compile errors
-2. Remove the UdonBehaviour and re-add the UdonSharpBehaviour
-3. Check the Console for detailed error messages
-
-4. If the UdonSharpProgramAsset is missing, see [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for an `AssetPostprocessor`-based auto-generation workflow
+1. Fix all compile errors first
+2. Check the Console for detailed error messages
+3. Remove the UdonBehaviour and re-add the UdonSharpBehaviour
+4. **If the `.asset` file is missing**: Install `UdonSharpProgramAssetAutoGenerator.cs` (from `assets/templates/`) into your `Assets/Editor/` folder. This auto-generates `.asset` files for new UdonSharp scripts on import. See [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for details
 
 ---
 
@@ -1530,6 +1534,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | **OnContactEnter not firing** | UdonBehaviour must be on same GameObject |
 | **Contact player is null** | Check `info.isAvatar` before accessing |
 | **Trigger not firing for seated players** | PlayerLocal collider disabled in station — use position check workaround |
+| **.asset missing / script not loaded** | Install `UdonSharpProgramAssetAutoGenerator.cs` in `Assets/Editor/` |
 
 ---
 
