@@ -1140,7 +1140,7 @@ EditorUtility.SetDirty(behaviour);
 1. Fix all compile errors first
 2. Check the Console for detailed error messages
 3. Remove the UdonBehaviour and re-add the UdonSharpBehaviour
-4. **If the `.asset` file is missing**: Install `UdonSharpProgramAssetAutoGenerator.cs` (from `assets/templates/`, or obtain the implementation from `references/editor-scripting.md`) into your `Assets/Editor/` folder
+4. **If the `.asset` file is missing**: Install `UdonSharpProgramAssetAutoGenerator.cs` (from `assets/templates/UdonSharpProgramAssetAutoGenerator.cs`, or obtain the implementation from `references/editor-scripting.md`) into your `Assets/Editor/` folder
 5. Reimport each affected `.cs` file (right-click -> Reimport, or make a trivial edit and save) to trigger domain reload and auto-generation
 6. Confirm the matching `.asset` file is created, then re-add the component if needed. See [Editor Scripting Reference: UdonSharpProgramAsset Auto-Generation](editor-scripting.md#udonsharpprogramasset-auto-generation) for details
 
