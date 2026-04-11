@@ -130,7 +130,15 @@ public override void OnPlayerJoined(VRCPlayerApi player) { }
 
 ### 8. UdonSharpProgramAsset Requirement
 
-Every `.cs` UdonSharpBehaviour needs a corresponding `.asset` (UdonSharpProgramAsset). Without it, the script won't compile to Udon. When creating new scripts outside Unity's "Create > U# Script" menu, recommend the auto-generator template (`UdonSharpProgramAssetAutoGenerator.cs`) in an `Editor` folder. See `references/editor-scripting.md` for details.
+Every `.cs` UdonSharpBehaviour needs a corresponding `.asset` (UdonSharpProgramAsset). Without it, the script won't compile to Udon.
+
+**When creating a new `.cs` file, the agent MUST follow this procedure:**
+
+1. **Check**: Verify that `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists in the user's Unity project
+2. **Install if missing**: If the file does not exist, create the `Assets/Editor/` directory (if needed) and write the auto-generator using the implementation from `references/editor-scripting.md` (UdonSharpProgramAsset Auto-Generation section)
+3. **Notify**: Inform the user that the auto-generator was installed and that new `.cs` files will automatically receive `.asset` files on domain reload
+
+Do NOT assume the auto-generator is already installed. The agent cannot verify installation status without explicitly checking, so skipping this procedure based on assumption is prohibited. See `references/editor-scripting.md` for the full implementation.
 
 ## Attribute Quick Reference
 
@@ -178,4 +186,4 @@ Types that can be used with `[UdonSynced]`:
 - [ ] Using return values for struct methods
 - [ ] Not using `AddListener()`
 - [ ] Unity callbacks (OnTriggerEnter, etc.) do not have override
-- [ ] New scripts have corresponding `.asset` files (or auto-generator is installed)
+- [ ] Auto-generator (`UdonSharpProgramAssetAutoGenerator.cs`) confirmed present in `Assets/Editor/` (installed if it was missing)
