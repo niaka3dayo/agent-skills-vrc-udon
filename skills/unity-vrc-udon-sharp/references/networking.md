@@ -1051,6 +1051,8 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 
 ### Master-Only Actions
 
+> **Warning**: `Networking.IsMaster` is not deprecated, but it is fragile in practice. The instance master is the first player to join. If that player leaves, the master role transfers to another player, creating a brief window where no action runs, or two clients race to act simultaneously. Prefer owner-centric patterns for any logic that must run reliably. See [Owner-Centric Architecture Migration](#owner-centric-architecture-migration) below.
+
 ```csharp
 public void DoMasterAction()
 {
@@ -1103,6 +1105,92 @@ void Update()
 }
 ```
 
+---
+
+## Owner-Centric Architecture Migration
+
+`Networking.IsMaster` checks which player is the **instance master** (the first player to join).
+Using it to gate critical logic creates two failure modes:
+
+1. **Master-leave gap**: When the master disconnects, VRChat transfers the master role to
+   another player. During the brief transition, `Networking.IsMaster` returns `false` on all
+   clients simultaneously — timed events or game-state updates can be silently dropped.
+
+2. **Concurrent master race**: If two clients check `Networking.IsMaster` in the same frame
+   during a handoff, both may act, causing duplicate state mutations.
+
+The **owner-centric** pattern avoids both issues: a specific `GameObject` has exactly one
+owner at all times, and `Networking.IsOwner(gameObject)` is consistent across all clients
+within the same serialization round.
+
+### Refactoring Pattern: IsMaster → IsOwner
+
+**Before (IsMaster)**
+
+```csharp
+public void StartGame()
+{
+    if (!Networking.IsMaster) return;  // Fragile: master may leave mid-check
+
+    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameRunning = true;
+    RequestSerialization();
+}
+```
+
+**After (owner-centric)**
+
+```csharp
+// Assign one dedicated GameObject as the "game manager" object.
+// Its owner is the authoritative game controller.
+
+public void StartGame()
+{
+    if (!Networking.IsOwner(gameObject)) return;  // Stable: exactly one owner
+
+    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameRunning = true;
+    RequestSerialization();
+}
+```
+
+### Handling Owner Leave
+
+When the owner of the manager object leaves, VRChat automatically transfers ownership.
+Resume game-manager duties in `OnOwnershipTransferred`:
+
+```csharp
+public override void OnOwnershipTransferred(VRCPlayerApi player)
+{
+    if (player == null || !player.IsValid()) return;
+
+    if (player.isLocal)
+    {
+        // Inherited ownership — re-broadcast current state so late joiners are covered
+        RequestSerialization();
+
+        // Resume any periodic owner duties here
+        if (gameRunning)
+        {
+            SendCustomEventDelayedSeconds(nameof(OwnerHeartbeat), 1.0f);
+        }
+    }
+}
+```
+
+### Migration Decision Table
+
+| Scenario | Use `IsMaster`? | Use `IsOwner`? |
+|---|---|---|
+| One-off world init (fires once at world launch) | Acceptable | Preferred |
+| Ongoing game logic (timers, spawning, scoring) | No — fragile | Yes |
+| Responding to player join/leave events | No — may double-fire | Yes |
+| Approving ownership transfers (`OnOwnershipRequest`) | No — wrong API | Yes — runs on current owner |
+| Checking if a specific player is the master | `player.isMaster` on `VRCPlayerApi` | N/A |
+
+> **Reference**: VRChat networking documentation — https://creators.vrchat.com/worlds/udon/networking/
+
+---
 
 ## See Also
 
