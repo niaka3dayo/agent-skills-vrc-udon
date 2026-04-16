@@ -421,7 +421,7 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 |-----------|-------|-------|
 | World build size (compressed) | 100 MB max | Aim for 5–8 MB in practice |
 | Texture resolution | 1024×1024 recommended max | Higher resolutions increase memory and load time |
-| Custom shaders | Not supported | Standard or Mobile shaders only |
+| Custom shaders | Supported with caution | Custom shaders are allowed for worlds; use mobile-compatible shaders to avoid GPU overload. Avatars are restricted to VRChat Mobile shaders. |
 | Post-processing effects | Not supported | Bloom, depth of field, color grading unavailable |
 | Real-time shadows | Not supported | Baked lighting only |
 | Video player (AVPro) | Not supported | Use Unity Video Player component instead |
@@ -430,7 +430,7 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 ### Features Not Available on Quest
 
 ```
-❌ Custom shaders (HLSL/ShaderLab beyond Mobile subset)
+⚠️ Custom shaders (worlds only: allowed with caution; avoid complex HLSL/ShaderLab features that stress the mobile GPU. Avatar shaders are restricted to VRChat Mobile shaders.)
 ❌ Post-processing stack (any effect)
 ❌ Real-time shadow casting and receiving
 ❌ AVPro video player
@@ -668,8 +668,9 @@ In practice, use the **FPS tiers** at the top of this document as the pass/fail 
 ### Official World Triangle Budget (Quest)
 
 From the official Android Content Optimization documentation:
+<https://creators.vrchat.com/platforms/android/android-content-optimization/>
 
-```
+```text
 Total world triangle budget (Quest/Android): ~250,000 triangles
 ```
 
@@ -680,6 +681,7 @@ Total world triangle budget (Quest/Android): ~250,000 triangles
 ### Per-Object Polygon Guidelines (Quest)
 
 These are approximate guidelines based on community practice and the official optimization guide:
+<https://creators.vrchat.com/platforms/android/android-content-optimization/>
 
 | Object Category | Triangle Target | Notes |
 |---|---|---|
@@ -691,7 +693,9 @@ These are approximate guidelines based on community practice and the official op
 
 ### Draw Call Targets (Quest)
 
-No hard SDK limit exists for draw calls, but practical performance targets are:
+No hard SDK limit exists for draw calls. The targets below are community-derived approximate
+guidelines, not official VRChat thresholds. Verify current recommendations against the
+official documentation: <https://creators.vrchat.com/platforms/android/android-content-optimization/>
 
 > These are community-derived approximate guidelines, not official VRChat thresholds.
 

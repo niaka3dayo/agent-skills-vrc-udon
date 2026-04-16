@@ -313,7 +313,7 @@ Bounces control how many times indirect light reflects off surfaces. More bounce
 | PC | 3–4 | Use 4 only for complex interiors with many reflective surfaces (approximate guideline — adjust based on profiling) |
 
 In Unity Lighting Settings:
-```
+```text
 Window > Rendering > Lighting > Lightmapping Settings
 └── Indirect Bounces: 2  (Quest)  /  3  (PC)
 ```
@@ -322,7 +322,7 @@ Window > Rendering > Lighting > Lightmapping Settings
 
 On Quest, **Baked lighting is strongly preferred over Mixed**. Use this decision guide:
 
-```
+```text
 Does the world have any moving lights or real-time shadows?
 ├── Yes → Is this required? (gameplay mechanic, not just aesthetics)
 │   ├── Yes → Use Mixed (PC only); remove or replace with Baked on Android build
@@ -343,7 +343,7 @@ Practical rule: **convert all Mixed lights to Baked before the Android build**. 
 
 Baked AO adds depth cues where surfaces meet, at zero runtime cost. Screen-space AO (SSAO) is unavailable on Quest.
 
-```
+```text
 Window > Rendering > Lighting > Lightmapping Settings
 
 Recommended settings for Quest:
@@ -386,7 +386,7 @@ Aim for one probe per enclosed room and one large probe outdoors. Avoid overlapp
 
 ## Lighting Workflow Summary: PC vs Quest
 
-```
+```text
 PC Build                           Quest/Android Build
 ────────────────────────────────   ──────────────────────────────────
 Resolution: 10–20 texels/unit      Resolution: 5–10 texels/unit
