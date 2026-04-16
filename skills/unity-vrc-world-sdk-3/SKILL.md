@@ -51,7 +51,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 6 | Place more than 2 active video players simultaneously | Each requires a dedicated hardware decode pipeline; >2 causes frame drops and audio desync | Disable extra players at scene start; activate only the currently playing one |
 | 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use Animator-driven transforms (no constraints) or remove cloth from Quest meshes |
 | 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
-| 9 | Place player walkable surfaces on Default layer (0) | `OnPlayerTriggerEnter` won't fire; avatar physics collision is unreliable | Use Environment (layer 11) for all walkable geometry, walls, and floors |
+| 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use lightmap resolution >40 texels/unit for large areas | Texture memory explodes (>2 GB for medium worlds); causes OOM crashes on mobile headsets | Use 10-20 texels/unit; check total lightmap atlas count (target ≤ 4 atlases) |
 
 ## Reference Loading Guide
