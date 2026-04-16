@@ -70,6 +70,22 @@ Load only what the task requires.
 | Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` |
 | Mirror setup and configuration | `components.md` | `performance.md` | `audio-video.md`, `upload.md` |
 
+## Before Starting a New World — Design Decisions
+
+These decisions shape every downstream choice. Make them first, before placing any component.
+
+| Decision | Options | Implication |
+|---|---|---|
+| **Quest required?** | Yes / No | Yes → Quest First philosophy applies from day 0, not as a retrofit |
+| **Expected player count?** | 1–8 / 9–40 / 40+ | Affects spawn count, mirror policy, max video players |
+| **Primary interaction?** | Grab (Pickup) / Sit (Station) / Watch (Video) / Explore | Determines which SDK components are mandatory |
+| **Lighting approach?** | Baked / Mixed / Realtime | Realtime is only viable on PC-only worlds; all lights must be baked before upload |
+| **Networked objects?** | None / Physics (Pickup+ObjectSync) / State (UdonSynced) | Determines sync architecture before Udon scripting begins |
+
+> **The most expensive mistake**: Designing for PC and adding Quest "later." By that point, lighting resolution, material complexity, and mesh density are locked. The Quest port then requires rebuilding the entire lighting and material pipeline.
+
+---
+
 ## Design Philosophy: Quest First
 
 **Build for Quest and get PC for free. Build for PC and Quest becomes a separate project.**
@@ -207,7 +223,8 @@ Demo:       All players spawn at Spawns[0]
 
 > **SDK 3.8.0+**: `Force Kinematic On Remote` — Makes Rigidbody kinematic on non-owner clients, preventing unexpected physics behavior.
 
-**→ For detailed properties, Udon events, and code examples, see `references/components.md`**
+**MANDATORY READ** [`references/components.md`](references/components.md) (~800 lines) when configuring any VRC component above. Load in full — dependency requirements and Udon event hooks are distributed throughout.
+**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 ---
 
@@ -236,7 +253,8 @@ Demo:       All players spawn at Spawns[0]
 4. Collision Matrix is automatically configured
 ```
 
-**→ For details, see `references/layers.md`**
+**MANDATORY READ** [`references/layers.md`](references/layers.md) when setting up collision or debugging physics. The default Unity collision matrix differs from the VRChat-correct one — always verify.
+**Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
 
@@ -296,7 +314,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 **Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
 
-**→ For details, see `references/performance.md`**
+**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization. Run the profiling workflow above first to identify the bottleneck category before consulting references.
+**Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
 
@@ -317,7 +336,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 └── Excessive Reflection Probes
 ```
 
-**→ For details, see `references/lighting.md`**
+**MANDATORY READ** [`references/lighting.md`](references/lighting.md) when configuring lightmaps or light probe placement.
+**Do NOT Load**: `references/audio-video.md`, `references/upload.md`, `references/layers.md`.
 
 ---
 
@@ -342,7 +362,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 | YouTube/Twitch     | ✅    | ❌          |
 | Quest support      | ✅    | ✅          |
 
-**→ For details, see `references/audio-video.md`**
+**MANDATORY READ** [`references/audio-video.md`](references/audio-video.md) for VRC_SpatialAudioSource or video player configuration.
+**Do NOT Load**: `references/lighting.md`, `references/performance.md`.
 
 ---
 
@@ -382,7 +403,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 □ Capacity set
 ```
 
-**→ For details, see `references/upload.md`**
+**MANDATORY READ** [`references/upload.md`](references/upload.md) before running Build & Upload. Verify all pre-upload checklist items first.
+**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 ---
 
@@ -434,7 +456,7 @@ Identify the symptom category, then follow the diagnostic path:
 - **"Missing script" on a UdonSharp component**
   → The `.cs` file must have a matching `.asset` file. See Rule 16 in the `unity-vrc-udon-sharp` skill.
 
-**→ For detailed diagnostic procedures, see `references/troubleshooting.md`**
+**MANDATORY READ** [`references/troubleshooting.md`](references/troubleshooting.md) only if the Diagnostic Router above did not resolve the issue. **Do NOT Load** for non-troubleshooting tasks.
 
 ---
 
