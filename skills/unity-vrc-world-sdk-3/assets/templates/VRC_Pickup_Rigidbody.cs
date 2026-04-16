@@ -10,9 +10,10 @@ using VRC.Udon; // Kept for consistency with other UdonSharp templates; not dire
 ///   - This GameObject MUST have a Rigidbody component (VRC_Pickup will not work without it).
 ///   - This GameObject MUST have a Collider component (required for Interact detection).
 ///   - Add VRC_ObjectSync if you want position/physics to sync automatically across players.
-///     Without VRC_ObjectSync, picking up the object also transfers ownership but does NOT
-///     sync physics — add [UdonSynced] variables and call RequestSerialization() in OnPickup
-///     for custom sync behaviour (BehaviourSyncMode.Manual is already set for this).
+///     Without VRC_ObjectSync, ownership is NOT transferred automatically on pickup — you must
+///     call Networking.SetOwner() explicitly (done in OnPickup below). Add [UdonSynced] variables
+///     and call RequestSerialization() in OnPickup for custom sync behaviour
+///     (BehaviourSyncMode.Manual is already set for this).
 ///
 /// Sync mode note:
 ///   BehaviourSyncMode.Manual is used so that synced variables (if you add any) are
@@ -20,9 +21,9 @@ using VRC.Udon; // Kept for consistency with other UdonSharp templates; not dire
 ///   no UdonSynced variables, you can safely switch to BehaviourSyncMode.None instead.
 ///
 /// Ownership note:
-///   Picking up a VRC_Pickup with VRC_ObjectSync automatically transfers ownership to the
-///   grabbing player; Networking.SetOwner is called here only as an explicit example for
-///   cases where ownership must be transferred before the pickup event (e.g. without ObjectSync).
+///   VRC_ObjectSync automatically transfers ownership to the grabbing player on pickup.
+///   Without VRC_ObjectSync, ownership is NOT transferred automatically — Networking.SetOwner
+///   is called in OnPickup to handle this case explicitly.
 ///
 /// Usage:
 ///   1. Add this script, VRC_Pickup, Rigidbody, Collider, and (optionally) VRC_ObjectSync
@@ -70,13 +71,14 @@ public class VRC_Pickup_Rigidbody : UdonSharpBehaviour
 
     /// <summary>
     /// Called on the local player when they pick up this object.
-    /// At this point the local player has already become the owner
-    /// (VRC_Pickup transfers ownership automatically on grab).
+    /// If VRC_ObjectSync is present, ownership has already been transferred automatically.
+    /// If VRC_ObjectSync is absent, the SetOwner call below performs the transfer explicitly.
     /// </summary>
     public override void OnPickup()
     {
-        // Explicit ownership transfer — required when VRC_ObjectSync is NOT present
-        // and you manage synced variables manually. Safe to leave in even with ObjectSync.
+        // Explicit ownership transfer — required when VRC_ObjectSync is NOT present,
+        // because VRC_Pickup alone does NOT auto-transfer ownership on grab.
+        // Safe to leave in even when ObjectSync is present (the condition makes it a no-op).
         if (!Networking.IsOwner(gameObject))
         {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
