@@ -69,6 +69,28 @@ Temporary effect for all players, no state?   -> SendCustomNetworkEvent (no sync
 
 > For detailed decision trees, data budget, and minimization principles, see `rules/udonsharp-sync-selection.md`.
 
+## Sync Debugging Quick Decision
+
+When sync "looks correct locally but doesn't work for others":
+
+```text
+Remote players don't see my state change?
+  ├── Did I call RequestSerialization() after writing? (Manual sync) → Add it
+  ├── Does the local player own the object?                          → Networking.SetOwner() first
+  └── Using Continuous sync for button/toggle state?                → Switch to Manual + RequestSerialization()
+
+RequestSerialization() called but still not syncing?
+  ├── Is Networking.IsClogged == true?           → Throttle; retry after delay
+  └── Writing in OnPreSerialization scope?       → Move write before OnPreSerialization fires
+
+Late joiners don't see current state?
+  ├── State set only on event (e.g., player trigger)?  → Also set in Start() + RequestSerialization() on owner
+  └── Using SendCustomNetworkEvent for persistent state? → Use [UdonSynced] variables instead
+
+OnOwnershipTransferred never fires after SetOwner()?
+  └── SetOwner() is async — write synced vars inside OnOwnershipTransferred callback, not immediately after
+```
+
 ## Reference Loading Guide
 
 Load only what you need. Over-loading wastes tokens; under-loading causes critical mistakes.
@@ -138,10 +160,6 @@ Station + trigger zone detection?       -> troubleshooting.md
 | Auto-generate .asset for new scripts | `UdonSharpProgramAssetAutoGenerator.cs` | AssetPostprocessor, domain-reload-only, auto-compile |
 
 > **Multiple needs?** Start with the template closest to your primary concern, then pull patterns from others. For example, a synced game with undo needs `UndoableGameManager.cs` as the base plus patterns from `RateLimitedSync.cs` for throttling.
-
-## Overview
-
-**SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
 
 ## Rules (Constraints & Networking)
 
