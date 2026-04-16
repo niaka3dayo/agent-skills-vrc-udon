@@ -377,7 +377,7 @@ Vertical placement: place probes at multiple heights (floor level ~0.5 m, mid-bo
 |---|---|---|
 | Type | **Baked** | Realtime probes re-render every frame — avoid on Quest |
 | Resolution | **128** | 256 is acceptable for hero areas only |
-| HDR | Disabled | HDR reflection textures use ~50% more memory on Quest; appropriate when the scene has no metallic or glossy surfaces that require HDR reflections |
+| HDR | Disabled | Saves ~50% reflection texture memory; enable only for hero areas with highly reflective metallic or glossy surfaces that require HDR reflections |
 | Box Projection | Only when needed | Adds overdraw; use only in box-shaped rooms |
 
 Aim for one probe per enclosed room and one large probe outdoors. Avoid overlapping more than 2–3 probes in any one area.

@@ -413,7 +413,7 @@ In-game checks:
 Cross-platform worlds (PC + Quest) require stricter constraints on the Quest/Android build.
 These limits apply to the Android build target and are enforced at upload time or at runtime.
 
-Reference: https://creators.vrchat.com/worlds/udon/
+Reference: https://creators.vrchat.com/platforms/android/quest-content-optimization
 
 ### Hard Limits
 
