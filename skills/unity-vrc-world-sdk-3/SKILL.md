@@ -48,11 +48,11 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 3 | Set Respawn Height at or above the world floor | Player respawns → falls → respawns again → infinite loop; players cannot recover | Set to an unreachable depth (e.g., floor at Y=0 → Respawn at Y=-100) |
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
 | 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile or guard assets with `#if UNITY_ANDROID` |
-| 6 | Place more than 2 active video players simultaneously | Each requires a dedicated hardware decode pipeline; >2 causes frame drops and audio desync | Disable extra players at scene start; activate only the currently playing one |
+| 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
 | 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use Animator-driven transforms (no constraints) or remove cloth from Quest meshes |
 | 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
-| 10 | Use lightmap resolution >40 texels/unit for large areas | Texture memory explodes (>2 GB for medium worlds); causes OOM crashes on mobile headsets | Use 10-20 texels/unit; check total lightmap atlas count (target ≤ 4 atlases) |
+| 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
 
 ## Reference Loading Guide
 
@@ -286,11 +286,12 @@ If FPS is below target, follow this workflow — measure before guessing:
    └── Physics: → Disable Rigidbodies / Cloth / Constraints on Quest
 
 3. Fix largest impact first, re-measure after each change
-   Mirror ON by default    → Disable by default               (-50% render cost)
-   Realtime shadows        → Bake all lights                  (-30-50% GPU cost)
-   High lightmap resolution → Reduce to 10 texels/unit        (-50-70% VRAM)
-   Unbatched static objects → Mark as Static + enable batching (-30-60% draw calls)
-   Many active particles   → Pool; disable off-screen          (-20% CPU)
+   (estimates below are typical ranges; actual gains vary by world complexity)
+   Mirror ON by default    → Disable by default               (often -40-50% render cost)
+   Realtime shadows        → Bake all lights                  (often -30-50% GPU cost)
+   High lightmap resolution → Reduce and re-profile           (often -30-70% VRAM)
+   Unbatched static objects → Mark as Static + enable batching (often -30-60% draw calls)
+   Many active particles   → Pool; disable off-screen          (often -10-20% CPU)
 ```
 
 **Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
