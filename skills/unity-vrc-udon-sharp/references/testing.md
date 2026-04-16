@@ -250,6 +250,7 @@ Run through this checklist before publishing any world.
 
 ## See Also
 
+- [api.md](api.md) - VRCObjectPool API, VRCPlayerApi methods, and Camera Dolly API reference
 - [networking.md](networking.md) - Ownership model, sync modes, and RequestSerialization
 - [networking-antipatterns.md](networking-antipatterns.md) - Common networking mistakes and how to avoid them
 - [troubleshooting.md](troubleshooting.md) - Common errors and solutions
