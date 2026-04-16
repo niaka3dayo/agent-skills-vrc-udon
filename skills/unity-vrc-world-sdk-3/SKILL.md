@@ -381,6 +381,15 @@ WebSearch:
 
 ---
 
+## Templates (`assets/templates/`)
+
+Starter templates for common SDK component patterns. Each template compiles without modification; adjust Inspector fields and extend the event stubs for your world.
+
+| Template | Purpose |
+|---|---|
+| `VRC_Pickup_Rigidbody.cs` | VRC_Pickup with Rigidbody — OnPickup/OnDrop/OnPickupUseDown/OnPickupUseUp events, ownership transfer, audio feedback |
+| `VRC_Station_Basic.cs` | VRC_Station controller — OnStationEntered/OnStationExited events, PlayerMobility, force-eject API |
+
 ## References
 
 | File                            | Content                   | Approx. Lines |

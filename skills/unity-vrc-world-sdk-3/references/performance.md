@@ -657,6 +657,72 @@ Verify all items below before uploading a Quest-compatible world build.
 □ No crashes or memory warnings during extended play session
 ```
 
+---
+
+## World Performance Rating
+
+VRChat does **not** have a formal in-client performance ranking system for worlds (unlike avatars which display Excellent/Good/Medium/Poor badges). There is no SDK-enforced ranking threshold that blocks world uploads based on polygon count or draw calls.
+
+In practice, use the **FPS tiers** at the top of this document as the pass/fail criteria, and apply the Quest/Android hard limits below as mandatory constraints.
+
+### Official World Triangle Budget (Quest)
+
+From the official Android Content Optimization documentation:
+
+```
+Total world triangle budget (Quest/Android): ~250,000 triangles
+```
+
+> This is the official guideline figure. The 200K hard cap listed in the Mesh Optimization
+> section above is a conservative community target; 250K is the documented upper boundary.
+> Staying within 50K–100K provides the best frame rate headroom for worlds with many players.
+
+### Per-Object Polygon Guidelines (Quest)
+
+These are approximate guidelines based on community practice and the official optimization guide:
+
+| Object Category | Triangle Target | Notes |
+|---|---|---|
+| Hero / focal interactive objects | ≤ 5,000 | Pickups, NPCs, key props |
+| Background / decorative objects | ≤ 1,000 | Furniture, environmental details |
+| Ground / floor planes | Minimal subdivision | Avoid dense meshes; bake detail into textures |
+| Total scene (ideal) | 50K–100K | Leaves headroom for players and avatars |
+| Total scene (upper limit) | ~250K | Official documented budget |
+
+### Draw Call Targets (Quest)
+
+No hard SDK limit exists for draw calls, but practical performance targets are:
+
+> These are community-derived approximate guidelines, not official VRChat thresholds.
+
+| Tier | Draw Calls | Expected Result |
+|---|---|---|
+| Excellent | < 50 | Stable 72 FPS with multiple players |
+| Acceptable | 50–100 | Achievable with batching and instancing |
+| Problematic | > 100 | Frame rate drops; optimization required |
+
+Reduce draw calls with Static Batching, GPU Instancing, and texture atlasing (see Draw Call Reduction section above).
+
+### Texture Compression Format (Quest)
+
+Quest uses the Qualcomm Adreno GPU, which natively supports **ASTC** (Adaptive Scalable Texture Compression). Always override textures to ASTC for the Android platform:
+
+```
+Inspector → Texture → Android override:
+├── Format: ASTC 6x6 block  (diffuse, albedo — good quality/size balance)
+├── Format: ASTC 4x4 block  (UI, normal maps — higher quality)
+└── Format: ASTC 8x8 block  (distant/minor textures — smaller size)
+
+ETC2 is the fallback when ASTC is unavailable. Prefer ASTC for all new content.
+```
+
+### Lightmap Resolution and Size (Quest)
+
+For detailed lightmap resolution and size recommendations (texels/unit, max size, directional mode, compression, AO settings), see:
+
+- **[Baked Lighting Workflow for Quest](#baked-lighting-workflow-for-quest)** — full settings table in this file
+- **[references/lighting.md — Quest Bake Parameter Reference](lighting.md#quest-bake-parameter-reference)** — rationale, acceptable ranges, and Baked vs Mixed decision guide
+
 ## See Also
 
 - [components.md](components.md) - Component reference including Quest-incompatible components to avoid
