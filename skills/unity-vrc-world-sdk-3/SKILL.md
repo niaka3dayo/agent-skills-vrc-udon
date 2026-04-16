@@ -388,18 +388,53 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ## Troubleshooting
 
-### Common Issues
+### Diagnostic Router
 
-| Issue                           | Cause                      | Solution                   |
-| ------------------------------- | -------------------------- | -------------------------- |
-| Player walks through walls      | Wrong layer                | Set to Environment         |
-| Can't grab Pickup               | Missing Collider/Rigidbody | Add both                   |
-| Pickup doesn't sync             | Missing ObjectSync         | Add VRC_ObjectSync         |
-| Can't sit in Station            | Missing Collider           | Add Collider               |
-| Mirror doesn't reflect          | Layer settings             | Check MirrorReflection     |
-| Build error                     | Validation failure         | Check SDK Panel            |
+Identify the symptom category, then follow the diagnostic path:
 
-**→ For details, see `references/troubleshooting.md`**
+**Physics / Collision**
+- **Player walks through walls or floor**
+  1. Did you run "Setup Layers for VRChat"? (SDK > Builder tab)
+     - No → Run it. The default collision matrix blocks player↔environment collision.
+     - Yes → Is the geometry on the **Environment layer (11)**?
+       - No → Move all walkable surfaces, walls, and floors to layer 11.
+       - Yes → Open Physics > Layer Collision Matrix: Environment × Player row must be **ON**.
+- **Pickup passes through floors / walls**
+  → Pickup must be on **Pickup layer (13)**, not Default (0). In the collision matrix, Pickup × Environment must be ON.
+
+**Grab / Interaction**
+- **Can't grab Pickup at all**
+  1. Collider present? No → Add a Collider component.
+  2. Rigidbody present? No → Add a Rigidbody component.
+  3. VRC_Pickup component present? No → Add it.
+- **Pickup grabbed but immediately released**
+  → Check **DisallowTheft** on VRC_Pickup. If the current holder already owns it, a second grab may be blocked.
+
+**Sync / Network**
+- **Pickup position doesn't update for other players**
+  → Add **VRC_ObjectSync** (requires Rigidbody). Without it, only the local client moves the object.
+- **Pickup returns to original position on drop**
+  → Ownership is not being transferred. Verify VRC_Pickup or UdonSharp script calls `Networking.SetOwner` before moving.
+
+**Seated / Station**
+- **Can't sit in Station (no interaction prompt)**
+  → **VRC_Station requires a Collider** on the same or a child GameObject to register the interaction ray.
+- **Player clips into Station geometry after sitting**
+  → Adjust the **Station Collision Transform** field in the VRC_Station Inspector.
+
+**Mirror**
+- **Mirror doesn't reflect players or world**
+  → Open VRC_MirrorReflection > Layers. Must include: **Player (9)**, **PlayerLocal (10)**, **MirrorReflection (18)**, **Environment (11)**.
+- **Mirror causes severe FPS drop**
+  → Remove unnecessary layers from the Layers mask, and ensure **Mirror is OFF by default** (see NEVER #1).
+
+**Build / Upload**
+- **SDK build error in VRChat Control Panel**
+  → Builder tab lists all ⚠️ and ✖️ blockers with descriptions. Resolve each before building.
+- **"Missing script" on a UdonSharp component**
+  → The `.cs` file must have a matching `.asset` file. See Rule 16 in the `unity-vrc-udon-sharp` skill.
+
+**→ For detailed diagnostic procedures, see `references/troubleshooting.md`**
 
 ---
 
