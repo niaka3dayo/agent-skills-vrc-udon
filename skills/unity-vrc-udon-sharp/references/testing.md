@@ -34,14 +34,14 @@ Open **VRChat SDK > ClientSim Settings** and uncheck **Enable ClientSim**.
 - Local player movement, pickups, interactions, UI, and station usage
 - Udon variable inspection during Play Mode
 - `OnDeserialization` events for the local player
-- `OnPlayerRestored` when spawning simulated remote players
+- `OnPlayerRestored` when spawning simulated remote players (event fires only; these simulated players do not perform real network synchronization)
 - Basic server-time simulation
 
 ### What ClientSim Does NOT Simulate
 
 | Not Simulated | Why This Matters |
 |---|---|
-| Remote players (only local player) | Ownership transfers, `OnPlayerJoined`/`OnPlayerLeft` are not realistic |
+| Real networked remote players (ClientSim can add simulated remote players that fire join/restore events, but they do not perform actual network synchronization) | Ownership transfers, sync conflicts, and `OnDeserialization` from a real remote client are not testable |
 | Full networking serialization | `OnPostSerialization` and `OnDeserialization` data structures differ from live VRChat |
 | Network congestion (`Networking.IsClogged`) | Rate limiting and congestion behavior cannot be tested |
 | Multi-user sync conflicts | Race conditions and ownership fights are invisible |

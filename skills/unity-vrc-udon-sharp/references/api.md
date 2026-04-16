@@ -360,7 +360,7 @@ public class PooledObject : UdonSharpBehaviour
     public VRCPlayerApi Owner;
 
     // Called on all clients when the object is assigned to a new owner
-    public void _OnOwnerSet()
+    public void OnOwnerSet()
     {
         // React to ownership assignment here
         if (Utilities.IsValid(Owner))
@@ -418,7 +418,7 @@ public class PoolManager : UdonSharpBehaviour
         if (Utilities.IsValid(pooledBehaviour))
         {
             pooledBehaviour.Owner = player;
-            pooledBehaviour.SendCustomNetworkEvent(NetworkEventTarget.All, "_OnOwnerSet");
+            pooledBehaviour.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PooledObject.OnOwnerSet));
         }
     }
 
