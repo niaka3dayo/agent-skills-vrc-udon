@@ -423,7 +423,7 @@ Know the sizes of synced types for bandwidth optimization:
 | `float` | 4 | |
 | `double` | 8 | |
 | `char` | 2 | UTF-16 |
-| `string` | variable | ~2 bytes per char + overhead, max ~50 chars |
+| `string` | variable | 2 bytes per char; no separate per-string limit — bounded by sync mode budget |
 | `Vector2` | 8 | 2 floats |
 | `Vector3` | 12 | 3 floats |
 | `Vector4` | 16 | 4 floats |
@@ -435,7 +435,7 @@ Know the sizes of synced types for bandwidth optimization:
 ### Bandwidth Limits
 
 - **Continuous sync**: ~200 bytes per UdonBehaviour
-- **Manual sync**: ~282KB per UdonBehaviour
+- **Manual sync**: ~280KB (280,496 bytes) per UdonBehaviour
 - **Total transmission**: ~11 KB/sec
 
 ## SerializationResult

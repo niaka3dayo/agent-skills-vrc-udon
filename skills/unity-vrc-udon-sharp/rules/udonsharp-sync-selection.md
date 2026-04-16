@@ -39,7 +39,7 @@ Estimate synced data volume before generating code.
 | `float` | 4 | Decimal values |
 | `Vector3` | 12 | Position |
 | `Quaternion` | 16 | Rotation |
-| `string` | ~50B limit | Text (keep short) |
+| `string` | 2 bytes/char | Text (keep short; Continuous budget is ~200B shared) |
 
 **Target**: < 50 bytes per behaviour
 

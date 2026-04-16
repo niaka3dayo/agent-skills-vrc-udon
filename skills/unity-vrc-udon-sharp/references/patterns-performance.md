@@ -826,7 +826,7 @@ private void ReplayFromScratch()
 
 **Cross-reference:** The `UndoableGameManager.cs` template uses **full-state snapshots** rather than operation logs — each move saves the complete `currentState` array via `System.Array.Copy`. Use snapshots when state is small and replay is expensive; use the operation-log approach when state is large but individual operations are compact. See [assets/templates/UndoableGameManager.cs](../assets/templates/UndoableGameManager.cs).
 
-> **Note:** The operation-log snippet above is a fragment showing the data layout and replay loop. In a full implementation, wrap it in an `UdonSharpBehaviour` class with `[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]` and add an initialized array (e.g., `private byte[] _opLog = new byte[4000];` for up to 1000 four-byte operations — 4 KB, well within the ~282 KB Manual sync limit).
+> **Note:** The operation-log snippet above is a fragment showing the data layout and replay loop. In a full implementation, wrap it in an `UdonSharpBehaviour` class with `[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]` and add an initialized array (e.g., `private byte[] _opLog = new byte[4000];` for up to 1000 four-byte operations — 4 KB, well within the ~280KB (280,496 bytes) Manual sync limit).
 
 #### Reset vs Cancel
 
@@ -863,7 +863,7 @@ public void ResetToInitial()
 | Keep authoritative data in synced arrays, derived state in local references | Late joiners receive authoritative data via `OnDeserialization` and rebuild locally |
 | One rebuild entry point (`BeginFullRebuild`) for all triggers | Reset, undo, late-joiner sync, and error recovery all use the same path — fewer edge cases |
 | Do not mix rebuild progress with sync serialization | If `RequestSerialization` fires mid-rebuild, the partial derived state is irrelevant — only authoritative data is transmitted |
-| Cap operation logs with a maximum size | `byte[]` sync has a ~282 KB Manual sync limit; a 4-byte-per-op log with 1000 ops = 4 KB — well within budget |
+| Cap operation logs with a maximum size | `byte[]` sync has a ~280KB (280,496 bytes) Manual sync limit; a 4-byte-per-op log with 1000 ops = 4 KB — well within budget |
 | Use cancel for user-initiated abort, reset for state revert | Cancel preserves partial visual progress; reset guarantees a clean starting state |
 
 ---

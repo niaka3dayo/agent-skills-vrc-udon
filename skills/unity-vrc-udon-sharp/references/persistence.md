@@ -40,7 +40,7 @@ Does another player need to see this value?
 | Layer | Scope | Lifetime | Capacity | Typical use |
 |-------|-------|----------|----------|-------------|
 | **Non-synced field** | Self only | Until scene reload | Unlimited | UI state, timers, cooldown flags |
-| **[UdonSynced]** | All players in instance | Instance lifetime (late joiners receive current value) | ~200 B continuous / ~282 KB manual per behaviour | Shared game state, scores, toggles |
+| **[UdonSynced]** | All players in instance | Instance lifetime (late joiners receive current value) | ~200 B continuous / ~280KB (280,496 bytes) manual per behaviour | Shared game state, scores, toggles |
 | **SendCustomNetworkEvent** | All players in instance | Instant (no persistence, late joiners miss it) | Event name only (no payload) | Sound effects, particle triggers, one-shot notifications |
 | **PlayerData** | Per player, readable by all | Cross-session (permanent until deleted) | 100 KB per player per world | Settings, unlocks, high scores |
 | **PlayerObject** | Per player, synced behaviour | Instance lifetime (+ cross-session if `VRCEnablePersistence` is on) | One UdonBehaviour per player | Complex per-player state with frequent updates |
