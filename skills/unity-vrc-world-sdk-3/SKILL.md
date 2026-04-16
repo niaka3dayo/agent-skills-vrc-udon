@@ -68,6 +68,7 @@ Load only what the task requires.
 | Baking lights / lightmap setup | `lighting.md`, `performance.md` | — | `audio-video.md`, `layers.md` |
 | World upload and publish | `upload.md` | `troubleshooting.md` | `audio-video.md`, `lighting.md` |
 | Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` |
+| Mirror setup and configuration | `components.md` | `performance.md` | `audio-video.md`, `upload.md` |
 
 ## Design Philosophy: Quest First
 
