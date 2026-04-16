@@ -12,6 +12,7 @@ metadata:
     author: niaka3dayo
     version: "1.2.1"
     tags: skill-maintenance, sdk-update, knowledge-management
+    internal: true
 ---
 
 # VRC Skills Renovator

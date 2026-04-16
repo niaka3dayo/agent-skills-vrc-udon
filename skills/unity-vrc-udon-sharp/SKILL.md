@@ -26,6 +26,15 @@ UdonSharp looks like regular Unity C# scripting — until you hit its hidden wal
 
 Every rule in this skill exists because UdonSharp's default behavior is to **fail silently**. Read the Rules before generating any code.
 
+## Before Writing Network Code
+
+Four architectural decisions that must be made before choosing sync modes or writing any synced variable. Changing them mid-implementation typically requires a full rewrite:
+
+- **Who owns this state?** One owner writes; all others read. If two players can both write (e.g., a shared toggle), you need an ownership transfer protocol — writes without ownership are silently discarded.
+- **When does ownership transfer?** On grab? Interact? Game event? `OnPlayerLeft`? Ownership transfer is asynchronous — do not write synced variables immediately after `SetOwner()`; write inside `OnOwnershipTransferred`.
+- **What do late joiners see?** State set only by one-time events (`SendCustomNetworkEvent`) is invisible to late joiners. Persistent state requires `[UdonSynced]` variables; the owner calls `RequestSerialization()` on join events to push current state to newcomers.
+- **What if the owner leaves mid-session?** Without explicit `OnPlayerLeft` handling, the object's synced state can never change again. Decide upfront: auto-transfer to master, reset to a known default, or the next interacting player claims ownership.
+
 ## Core Principles
 
 1. **Constraints First** — Assume standard C# features are blocked until verified. Check `udonsharp-constraints.md` before using any API.
@@ -56,6 +65,8 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 | 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Events and components do not exist for worlds — code compiles but callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | `PlayerData`, `PlayerObject`, `OnPlayerRestored` do not exist — compile or silent runtime failure | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
 | 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
+| 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
+| 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and their simple arrays are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
 
 ## Sync Mode Quick Decision
 
@@ -68,6 +79,28 @@ Temporary effect for all players, no state?   -> SendCustomNetworkEvent (no sync
 ```
 
 > For detailed decision trees, data budget, and minimization principles, see `rules/udonsharp-sync-selection.md`.
+
+## Sync Debugging Quick Decision
+
+When sync "looks correct locally but doesn't work for others":
+
+```text
+Remote players don't see my state change?
+  ├── Did I call RequestSerialization() after writing? (Manual sync) → Add it
+  ├── Does the local player own the object?                          → Networking.SetOwner() first
+  └── Using Continuous sync for button/toggle state?                → Switch to Manual + RequestSerialization()
+
+RequestSerialization() called but still not syncing?
+  ├── Is Networking.IsClogged == true?           → Throttle; retry after delay
+  └── Writing in OnPreSerialization scope?       → Move write before OnPreSerialization fires
+
+Late joiners don't see current state?
+  ├── State set only on event (e.g., player trigger)?  → Also set in Start() + RequestSerialization() on owner
+  └── Using SendCustomNetworkEvent for persistent state? → Use [UdonSynced] variables instead
+
+OnOwnershipTransferred never fires after SetOwner()?
+  └── SetOwner() is async — write synced vars inside OnOwnershipTransferred callback, not immediately after
+```
 
 ## Reference Loading Guide
 
@@ -82,7 +115,9 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Using PhysBones/Contacts/Constraints | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
 | Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
-| Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
+| Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
+| Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
+| Writing new UdonSharp scripts (not sure if sync needed) | `constraints.md` | `networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 
 ## Pattern Selection Guide
@@ -137,10 +172,6 @@ Station + trigger zone detection?       -> troubleshooting.md
 
 > **Multiple needs?** Start with the template closest to your primary concern, then pull patterns from others. For example, a synced game with undo needs `UndoableGameManager.cs` as the base plus patterns from `RateLimitedSync.cs` for throttling.
 
-## Overview
-
-**SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
-
 ## Rules (Constraints & Networking)
 
 Compile constraints and networking rules are defined in **always-loaded Rules**:
@@ -169,37 +200,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 > **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
 
-## Web Search
-
-### When to Search
-
-| Scenario | Action |
-|----------|--------|
-| New SDK version support | Check official docs for latest API |
-| "Is this possible?" questions | Verify feasibility in official docs |
-| Unknown errors | Refer to official troubleshooting |
-| New feature usage | Retrieve latest code examples |
-
-### Search Strategy
-
-```
-# Official documentation search
-WebSearch: "feature or API name site:creators.vrchat.com"
-
-# UdonSharp API reference
-WebSearch: "API name site:udonsharp.docs.vrchat.com"
-
-# Error investigation: VRChat official forums
-WebSearch: "error message site:ask.vrchat.com"
-
-# Error investigation: Canny (bug reports / known issues)
-WebSearch: "error message site:feedback.vrchat.com"
-
-# Error investigation: GitHub Issues
-WebSearch: "error message UdonSharp site:github.com"
-```
-
-### Official Resources
+## Official Resources
 
 | Resource | URL | Contents |
 |----------|-----|----------|
@@ -234,6 +235,7 @@ WebSearch: "error message UdonSharp site:github.com"
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) | Continuous, Manual, NoVariableSync, sync example |
 | `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback, VRCStation, seated player, trigger zone, OnPlayerTriggerEnter not firing, station collider, position polling, OnStationEntered |
 | `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |
+| `testing.md` | Testing and debugging guide: ClientSim editor testing, Build and Test (single and multi-client), Debug.Log patterns, pre-release cleanup, testing checklist | ClientSim, Build and Test, multi-client, late joiner test, debug, Debug.Log, ownership test, sync test, testing checklist |
 
 ## Templates (`assets/templates/`)
 

@@ -1,6 +1,6 @@
 # UdonSharp Cheatsheet
 
-**SDK 3.7.1 - 3.10.2 Coverage** (as of March 2026)
+**SDK 3.7.1 - 3.10.2 Coverage** (as of April 2026)
 
 ## Blocked Features and Alternatives
 
@@ -363,4 +363,17 @@ if (VRCJson.TryDeserializeFromJson(result.Result, out DataToken json))
 
 **Dynamic VRCUrl generation: Not possible** -- `new VRCUrl(stringVar)` is blocked by the Udon VM at runtime.
 For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` array (predefined), (3) server-side routing
+
+---
+
+## Reference Index
+
+| Topic | File |
+|-------|------|
+| Camera Dolly API, VRCObjectPool API | [references/api.md](references/api.md) |
+| Testing in Editor (ClientSim), multi-client debugging | [references/testing.md](references/testing.md) |
+| Networking ownership, sync modes, IsMaster migration | [references/networking.md](references/networking.md) |
+| Web / Image loading, VRCUrl constraints | [references/web-loading.md](references/web-loading.md) |
+| UI / Canvas patterns | [references/patterns-ui.md](references/patterns-ui.md) |
+| Video player patterns | [references/patterns-video.md](references/patterns-video.md) |
 

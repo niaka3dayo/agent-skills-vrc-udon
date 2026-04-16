@@ -36,10 +36,9 @@ UdonSharpException: UdonSharp does not currently support [feature]
 | Generics `List<T>` | Arrays `T[]` or `DataList` |
 | LINQ | Manual loops |
 | `dynamic` | Explicit types |
-| `ref`/`out` parameters | Return values or class fields |
 | Multi-dimensional arrays `T[,]` | Jagged arrays `T[][]` |
 | Delegates / Events | `SendCustomEvent()` |
-| `nameof()` on external types | String literals |
+| `nameof()` on types from blocked namespaces (e.g., `System.Net.HttpWebRequest`) | String literals (`"HttpWebRequest"`); `nameof()` works normally for UdonSharp-compatible types and method/property names |
 | `try/catch/finally` | Validate inputs, null checks |
 
 **Solution:**

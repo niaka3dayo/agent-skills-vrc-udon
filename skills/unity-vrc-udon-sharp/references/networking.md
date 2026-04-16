@@ -73,7 +73,7 @@ Explicit synchronization via `RequestSerialization()` calls.
 
 **Characteristics:**
 - Only syncs when `RequestSerialization()` is called
-- Data limit: **65KB -> 280KB** (see release notes for details)
+- Data limit: **280,496 bytes (~280KB)** per serialization (increased from 65,024 bytes in an earlier release)
 - Best for: Game state, scores, settings, infrequent updates
 
 ```csharp
@@ -144,7 +144,7 @@ public class NoSyncExample : UdonSharpBehaviour
 | Mode | Data size | Frequency | Use case |
 |--------|-------------|------|-------------|
 | Continuous | ~200 bytes | High (10Hz) | Position/rotation tracking |
-| Manual | 280KB | On-demand | Game state, scores, settings |
+| Manual | ~280KB (280,496 bytes) | On-demand | Game state, scores, settings |
 | None | N/A | N/A | Event-only communication |
 
 ## VRC_ObjectSync Warning
@@ -591,7 +591,7 @@ Use the `[UdonSynced]` attribute to synchronize fields:
 [UdonSynced] private float health;
 [UdonSynced] private bool isActive;
 [UdonSynced] private Vector3 position;
-[UdonSynced] private string playerName; // Max ~50 characters!
+[UdonSynced] private string playerName; // 2 bytes/char; keep short in Continuous mode (~200 byte shared budget)
 ```
 
 ### Sync Modes
@@ -805,7 +805,7 @@ Only types syncable with `[UdonSynced]` can be used as parameters:
 | `long`, `ulong` | 8 bytes | |
 | `float` | 4 bytes | |
 | `double` | 8 bytes | |
-| `string` | variable | ~50 char limit |
+| `string` | 2 bytes/char | No fixed per-string limit; bounded by NetworkCallable event payload (16 KB/event max, ~18 KB/s throughput). Events >1024 bytes are split into multiple internal packets. Independent of `[UdonSynced]` sync mode budgets. |
 | `Vector2/3/4` | 8/12/16 bytes | |
 | `Quaternion` | 16 bytes | |
 | `Color`, `Color32` | 16/4 bytes | |
@@ -957,8 +957,8 @@ public void CheckMessage()
 ### String Length
 
 Synced strings have no fixed character limit. The practical limit depends on sync buffer size and UTF-16 encoding (2 bytes per character):
-- **Continuous**: ~200 bytes per serialization
-- **Manual**: ~280KB per serialization
+- **Continuous**: ~200 bytes per serialization (shared across all synced fields on the behaviour)
+- **Manual**: 280,496 bytes (~280KB) per serialization
 
 ```csharp
 // Keep synced strings short to conserve sync buffer
@@ -1051,6 +1051,8 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 
 ### Master-Only Actions
 
+> **Warning**: `Networking.IsMaster` is not deprecated, but it is fragile in practice. The instance master is the first player to join. If that player leaves, the master role transfers to another player, creating a brief window where no action runs, or two clients race to act simultaneously. Prefer owner-centric patterns for any logic that must run reliably. See [Owner-Centric Architecture Migration](#owner-centric-architecture-migration) below.
+
 ```csharp
 public void DoMasterAction()
 {
@@ -1103,6 +1105,96 @@ void Update()
 }
 ```
 
+---
+
+## Owner-Centric Architecture Migration
+
+`Networking.IsMaster` checks which player is the **instance master** (the first player to join).
+Using it to gate critical logic creates two failure modes:
+
+1. **Master-leave gap**: When the master disconnects, VRChat transfers the master role to
+   another player. During the brief transition, `Networking.IsMaster` returns `false` on all
+   clients simultaneously — timed events or game-state updates can be silently dropped.
+
+2. **Concurrent master race**: If two clients check `Networking.IsMaster` in the same frame
+   during a handoff, both may act, causing duplicate state mutations.
+
+The **owner-centric** pattern reduces both risks: a specific `GameObject` has exactly one
+owner at all times, so `Networking.IsOwner(gameObject)` typically returns the same result
+across all clients. Note that during ownership transfers (e.g., the current owner leaves),
+there is a brief transient window where clients may briefly disagree on who the owner is
+until the network round-trip completes. The `OnOwnershipTransferred` callback is the correct
+place to handle this case — re-initialize owner-only state and call `RequestSerialization()`
+so all clients converge to the new owner's authoritative state.
+
+### Refactoring Pattern: IsMaster → IsOwner
+
+**Before (IsMaster)**
+
+```csharp
+public void StartGame()
+{
+    if (!Networking.IsMaster) return;  // Fragile: master may leave mid-check
+
+    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameRunning = true;
+    RequestSerialization();
+}
+```
+
+**After (owner-centric)**
+
+```csharp
+// Assign one dedicated GameObject as the "game manager" object.
+// Its owner is the authoritative game controller.
+
+public void StartGame()
+{
+    if (!Networking.IsOwner(gameObject)) return;  // Stable: exactly one owner
+
+    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameRunning = true;
+    RequestSerialization();
+}
+```
+
+### Handling Owner Leave
+
+When the owner of the manager object leaves, VRChat automatically transfers ownership.
+Resume game-manager duties in `OnOwnershipTransferred`:
+
+```csharp
+public override void OnOwnershipTransferred(VRCPlayerApi player)
+{
+    if (player == null || !player.IsValid()) return;
+
+    if (player.isLocal)
+    {
+        // Inherited ownership — re-broadcast current state so late joiners are covered
+        RequestSerialization();
+
+        // Resume any periodic owner duties here
+        if (gameRunning)
+        {
+            SendCustomEventDelayedSeconds(nameof(OwnerHeartbeat), 1.0f);
+        }
+    }
+}
+```
+
+### Migration Decision Table
+
+| Scenario | Use `IsMaster`? | Use `IsOwner`? |
+|---|---|---|
+| One-off world init (fires once at world launch) | Acceptable | Preferred |
+| Ongoing game logic (timers, spawning, scoring) | No — fragile | Yes |
+| Responding to player join/leave events | No — may double-fire | Yes |
+| Approving ownership transfers (`OnOwnershipRequest`) | No — wrong API | Yes — runs on current owner |
+| Checking if a specific player is the master | `player.isMaster` on `VRCPlayerApi` | N/A |
+
+> **Reference**: VRChat networking documentation — https://creators.vrchat.com/worlds/udon/networking/
+
+---
 
 ## See Also
 

@@ -374,3 +374,14 @@ site:github.com/vrchat-community "issue keyword"
 | 3.8.1 | [NetworkCallable] |
 | 3.9.0 | Camera Dolly, Auto Hold |
 | 3.10.0 | Dynamics (PhysBones) |
+
+---
+
+## Reference Index
+
+| Topic | File |
+|-------|------|
+| Performance targets, Quest optimization checklist | [references/performance.md](references/performance.md) |
+| Lightmap settings, Quest bake parameter reference | [references/lighting.md](references/lighting.md) |
+| Pickup + Rigidbody template | [assets/templates/VRC_Pickup_Rigidbody.cs](assets/templates/VRC_Pickup_Rigidbody.cs) |
+| Station (sit) template | [assets/templates/VRC_Station_Basic.cs](assets/templates/VRC_Station_Basic.cs) |
