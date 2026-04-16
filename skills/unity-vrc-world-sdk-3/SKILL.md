@@ -53,6 +53,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
+| 11 | Add VRC_UIShape to a Screen Space or Overlay Canvas | VRC_UIShape requires World Space Canvas; other modes throw a runtime Unity error in VRChat — the UI renders visually but is not interactive, with no visible error to the world builder | Set Canvas > Render Mode to World Space before adding VRC_UIShape |
 
 ## Reference Loading Guide
 
@@ -138,7 +139,7 @@ Exactly **one** is required in every VRChat world.
 | Property                        | Type        | Description                     | Default           |
 | ------------------------------- | ----------- | ------------------------------- | ------------------ |
 | **Spawns**                      | Transform[] | Array of spawn points           | Descriptor position |
-| **Spawn Order**                 | enum        | Sequential/Random/Demo          | Sequential         |
+| **Spawn Order**                 | enum        | Sequential/Random/Demo (Demo: all players to Spawns[0]) | Sequential |
 | **Respawn Height**              | float       | Respawn height (Y axis)         | -100               |
 | **Object Behaviour At Respawn** | enum        | Respawn/Destroy                 | Respawn            |
 | **Reference Camera**            | Camera      | Player camera settings reference | None              |
@@ -148,14 +149,6 @@ Exactly **one** is required in every VRChat world.
 | **Maximum Capacity**            | int         | Max player count (hard limit)   | -                  |
 | **Recommended Capacity**        | int         | Recommended player count (UI)   | -                  |
 
-#### Spawn Order Behavior
-
-```
-Sequential: 0 → 1 → 2 → 0 → 1 → 2... (in order)
-Random:     Random selection
-Demo:       All players spawn at Spawns[0]
-```
-
 #### Reference Camera Usage
 
 ```csharp
@@ -164,26 +157,22 @@ Demo:       All players spawn at Spawns[0]
 // 2. Apply Post Processing effects
 // 3. Set background color
 
-// Setup steps:
-// 1. Create a Camera (name: "ReferenceCamera")
-// 2. Adjust Camera component settings
-// 3. Disable the Camera (uncheck the component)
-// 4. Assign it to VRC_SceneDescriptor's Reference Camera
+// ⚠️ MUST disable the Camera component after configuring — an active Reference Camera
+//    renders a second viewport. VRChat reads only the camera settings, not its output.
+// Assign the configured (disabled) Camera to VRC_SceneDescriptor > Reference Camera.
 ```
 
 ### Spawn Points Setup
 
 ```csharp
-// Setup steps:
-// 1. Create an empty GameObject
-// 2. Set position and rotation (players face the Z+ direction)
-// 3. Add to the VRC_SceneDescriptor Spawns array
+// Spawn points are empty GameObjects assigned to VRC_SceneDescriptor > Spawns array.
+// Players enter facing the Z+ direction of the spawn Transform.
 
-// Recommendations:
-// - At least 2-3 spawn points (for simultaneous joins)
-// - Slightly above the floor (~0.1m)
-// - Clear of obstacles
-// - Account for VR player guardian boundaries
+// VRChat-specific requirements:
+// - At least 2-3 spawn points (for simultaneous joins — single spawn causes overlap)
+// - Place slightly above the floor (~0.1m) to avoid floor collision on spawn
+// - Keep clear of obstacles (VR player guardian area is larger than their avatar)
+// - Account for VR guardian boundaries — desktop player sizes differ from VR
 ```
 
 ### Required Setup Checklist
@@ -200,6 +189,9 @@ Demo:       All players spawn at Spawns[0]
 ---
 
 ## Components
+
+**MANDATORY READ** [`references/components.md`](references/components.md) (~800 lines) before configuring any VRC component below. Load in full — dependency requirements and Udon event hooks are distributed throughout.
+**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 | Component                  | Required Elements        | Purpose                        | SDK  |
 | -------------------------- | ------------------------ | ------------------------------ | ---- |
@@ -222,9 +214,6 @@ Demo:       All players spawn at Spawns[0]
 | State only / complex logic      | ❌             | ✅ Recommended       |
 
 > **SDK 3.8.0+**: `Force Kinematic On Remote` — Makes Rigidbody kinematic on non-owner clients, preventing unexpected physics behavior.
-
-**MANDATORY READ** [`references/components.md`](references/components.md) (~800 lines) when configuring any VRC component above. Load in full — dependency requirements and Udon event hooks are distributed throughout.
-**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 ---
 
@@ -455,6 +444,12 @@ Identify the symptom category, then follow the diagnostic path:
   → Builder tab lists all ⚠️ and ✖️ blockers with descriptions. Resolve each before building.
 - **"Missing script" on a UdonSharp component**
   → The `.cs` file must have a matching `.asset` file. See Rule 16 in the `unity-vrc-udon-sharp` skill.
+
+**Editor / Runtime Discrepancy**
+- **World works in Unity Editor Play mode but fails or behaves differently in VRChat**
+  → Unity Play mode does not replicate all SDK behaviors. Use **"Build & Test New Build"** (SDK > Builder tab) — this launches the actual VRChat client locally. Editor Play is useful only for quick UdonSharp iteration.
+- **Interactive UI element is visible but cannot be clicked in VRChat**
+  → VRC_UIShape on a Screen Space or Overlay Canvas (see NEVER #11). Set Canvas > Render Mode to **World Space**.
 
 **MANDATORY READ** [`references/troubleshooting.md`](references/troubleshooting.md) only if the Diagnostic Router above did not resolve the issue. **Do NOT Load** for non-troubleshooting tasks.
 
