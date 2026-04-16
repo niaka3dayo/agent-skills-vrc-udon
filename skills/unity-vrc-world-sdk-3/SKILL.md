@@ -78,7 +78,7 @@ Quest (Meta Quest 2/3/Pro) defines the performance budget:
 - **VRAM**: ~4 GB shared with OS (vs 6–12 GB on PC); no HDR framebuffer
 - **Thermal throttling**: Sustained 100% GPU load causes clock reduction within minutes
 
-If a world runs at 72 FPS on Quest with a single test client, it will run at 90+ FPS on PC. The converse rarely holds.
+If a world runs at 72 FPS on Quest with a single test client, it will typically run at 90+ FPS on PC — though results vary by shader complexity, CPU-bound workloads, and hardware differences. The converse rarely holds. Verify against the [official VRChat optimization documentation](https://creators.vrchat.com/worlds/udon/performance-and-optimization/) before publishing.
 
 **NEVER optimize exclusively for PC with "Quest support added later"** — by that point, lighting, materials, and mesh density are all locked to PC quality, and the Quest port requires rebuilding everything.
 
@@ -274,7 +274,7 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ```
 1. Measure
-   ├── Unity Profiler: Deep Profile in Play mode or Build & Test
+   ├── Unity Profiler: standard profiling in Play mode (primary; Deep Profile only for function-level deep dives — avoid on Quest, misleading results)
    ├── VRChat overlay: type "/perf" in-game
    └── Stats window: Draw Calls, Triangles, VRAM
 

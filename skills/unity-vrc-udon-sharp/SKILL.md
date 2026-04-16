@@ -84,7 +84,7 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
 | Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
-| Writing new UdonSharp scripts (not sure if sync needed) | `udonsharp-constraints.md` | `udonsharp-networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
+| Writing new UdonSharp scripts (not sure if sync needed) | `constraints.md` | `networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 
 ## Pattern Selection Guide
