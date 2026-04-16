@@ -26,6 +26,15 @@ UdonSharp looks like regular Unity C# scripting — until you hit its hidden wal
 
 Every rule in this skill exists because UdonSharp's default behavior is to **fail silently**. Read the Rules before generating any code.
 
+## Before Writing Network Code
+
+Four architectural decisions that must be made before choosing sync modes or writing any synced variable. Changing them mid-implementation typically requires a full rewrite:
+
+- **Who owns this state?** One owner writes; all others read. If two players can both write (e.g., a shared toggle), you need an ownership transfer protocol — writes without ownership are silently discarded.
+- **When does ownership transfer?** On grab? Interact? Game event? `OnPlayerLeft`? Ownership transfer is asynchronous — do not write synced variables immediately after `SetOwner()`; write inside `OnOwnershipTransferred`.
+- **What do late joiners see?** State set only by one-time events (`SendCustomNetworkEvent`) is invisible to late joiners. Persistent state requires `[UdonSynced]` variables; the owner calls `RequestSerialization()` on join events to push current state to newcomers.
+- **What if the owner leaves mid-session?** Without explicit `OnPlayerLeft` handling, the object's synced state can never change again. Decide upfront: auto-transfer to master, reset to a known default, or the next interacting player claims ownership.
+
 ## Core Principles
 
 1. **Constraints First** — Assume standard C# features are blocked until verified. Check `udonsharp-constraints.md` before using any API.
@@ -56,6 +65,8 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 | 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Events and components do not exist for worlds — code compiles but callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | `PlayerData`, `PlayerObject`, `OnPlayerRestored` do not exist — compile or silent runtime failure | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
 | 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
+| 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
+| 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and their simple arrays are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
 
 ## Sync Mode Quick Decision
 

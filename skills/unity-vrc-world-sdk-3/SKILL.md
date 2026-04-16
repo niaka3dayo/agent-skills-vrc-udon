@@ -27,10 +27,10 @@ metadata:
 | ------------------------------------------ | -------------------------- | ------------------------------- |
 | [Scene Setup](#scene-setup)                | VRC_SceneDescriptor, Spawn | This file                       |
 | [Components](#components)                  | Pickup, Station, Mirror    | `references/components.md`      |
-| [Layers & Collision](#layers--collision)   | Layers, Collision Matrix   | `references/layers.md`          |
+| [Layers & Collision](#layers-collision)   | Layers, Collision Matrix   | `references/layers.md`          |
 | [Performance](#performance)                | Optimization guide         | `references/performance.md`     |
 | [Lighting](#lighting)                      | Lighting settings          | `references/lighting.md`        |
-| [Audio & Video](#audio--video)             | Audio, Video players       | `references/audio-video.md`     |
+| [Audio & Video](#audio-video)             | Audio, Video players       | `references/audio-video.md`     |
 | [World Upload](#world-upload)              | Upload workflow            | `references/upload.md`          |
 | [Troubleshooting](#troubleshooting)        | Problem solving            | `references/troubleshooting.md` |
 | [Cheatsheet](CHEATSHEET.md)               | Quick reference            | `CHEATSHEET.md`                 |
@@ -53,6 +53,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
+| 11 | Add VRC_UIShape to a Screen Space or Overlay Canvas | VRC_UIShape requires World Space Canvas; other modes throw a runtime Unity error in VRChat — the UI renders visually but is not interactive, with no visible error to the world builder | Set Canvas > Render Mode to World Space before adding VRC_UIShape |
 
 ## Reference Loading Guide
 
@@ -69,6 +70,22 @@ Load only what the task requires.
 | World upload and publish | `upload.md` | `troubleshooting.md` | `audio-video.md`, `lighting.md` |
 | Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` |
 | Mirror setup and configuration | `components.md` | `performance.md` | `audio-video.md`, `upload.md` |
+
+## Before Starting a New World — Design Decisions
+
+These decisions shape every downstream choice. Make them first, before placing any component.
+
+| Decision | Options | Implication |
+|---|---|---|
+| **Quest required?** | Yes / No | Yes → Quest First philosophy applies from day 0, not as a retrofit |
+| **Expected player count?** | 1–8 / 9–40 / 40+ | Affects spawn count, mirror policy, max video players |
+| **Primary interaction?** | Grab (Pickup) / Sit (Station) / Watch (Video) / Explore | Determines which SDK components are mandatory |
+| **Lighting approach?** | Baked / Mixed / Realtime | Realtime is only viable on PC-only worlds; all lights must be baked before upload |
+| **Networked objects?** | None / Physics (Pickup+ObjectSync) / State (UdonSynced) | Determines sync architecture before Udon scripting begins |
+
+> **The most expensive mistake**: Designing for PC and adding Quest "later." By that point, lighting resolution, material complexity, and mesh density are locked. The Quest port then requires rebuilding the entire lighting and material pipeline.
+
+---
 
 ## Design Philosophy: Quest First
 
@@ -122,7 +139,7 @@ Exactly **one** is required in every VRChat world.
 | Property                        | Type        | Description                     | Default           |
 | ------------------------------- | ----------- | ------------------------------- | ------------------ |
 | **Spawns**                      | Transform[] | Array of spawn points           | Descriptor position |
-| **Spawn Order**                 | enum        | Sequential/Random/Demo          | Sequential         |
+| **Spawn Order**                 | enum        | Sequential/Random/Demo (Demo: all players to Spawns[0]) | Sequential |
 | **Respawn Height**              | float       | Respawn height (Y axis)         | -100               |
 | **Object Behaviour At Respawn** | enum        | Respawn/Destroy                 | Respawn            |
 | **Reference Camera**            | Camera      | Player camera settings reference | None              |
@@ -132,14 +149,6 @@ Exactly **one** is required in every VRChat world.
 | **Maximum Capacity**            | int         | Max player count (hard limit)   | -                  |
 | **Recommended Capacity**        | int         | Recommended player count (UI)   | -                  |
 
-#### Spawn Order Behavior
-
-```
-Sequential: 0 → 1 → 2 → 0 → 1 → 2... (in order)
-Random:     Random selection
-Demo:       All players spawn at Spawns[0]
-```
-
 #### Reference Camera Usage
 
 ```csharp
@@ -148,26 +157,22 @@ Demo:       All players spawn at Spawns[0]
 // 2. Apply Post Processing effects
 // 3. Set background color
 
-// Setup steps:
-// 1. Create a Camera (name: "ReferenceCamera")
-// 2. Adjust Camera component settings
-// 3. Disable the Camera (uncheck the component)
-// 4. Assign it to VRC_SceneDescriptor's Reference Camera
+// ⚠️ MUST disable the Camera component after configuring — an active Reference Camera
+//    renders a second viewport. VRChat reads only the camera settings, not its output.
+// Assign the configured (disabled) Camera to VRC_SceneDescriptor > Reference Camera.
 ```
 
 ### Spawn Points Setup
 
 ```csharp
-// Setup steps:
-// 1. Create an empty GameObject
-// 2. Set position and rotation (players face the Z+ direction)
-// 3. Add to the VRC_SceneDescriptor Spawns array
+// Spawn points are empty GameObjects assigned to VRC_SceneDescriptor > Spawns array.
+// Players enter facing the Z+ direction of the spawn Transform.
 
-// Recommendations:
-// - At least 2-3 spawn points (for simultaneous joins)
-// - Slightly above the floor (~0.1m)
-// - Clear of obstacles
-// - Account for VR player guardian boundaries
+// VRChat-specific requirements:
+// - At least 2-3 spawn points (for simultaneous joins — single spawn causes overlap)
+// - Place slightly above the floor (~0.1m) to avoid floor collision on spawn
+// - Keep clear of obstacles (VR player guardian area is larger than their avatar)
+// - Account for VR guardian boundaries — desktop player sizes differ from VR
 ```
 
 ### Required Setup Checklist
@@ -184,6 +189,9 @@ Demo:       All players spawn at Spawns[0]
 ---
 
 ## Components
+
+**MANDATORY READ** [`references/components.md`](references/components.md) (~800 lines) before configuring any VRC component below. Load in full — dependency requirements and Udon event hooks are distributed throughout.
+**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 | Component                  | Required Elements        | Purpose                        | SDK  |
 | -------------------------- | ------------------------ | ------------------------------ | ---- |
@@ -206,8 +214,6 @@ Demo:       All players spawn at Spawns[0]
 | State only / complex logic      | ❌             | ✅ Recommended       |
 
 > **SDK 3.8.0+**: `Force Kinematic On Remote` — Makes Rigidbody kinematic on non-owner clients, preventing unexpected physics behavior.
-
-**→ For detailed properties, Udon events, and code examples, see `references/components.md`**
 
 ---
 
@@ -236,7 +242,8 @@ Demo:       All players spawn at Spawns[0]
 4. Collision Matrix is automatically configured
 ```
 
-**→ For details, see `references/layers.md`**
+**MANDATORY READ** [`references/layers.md`](references/layers.md) when setting up collision or debugging physics. The default Unity collision matrix differs from the VRChat-correct one — always verify.
+**Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
 
@@ -296,7 +303,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 **Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
 
-**→ For details, see `references/performance.md`**
+**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization. Run the profiling workflow above first to identify the bottleneck category before consulting references.
+**Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
 
@@ -317,7 +325,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 └── Excessive Reflection Probes
 ```
 
-**→ For details, see `references/lighting.md`**
+**MANDATORY READ** [`references/lighting.md`](references/lighting.md) when configuring lightmaps or light probe placement.
+**Do NOT Load**: `references/audio-video.md`, `references/upload.md`, `references/layers.md`.
 
 ---
 
@@ -342,7 +351,8 @@ If FPS is below target, follow this workflow — measure before guessing:
 | YouTube/Twitch     | ✅    | ❌          |
 | Quest support      | ✅    | ✅          |
 
-**→ For details, see `references/audio-video.md`**
+**MANDATORY READ** [`references/audio-video.md`](references/audio-video.md) for VRC_SpatialAudioSource or video player configuration.
+**Do NOT Load**: `references/lighting.md`, `references/performance.md`.
 
 ---
 
@@ -382,24 +392,66 @@ If FPS is below target, follow this workflow — measure before guessing:
 □ Capacity set
 ```
 
-**→ For details, see `references/upload.md`**
+**MANDATORY READ** [`references/upload.md`](references/upload.md) before running Build & Upload. Verify all pre-upload checklist items first.
+**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### Diagnostic Router
 
-| Issue                           | Cause                      | Solution                   |
-| ------------------------------- | -------------------------- | -------------------------- |
-| Player walks through walls      | Wrong layer                | Set to Environment         |
-| Can't grab Pickup               | Missing Collider/Rigidbody | Add both                   |
-| Pickup doesn't sync             | Missing ObjectSync         | Add VRC_ObjectSync         |
-| Can't sit in Station            | Missing Collider           | Add Collider               |
-| Mirror doesn't reflect          | Layer settings             | Check MirrorReflection     |
-| Build error                     | Validation failure         | Check SDK Panel            |
+Identify the symptom category, then follow the diagnostic path:
 
-**→ For details, see `references/troubleshooting.md`**
+**Physics / Collision**
+- **Player walks through walls or floor**
+  1. Did you run "Setup Layers for VRChat"? (SDK > Builder tab)
+     - No → Run it. The default collision matrix blocks player↔environment collision.
+     - Yes → Is the geometry on the **Environment layer (11)**?
+       - No → Move all walkable surfaces, walls, and floors to layer 11.
+       - Yes → Open Physics > Layer Collision Matrix: Environment × Player row must be **ON**.
+- **Pickup passes through floors / walls**
+  → Pickup must be on **Pickup layer (13)**, not Default (0). In the collision matrix, Pickup × Environment must be ON.
+
+**Grab / Interaction**
+- **Can't grab Pickup at all**
+  1. Collider present? No → Add a Collider component.
+  2. Rigidbody present? No → Add a Rigidbody component.
+  3. VRC_Pickup component present? No → Add it.
+- **Pickup grabbed but immediately released**
+  → Check **DisallowTheft** on VRC_Pickup. If the current holder already owns it, a second grab may be blocked.
+
+**Sync / Network**
+- **Pickup position doesn't update for other players**
+  → Add **VRC_ObjectSync** (requires Rigidbody). Without it, only the local client moves the object.
+- **Pickup returns to original position on drop**
+  → Ownership is not being transferred. Verify VRC_Pickup or UdonSharp script calls `Networking.SetOwner` before moving.
+
+**Seated / Station**
+- **Can't sit in Station (no interaction prompt)**
+  → **VRC_Station requires a Collider** on the same or a child GameObject to register the interaction ray.
+- **Player clips into Station geometry after sitting**
+  → Adjust the **Station Collision Transform** field in the VRC_Station Inspector.
+
+**Mirror**
+- **Mirror doesn't reflect players or world**
+  → Open VRC_MirrorReflection > Layers. Must include: **Player (9)**, **PlayerLocal (10)**, **MirrorReflection (18)**, **Environment (11)**.
+- **Mirror causes severe FPS drop**
+  → Remove unnecessary layers from the Layers mask, and ensure **Mirror is OFF by default** (see NEVER #1).
+
+**Build / Upload**
+- **SDK build error in VRChat Control Panel**
+  → Builder tab lists all ⚠️ and ✖️ blockers with descriptions. Resolve each before building.
+- **"Missing script" on a UdonSharp component**
+  → The `.cs` file must have a matching `.asset` file. See the "missing .asset / script-asset pairing" rule in the `unity-vrc-udon-sharp` skill.
+
+**Editor / Runtime Discrepancy**
+- **World works in Unity Editor Play mode but fails or behaves differently in VRChat**
+  → Unity Play mode does not replicate all SDK behaviors. Use **"Build & Test New Build"** (SDK > Builder tab) — this launches the actual VRChat client locally. Editor Play is useful only for quick UdonSharp iteration.
+- **Interactive UI element is visible but cannot be clicked in VRChat**
+  → VRC_UIShape on a Screen Space or Overlay Canvas (see NEVER #11). Set Canvas > Render Mode to **World Space**.
+
+**MANDATORY READ** [`references/troubleshooting.md`](references/troubleshooting.md) only if the Diagnostic Router above did not resolve the issue. **Do NOT Load** for non-troubleshooting tasks.
 
 ---
 
