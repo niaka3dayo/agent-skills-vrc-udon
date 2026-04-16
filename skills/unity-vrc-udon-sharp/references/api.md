@@ -1016,7 +1016,7 @@ Three components work together in a fixed parent-child hierarchy.
 
 ### Component Hierarchy
 
-```
+```text
 GameObject (VRC Camera Dolly Animation)
 ├── GameObject (VRC Camera Dolly Path)
 │   ├── GameObject (VRC Camera Dolly Point)
