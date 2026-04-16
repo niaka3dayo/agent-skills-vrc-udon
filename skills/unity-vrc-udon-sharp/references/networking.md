@@ -805,7 +805,7 @@ Only types syncable with `[UdonSynced]` can be used as parameters:
 | `long`, `ulong` | 8 bytes | |
 | `float` | 4 bytes | |
 | `double` | 8 bytes | |
-| `string` | 2 bytes/char | No fixed limit; bounded by sync mode budget (Continuous: shared ~200 bytes; Manual: ~280KB) |
+| `string` | 2 bytes/char | No fixed per-string limit; bounded by NetworkCallable event payload (16 KB/event max, ~18 KB/s throughput). Events >1024 bytes are split into multiple internal packets. Independent of `[UdonSynced]` sync mode budgets. |
 | `Vector2/3/4` | 8/12/16 bytes | |
 | `Quaternion` | 16 bytes | |
 | `Color`, `Color32` | 16/4 bytes | |
