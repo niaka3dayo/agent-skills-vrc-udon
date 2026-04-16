@@ -313,18 +313,154 @@ station.ExitStation(VRCPlayerApi player);
 
 ## VRCObjectPool
 
-Object pooling for network-aware objects.
+Object pooling for network-aware objects. The pool manages and synchronizes the active state of each held object across all players.
+
+**Class**: `VRC.SDK3.Components.VRCObjectPool`
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Pool` | `GameObject[]` | The objects managed by this pool |
 
 ### Methods
 
 ```csharp
 public VRCObjectPool pool;
 
-// Spawn (owner only)
+// Activate an unused object (pool owner only). Returns null if all objects are in use.
 GameObject spawned = pool.TryToSpawn();
 
-// Return to pool
+// Return an object to the pool (pool owner only). Deactivates the object.
 pool.Return(GameObject obj);
+```
+
+### Ownership Behavior
+
+The VRCObjectPool itself is a networked object; only its **owner** can call `TryToSpawn()` and `Return()`.
+
+- **`TryToSpawn()`** activates an available pooled object and returns it. The ownership of the activated object is **not** automatically transferred to any specific player — call `Networking.SetOwner()` explicitly after spawning if you need the spawned object to be owned by a particular player.
+- **`Return()`** deactivates the object and returns it to the pool. Only the pool owner can call this method.
+
+### Network Synchronization
+
+The pool synchronizes the active/inactive state of every held object across all players. Late joiners automatically receive the correct active or inactive state for each pooled object.
+
+### Pooled Object Contract
+
+When writing an UdonSharp behaviour that is intended to run on pooled objects, it should follow this convention so the pool can set ownership correctly:
+
+```csharp
+using UdonSharp;
+using VRC.SDKBase;
+
+public class PooledObject : UdonSharpBehaviour
+{
+    // Set by the pool manager after TryToSpawn(); null when unassigned
+    public VRCPlayerApi Owner;
+
+    // Called on all clients when the object is assigned to a new owner
+    public void _OnOwnerSet()
+    {
+        // React to ownership assignment here
+        if (Utilities.IsValid(Owner))
+        {
+            Debug.Log($"Object assigned to: {Owner.displayName}");
+        }
+    }
+
+    void OnEnable()
+    {
+        // OnEnable fires before Start() when the pool activates this object.
+        // Use this instead of the deprecated OnSpawn event.
+    }
+
+    void OnDisable()
+    {
+        // Fired when Return() deactivates this object.
+        Owner = null;
+    }
+}
+```
+
+> **Note**: `OnSpawn` is **deprecated**. Use `OnEnable` to react to an object being activated by the pool.
+
+### Usage Pattern: Master-Managed Pool
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Components;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class PoolManager : UdonSharpBehaviour
+{
+    public VRCObjectPool objectPool;
+
+    public override void OnPlayerJoined(VRCPlayerApi player)
+    {
+        // Only the pool owner (e.g. master) calls TryToSpawn
+        if (!Networking.IsOwner(objectPool.gameObject)) return;
+
+        GameObject spawned = objectPool.TryToSpawn();
+        if (spawned == null)
+        {
+            Debug.LogWarning("No objects available in pool");
+            return;
+        }
+
+        // Transfer ownership of the spawned object to the joining player
+        Networking.SetOwner(player, spawned);
+
+        PooledObject pooledBehaviour = (PooledObject)spawned.GetComponent(typeof(PooledObject));
+        if (Utilities.IsValid(pooledBehaviour))
+        {
+            pooledBehaviour.Owner = player;
+            pooledBehaviour.SendCustomNetworkEvent(NetworkEventTarget.All, "_OnOwnerSet");
+        }
+    }
+
+    public override void OnPlayerLeft(VRCPlayerApi player)
+    {
+        if (!Networking.IsOwner(objectPool.gameObject)) return;
+
+        // Find and return the object assigned to the leaving player
+        foreach (GameObject obj in objectPool.Pool)
+        {
+            if (!obj.activeInHierarchy) continue;
+
+            PooledObject pooledBehaviour = (PooledObject)obj.GetComponent(typeof(PooledObject));
+            if (Utilities.IsValid(pooledBehaviour) && pooledBehaviour.Owner == player)
+            {
+                objectPool.Return(obj);
+                break;
+            }
+        }
+    }
+}
+```
+
+### VRCObjectPool vs VRCInstantiate
+
+| | VRCObjectPool | VRCInstantiate |
+|---|---|---|
+| **Sync** | Network-synchronized across all players | Local only — not synced |
+| **Ownership** | Managed by pool owner; spawned object ownership must be set manually | No ownership concept |
+| **Late joiners** | Receive correct state automatically | Miss any previously instantiated objects |
+| **Object reuse** | Pre-allocated pool; `Return()` makes objects available again | Objects persist until destroyed |
+| **Use when** | Spawning networked bullets, per-player data containers, shared world objects | Local particle effects, client-side previews, non-networked decorations |
+
+#### Decision Flow
+
+```text
+Does every player need to see the spawned object?
+├── No  --> VRCInstantiate (local, no sync overhead)
+└── Yes --> VRCObjectPool (synchronized, ownership-aware)
+         Does the object need to be reused frequently?
+         ├── Yes --> VRCObjectPool (pooling avoids repeated allocation)
+         └── No  --> VRCObjectPool still preferred over VRCInstantiate for synced objects
 ```
 
 ## VRCObjectSync
@@ -867,6 +1003,108 @@ public class DroneCheckpoint : UdonSharpBehaviour
     }
 }
 ```
+
+## VRC Camera Dolly API (SDK 3.9.0+)
+
+Defines camera dolly animations applied to the local player's VRChat user camera.
+Three components work together in a fixed parent-child hierarchy.
+
+**Available since**: SDK 3.9.0
+
+> **No ClientSim preview**: Camera dolly animations do not render in ClientSim.
+> Use **Build and Test** to preview animations at runtime.
+
+### Component Hierarchy
+
+```
+GameObject (VRC Camera Dolly Animation)
+├── GameObject (VRC Camera Dolly Path)
+│   ├── GameObject (VRC Camera Dolly Point)
+│   └── GameObject (VRC Camera Dolly Point)
+└── GameObject (VRC Camera Dolly Path)
+    ├── GameObject (VRC Camera Dolly Point)
+    ├── GameObject (VRC Camera Dolly Point)
+    └── GameObject (VRC Camera Dolly Point)
+```
+
+### VRC Camera Dolly Animation — Inspector Parameters
+
+Configure these in the Unity Inspector on the top-level `VRC Camera Dolly Animation` component:
+
+| Parameter | Description |
+|-----------|-------------|
+| `Is Relative To Player` | Anchor animation to the local player's position instead of world origin |
+| `Is Speed Based` | Use speed values per point rather than fixed durations |
+| `Is Using Look At Me` | Enable Look-At-Me horizontal/vertical offsets on points |
+| `Is Using Greenscreen` | Enable Green Screen HSL controls on points |
+| `Is Using Multi Stream` | Enable multi-stream animation mode |
+| `Path Type` | Interpolation method for the path (linear, smooth, etc.) |
+| `Loop Type` | How the animation loops (none, loop, ping-pong) |
+| `Capture Type` | Capture methodology for the animation |
+| `Focus Mode` | Camera focus mode for this animation |
+| `Anchor Mode` | Camera anchor mode for this animation |
+| `Paths` | List of `VRC Camera Dolly Path` children; populate via **Collect Paths & Points** |
+
+### VRC Camera Dolly Path — Inspector Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `Points` | List of `VRC Camera Dolly Point` children; populated via **Collect Paths & Points** |
+
+### VRC Camera Dolly Point — Inspector Parameters (Keyframe)
+
+| Parameter | Description |
+|-----------|-------------|
+| `Zoom` | Keyframe zoom value |
+| `Duration` | Duration for this keyframe (time-based mode only) |
+| `Speed` | Speed for this keyframe (speed-based mode only) |
+| `Focal Distance` | Focal distance (manual focus mode) |
+| `Aperture` | Aperture value (manual or semi-auto focus mode) |
+| `Hue` | Greenscreen hue (greenscreen mode) |
+| `Saturation` | Greenscreen saturation (greenscreen mode) |
+| `Lightness` | Greenscreen lightness (greenscreen mode) |
+| `Look At Me X Offset` | Horizontal Look-At-Me offset (Look-At-Me mode) |
+| `Look At Me Y Offset` | Vertical Look-At-Me offset (Look-At-Me mode) |
+
+### UdonSharp API
+
+The scripting surface for Camera Dolly is intentionally minimal. The primary method is:
+
+```csharp
+// Apply the animation to the local player's VRChat user camera
+dollyAnimation.Import();
+```
+
+`Import()` reads all paths and points collected on the `VRC Camera Dolly Animation` component and applies the resulting animation to the camera of the **local client** only. It has no return value.
+
+### Setup and Usage
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+
+public class DollyController : UdonSharpBehaviour
+{
+    // Drag the GameObject that holds VRC Camera Dolly Animation into this field
+    [SerializeField] private VRCCameraDollyAnimation dollyAnimation;
+
+    // Call this to start the camera dolly animation for the local player
+    public void PlayDolly()
+    {
+        if (!Utilities.IsValid(dollyAnimation)) return;
+        dollyAnimation.Import();
+    }
+}
+```
+
+> **Important**: Before entering Play mode or building, select the top-level `VRC Camera Dolly Animation` object and click **Collect Paths & Points** to register all child paths and points. Any time you add, remove, or re-order children, repeat this step.
+
+### Limitations
+
+- The API applies the animation to the **local player only**. To trigger it for all players, use `SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayDolly))`.
+- No properties of the animation, paths, or points are readable or writable from UdonSharp at runtime.
+- There is no event callback when the animation completes.
+- No ClientSim preview; Build and Test is required to see the animation.
 
 ## See Also
 
