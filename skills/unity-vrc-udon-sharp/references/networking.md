@@ -1119,9 +1119,13 @@ Using it to gate critical logic creates two failure modes:
 2. **Concurrent master race**: If two clients check `Networking.IsMaster` in the same frame
    during a handoff, both may act, causing duplicate state mutations.
 
-The **owner-centric** pattern avoids both issues: a specific `GameObject` has exactly one
-owner at all times, and `Networking.IsOwner(gameObject)` is consistent across all clients
-within the same serialization round.
+The **owner-centric** pattern reduces both risks: a specific `GameObject` has exactly one
+owner at all times, so `Networking.IsOwner(gameObject)` typically returns the same result
+across all clients. Note that during ownership transfers (e.g., the current owner leaves),
+there is a brief transient window where clients may briefly disagree on who the owner is
+until the network round-trip completes. The `OnOwnershipTransferred` callback is the correct
+place to handle this case — re-initialize owner-only state and call `RequestSerialization()`
+so all clients converge to the new owner's authoritative state.
 
 ### Refactoring Pattern: IsMaster → IsOwner
 
