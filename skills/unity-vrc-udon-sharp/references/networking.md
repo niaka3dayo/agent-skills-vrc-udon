@@ -73,7 +73,7 @@ Explicit synchronization via `RequestSerialization()` calls.
 
 **Characteristics:**
 - Only syncs when `RequestSerialization()` is called
-- Data limit: **65KB -> 280KB** (see release notes for details)
+- Data limit: **280,496 bytes (~280KB)** per serialization (increased from 65,024 bytes in an earlier release)
 - Best for: Game state, scores, settings, infrequent updates
 
 ```csharp
@@ -144,7 +144,7 @@ public class NoSyncExample : UdonSharpBehaviour
 | Mode | Data size | Frequency | Use case |
 |--------|-------------|------|-------------|
 | Continuous | ~200 bytes | High (10Hz) | Position/rotation tracking |
-| Manual | 280KB | On-demand | Game state, scores, settings |
+| Manual | ~280KB (280,496 bytes) | On-demand | Game state, scores, settings |
 | None | N/A | N/A | Event-only communication |
 
 ## VRC_ObjectSync Warning
@@ -591,7 +591,7 @@ Use the `[UdonSynced]` attribute to synchronize fields:
 [UdonSynced] private float health;
 [UdonSynced] private bool isActive;
 [UdonSynced] private Vector3 position;
-[UdonSynced] private string playerName; // Max ~50 characters!
+[UdonSynced] private string playerName; // 2 bytes/char; keep short in Continuous mode (~200 byte shared budget)
 ```
 
 ### Sync Modes
@@ -805,7 +805,7 @@ Only types syncable with `[UdonSynced]` can be used as parameters:
 | `long`, `ulong` | 8 bytes | |
 | `float` | 4 bytes | |
 | `double` | 8 bytes | |
-| `string` | variable | ~50 char limit |
+| `string` | 2 bytes/char | No fixed per-string limit; bounded by NetworkCallable event payload (16 KB/event max, ~18 KB/s throughput). Events >1024 bytes are split into multiple internal packets. Independent of `[UdonSynced]` sync mode budgets. |
 | `Vector2/3/4` | 8/12/16 bytes | |
 | `Quaternion` | 16 bytes | |
 | `Color`, `Color32` | 16/4 bytes | |
@@ -957,8 +957,8 @@ public void CheckMessage()
 ### String Length
 
 Synced strings have no fixed character limit. The practical limit depends on sync buffer size and UTF-16 encoding (2 bytes per character):
-- **Continuous**: ~200 bytes per serialization
-- **Manual**: ~280KB per serialization
+- **Continuous**: ~200 bytes per serialization (shared across all synced fields on the behaviour)
+- **Manual**: 280,496 bytes (~280KB) per serialization
 
 ```csharp
 // Keep synced strings short to conserve sync buffer

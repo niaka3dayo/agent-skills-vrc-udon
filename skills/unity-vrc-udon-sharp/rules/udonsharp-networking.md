@@ -25,7 +25,7 @@ RequestSerialization();
 |------|----------------|-----------------|------------|
 | **NoVariableSync** | `BehaviourSyncMode.NoVariableSync` | No variable sync, events only | - |
 | **Continuous** | `BehaviourSyncMode.Continuous` | Automatic sync ~10Hz | ~200 bytes |
-| **Manual** | `BehaviourSyncMode.Manual` | Explicit sync via `RequestSerialization()` | ~282KB |
+| **Manual** | `BehaviourSyncMode.Manual` | Explicit sync via `RequestSerialization()` | ~280KB (280,496 bytes) |
 
 ### Continuous
 
@@ -60,8 +60,12 @@ Manual sync procedure: Acquire ownership -> Update synced variables -> `RequestS
 
 ## String Sync Limitations
 
-- Maximum length for synced strings: **~50 characters**
-- For longer data, consider splitting into chunks or using alternative approaches
+Synced `string` fields are encoded at 2 bytes/char. There is no separate per-string character limit; the practical limit depends on the sync mode's serialization budget:
+
+- **Continuous**: strings share the ~200-byte budget with all other synced fields on the behaviour. Keep synced strings short (a single short word or short code), as even a 20-character string consumes 40 bytes.
+- **Manual**: strings can be much larger within the ~280KB (280,496 byte) per-serialization limit.
+
+For longer data in Continuous mode, consider splitting across multiple fields or switching to Manual sync.
 
 ## NetworkCallable (SDK 3.8.1+)
 
@@ -196,7 +200,7 @@ public override void OnDeserialization()
 
 - [ ] Ownership verified/acquired before modifying synced variables
 - [ ] `RequestSerialization()` called for Manual sync
-- [ ] Synced strings are within 50 characters
+- [ ] Synced strings in Continuous sync are kept short (respect the ~200-byte shared budget; 2 bytes/char)
 - [ ] VRCPlayerApi validity checked
 - [ ] Works correctly for late joiners
 - [ ] NetworkCallable rate limits considered
