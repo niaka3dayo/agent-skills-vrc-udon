@@ -387,8 +387,10 @@ public class ProximityDetector : UdonSharpBehaviour
         VRCPlayerApi[] allPlayers = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(allPlayers);
 
-        // Count players in range first
+        // Single pass: collect matches into an oversized temp array, then copy
+        VRCPlayerApi[] temp = new VRCPlayerApi[allPlayers.Length];
         int count = 0;
+
         foreach (VRCPlayerApi player in allPlayers)
         {
             if (player != null && player.IsValid())
@@ -399,27 +401,16 @@ public class ProximityDetector : UdonSharpBehaviour
                 );
                 if (distance <= detectionRange)
                 {
-                    count++;
+                    temp[count++] = player;
                 }
             }
         }
 
-        // Create result array
+        // Trim to actual count
         VRCPlayerApi[] result = new VRCPlayerApi[count];
-        int index = 0;
-        foreach (VRCPlayerApi player in allPlayers)
+        for (int i = 0; i < count; i++)
         {
-            if (player != null && player.IsValid())
-            {
-                float distance = Vector3.Distance(
-                    transform.position,
-                    player.GetPosition()
-                );
-                if (distance <= detectionRange)
-                {
-                    result[index++] = player;
-                }
-            }
+            result[i] = temp[i];
         }
 
         return result;
