@@ -27,10 +27,10 @@ metadata:
 | ------------------------------------------ | -------------------------- | ------------------------------- |
 | [Scene Setup](#scene-setup)                | VRC_SceneDescriptor, Spawn | This file                       |
 | [Components](#components)                  | Pickup, Station, Mirror    | `references/components.md`      |
-| [Layers & Collision](#layers--collision)   | Layers, Collision Matrix   | `references/layers.md`          |
+| [Layers & Collision](#layers-collision)   | Layers, Collision Matrix   | `references/layers.md`          |
 | [Performance](#performance)                | Optimization guide         | `references/performance.md`     |
 | [Lighting](#lighting)                      | Lighting settings          | `references/lighting.md`        |
-| [Audio & Video](#audio--video)             | Audio, Video players       | `references/audio-video.md`     |
+| [Audio & Video](#audio-video)             | Audio, Video players       | `references/audio-video.md`     |
 | [World Upload](#world-upload)              | Upload workflow            | `references/upload.md`          |
 | [Troubleshooting](#troubleshooting)        | Problem solving            | `references/troubleshooting.md` |
 | [Cheatsheet](CHEATSHEET.md)               | Quick reference            | `CHEATSHEET.md`                 |
@@ -443,7 +443,7 @@ Identify the symptom category, then follow the diagnostic path:
 - **SDK build error in VRChat Control Panel**
   → Builder tab lists all ⚠️ and ✖️ blockers with descriptions. Resolve each before building.
 - **"Missing script" on a UdonSharp component**
-  → The `.cs` file must have a matching `.asset` file. See Rule 16 in the `unity-vrc-udon-sharp` skill.
+  → The `.cs` file must have a matching `.asset` file. See the "missing .asset / script-asset pairing" rule in the `unity-vrc-udon-sharp` skill.
 
 **Editor / Runtime Discrepancy**
 - **World works in Unity Editor Play mode but fails or behaves differently in VRChat**
