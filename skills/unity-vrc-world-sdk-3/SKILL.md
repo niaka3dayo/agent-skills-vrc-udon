@@ -416,44 +416,6 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ---
 
-## Web Search
-
-### Official Documentation (WebSearch)
-
-```
-# Search official documentation
-WebSearch: "component or feature to look up site:creators.vrchat.com"
-```
-
-### Issue Investigation (WebSearch)
-
-```
-# Step 1: Forum search
-WebSearch:
-  query: "issue description site:ask.vrchat.com"
-  allowed_domains: ["ask.vrchat.com"]
-
-# Step 2: Known bug search
-WebSearch:
-  query: "issue description site:feedback.vrchat.com"
-  allowed_domains: ["feedback.vrchat.com"]
-
-# Step 3: GitHub Issues
-WebSearch:
-  query: "issue description site:github.com/vrchat-community"
-```
-
-### Official Resources
-
-| Resource          | URL                                   |
-| ----------------- | ------------------------------------- |
-| VRChat Creators   | https://creators.vrchat.com/worlds/   |
-| VRChat Forums     | https://ask.vrchat.com/               |
-| VRChat Canny      | https://feedback.vrchat.com/          |
-| SDK Release Notes | https://creators.vrchat.com/releases/ |
-
----
-
 ## Templates (`assets/templates/`)
 
 Starter templates for common SDK component patterns. Each template compiles without modification; adjust Inspector fields and extend the event stubs for your world.
