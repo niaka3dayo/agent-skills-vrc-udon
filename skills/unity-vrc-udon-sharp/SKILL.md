@@ -83,6 +83,8 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
+| Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
+| Writing new UdonSharp scripts (not sure if sync needed) | `udonsharp-constraints.md` | `udonsharp-networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 
 ## Pattern Selection Guide
@@ -169,37 +171,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 > **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
 
-## Web Search
-
-### When to Search
-
-| Scenario | Action |
-|----------|--------|
-| New SDK version support | Check official docs for latest API |
-| "Is this possible?" questions | Verify feasibility in official docs |
-| Unknown errors | Refer to official troubleshooting |
-| New feature usage | Retrieve latest code examples |
-
-### Search Strategy
-
-```
-# Official documentation search
-WebSearch: "feature or API name site:creators.vrchat.com"
-
-# UdonSharp API reference
-WebSearch: "API name site:udonsharp.docs.vrchat.com"
-
-# Error investigation: VRChat official forums
-WebSearch: "error message site:ask.vrchat.com"
-
-# Error investigation: Canny (bug reports / known issues)
-WebSearch: "error message site:feedback.vrchat.com"
-
-# Error investigation: GitHub Issues
-WebSearch: "error message UdonSharp site:github.com"
-```
-
-### Official Resources
+## Official Resources
 
 | Resource | URL | Contents |
 |----------|-----|----------|
