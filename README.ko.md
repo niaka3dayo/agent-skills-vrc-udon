@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | **한국어**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.2-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.3-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="에이전트 스킬" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="라이선스" />
@@ -215,7 +215,8 @@ Q3: 지속적으로 변하나요? (위치/회전)
 | **3.9.0** | Camera Dolly API, Auto Hold pickup | 지원 |
 | **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | 지원 |
 | **3.10.1** | 버그 수정, 안정성 개선 | 지원 |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones 수정, 셰이더 시간 글로벌 변수 | 최신 안정 버전 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones 수정, 셰이더 시간 글로벌 변수 | 지원 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (아바타), Mirror 렌더 순서 수정 | 최신 안정 버전 |
 
 > **참고**: SDK 3.9.0 미만은 2025년 12월 2일에 지원이 종료되었습니다. 새로운 월드 업로드에는 3.9.0 이상이 필요합니다.
 
@@ -256,7 +257,7 @@ Q3: 지속적으로 변하나요? (위치/회전)
 - 콘텐츠는 어떠한 보증 없이 **"있는 그대로"** 제공됩니다. [LICENSE](LICENSE)를 참조하세요.
 - 이것은 개인 프로젝트입니다. **오류, 오래된 정보, 불완전한 내용이 있을 수 있습니다.** 반드시 [공식 VRChat 문서](https://creators.vrchat.com/)와 대조하여 확인하세요.
 - 이 리포지토리로 인해 발생하는 문제(빌드 오류, 업로드 거부, 예상치 못한 월드 동작 등)에 대해 저자는 어떠한 책임도 지지 않습니다.
-- SDK 지원 범위(3.7.1 - 3.10.2)는 마지막 업데이트 시점을 반영합니다. 새로운 VRChat 릴리스에 따라 동작이 변경될 수 있습니다.
+- SDK 지원 범위(3.7.1 - 3.10.3)는 마지막 업데이트 시점을 반영합니다. 새로운 VRChat 릴리스에 따라 동작이 변경될 수 있습니다.
 
 ### AI 지원 제작
 

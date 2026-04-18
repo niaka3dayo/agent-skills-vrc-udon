@@ -895,6 +895,36 @@ public class ScoreBoard : UdonSharpBehaviour
 
 ---
 
+## VRC+ Cosmetic Indicator (SDK 3.10.3+)
+
+**Cosmetic only.** This pattern enables a non-functional visual indicator (badge, icon, chat color tint) for players with a VRC+ subscription. Gating gameplay, safety, or moderation features by `isVRCPlus` is forbidden — see NEVER #19 in `SKILL.md`.
+
+Two constraints shape the code: `isVRCPlus` must be read after `OnPlayerRestored` (see `api.md` for the timing rationale), and the value must never be `[UdonSynced]` (each client evaluates `player.isVRCPlus` locally).
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+public class LocalVRCPlusBadge : UdonSharpBehaviour
+{
+    [SerializeField] private GameObject plusBadge; // purely visual
+
+    public override void OnPlayerRestored(VRCPlayerApi player)
+    {
+        if (player == null || !player.isLocal) return;
+        plusBadge.SetActive(player.isVRCPlus); // cosmetic display only
+    }
+}
+```
+
+Notes:
+- The badge is on the **local** player and read against the local `VRCPlayerApi`. Applying this to remote players works the same way — iterate `VRCPlayerApi.GetPlayers()` on each client and set each badge locally; never sync the result.
+- Resist the temptation to skip the `OnPlayerRestored` gate. Reading in `OnPlayerJoined` may return an unset / default value while the profile is still being fetched.
+- If you need to react to a hypothetical future subscription change mid-session, re-read inside whatever update hook you already have; still no `[UdonSynced]`.
+
+---
+
 
 ## See Also
 

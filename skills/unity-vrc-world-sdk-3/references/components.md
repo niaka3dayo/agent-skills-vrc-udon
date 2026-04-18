@@ -1,6 +1,6 @@
 # VRChat World Components Complete Reference
 
-Full component reference for SDK 3.7.1 - 3.10.2.
+Full component reference for SDK 3.7.1 - 3.10.3.
 
 ## Table of Contents
 
@@ -15,6 +15,7 @@ Full component reference for SDK 3.7.1 - 3.10.2.
 - [VRC_AvatarPedestal](#vrc_avatarpedestal)
 - [VRC_CameraDolly](#vrc_cameradolly)
 - [VRCCameraSettings API](#vrccamerasettings-api)
+- [Avatar-driven features that read world colliders](#avatar-driven-features-that-read-world-colliders)
 - [Allowed Unity Components](#allowed-unity-components)
 
 ---
@@ -696,6 +697,12 @@ public class CameraMonitor : UdonSharpBehaviour
     }
 }
 ```
+
+---
+
+## Avatar-driven features that read world colliders
+
+Some avatar-side features fire rays or cast queries into the world and react to whatever collider they hit. `VRCRaycast` (SDK 3.10.3+) is one such feature: avatars can emit rays that intersect world colliders and players. World builders do not author or script `VRCRaycast` — it lives on the avatar side — but **collider presence, layer assignment, and IsTrigger settings on world geometry determine whether those avatar rays produce a "hit" and therefore whether visitors' avatars react as their authors intended**. Treat your interactable/solid geometry's collider+layer setup as an implicit contract with avatar-side tooling, not just with Udon interactions.
 
 ---
 

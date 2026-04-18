@@ -3,7 +3,7 @@
 Complete reference of C# features and their availability in UdonSharp, including SDK version availability,
 compiler behavior details, and annotated code examples.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
+**Supported SDK Versions**: 3.7.1 - 3.10.3
 
 > For the quick-reference checklist and code generation rules, see `rules/udonsharp-constraints.md`.
 

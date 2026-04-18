@@ -7,7 +7,7 @@ description: >
     network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
     persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts),
     Web Loading, VRAM management (texture lifecycle, Dispose vs Destroy),
-    and event handling. SDK 3.7.1 - 3.10.2 coverage.
+    and event handling. SDK 3.7.1 - 3.10.3 coverage.
     Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
     NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
     synced variables, VRChat world scripting, C# to Udon.
@@ -45,7 +45,7 @@ Four architectural decisions that must be made before choosing sync modes or wri
 
 ## Common Mistakes (NEVER List)
 
-These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior. Check this list before writing any UdonSharp code.
+These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior — **or** violate VRChat's design norms in ways that compile and run but break player expectations. Check this list before writing any UdonSharp code.
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|
@@ -61,12 +61,13 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 | 10 | Use `Button.onClick.AddListener()` | Not available in Udon — no runtime delegate support | Configure `SendCustomEvent` via Inspector OnClick |
 | 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
 | 12 | Write synced variables before `OnOwnershipTransferred` confirms ownership | `SetOwner` is async — writes before confirmation are silently discarded | Store intent locally, write + serialize in `OnOwnershipTransferred` callback |
-| 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Attribute compiles but is **silently ignored** — methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
-| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Events and components do not exist for worlds — code compiles but callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
-| 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | `PlayerData`, `PlayerObject`, `OnPlayerRestored` do not exist — compile or silent runtime failure | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
+| 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Compiles but silently ignored at runtime — the attribute has no effect and methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
+| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
+| 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
 | 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
 | 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
 | 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and their simple arrays are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
+| 19 | Gate core gameplay, safety, or moderation features by `isVRCPlus` | Breaks equitable course-of-play; conflicts with VRChat community norms; players expect gameplay access to be independent of subscription tier | Limit to cosmetic indicators (avatar icons, chat color, non-functional tier badges) |
 
 ## Sync Mode Quick Decision
 
@@ -197,6 +198,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | 3.10.0 | **VRChat Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
 | 3.10.1 | Bug fixes and stability improvements |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
 
 > **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
 
