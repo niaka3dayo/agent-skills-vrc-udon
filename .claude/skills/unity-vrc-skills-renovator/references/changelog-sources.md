@@ -67,6 +67,7 @@ minor: Bug fixes, small changes
 | 3.10.0 | 2025 | Dynamics for Worlds |
 | 3.10.1 | 2025 | Bug fixes and stability improvements |
 | 3.10.2 | 2026 | EventTiming extensions, PhysBones fixes, shader time globals |
+| 3.10.3 | 2026 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
 
 ### Checkpoints for Next Update
 
