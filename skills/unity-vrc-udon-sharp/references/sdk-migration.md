@@ -8,6 +8,14 @@ Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 > New world uploads are no longer possible with those versions.
 > Worlds that have not yet migrated past 3.9.0 must update to continue publishing.
 
+## Version markers
+
+Version-specific notes in this skill use three marker forms. Match them verbatim when adding new annotations:
+
+- `(requires SDK X.Y.Z+)` — feature gate. The API, attribute, or component exists only from that version onward.
+- `(fixed in SDK X.Y.Z)` — a bug that existed in earlier SDKs is resolved starting with this version.
+- `(unresolved as of SDK X.Y.Z)` — a bug is still open in this version. Include a tracking link (canny, GitHub issue) when available.
+
 ---
 
 ## SDK 3.7.x to 3.8.x
