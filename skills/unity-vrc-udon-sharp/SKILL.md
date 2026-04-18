@@ -45,7 +45,7 @@ Four architectural decisions that must be made before choosing sync modes or wri
 
 ## Common Mistakes (NEVER List)
 
-These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior. Check this list before writing any UdonSharp code.
+These constraints cause either **compile-time failures** or **silent runtime failures**. Check this list before writing any UdonSharp code.
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|
