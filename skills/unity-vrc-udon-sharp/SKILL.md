@@ -45,7 +45,7 @@ Four architectural decisions that must be made before choosing sync modes or wri
 
 ## Common Mistakes (NEVER List)
 
-These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior. Check this list before writing any UdonSharp code.
+These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior — **or** violate VRChat's design norms in ways that compile and run but break player expectations. Check this list before writing any UdonSharp code.
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|

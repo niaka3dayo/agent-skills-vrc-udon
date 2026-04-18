@@ -339,8 +339,6 @@ Namespace for all VRC Constraints: `VRC.SDK3.Dynamics.Constraint.Components`.
 - [ ] For worlds using PhysBones in world space: avoid placing them inside `Instantiate()`-created objects (PhysBones in instantiated objects may not be network-synced; use scene-placed objects or VRChat Object Pool instead)
 - [ ] Test the Contact-based interactions with multiple players; `Allow Self` / `Allow Others` settings on `VRC Contact Receiver` do not apply to world-object senders
 
----
-
 #### SDK 3.10.3 changes
 
 Small surface, but each item has non-obvious consequences documented elsewhere — this entry just routes you to them.
