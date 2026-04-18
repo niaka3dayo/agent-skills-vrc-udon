@@ -7,7 +7,7 @@ description: >
     Covers VRC_SceneDescriptor, spawn points, VRC_Pickup, VRC_Station,
     VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, layer/collision matrix,
     baked lighting, Quest/Android limits, and upload workflow.
-    SDK 3.7.1 - 3.10.2 coverage.
+    SDK 3.7.1 - 3.10.3 coverage.
     Triggers on: VRChat world, VRC SDK, scene setup, VRC_SceneDescriptor,
     spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
     optimization, Quest support, light baking, upload, FPS improvement.
@@ -102,7 +102,7 @@ If a world runs at 72 FPS on Quest with a single test client, it will typically 
 
 ## SDK Versions
 
-**Supported versions**: SDK 3.7.1 - 3.10.2 (as of March 2026)
+**Supported versions**: SDK 3.7.1 - 3.10.3 (as of March 2026)
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |
@@ -114,7 +114,8 @@ If a world runs at 72 FPS on Quest with a single test client, it will typically 
 | 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings              | ✅             |
 | 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | ✅             |
 | 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
-| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅ Latest stable |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅             |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | ✅ Latest stable |
 
 > **Important**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible with these versions.
 
