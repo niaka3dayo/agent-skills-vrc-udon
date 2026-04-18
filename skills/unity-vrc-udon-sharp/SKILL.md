@@ -45,7 +45,7 @@ Four architectural decisions that must be made before choosing sync modes or wri
 
 ## Common Mistakes (NEVER List)
 
-These constraints cause **silent failures** — no compiler error, no runtime exception, just broken behavior — **or** violate VRChat's design norms in ways that compile and run but break player expectations. Check this list before writing any UdonSharp code.
+These constraints cause either **compile-time failures** or **silent runtime failures**. Check this list before writing any UdonSharp code.
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|
@@ -67,7 +67,6 @@ These constraints cause **silent failures** — no compiler error, no runtime ex
 | 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
 | 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
 | 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and their simple arrays are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
-| 19 | Gate core gameplay, safety, or moderation features by `isVRCPlus` | Breaks equitable course-of-play; conflicts with VRChat community norms; players expect gameplay access to be independent of subscription tier | Limit to cosmetic indicators (avatar icons, chat color, non-functional tier badges) |
 
 ## Sync Mode Quick Decision
 
