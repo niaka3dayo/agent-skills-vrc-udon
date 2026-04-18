@@ -2,7 +2,7 @@
 
 Complete reference of VRChat-specific classes, methods, and types available in UdonSharp.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3 (SDK coverage: 3.7.1 - 3.10.3)
+**Supported SDK Versions**: 3.7.1 - 3.10.3
 
 ## VRCPlayerApi
 

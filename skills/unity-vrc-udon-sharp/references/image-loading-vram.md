@@ -1,6 +1,6 @@
 # Image Loading — VRAM & Memory Management
 
-**Supported SDK Versions**: 3.7.1+ (image loading), 3.7.1 - 3.10.3 (SDK coverage: 3.7.1 - 3.10.3)
+**Supported SDK Versions**: 3.7.1+ (image loading), 3.7.1 - 3.10.3
 
 Extended memory management guide for `VRCImageDownloader`. Covers GPU memory lifecycle,
 safe texture cleanup, double-buffer fade, stock vs. streaming mode, mipmap bias control,

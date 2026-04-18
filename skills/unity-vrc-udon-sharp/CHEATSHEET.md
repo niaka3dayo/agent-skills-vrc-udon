@@ -1,6 +1,6 @@
 # UdonSharp Cheatsheet
 
-**SDK 3.7.1 - 3.10.3 Coverage** (SDK coverage: 3.7.1 - 3.10.3)
+**SDK 3.7.1 - 3.10.3 Coverage**
 
 ## Blocked Features and Alternatives
 

@@ -1,6 +1,6 @@
 # Web Loading (String / Image Download)
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3 (SDK coverage: 3.7.1 - 3.10.3)
+**Supported SDK Versions**: 3.7.1 - 3.10.3
 
 Since `System.Net` is unavailable in UdonSharp, VRChat-specific APIs must be used to retrieve data from the web.
 

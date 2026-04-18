@@ -1,6 +1,6 @@
 # VRC World SDK 3 Cheatsheet
 
-**SDK 3.7.1 - 3.10.3 supported** (SDK coverage: 3.7.1 - 3.10.3)
+**SDK 3.7.1 - 3.10.3 supported**
 
 ---
 
