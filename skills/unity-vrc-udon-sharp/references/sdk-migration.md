@@ -2,7 +2,7 @@
 
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
-**Applies to**: SDK 3.7.x through 3.10.2
+**Applies to**: SDK 3.7.x through 3.10.3
 
 > **Deprecation Notice**: SDK versions below 3.9.0 were deprecated on **December 2, 2025**.
 > New world uploads are no longer possible with those versions.
@@ -338,6 +338,16 @@ Namespace for all VRC Constraints: `VRC.SDK3.Dynamics.Constraint.Components`.
 - [ ] Audit `SendCustomEventDelayed*` calls: use `EventTiming.FixedUpdate` for physics-coupled callbacks, `EventTiming.PostLateUpdate` for camera/IK callbacks, instead of frame-delay workarounds
 - [ ] For worlds using PhysBones in world space: avoid placing them inside `Instantiate()`-created objects (PhysBones in instantiated objects may not be network-synced; use scene-placed objects or VRChat Object Pool instead)
 - [ ] Test the Contact-based interactions with multiple players; `Allow Self` / `Allow Others` settings on `VRC Contact Receiver` do not apply to world-object senders
+
+#### SDK 3.10.3 changes
+
+Small surface, but each item has non-obvious consequences documented elsewhere — this entry just routes you to them.
+
+- **`VRCPlayerApi.isVRCPlus`** (bool) added. Evaluated per-client; read after `OnPlayerRestored`, not inside `OnPlayerJoined`. Never `[UdonSynced]` the result. Full timing and anti-sync rationale: `api.md` (VRCPlayerApi Properties > isVRCPlus subsection).
+- **NEVER #19** (design-axis, not silent-failure): do not gate core gameplay, safety, or moderation features by `isVRCPlus`. See SKILL.md NEVER table and the cosmetic-indicator pattern in `patterns-core.md`.
+- **VRCRaycast**: avatar-side component (added 3.10.3). Udon runtime access is not indicated by the release notes. World builders should design collider/layer setup with avatar-driven raycasts in mind — see `unity-vrc-world-sdk-3/references/components.md`.
+- **Mirror rendering internals**: VRChat's mirror pipeline moved from `OnWillRenderObject` to `Camera.onPreCull` for 2026.1.3 client parity. Udon scripts do not interact with either hook, so no script-side migration is required.
+- **Toon Standard shader** (avatar-only): not covered by this skill.
 
 ---
 
