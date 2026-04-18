@@ -2,7 +2,7 @@
 
 Common errors, causes, and solutions for VRChat UdonSharp development.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.2 (as of March 2026)
+**Supported SDK Versions**: 3.7.1 - 3.10.3 (as of March 2026)
 
 ## Table of Contents
 

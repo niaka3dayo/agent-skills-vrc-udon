@@ -1,6 +1,6 @@
 # VRChat World Components Complete Reference
 
-Full component reference for SDK 3.7.1 - 3.10.2.
+Full component reference for SDK 3.7.1 - 3.10.3.
 
 ## Table of Contents
 

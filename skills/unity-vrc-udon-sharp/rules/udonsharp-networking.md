@@ -2,7 +2,7 @@
 
 Core networking rules and constraints. See `../references/networking.md` for detailed patterns.
 
-**SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
+**SDK Coverage**: 3.7.1 - 3.10.3 (as of March 2026)
 
 ## Ownership Model
 
