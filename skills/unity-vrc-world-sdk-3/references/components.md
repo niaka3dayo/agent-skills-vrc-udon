@@ -699,6 +699,12 @@ public class CameraMonitor : UdonSharpBehaviour
 
 ---
 
+## Avatar-driven features that read world colliders
+
+Some avatar-side features fire rays or cast queries into the world and react to whatever collider they hit. `VRCRaycast` (SDK 3.10.3+) is one such feature: avatars can emit rays that intersect world colliders and players. World builders do not author or script `VRCRaycast` — it lives on the avatar side — but **collider presence, layer assignment, and IsTrigger settings on world geometry determine whether those avatar rays produce a "hit" and therefore whether visitors' avatars react as their authors intended**. Treat your interactable/solid geometry's collider+layer setup as an implicit contract with avatar-side tooling, not just with Udon interactions.
+
+---
+
 ## Allowed Unity Components
 
 Unity standard components available in VRChat.
