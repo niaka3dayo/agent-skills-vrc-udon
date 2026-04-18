@@ -2,7 +2,7 @@
 
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
-**Applies to**: SDK 3.7.x through 3.10.2
+**Applies to**: SDK 3.7.x through 3.10.3
 
 > **Deprecation Notice**: SDK versions below 3.9.0 were deprecated on **December 2, 2025**.
 > New world uploads are no longer possible with those versions.

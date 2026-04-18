@@ -15,6 +15,7 @@ Full component reference for SDK 3.7.1 - 3.10.2.
 - [VRC_AvatarPedestal](#vrc_avatarpedestal)
 - [VRC_CameraDolly](#vrc_cameradolly)
 - [VRCCameraSettings API](#vrccamerasettings-api)
+- [Avatar-driven features that read world colliders](#avatar-driven-features-that-read-world-colliders)
 - [Allowed Unity Components](#allowed-unity-components)
 
 ---
