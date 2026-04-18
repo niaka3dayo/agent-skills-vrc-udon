@@ -28,6 +28,20 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: failure_basis
+    attributes:
+      label: Failure basis
+      description: |
+        What justifies this rule/pattern being added to the skill?
+        See CONTRIBUTING.md "Content Scope" for the policy.
+      options:
+        - Technical — silent failure, compile error, data desync, API ignore, memory leak, etc.
+        - Platform enforcement — VRChat TOS violation with mechanical consequence (world deletion, account restriction)
+        - Design preference / community norm (not covered — skill scope excludes this)
+    validations:
+      required: true
+
   - type: textarea
     id: description
     attributes:
