@@ -728,7 +728,7 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 When a player sits in a VRCStation, the **PlayerLocal (Layer 10) capsule collider is effectively disabled**. This causes `OnPlayerTriggerEnter`, `OnPlayerTriggerExit`, and `OnPlayerTriggerStay` to **not fire** for seated players.
 
-This is a [known long-standing issue](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations). As of SDK 3.10.2, no fix has been released.
+This is a [known long-standing issue](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations) (unresolved as of SDK 3.10.3).
 
 ### Symptoms
 
