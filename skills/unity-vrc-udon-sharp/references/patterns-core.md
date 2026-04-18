@@ -910,12 +910,9 @@ public class LocalVRCPlusBadge : UdonSharpBehaviour
 {
     [SerializeField] private GameObject plusBadge; // purely visual
 
-    private bool _playerReady = false;
-
     public override void OnPlayerRestored(VRCPlayerApi player)
     {
         if (player == null || !player.isLocal) return;
-        _playerReady = true;
         plusBadge.SetActive(player.isVRCPlus); // cosmetic display only
     }
 }
