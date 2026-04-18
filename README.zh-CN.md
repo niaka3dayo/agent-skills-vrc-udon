@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | **简体中文** | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.2-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.3-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="AI Agent 技能" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="许可证" />
@@ -215,7 +215,8 @@ Q3: 是否持续变化？（位置/旋转）
 | **3.9.0** | Camera Dolly API、Auto Hold 拾取 | 已支持 |
 | **3.10.0** | VRChat Dynamics for Worlds（PhysBones、Contacts、VRC Constraints） | 已支持 |
 | **3.10.1** | Bug 修复、稳定性改进 | 已支持 |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修复、着色器时间全局变量 | 最新稳定版 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修复、着色器时间全局变量 | 已支持 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（头像）、Mirror 渲染顺序修复 | 最新稳定版 |
 
 > **注意**：SDK < 3.9.0 已于 2025 年 12 月 2 日弃用。上传新世界需要 3.9.0+。
 
@@ -256,7 +257,7 @@ Q3: 是否持续变化？（位置/旋转）
 - 内容以 **"按原样"（AS IS）** 提供，不附带任何保证。请参阅 [LICENSE](LICENSE)。
 - 这是一个个人项目。**可能存在错误、过时信息或不完整的内容。** 请始终以 [VRChat 官方文档](https://creators.vrchat.com/) 为准进行验证。
 - 作者不对因使用本仓库而导致的任何问题（构建错误、上传被拒、意外的世界行为等）承担责任。
-- SDK 覆盖范围（3.7.1 - 3.10.2）反映最后一次更新的状态。VRChat 新版本发布后，行为可能会发生变化。
+- SDK 覆盖范围（3.7.1 - 3.10.3）反映最后一次更新的状态。VRChat 新版本发布后，行为可能会发生变化。
 
 ### AI 辅助创建
 
