@@ -895,11 +895,11 @@ public class ScoreBoard : UdonSharpBehaviour
 
 ---
 
-## VRC+ Cosmetic Indicator (SDK 3.10.3+)
+## VRC+ Detection — Reading `isVRCPlus` (SDK 3.10.3+)
 
-**Cosmetic only.** This pattern enables a non-functional visual indicator (badge, icon, chat color tint) for players with a VRC+ subscription. Gating gameplay, safety, or moderation features by `isVRCPlus` is forbidden — see NEVER #19 in `SKILL.md`.
+This pattern reads `VRCPlayerApi.isVRCPlus` on the local player and conditionally enables a `GameObject`. Substitute any behaviour you want to condition on subscription status — the code shape is the same regardless of what the target object does. Whether and how to use `isVRCPlus` is a design decision left to the caller.
 
-Two constraints shape the code: `isVRCPlus` must be read after `OnPlayerRestored` (see `api.md` for the timing rationale), and the value must never be `[UdonSynced]` (each client evaluates `player.isVRCPlus` locally).
+Two technical constraints shape the code: `isVRCPlus` must be read after `OnPlayerRestored` (see `api.md` for the timing rationale), and the value must never be `[UdonSynced]` (each client evaluates `player.isVRCPlus` locally, so a synced value would misreport state for every other client).
 
 ```csharp
 using UdonSharp;
@@ -908,20 +908,20 @@ using VRC.SDKBase;
 
 public class LocalVRCPlusBadge : UdonSharpBehaviour
 {
-    [SerializeField] private GameObject plusBadge; // purely visual
+    [SerializeField] private GameObject plusBadge;
 
     public override void OnPlayerRestored(VRCPlayerApi player)
     {
         if (player == null || !player.isLocal) return;
-        plusBadge.SetActive(player.isVRCPlus); // cosmetic display only
+        plusBadge.SetActive(player.isVRCPlus);
     }
 }
 ```
 
 Notes:
-- The badge is on the **local** player and read against the local `VRCPlayerApi`. Applying this to remote players works the same way — iterate `VRCPlayerApi.GetPlayers()` on each client and set each badge locally; never sync the result.
-- Resist the temptation to skip the `OnPlayerRestored` gate. Reading in `OnPlayerJoined` may return an unset / default value while the profile is still being fetched.
-- If you need to react to a hypothetical future subscription change mid-session, re-read inside whatever update hook you already have; still no `[UdonSynced]`.
+- The read is on the **local** player against the local `VRCPlayerApi`. Applying this to remote players works the same way — iterate `VRCPlayerApi.GetPlayers()` on each client and evaluate each player's `isVRCPlus` locally; never sync the result.
+- Do not skip the `OnPlayerRestored` gate. Reading in `OnPlayerJoined` may return an unset / default value while the profile is still being fetched.
+- If you need to react to a subscription change mid-session, re-read inside whatever update hook you already have; still no `[UdonSynced]`.
 
 ---
 

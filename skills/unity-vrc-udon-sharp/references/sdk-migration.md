@@ -351,8 +351,7 @@ Namespace for all VRC Constraints: `VRC.SDK3.Dynamics.Constraint.Components`.
 
 Small surface, but each item has non-obvious consequences documented elsewhere — this entry just routes you to them.
 
-- **`VRCPlayerApi.isVRCPlus`** (bool) added. Evaluated per-client; read after `OnPlayerRestored`, not inside `OnPlayerJoined`. Never `[UdonSynced]` the result. Full timing and anti-sync rationale: `api.md` (VRCPlayerApi Properties > isVRCPlus subsection).
-- **NEVER #19** (design-axis, not silent-failure): do not gate core gameplay, safety, or moderation features by `isVRCPlus`. See SKILL.md NEVER table and the cosmetic-indicator pattern in `patterns-core.md`.
+- **`VRCPlayerApi.isVRCPlus`** (bool) added. Evaluated per-client; read after `OnPlayerRestored`, not inside `OnPlayerJoined`. Never `[UdonSynced]` the result. Full timing and anti-sync rationale: `api.md` (VRCPlayerApi Properties > isVRCPlus subsection). Worked example: `patterns-core.md` (VRC+ Detection — Reading `isVRCPlus`).
 - **VRCRaycast**: avatar-side component (added 3.10.3). Udon runtime access is not indicated by the release notes. World builders should design collider/layer setup with avatar-driven raycasts in mind — see `unity-vrc-world-sdk-3/references/components.md`.
 - **Mirror rendering internals**: VRChat's mirror pipeline moved from `OnWillRenderObject` to `Camera.onPreCull` for 2026.1.3 client parity. Udon scripts do not interact with either hook, so no script-side migration is required.
 - **Toon Standard shader** (avatar-only): not covered by this skill.
