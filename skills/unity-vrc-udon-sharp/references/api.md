@@ -31,7 +31,7 @@ Two properties of that model drive correct usage:
 - **Timing**: Reading `isVRCPlus` inside `OnPlayerJoined` is not guaranteed to return an authoritative value. `OnPlayerJoined` fires during the network handshake before the player's profile and persistence data have settled; the subscription state may still be unset when the event fires. Gate reads behind `OnPlayerRestored` (or a local `_playerReady` flag set there) — `OnPlayerRestored` fires after persistence data has been loaded, which is the earliest point where account-tied properties are reliable.
 - **Anti-sync**: Do **NOT** store `isVRCPlus` in an `[UdonSynced]` variable and broadcast it. Each client must read `player.isVRCPlus` on its own against the `VRCPlayerApi` it holds. Syncing a single master-evaluated value will misreport the state for every other player and is a correctness bug, not a bandwidth optimisation. (See NEVER #18 for the general form of this anti-pattern; `isVRCPlus` is a new axis — "per-client evaluation" rather than "component reference.")
 
-For an example using the property for cosmetic-only indicators, see `patterns-core.md` (VRC+ Cosmetic Indicator). For the design-axis constraint against gating gameplay by subscription tier, see NEVER #19 in `SKILL.md`.
+For a worked example of reading the property and enabling a local `GameObject` based on it, see `patterns-core.md` (VRC+ Detection — Reading `isVRCPlus`).
 
 ### Movement Methods
 
