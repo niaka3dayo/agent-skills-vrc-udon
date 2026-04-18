@@ -2,7 +2,7 @@
 
 Complete reference of all events available in UdonSharp. Override these methods to respond to events.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3 (as of March 2026)
+**Supported SDK Versions**: 3.7.1 - 3.10.3 (SDK coverage: 3.7.1 - 3.10.3)
 
 ## Important: override vs Non-override
 

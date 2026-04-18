@@ -102,7 +102,7 @@ If a world runs at 72 FPS on Quest with a single test client, it will typically 
 
 ## SDK Versions
 
-**Supported versions**: SDK 3.7.1 - 3.10.3 (as of March 2026)
+**Supported versions**: SDK 3.7.1 - 3.10.3 (SDK coverage: 3.7.1 - 3.10.3)
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |

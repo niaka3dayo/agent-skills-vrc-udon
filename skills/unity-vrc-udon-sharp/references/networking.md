@@ -2,7 +2,7 @@
 
 Comprehensive guide to networking and synchronization in UdonSharp.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3 (as of March 2026)
+**Supported SDK Versions**: 3.7.1 - 3.10.3 (SDK coverage: 3.7.1 - 3.10.3)
 
 > **Warning**: Networking in Udon is a work in progress and can be fragile. Keep implementations simple and test thoroughly with multiple players.
 >
