@@ -18,7 +18,7 @@ Read the following Rules before writing any UdonSharp code:
 | `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
 | `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
 
-## SDK (3.7.1 - 3.10.2)
+## SDK (3.7.1 - 3.10.3)
 
 | Version | Key Features |
 |---------|--------------|
@@ -28,6 +28,7 @@ Read the following Rules before writing any UdonSharp code:
 | 3.10.0 | VRChat Dynamics for Worlds (PhysBones, Contacts) |
 | 3.10.1 | Bug fixes and stability improvements |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
 
 ## Docs Reference
 

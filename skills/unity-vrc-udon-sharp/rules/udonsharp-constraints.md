@@ -2,7 +2,7 @@
 
 UdonSharp compiles C# to Udon Assembly. Always adhere to these constraints, which differ from standard C#.
 
-**SDK Coverage**: 3.7.1 - 3.10.2 (as of March 2026)
+**SDK Coverage**: 3.7.1 - 3.10.3
 
 > For detailed examples, SDK version availability, and compiler behavior explanations,
 > see `references/constraints.md`.

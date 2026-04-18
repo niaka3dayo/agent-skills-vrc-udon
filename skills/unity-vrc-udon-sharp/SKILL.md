@@ -7,7 +7,7 @@ description: >
     network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
     persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts),
     Web Loading, VRAM management (texture lifecycle, Dispose vs Destroy),
-    and event handling. SDK 3.7.1 - 3.10.2 coverage.
+    and event handling. SDK 3.7.1 - 3.10.3 coverage.
     Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
     NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
     synced variables, VRChat world scripting, C# to Udon.
@@ -198,6 +198,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | 3.10.0 | **VRChat Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
 | 3.10.1 | Bug fixes and stability improvements |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
 
 > **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
 
