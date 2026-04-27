@@ -1184,8 +1184,8 @@ Prefer the UdonSharp helper that wires `programSource` automatically:
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UdonSharpEditor;
 
-// Creates UdonBehaviour AND sets programSource in one call
-MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
+    // Creates UdonBehaviour AND sets programSource in one call
+    MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
 #endif
 ```
 
@@ -1195,13 +1195,13 @@ If the `UdonBehaviour` was created without `AddUdonSharpComponent`, assign manua
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
 
-UdonBehaviour ub = gameObject.GetComponent<UdonBehaviour>();
-UdonSharpProgramAsset programAsset =
-    AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(
-        "Assets/Path/MyScript.asset");
-Undo.RecordObject(ub, "Assign UdonSharpProgramAsset");
-ub.programSource = programAsset;
-EditorUtility.SetDirty(ub);
+    UdonBehaviour ub = gameObject.GetComponent<UdonBehaviour>();
+    UdonSharpProgramAsset programAsset =
+        AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(
+            "Assets/Path/MyScript.asset");
+    Undo.RecordObject(ub, "Assign UdonSharpProgramAsset");
+    ub.programSource = programAsset;
+    EditorUtility.SetDirty(ub);
 #endif
 ```
 
@@ -1209,7 +1209,7 @@ Or, in the Inspector, drag the `.asset` from the Project window into the `Progra
 
 **Prevention:**
 
-When automating UdonBehaviour creation, verify `programSource` is set as a post-step. See [Rule 9 in `rules/udonsharp-constraints.md`](../rules/udonsharp-constraints.md) for the verification procedure.
+When automating UdonBehaviour creation, verify `programSource` is set as a post-step. See [Rule 9 in `rules/udonsharp-constraints.md`](../rules/udonsharp-constraints.md#9-udonbehaviour-component-wiring) for the verification procedure.
 
 ---
 

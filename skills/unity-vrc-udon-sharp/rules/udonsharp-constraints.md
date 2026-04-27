@@ -161,8 +161,8 @@ After the `.asset` file is generated (Rule 8), the GameObject's `UdonBehaviour` 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UdonSharpEditor;
-// Creates UdonBehaviour AND sets programSource in one call
-MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
+    // Creates UdonBehaviour AND sets programSource in one call
+    MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
 #endif
 ```
 
