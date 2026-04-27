@@ -1149,6 +1149,70 @@ EditorUtility.SetDirty(behaviour);
 
 ---
 
+### UdonBehaviour with Empty Program Source (Silent No-Op)
+
+**Symptoms:**
+
+- `UdonBehaviour` component is attached to the GameObject
+- The corresponding `UdonSharpProgramAsset` (`.asset`) exists in the project
+- The `.cs` script compiles without errors
+- Yet **no Udon events fire** — `Start()`, `Interact()`, `OnPlayerJoined()`, etc. never run
+- No errors, no warnings, no log output
+
+**Cause:**
+
+The `UdonBehaviour.programSource` field is empty. Without this reference, the component has nothing to execute. Unity treats it as a valid component (no missing-script warning), so the failure is invisible until you notice the script does not run.
+
+This commonly happens when AI agents automate Unity setup (Unity MCP servers, custom editor scripts, prefab manipulation tools) and add `UdonBehaviour` components directly without going through `AddUdonSharpComponent`.
+
+**Distinction from "The associated script cannot be loaded":**
+
+- That error fires when the `.asset` is missing entirely (Rule 8 violation)
+- This silent no-op fires when the `.asset` exists but is not assigned to `programSource` (Rule 9 violation)
+
+**Diagnosis:**
+
+1. Select the GameObject in the Hierarchy
+2. Inspect the `UdonBehaviour` component
+3. Check the **Program Source** field — if it shows `None (Abstract Udon Program Asset)`, this is the cause
+
+**Solution:**
+
+Prefer the UdonSharp helper that wires `programSource` automatically:
+
+```csharp
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
+using UdonSharpEditor;
+
+    // Creates UdonBehaviour AND sets programSource in one call
+    MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
+#endif
+```
+
+If the `UdonBehaviour` was created without `AddUdonSharpComponent`, assign manually:
+
+```csharp
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
+using UnityEditor;
+
+    UdonBehaviour ub = gameObject.GetComponent<UdonBehaviour>();
+    UdonSharpProgramAsset programAsset =
+        AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(
+            "Assets/Path/MyScript.asset");
+    Undo.RecordObject(ub, "Assign UdonSharpProgramAsset");
+    ub.programSource = programAsset;
+    EditorUtility.SetDirty(ub);
+#endif
+```
+
+Or, in the Inspector, drag the `.asset` from the Project window into the `Program Source` slot.
+
+**Prevention:**
+
+When automating UdonBehaviour creation, verify `programSource` is set as a post-step. See [Rule 9 in `rules/udonsharp-constraints.md`](../rules/udonsharp-constraints.md#9-udonbehaviour-component-wiring) for the verification procedure.
+
+---
+
 ## Performance Issues
 
 ### FPS Drop from Many UdonBehaviours
@@ -1540,6 +1604,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | **Contact player is null** | Check `info.isAvatar` before accessing |
 | **Trigger not firing for seated players** | PlayerLocal collider disabled in station — use position check workaround |
 | **.asset missing / script not loaded** | Install auto-generator in `Assets/Editor/`, then reimport the affected `.cs` |
+| **UdonBehaviour silently does nothing** | Check `Program Source` slot — likely empty; assign `.asset` or use `AddUdonSharpComponent` |
 
 ---
 
