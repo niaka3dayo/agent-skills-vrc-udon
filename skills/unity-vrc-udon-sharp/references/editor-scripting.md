@@ -108,7 +108,10 @@ using UdonSharpEditor;
 // Add UdonSharpBehaviour component
 MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
 
-// This creates both the UdonBehaviour and the proxy
+// This creates the UdonBehaviour, assigns its programSource (.asset), and creates the proxy.
+// Skipping this helper and calling AddComponent<UdonBehaviour>() directly produces a component
+// with empty programSource — silently does nothing at runtime. See troubleshooting.md
+// "UdonBehaviour with Empty Program Source" for the diagnostic walk-through.
 #endif
 ```
 
@@ -668,3 +671,4 @@ public class UdonSharpProgramAssetAutoGenerator : AssetPostprocessor
 - Abstract classes are intentionally skipped (they cannot have their own UdonSharpProgramAsset)
 - The `Editor` folder placement is required (scripts in `Editor` are not compiled by UdonSharp)
 - Generation only runs after domain reload (`didDomainReload`), not on every asset import
+- **Asset generation does not wire `UdonBehaviour.programSource`** — this generator only creates the `.asset` file. Assigning it to a `UdonBehaviour` on a GameObject is a separate step; use [`AddUdonSharpComponent`](#addudonsharpcomponent) for new components, or see "UdonBehaviour with Empty Program Source" in `troubleshooting.md` for diagnosing existing components

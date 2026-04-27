@@ -140,6 +140,34 @@ Every `.cs` UdonSharpBehaviour needs a corresponding `.asset` (UdonSharpProgramA
 
 Do NOT assume the auto-generator is already installed. The agent cannot verify installation status without explicitly checking, so skipping this procedure based on assumption is prohibited. See `references/editor-scripting.md` for the full implementation.
 
+### 9. UdonBehaviour Component Wiring
+
+After the `.asset` file is generated (Rule 8), the GameObject's `UdonBehaviour` component must reference that `.asset` in its **Program Source** field. Without this assignment, the UdonBehaviour exists on the GameObject but executes nothing — no error, no warning, no compile failure. The same silent-failure family as Rule 8, but at the **component layer** instead of the file layer.
+
+| State | `.asset` exists? | `programSource` set? | Symptom |
+|-------|:-:|:-:|---------|
+| Healthy | Yes | Yes | Code runs |
+| Rule 8 violation | No | (n/a) | "The associated script cannot be loaded" |
+| Rule 9 violation | Yes | No | Component present, **no events fire**, no log |
+
+**When the agent creates UdonBehaviour components programmatically (Unity automation, editor scripts, prefab manipulation), it MUST verify after creation:**
+
+1. The GameObject has a `UdonBehaviour` component
+2. That component's `programSource` field references the matching `UdonSharpProgramAsset`
+3. The referenced `.asset` is the one paired with the intended `.cs` (same base name, same folder)
+
+**Preferred API (handles wiring automatically):**
+
+```csharp
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
+using UdonSharpEditor;
+// Creates UdonBehaviour AND sets programSource in one call
+MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
+#endif
+```
+
+When manipulating `UdonBehaviour` directly without `AddUdonSharpComponent`, the agent is responsible for assigning `programSource` itself. See `references/editor-scripting.md` for proxy-system specifics and `references/troubleshooting.md` for diagnostic steps.
+
 ## Attribute Quick Reference
 
 ### Class Level
@@ -187,3 +215,4 @@ Types that can be used with `[UdonSynced]`:
 - [ ] Not using `AddListener()`
 - [ ] Unity callbacks (OnTriggerEnter, etc.) do not have override
 - [ ] Auto-generator (`UdonSharpProgramAssetAutoGenerator.cs`) confirmed present in `Assets/Editor/` (installed if it was missing)
+- [ ] Every UdonBehaviour created programmatically has its `programSource` populated with the matching `.asset` (Rule 9)
