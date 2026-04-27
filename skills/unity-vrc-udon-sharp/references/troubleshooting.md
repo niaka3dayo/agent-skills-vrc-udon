@@ -1199,6 +1199,7 @@ UdonBehaviour ub = gameObject.GetComponent<UdonBehaviour>();
 UdonSharpProgramAsset programAsset =
     AssetDatabase.LoadAssetAtPath<UdonSharpProgramAsset>(
         "Assets/Path/MyScript.asset");
+Undo.RecordObject(ub, "Assign UdonSharpProgramAsset");
 ub.programSource = programAsset;
 EditorUtility.SetDirty(ub);
 #endif
