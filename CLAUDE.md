@@ -95,42 +95,80 @@ node bin/install.mjs --help
 ### Overview
 
 ```
-dev ──release PR──> main ──Release Drafter draft──> publish ──> npm
+dev ──version-bump PR──> dev ──release PR──> main ──Release Drafter draft──> publish ──> npm
 ```
 
-Version numbers and changelogs are **fully automated** by Release Drafter.
-Do NOT manually edit `package.json` version — `publish.yml` sets it from the release tag.
+Changelogs are automated by Release Drafter. **Version numbers must be bumped manually on `dev` before opening the release PR** (see Step 1 below). `publish.yml` does run `npm version "$VERSION" --no-git-tag-version` in the CI runner as a safety net, but those edits are not committed back, so the git tree's source-of-truth must be kept current by hand.
 
 ### Step-by-step
 
-1. **Create a release PR from `dev` to `main`**
+1. **Bump version fields on `dev`**
+   - Decide the target version vX.Y.Z (consult labels on merged PRs since the last release — see "Version resolution" below).
+   - Branch off `dev`, run the bump, open a PR back to `dev`:
+
+     ```bash
+     git checkout dev && git pull
+     git checkout -b chore/release-vX.Y.Z
+
+     OLD=$(node -p "require('./package.json').version")
+     NEW=X.Y.Z
+
+     # 5 fields must move together — Version Sync CI verifies parity.
+     sed -i "s/\"version\": \"$OLD\"/\"version\": \"$NEW\"/" package.json .claude-plugin/marketplace.json
+     sed -i "s/version: \"$OLD\"/version: \"$NEW\"/" \
+       skills/unity-vrc-udon-sharp/SKILL.md \
+       skills/unity-vrc-world-sdk-3/SKILL.md \
+       .claude/skills/unity-vrc-skills-renovator/SKILL.md
+
+     git commit -am "chore(version): bump to vX.Y.Z"
+     git push -u origin chore/release-vX.Y.Z
+     gh pr create --base dev --label "release: maintenance" \
+       --title "chore(version): bump to vX.Y.Z" \
+       --body "Pre-release version bump for Step 2 of the release flow."
+     ```
+
+   - Wait for CI green (Version Sync CI verifies all 5 fields agree on `vX.Y.Z`). Merge the bump PR into `dev` (squash is fine here — single-purpose commit).
+
+2. **Create a release PR from `dev` to `main`**
    ```bash
    gh pr create --base main --head dev \
      --title "Release vX.Y.Z" \
      --body "Merge dev into main for release"
    ```
-   - Title should include the expected version (check the draft release for the resolved version)
-   - Wait for CI to pass and CodeRabbit approval
+   - Title must include the version that matches `package.json#version` on `dev` after Step 1.
+   - Wait for CI to pass. CodeRabbit approval is **not required for release PRs** (per repo convention — release PRs are mechanical merges of already-reviewed commits).
 
-2. **Merge the release PR**
-   - Merge (do NOT squash — preserve commit history)
-   - This triggers Release Drafter to update the draft release on `main`
+3. **Merge the release PR**
+   - Merge (do NOT squash — preserve commit history so Release Drafter sees each underlying PR commit).
+   - This triggers Release Drafter to update the draft release on `main`.
 
-3. **Publish the GitHub Release draft**
+4. **Publish the GitHub Release draft**
    ```bash
    # List draft releases
    gh release list --exclude-drafts=false
 
-   # Review and publish the draft (edit title/notes if needed)
+   # Always rewrite the auto-generated notes before publishing:
+   #   - Remove the "Release vX.Y.Z (#N)" self-reference line
+   #   - Replace bare PR titles with user-facing prose
+   #   - Add a reporter acknowledgement section if any bundled PR closed an
+   #     externally-reported Issue (mirror the reporter's language: Japanese
+   #     reporter → Japanese acknowledgement, English reporter → English)
+   gh release edit vX.Y.Z --notes "$(cat <<'NOTES'
+   ## What's New in vX.Y.Z
+   ...
+   NOTES
+   )"
+
+   # Publish (this triggers publish.yml → npm publish)
    gh release edit vX.Y.Z --draft=false
    ```
-   - The `published` event triggers `publish.yml`
-   - `publish.yml` reads the tag, sets `npm version`, and runs `npm publish --provenance`
-   - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret)
+   - The `published` event triggers `publish.yml`.
+   - `publish.yml` reads the tag, runs `npm version "$VERSION" --allow-same-version` (no-op if Step 1 was done correctly), syncs to SKILL.md / marketplace.json again as a safety net, and runs `npm publish --provenance`.
+   - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret).
 
-### Version resolution (automatic)
+### Version resolution (label-driven)
 
-Release Drafter resolves the version bump from PR labels:
+When deciding the target version in Step 1, count the labels on PRs merged into `dev` since the last release:
 
 | Label | Bump |
 |-------|------|
@@ -140,14 +178,14 @@ Release Drafter resolves the version bump from PR labels:
 | `release: docs` | patch |
 | `release: maintenance` | patch |
 
-If no label matches, defaults to **patch**.
+The highest bump wins. If no label matches, default to **patch**. Release Drafter independently resolves the same labels for the draft body, so as long as the manual bump in Step 1 matches Release Drafter's resolution, the draft and `package.json` will agree.
 
 ### What NOT to do
 
-- Do NOT manually bump `package.json` version (publish.yml handles it)
-- Do NOT create tags manually (Release Drafter creates them)
-- Do NOT push directly to `main` (branch protection blocks it)
-- Do NOT merge feature branches directly to `main` (always go through `dev`)
+- Do NOT skip Step 1 (the manual version bump). `publish.yml`'s runner-side mutation does **not** commit back, so a missed bump leaves the git tree frozen. The Version Sync CI check trivially passes when all 5 fields agree on the wrong value — this drifted for 5 release cycles before being caught (PR #169).
+- Do NOT create tags manually (Release Drafter creates them when the release is published).
+- Do NOT push directly to `main` (branch protection blocks it; use the release PR flow).
+- Do NOT merge feature branches directly to `main` (always go through `dev`).
 
 ## Editing Skills
 
