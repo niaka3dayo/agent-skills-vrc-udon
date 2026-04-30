@@ -105,6 +105,19 @@ jobs:
       - name: Test installer list
         run: node bin/install.mjs --list
 
+  installer-tests:
+    name: Installer Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: "22"
+
+      - name: Run installer tests
+        run: npm test
+
   editorconfig:
     name: EditorConfig
     runs-on: ubuntu-latest
