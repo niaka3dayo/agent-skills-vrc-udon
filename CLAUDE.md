@@ -107,18 +107,26 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    - Branch off `dev`, run the bump, open a PR back to `dev`:
 
      ```bash
+     set -e
      git checkout dev && git pull
      git checkout -b chore/release-vX.Y.Z
 
+     # OLD: read from local package.json. If your local is stale, prefer:
+     #   OLD=$(npm view agent-skills-vrc-udon version)
      OLD=$(node -p "require('./package.json').version")
      NEW=X.Y.Z
 
      # 5 fields must move together — Version Sync CI verifies parity.
+     # The SKILL.md sed is anchored to the 4-space-indented frontmatter line
+     # so body-text occurrences (e.g. SDK version mentions) are not rewritten.
      sed -i "s/\"version\": \"$OLD\"/\"version\": \"$NEW\"/" package.json .claude-plugin/marketplace.json
-     sed -i "s/version: \"$OLD\"/version: \"$NEW\"/" \
+     sed -i "s/^    version: \"$OLD\"$/    version: \"$NEW\"/" \
        skills/unity-vrc-udon-sharp/SKILL.md \
        skills/unity-vrc-world-sdk-3/SKILL.md \
        .claude/skills/unity-vrc-skills-renovator/SKILL.md
+
+     # Sanity check before commit — only the 5 expected fields should diff.
+     git diff --stat
 
      git commit -am "chore(version): bump to vX.Y.Z"
      git push -u origin chore/release-vX.Y.Z
@@ -127,14 +135,16 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
        --body "Pre-release version bump for Step 2 of the release flow."
      ```
 
-   - Wait for CI green (Version Sync CI verifies all 5 fields agree on `vX.Y.Z`). Merge the bump PR into `dev` (squash is fine here — single-purpose commit).
+   - Wait for **all** CI jobs green — specifically Version Sync, which verifies all 5 fields agree on `vX.Y.Z`. (Branch protection currently enforces only `Symlink Integrity / Hook Scripts / npm Pack Test` as required contexts; do not merge if Version Sync is red even though GitHub allows it.) Merge the bump PR into `dev` (squash is fine here — single-purpose commit). CodeRabbit review is optional on this PR — it's mechanical and Version Sync is the substantive check.
 
 2. **Create a release PR from `dev` to `main`**
+
    ```bash
    gh pr create --base main --head dev \
      --title "Release vX.Y.Z" \
      --body "Merge dev into main for release"
    ```
+
    - Title must include the version that matches `package.json#version` on `dev` after Step 1.
    - Wait for CI to pass. CodeRabbit approval is **not required for release PRs** (per repo convention — release PRs are mechanical merges of already-reviewed commits).
 
@@ -143,6 +153,7 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    - This triggers Release Drafter to update the draft release on `main`.
 
 4. **Publish the GitHub Release draft**
+
    ```bash
    # List draft releases
    gh release list --exclude-drafts=false
@@ -151,8 +162,11 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    #   - Remove the "Release vX.Y.Z (#N)" self-reference line
    #   - Replace bare PR titles with user-facing prose
    #   - Add a reporter acknowledgement section if any bundled PR closed an
-   #     externally-reported Issue (mirror the reporter's language: Japanese
-   #     reporter → Japanese acknowledgement, English reporter → English)
+   #     externally-reported Issue. Mirror the reporter's language for the
+   #     release-notes acknowledgement (Japanese reporter → Japanese; English
+   #     reporter → English). Issue/PR titles and bodies remain English-first
+   #     per repo convention; the reporter-language rule applies only to
+   #     user-facing release notes.
    gh release edit vX.Y.Z --notes "$(cat <<'NOTES'
    ## What's New in vX.Y.Z
    ...
@@ -162,6 +176,7 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    # Publish (this triggers publish.yml → npm publish)
    gh release edit vX.Y.Z --draft=false
    ```
+
    - The `published` event triggers `publish.yml`.
    - `publish.yml` reads the tag, runs `npm version "$VERSION" --allow-same-version` (no-op if Step 1 was done correctly), syncs to SKILL.md / marketplace.json again as a safety net, and runs `npm publish --provenance`.
    - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret).

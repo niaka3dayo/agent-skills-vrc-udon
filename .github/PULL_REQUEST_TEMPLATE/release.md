@@ -29,6 +29,7 @@ Release vX.Y.Z — short one-line punchline.
 
 ### `Skill or Area` (#NNN)
 
+
 - ...
 
 ## Reporter acknowledgement (if applicable)

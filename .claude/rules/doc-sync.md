@@ -27,8 +27,19 @@ Any change to these paths requires a documentation sync check:
 ## What NOT to Update
 
 - `CHANGELOG.md` — managed by Release Drafter, not manual edits
-- `package.json` version — managed by publish workflow
-- `SKILL.md` version fields — managed by publish workflow
+
+## What to Update Together (Release Flow)
+
+These fields must be bumped together on `dev` via a `chore(version): bump to vX.Y.Z` PR
+**before** opening the release PR. See CLAUDE.md "Release Guide" Step 1 for the exact procedure.
+`publish.yml` does mutate them in the CI runner as a safety net, but those edits are not
+committed back, so the source-of-truth must be kept current by hand:
+
+- `package.json` → `.version`
+- `.claude-plugin/marketplace.json` → `.metadata.version`
+- `skills/unity-vrc-udon-sharp/SKILL.md` → frontmatter `metadata.version`
+- `skills/unity-vrc-world-sdk-3/SKILL.md` → frontmatter `metadata.version`
+- `.claude/skills/unity-vrc-skills-renovator/SKILL.md` → frontmatter `metadata.version`
 
 ## Checklist (run mentally before committing)
 
