@@ -16,6 +16,9 @@
   "bin": {
     "agent-skills-vrc-udon": "./bin/install.mjs"
   },
+  "scripts": {
+    "test": "node --test 'tests/**/*.test.mjs'"
+  },
   "files": [
     "bin/",
     "skills/",
