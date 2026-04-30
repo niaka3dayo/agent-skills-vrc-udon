@@ -75,6 +75,15 @@ assert_contains "A: stdout passes input through" "$A_STDOUT" '"file_path":"Foo.c
 # ------------------------------------------------------------
 # Case B: jq present, file_path / filePath both missing → exit 0, no abort
 # ------------------------------------------------------------
+# Precondition: Cases B and C run against the unrestricted environment and
+# require jq to actually be installed. Without this guard, a runner that
+# happens to lack jq would silently fall through Case A's new passthrough
+# and stop testing what B/C claim to test.
+if ! command -v jq >/dev/null 2>&1; then
+    echo "ABORT: Cases B/C require jq in PATH (precondition not met)"
+    exit 2
+fi
+
 CASE_B_INPUT='{"tool_input":{}}'
 B_STDOUT=$(printf '%s' "$CASE_B_INPUT" | "$HOOK" 2>"$TMPROOT/case_b.err")
 B_RC=$?
