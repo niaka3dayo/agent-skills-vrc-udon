@@ -229,6 +229,13 @@ console.log(bold('agent-skills-vrc-udon') + ` v${pkg.version}`);
 
 // Version detection: show upgrade/already-up-to-date message
 const installedVersion = readInstalledVersion();
+// Treat any version mismatch (upgrade or downgrade) as a request to refresh
+// installed content, so .version never drifts ahead of the actual files.
+// Without this, an upgrade re-run without --force would print
+// "Upgrading from..." but keep the old skills/ on disk while bumping .version,
+// permanently masking new rules from existing users (Issue #164).
+const isUpgrade = installedVersion !== null && installedVersion !== pkg.version;
+const shouldOverwrite = force || isUpgrade;
 if (installedVersion !== null) {
   if (installedVersion === pkg.version) {
     console.log(dim(`Already up to date (v${pkg.version}).`));
@@ -244,7 +251,7 @@ let copied = 0;
 let skipped = 0;
 
 // 1. Copy skills/
-if (existsSync(AGENT_DOCS_DEST) && !force) {
+if (existsSync(AGENT_DOCS_DEST) && !shouldOverwrite) {
   console.log(yellow('  SKIP') + ` .agent-skills/skills/ ${dim('(already exists, use --force to overwrite)')}`);
   skipped += countFiles(AGENT_DOCS_SRC);
 } else {
@@ -262,7 +269,7 @@ for (const cf of CONFIG_FILES) {
 
   if (!existsSync(src)) continue;
 
-  if (existsSync(dest) && !force) {
+  if (existsSync(dest) && !shouldOverwrite) {
     console.log(yellow('  SKIP') + ` .agent-skills/${cf} ${dim('(already exists)')}`);
     skipped++;
   } else {
