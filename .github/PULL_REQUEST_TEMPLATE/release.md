@@ -19,14 +19,16 @@
 Release vX.Y.Z — short one-line punchline.
 
 **N PRs since vPREVIOUS:**
-- #NNN — `<type>`: <one-sentence summary>
+
+- #NNN — `<type>`: `one-sentence summary`
 - ...
 
 **Version bump driver**: `release: <highest-label>` → `<bump-type>`.
 
 ## What changed
 
-### <Skill or Area> (#NNN)
+### `Skill or Area` (#NNN)
+
 - ...
 
 ## Reporter acknowledgement (if applicable)
