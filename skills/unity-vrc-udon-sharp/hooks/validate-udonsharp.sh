@@ -9,7 +9,21 @@
 set -e
 
 input=$(cat)
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""')
+
+# Require jq for JSON parsing. Without this guard, jq absence under set -e
+# aborts every PostToolUse hook invocation on .cs edits with a "command not
+# found" message, breaking validation silently for users on minimal Linux
+# images and macOS without Homebrew jq (Issue #165, Case A). Pass input
+# through so the original edit still propagates downstream.
+if ! command -v jq &>/dev/null; then
+    echo "$input"
+    exit 0
+fi
+
+# Tolerate jq parse failures: if the incoming JSON is malformed, fall through
+# to the empty-file_path branch (which exits cleanly) instead of aborting
+# under set -e (Issue #165, Case B).
+file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""' 2>/dev/null || true)
 
 # Only process .cs files
 if [[ ! "$file_path" =~ \.cs$ ]]; then

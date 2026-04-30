@@ -44,6 +44,9 @@ jobs:
       - name: Bash syntax check
         run: bash -n skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh
 
+      - name: Smoke test validate-udonsharp.sh
+        run: bash tests/hooks/validate-udonsharp.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest
