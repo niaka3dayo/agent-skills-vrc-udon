@@ -403,41 +403,33 @@ MyProperty = 10;
 **Symptoms:**
 - Unexpected ownership changes
 - State desynchronization
-- "Flickering" between states
+- Loser's local write is overwritten when the concurrent winner's serialization arrives
 
 **Solution:**
+
+`Networking.SetOwner` is **locally immediate** on the calling client — `Networking.IsOwner(gameObject)` returns `true` synchronously after the call. There is no need to defer the action to `OnOwnershipTransferred`. Concurrent callers each succeed locally; the network resolves the durable owner by arrival order, and the loser's write is overwritten on the next deserialization. Guard writes with `IsOwner` and accept that property of the network.
+
 ```csharp
-// Use ownership request pattern
 public override void Interact()
 {
-    if (Networking.IsOwner(gameObject))
+    if (!Networking.IsOwner(gameObject))
     {
-        // Already owner, proceed
-        DoAction();
-    }
-    else
-    {
-        // Request ownership, wait for transfer
-        _pendingAction = true;
+        // SetOwner is locally immediate; IsOwner is true after this returns.
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
     }
-}
 
-public override void OnOwnershipTransferred(VRCPlayerApi player)
-{
-    if (player.isLocal && _pendingAction)
-    {
-        _pendingAction = false;
-        DoAction();
-    }
+    DoAction();
 }
 
 private void DoAction()
 {
-    // Modify synced variables here
+    // IsOwner is true on this frame after SetOwner; safe to write
+    // synced variables here.
     RequestSerialization();
 }
 ```
+
+> For owner-side protection during critical actions (e.g., reject ownership requests mid-transaction), use `OnOwnershipRequest` — see [networking.md §"Ownership Arbitration with OnOwnershipRequest"](networking.md#ownership-arbitration-with-onownershiprequest).
 
 ---
 
