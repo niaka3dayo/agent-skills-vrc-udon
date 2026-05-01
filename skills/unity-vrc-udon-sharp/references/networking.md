@@ -571,7 +571,9 @@ public override bool OnOwnershipRequest(
 | Turn-based game during active turn | Reject (`false`) until turn ends |
 | Free-for-all interaction | Accept (`true`) |
 
-> **Important**: `OnOwnershipRequest` runs locally on **both the requester and the current owner**. The logic must be consistent on both sides to avoid desync. If the owner has disconnected, the callback is not invoked — VRChat auto-assigns directly.
+> **Important**: `OnOwnershipRequest` runs locally on **both the requester and the Requested Owner** (the `requestedOwner` parameter — typically the player calling `SetOwner`, but can be a different player when one client transfers ownership to another). The logic must be consistent on both sides to avoid desync. If the previous owner has disconnected, the callback is not invoked — VRChat auto-assigns directly.
+>
+> Source: [Object Ownership — Network Components](https://creators.vrchat.com/worlds/udon/networking/network-components/) on creators.vrchat.com.
 
 ## Synced Variables
 
