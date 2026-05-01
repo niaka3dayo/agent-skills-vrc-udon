@@ -14,7 +14,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "1.2.1"
+    version: "1.8.2"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
 ---
 
@@ -31,7 +31,7 @@ Every rule in this skill exists because UdonSharp's default behavior is to **fai
 Four architectural decisions that must be made before choosing sync modes or writing any synced variable. Changing them mid-implementation typically requires a full rewrite:
 
 - **Who owns this state?** One owner writes; all others read. If two players can both write (e.g., a shared toggle), you need an ownership transfer protocol — writes without ownership are silently discarded.
-- **When does ownership transfer?** On grab? Interact? Game event? `OnPlayerLeft`? Ownership transfer is asynchronous — do not write synced variables immediately after `SetOwner()`; write inside `OnOwnershipTransferred`.
+- **When does ownership transfer?** On grab? Interact? Game event? `OnPlayerLeft`? `Networking.SetOwner` is **locally immediate** on the calling client — `Networking.IsOwner(gameObject)` is `true` synchronously after the call, and writing `[UdonSynced]` fields plus `RequestSerialization()` immediately afterwards is safe under an `IsOwner` guard. Concurrent `SetOwner` calls from multiple clients are resolved by network arrival order — there is no client-side arbitration, so accept that the loser's write is overwritten.
 - **What do late joiners see?** State set only by one-time events (`SendCustomNetworkEvent`) is invisible to late joiners. Persistent state requires `[UdonSynced]` variables; the owner calls `RequestSerialization()` on join events to push current state to newcomers.
 - **What if the owner leaves mid-session?** Without explicit `OnPlayerLeft` handling, the object's synced state can never change again. Decide upfront: auto-transfer to master, reset to a known default, or the next interacting player claims ownership.
 
@@ -60,7 +60,7 @@ These constraints cause either **compile-time failures** or **silent runtime fai
 | 9 | Use LINQ (`.Where`, `.Select`, etc.) or lambda expressions | Compile error — not supported by Udon compiler | Manual `for` loops with named methods |
 | 10 | Use `Button.onClick.AddListener()` | Not available in Udon — no runtime delegate support | Configure `SendCustomEvent` via Inspector OnClick |
 | 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
-| 12 | Write synced variables before `OnOwnershipTransferred` confirms ownership | `SetOwner` is async — writes before confirmation are silently discarded | Store intent locally, write + serialize in `OnOwnershipTransferred` callback |
+| 12 | Write to `[UdonSynced]` fields without an `IsOwner` guard | Non-owner writes are purely local and silently reverted on the next deserialization from the actual owner | `Networking.SetOwner` first if needed (locally immediate), then write under `IsOwner` and call `RequestSerialization()` |
 | 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Compiles but silently ignored at runtime — the attribute has no effect and methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
 | 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
@@ -98,8 +98,8 @@ Late joiners don't see current state?
   ├── State set only on event (e.g., player trigger)?  → Also set in Start() + RequestSerialization() on owner
   └── Using SendCustomNetworkEvent for persistent state? → Use [UdonSynced] variables instead
 
-OnOwnershipTransferred never fires after SetOwner()?
-  └── SetOwner() is async — write synced vars inside OnOwnershipTransferred callback, not immediately after
+OnOwnershipTransferred not firing on a remote client?
+  └── On the caller, the callback fires synchronously inside SetOwner — confirm the calling client called Networking.SetOwner(LocalPlayer, gameObject), and that remote clients resolve the same gameObject reference (scene path or prefab GUID)
 ```
 
 ## Reference Loading Guide

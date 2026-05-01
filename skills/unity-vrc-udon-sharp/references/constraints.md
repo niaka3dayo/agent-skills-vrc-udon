@@ -1006,7 +1006,9 @@ public class SyncedUrlList : UdonSharpBehaviour
 | `[UdonSynced] string` for metadata | JSON-encoded array of `[timestamp, type, sender]` entries |
 | `VRCJson.TrySerializeToJson` / `TryDeserializeFromJson` | Serialization of structured metadata into a single synced string |
 | `OnDeserialization` | Handles incoming sync data on non-owner clients |
-| Pending-operation + `OnOwnershipTransferred` | Defers synced writes until ownership is confirmed, avoiding SetOwner race conditions |
+| Pending-operation + `OnOwnershipTransferred` | Carries multi-step deferred operation parameters (Add vs Remove) from the request site to the callback. |
+
+> *Note: `Networking.SetOwner` is locally immediate (post-2021.2.2), so this pattern is not required for ownership timing — it survives because it cleanly carries the operation context from the request site into the callback. See [networking-antipatterns.md §1](networking-antipatterns.md#1-ownership-race-condition) for the immediate-after-SetOwner alternative when no parameter passing is needed.*
 
 **Bandwidth and Performance Considerations:**
 

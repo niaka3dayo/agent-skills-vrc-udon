@@ -1586,7 +1586,11 @@ public class AppManager : UdonSharpBehaviour
     private bool _isTransitioning = false;
     private int _previousAppIndex = -1;
 
-    // Pending open state (used when ownership transfer is in progress)
+    // Pending open state — carries the requested operation from OpenApp/CloseCurrentApp
+    // into OnOwnershipTransferred so the callback knows which app to open.
+    // Note: Networking.SetOwner is locally immediate (post-2021.2.2), so a request that
+    // already owns the object can execute synchronously; this field exists for the
+    // ownership-transfer code path only.
     // -2 = no pending operation, -1 = pending close, >= 0 = pending open index
     private int _pendingOpenIndex = -2;
 
