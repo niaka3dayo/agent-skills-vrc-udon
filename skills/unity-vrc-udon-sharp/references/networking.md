@@ -1184,7 +1184,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | One-off world init (fires once at world launch) | Acceptable | Preferred |
 | Ongoing game logic (timers, spawning, scoring) | No — fragile | Yes |
 | Responding to player join/leave events | No — may double-fire | Yes |
-| Approving ownership transfers (`OnOwnershipRequest`) | No — wrong API | Yes — runs on current owner |
+| Approving ownership transfers (`OnOwnershipRequest`) | No — wrong API | Neither — the callback fires on both the requester and the current owner; logic must agree on both clients to avoid desync. See [Ownership Arbitration with OnOwnershipRequest](#ownership-arbitration-with-onownershiprequest) above. |
 | Checking if a specific player is the master | `player.isMaster` on `VRCPlayerApi` | N/A |
 
 > **Reference**: VRChat networking documentation — https://creators.vrchat.com/worlds/udon/networking/
