@@ -14,7 +14,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "1.8.1"
+    version: "1.8.2"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
 ---
 
