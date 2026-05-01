@@ -428,12 +428,13 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 
 ### Ownership Request Arbitration
 
-`OnOwnershipRequest` allows the current owner to accept or reject ownership transfers. This is called **only on the current owner's client**.
+`OnOwnershipRequest` allows the current owner to accept or reject ownership transfers. The callback runs locally on **both the requester and the current owner**, so the logic must return the same result on both sides to avoid desync.
 
 ```csharp
 /// <summary>
-/// Called on the current owner's client when another player requests ownership.
-/// Return true to accept, false to reject the transfer.
+/// Called on both the requester's and the current owner's clients
+/// when another player requests ownership. Return true to accept,
+/// false to reject the transfer. The result MUST agree on both sides.
 /// </summary>
 public override bool OnOwnershipRequest(
     VRCPlayerApi requestingPlayer,
