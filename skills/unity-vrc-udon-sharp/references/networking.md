@@ -457,54 +457,47 @@ Debug.Log($"Owner: {owner.displayName}");
 ### Ownership Transfer
 
 ```csharp
-// Request ownership for local player
+// Request ownership for the local player.
+// Locally immediate — IsOwner(gameObject) returns true after this call.
 Networking.SetOwner(Networking.LocalPlayer, gameObject);
-
-// Note: Ownership transfer is not instant!
-// The previous owner must acknowledge the transfer
 ```
 
-**Important timing issue**: After `SetOwner`, the new owner cannot immediately modify synced variables. It must wait for the previous owner's acknowledgment:
+**Set owner if needed and update synced state in one call:**
 
 ```csharp
-// WRONG - May fail due to timing
-Networking.SetOwner(Networking.LocalPlayer, gameObject);
-syncedValue = 10; // Might not sync!
-RequestSerialization();
-
-// CORRECT - Wait for ownership confirmation
 public void RequestOwnershipAndUpdate(int newValue)
 {
-    pendingValue = newValue;
-    Networking.SetOwner(Networking.LocalPlayer, gameObject);
-    // Value will be set in OnOwnershipTransferred
+    if (!Networking.IsOwner(gameObject))
+    {
+        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+    }
+
+    syncedValue = newValue;
+    RequestSerialization();
 }
 
+// OnOwnershipTransferred remains useful for inheritance scenarios
+// (e.g., the previous owner left and you became owner without a
+// SetOwner call of your own). For SetOwner-initiated transfers, the
+// callback fires synchronously inside SetOwner — usually you do not
+// need to write code in it for the calling-side path.
 public override void OnOwnershipTransferred(VRCPlayerApi player)
 {
     if (player.isLocal)
     {
-        syncedValue = pendingValue;
+        // Re-broadcast state so non-owner clients converge.
         RequestSerialization();
     }
 }
 ```
 
-### Ownership Transfer Timing Diagram
+### Ownership Transfer Timing Semantics
 
-```text
-Player A (current owner) | Player B (requesting)
--------------------------|------------------------
-                        | SetOwner(B, obj)
-                        | [Cannot sync yet!]
-Receives request         |
-Acknowledges transfer   |
-                        | OnOwnershipTransferred(B)
-                        | [Now safe to sync]
-                        | RequestSerialization()
-```
+- **On the calling client:** `Networking.SetOwner` takes effect immediately. `Networking.IsOwner(gameObject)` returns `true` synchronously after the call. `OnOwnershipTransferred` fires synchronously within the `SetOwner` stack on the calling client.
+- **On remote clients:** the new ownership becomes visible after VRChat propagates the change. Each remote client's `OnOwnershipTransferred` fires when the propagation arrives.
+- **No client-side arbitration:** when two clients call `SetOwner` simultaneously, both succeed locally and may write synced variables; VRChat resolves the durable owner by network arrival order. The loser's write is overwritten when the winner's serialization arrives. This is by design — see [networking-antipatterns.md §1](networking-antipatterns.md#1-ownership-race-condition) for the recommended `IsOwner`-guarded pattern, and [§"Ownership Arbitration with OnOwnershipRequest"](#ownership-arbitration-with-onownershiprequest) below for owner-side protection during critical actions.
 
-**Race condition warning**: If multiple players call `SetOwner` simultaneously, the last one processed wins. There is no built-in conflict resolution.
+> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; current SDKs (3.7.1+, this skill's coverage range) are locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
 
 ### Owner Leave and Ownership Cascade
 
@@ -642,8 +635,8 @@ public void IncrementScore()
 {
     if (!Networking.IsOwner(gameObject))
     {
+        // SetOwner is locally immediate — IsOwner is true after this returns.
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        return; // Wait for OnOwnershipTransferred
     }
 
     score += 10;
@@ -1123,7 +1116,7 @@ The **owner-centric** pattern reduces both risks: a specific `GameObject` has ex
 owner at all times, so `Networking.IsOwner(gameObject)` typically returns the same result
 across all clients. Note that during ownership transfers (e.g., the current owner leaves),
 there is a brief transient window where clients may briefly disagree on who the owner is
-until the network round-trip completes. The `OnOwnershipTransferred` callback is the correct
+until VRChat propagates the new ownership to other clients. The `OnOwnershipTransferred` callback is the correct
 place to handle this case — re-initialize owner-only state and call `RequestSerialization()`
 so all clients converge to the new owner's authoritative state.
 

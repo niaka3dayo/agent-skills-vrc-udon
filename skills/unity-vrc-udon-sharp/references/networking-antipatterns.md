@@ -10,17 +10,18 @@ Common mistakes in UdonSharp networking that cause silent failures, data loss, o
 
 ### 1. Ownership Race Condition
 
-**Problem**: Two clients call `Networking.SetOwner` simultaneously for the same object. There is no built-in conflict resolution — the last-processed `SetOwner` wins, which is non-deterministic. Whichever client "loses" the race will have its synced variable writes silently discarded because `RequestSerialization()` is called before ownership is confirmed.
+**Problem**: `Networking.SetOwner` is **locally immediate** on the calling client — `Networking.IsOwner(gameObject)` returns `true` synchronously after the call returns, and `OnOwnershipTransferred` fires synchronously inside the `SetOwner` stack on that client. When two clients call `SetOwner` for the same object at the same moment, **both succeed locally** and may write `[UdonSynced]` variables; VRChat's network resolves the durable owner by network arrival order, and the loser's write is overwritten when the winner's serialization arrives. There is no client-side arbitration. Treat "loser overwrite" as a property of the network, not a bug to engineer around with callback gating.
 
 **Wrong:**
 
 ```csharp
-// Client A and Client B both execute this at the same time
+// Mutating [UdonSynced] without an IsOwner guard — when SetOwner has not
+// been called for the local client (e.g., owner is someone else), the
+// write is purely local and is silently reverted on the next deserialization.
 public void TryCapture()
 {
-    Networking.SetOwner(Networking.LocalPlayer, gameObject);
-    capturedBy = Networking.LocalPlayer.playerId; // May be overwritten by Client B
-    RequestSerialization();                        // May be dropped — not owner yet
+    capturedBy = Networking.LocalPlayer.playerId; // No IsOwner guard — may be a non-owner write
+    RequestSerialization();                        // No-op when called by a non-owner
 }
 ```
 
@@ -31,28 +32,39 @@ public void TryCapture()
 public class CapturePoint : UdonSharpBehaviour
 {
     [UdonSynced] private int capturedBy = -1;
-    private int _pendingCaptureId = -1;
 
     public void TryCapture()
     {
-        // Store intent, then request ownership
-        _pendingCaptureId = Networking.LocalPlayer.playerId;
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        // Do NOT write synced variables here — ownership is not confirmed yet
-    }
+        // SetOwner is locally immediate. After it returns, IsOwner is true
+        // for this client. Two clients racing to capture will both write
+        // locally and serialize; the network resolves the durable owner by
+        // arrival order, and the loser's write is overwritten when the
+        // winner's serialization arrives. This is acceptable for capture-
+        // point semantics.
+        if (!Networking.IsOwner(gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        }
 
-    public override void OnOwnershipTransferred(VRCPlayerApi player)
-    {
-        if (!player.isLocal) return;
-
-        // Only write + serialize after confirmed ownership
-        capturedBy = _pendingCaptureId;
+        capturedBy = Networking.LocalPlayer.playerId;
         RequestSerialization();
     }
+
+    public override void OnDeserialization()
+    {
+        // Update visuals from synced state (runs on non-owner clients).
+        UpdateVisualsFromCapturedBy();
+    }
+
+    private void UpdateVisualsFromCapturedBy() { /* ... */ }
 }
 ```
 
-**Explanation**: `Networking.SetOwner` is asynchronous. The previous owner must acknowledge the transfer before `OnOwnershipTransferred` fires on the new owner. Writing synced variables before that callback means the write may come from a non-owner and will be silently ignored by VRChat. Use `OnOwnershipTransferred` as the commit point.
+**Explanation**: `Networking.SetOwner` is **locally immediate**. After the call returns, `Networking.IsOwner(gameObject)` is `true` and `OnOwnershipTransferred` has already fired synchronously inside the `SetOwner` stack on the calling client. Writing `[UdonSynced]` fields and calling `RequestSerialization()` immediately afterwards is safe under an `IsOwner` guard. Concurrent calls from multiple clients are *not* arbitrated client-side — VRChat's network resolves the durable owner by arrival order, and the loser's local write is overwritten when the winner's serialization arrives. See the [Transfer Events Diagram](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram) on creators.vrchat.com.
+
+**When `OnOwnershipRequest` fits.** If the *current owner* needs to reject ownership transfers during a critical action (turn-based logic, mid-transaction state), use `OnOwnershipRequest`. That is a different problem class — owner-side protection — not arbitration among concurrent requesters. See [networking.md §"Ownership Arbitration with OnOwnershipRequest"](networking.md#ownership-arbitration-with-onownershiprequest).
+
+> *Footnote: Pre-2021.2.2 SDKs were asynchronous; this skill targets SDK 3.7.1+ where the locally-immediate behavior is in effect.*
 
 ---
 
@@ -277,19 +289,11 @@ public class GameFlag : UdonSharpBehaviour
     {
         if (!Networking.IsOwner(gameObject))
         {
-            // Become owner first, then write in OnOwnershipTransferred
+            // Locally immediate; we own the object after this returns.
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
-            return;
         }
 
-        SetCaptured(true);
-    }
-
-    public override void OnOwnershipTransferred(VRCPlayerApi player)
-    {
-        if (!player.isLocal) return;
-
-        // Ownership confirmed — safe to write and serialize
+        // SetOwner is locally immediate — safe to write under IsOwner.
         SetCaptured(true);
     }
 
@@ -308,7 +312,7 @@ public class GameFlag : UdonSharpBehaviour
 }
 ```
 
-**Explanation**: In UdonSharp, only the current owner's `RequestSerialization()` calls are transmitted. Non-owner writes to `[UdonSynced]` variables are purely local and will be overwritten by the next deserialization from the actual owner. Always guard synced writes with `Networking.IsOwner(gameObject)` and use the `SetOwner` + `OnOwnershipTransferred` pattern when ownership transfer is needed.
+**Explanation**: In UdonSharp, only the current owner's `RequestSerialization()` calls are transmitted. Non-owner writes to `[UdonSynced]` variables are purely local and will be overwritten by the next deserialization from the actual owner — that is the silent failure to guard against. Always guard synced writes with `Networking.IsOwner(gameObject)`; if you are not the owner, call `Networking.SetOwner` first — it is locally immediate, so once it returns `IsOwner` is `true` and you may write and serialize on the same frame.
 
 ---
 

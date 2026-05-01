@@ -217,9 +217,8 @@ Run through this checklist before publishing any world.
 
 ### Ownership and Sync
 
-- [ ] All `[UdonSynced]` modifications are preceded by `Networking.IsOwner()` checks
+- [ ] All `[UdonSynced]` writes are guarded by `Networking.IsOwner(gameObject)`; if not owner, call `Networking.SetOwner` first (locally immediate), then write and `RequestSerialization()` (Manual sync)
 - [ ] All Manual-sync behaviours call `RequestSerialization()` after modifying synced fields
-- [ ] Ownership transfer (`Networking.SetOwner()`) is confirmed via `OnOwnershipTransferred` before writing synced state
 - [ ] No ownership fights: two scripts do not compete for ownership of the same object
 
 ### Late Joiner Correctness
