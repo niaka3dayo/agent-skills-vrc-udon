@@ -381,6 +381,8 @@ int[] dest = new int[3];
 System.Array.Copy(source, dest, 3);
 ```
 
+> **Predicate-based APIs** (`Array.FindAll`, `Array.Find`, etc.) are impractical in UdonSharp — see [`patterns-performance.md`](patterns-performance.md) `Array Filtering — Array.FindAll Alternative` for the temp-array filtering pattern.
+
 ---
 
 ## GetComponent and SDK Version Notes

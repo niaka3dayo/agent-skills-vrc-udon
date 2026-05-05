@@ -4,7 +4,7 @@
 
 This repository is a **knowledge base** (Markdown files, C# templates, shell scripts). It does not contain application code that processes user data.
 
-The only executable component is the **NPX installer** (`bin/install.mjs`), which copies files to the user's project directory.
+The only executable component is a small **deprecation shim** (`bin/install.mjs`), which prints a migration banner and exits without writing any files. This shim is scheduled for removal in v2.0.0 (see [Issue #180](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/180)).
 
 ## Reporting
 

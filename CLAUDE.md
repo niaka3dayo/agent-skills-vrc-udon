@@ -54,7 +54,7 @@ Both `dev` and `main` are protected:
 
 | File | Purpose |
 |------|---------|
-| `bin/install.mjs` | npx installer (copies skills + templates to user project) |
+| `bin/install.mjs` | v1.9.0+ deprecation shim — prints a migration banner and exits 0. Slated for removal in v2.0.0 (#180) |
 | `package.json` | npm metadata, `files` array controls what gets published |
 | `skills/*/SKILL.md` | Skill definitions with YAML frontmatter |
 | `skills/*/rules/*.md` | Constraint rules for AI code generation |
@@ -66,9 +66,8 @@ Both `dev` and `main` are protected:
 # Verify npm pack includes correct files
 npm pack --dry-run
 
-# Test installer
-node bin/install.mjs --list
-node bin/install.mjs --help
+# Smoke-test the deprecation shim (v1.9.0+)
+node bin/install.mjs | grep -q 'npx skills add niaka3dayo/agent-skills-vrc-udon'
 ```
 
 ## CI Checks

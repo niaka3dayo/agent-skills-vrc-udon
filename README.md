@@ -75,17 +75,9 @@ This uses the [skills.sh](https://skills.sh) ecosystem to install skills into yo
 claude plugin add niaka3dayo/agent-skills-vrc-udon
 ```
 
-### Method 3: npx direct install
+### Method 3: npx direct install (deprecated, v1.9.0+)
 
-```bash
-npx agent-skills-vrc-udon
-```
-
-Options:
-```bash
-npx agent-skills-vrc-udon --force    # Overwrite existing files
-npx agent-skills-vrc-udon --list     # Preview files to install (dry run)
-```
+> **Deprecated.** The `npx agent-skills-vrc-udon` command no longer copies files; it prints a banner and exits. Use Method 1 (`npx skills add ...`) above. Full removal is scheduled for v2.0.0. See [Issue #180](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/180) for the rationale and migration notes.
 
 ### Method 4: git clone
 

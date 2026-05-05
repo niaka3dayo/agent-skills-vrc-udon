@@ -14,7 +14,7 @@ Any change to these paths requires a documentation sync check:
 | `skills/*/references/*.md` | README.md Skills section (reference count/list) |
 | `skills/*/assets/templates/*.cs` | README.md Skills section (template count) |
 | `templates/*.md` | README.md Install/Structure section |
-| `bin/install.mjs` | README.md Install section, CLAUDE.md Testing section |
+| `bin/install.mjs` | README.md Install section (Method 3 deprecation callout, all 5 language variants), CLAUDE.md Testing section (banner verification command) |
 
 ## What to Check
 

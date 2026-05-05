@@ -92,21 +92,16 @@ jobs:
             fi
           done
 
-      - name: Test installer help
-        run: node bin/install.mjs --help
-
-      - name: Test installer version
+      - name: Smoke-test deprecation shim (Issue #180)
         run: |
-          VERSION=$(node bin/install.mjs --version)
+          OUT=$(node bin/install.mjs)
+          echo "$OUT"
+          echo "$OUT" | grep -q 'npx skills add niaka3dayo/agent-skills-vrc-udon' \
+            || { echo "ERROR: deprecation banner missing canonical command"; exit 1; }
           PKG_VERSION=$(node -p "require('./package.json').version")
-          if [ "$VERSION" != "$PKG_VERSION" ]; then
-            echo "ERROR: Version mismatch: $VERSION != $PKG_VERSION"
-            exit 1
-          fi
-          echo "OK: Version $VERSION"
-
-      - name: Test installer list
-        run: node bin/install.mjs --list
+          echo "$OUT" | grep -q "v$PKG_VERSION" \
+            || { echo "ERROR: deprecation banner missing version v$PKG_VERSION"; exit 1; }
+          echo "OK: deprecation banner present"
 
   installer-tests:
     name: Installer Tests
