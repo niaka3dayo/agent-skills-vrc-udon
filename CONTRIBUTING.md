@@ -51,7 +51,7 @@ If the only reason "this is bad" is "the community dislikes it" or "it's ethical
 - **Outdated information**: SDK updates that make existing rules inaccurate
 - **Missing patterns**: Common UdonSharp patterns not covered by the skills
 - **Broken hooks**: Validation hooks that produce false positives/negatives
-- **Installer issues**: Problems with `npx agent-skills-vrc-udon`
+- **Install issues**: Problems with `npx skills add niaka3dayo/agent-skills-vrc-udon` or `claude plugin add niaka3dayo/agent-skills-vrc-udon`. (The legacy `npx agent-skills-vrc-udon` command is a deprecation shim as of v1.9.0; see [Issue #180](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/180).)
 
 ## How to Report
 

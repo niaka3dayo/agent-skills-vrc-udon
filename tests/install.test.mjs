@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,9 +12,8 @@ const REPO_ROOT = resolve(__dirname, '..');
 const INSTALLER = join(REPO_ROOT, 'bin/install.mjs');
 const PKG_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')).version;
 
-/** A file that exists in the source skills/ tree; used as a sentinel to detect overwrite. */
-const SENTINEL_PATH = join('skills', 'unity-vrc-udon-sharp', 'SKILL.md');
-const STALE_MARKER = '__INSTALLER_TEST_STALE__\n';
+const CANONICAL_CMD = 'npx skills add niaka3dayo/agent-skills-vrc-udon';
+const ISSUE_URL = 'https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/180';
 
 function setupTempProject(t) {
   const dir = mkdtempSync(join(tmpdir(), 'agent-skills-test-'));
@@ -22,7 +21,7 @@ function setupTempProject(t) {
   return dir;
 }
 
-function runInstaller(cwd, args = []) {
+function runShim(cwd, args = []) {
   return execFileSync('node', [INSTALLER, ...args], {
     cwd,
     env: { ...process.env, NO_COLOR: '1' },
@@ -30,95 +29,49 @@ function runInstaller(cwd, args = []) {
   });
 }
 
-test('fresh install: copies skills and writes current package version', (t) => {
+test('no-args: prints deprecation banner, exits 0, writes nothing', (t) => {
   const dir = setupTempProject(t);
 
-  runInstaller(dir);
+  const out = runShim(dir);
 
-  assert.ok(
-    existsSync(join(dir, '.agent-skills', 'skills', 'unity-vrc-udon-sharp')),
-    'skills/ should be copied on fresh install',
-  );
-  assert.equal(
-    readFileSync(join(dir, '.agent-skills', '.version'), 'utf8').trim(),
-    PKG_VERSION,
-    '.version should match current package version',
-  );
+  assert.ok(out.includes(CANONICAL_CMD),
+    'banner must include the canonical skills CLI command');
+  assert.ok(out.includes(ISSUE_URL),
+    'banner must include the link to Issue #180');
+  assert.ok(out.includes(PKG_VERSION),
+    `banner must include the current package version (${PKG_VERSION})`);
+  assert.equal(existsSync(join(dir, '.agent-skills')), false,
+    'shim must NOT create .agent-skills/ on the user filesystem');
 });
 
-test('same-version re-run without --force: preserves existing files (current SKIP behavior)', (t) => {
+test('legacy flags are no-ops: each prints the same banner and exits 0', (t) => {
   const dir = setupTempProject(t);
 
-  runInstaller(dir);
-  const sentinel = join(dir, '.agent-skills', SENTINEL_PATH);
-  writeFileSync(sentinel, STALE_MARKER, 'utf8');
+  const flags = [
+    ['--help'], ['-h'],
+    ['--version'], ['-v'],
+    ['--list'],
+    ['--symlink'],
+    ['--force'],
+    ['--uninstall'],
+    ['--unknown-flag'],
+    ['--symlink', '--force'],
+  ];
 
-  // .version already equals PKG_VERSION → not an upgrade → SKIP path is correct here
-  runInstaller(dir);
-
-  assert.equal(
-    readFileSync(sentinel, 'utf8'),
-    STALE_MARKER,
-    'same-version re-run should not overwrite (use --force for that)',
-  );
+  for (const argv of flags) {
+    const out = runShim(dir, argv);
+    assert.ok(out.includes(CANONICAL_CMD),
+      `flag ${JSON.stringify(argv)} should still print the canonical command`);
+    assert.equal(existsSync(join(dir, '.agent-skills')), false,
+      `flag ${JSON.stringify(argv)} must not create .agent-skills/`);
+  }
 });
 
-test('upgrade re-run without --force: overwrites stale skills (Issue #164)', (t) => {
+test('non-zero exit is never used (every invocation returns 0)', (t) => {
   const dir = setupTempProject(t);
 
-  runInstaller(dir);
-  // Simulate "user installed an older version" by downgrading .version
-  // and corrupting a sentinel file as if it were stale content.
-  writeFileSync(join(dir, '.agent-skills', '.version'), '0.0.0', 'utf8');
-  const sentinel = join(dir, '.agent-skills', SENTINEL_PATH);
-  writeFileSync(sentinel, STALE_MARKER, 'utf8');
-
-  // Re-run without --force; installer should detect the version mismatch
-  // and overwrite stale skills/ content.
-  runInstaller(dir);
-
-  assert.notEqual(
-    readFileSync(sentinel, 'utf8'),
-    STALE_MARKER,
-    'Issue #164: skills/ was SKIPped during upgrade; content stayed stale',
-  );
-  assert.equal(
-    readFileSync(join(dir, '.agent-skills', '.version'), 'utf8').trim(),
-    PKG_VERSION,
-    '.version should be updated to current package version after upgrade',
-  );
-});
-
-test('upgrade re-run without --force: overwrites stale config reference files (Issue #164)', (t) => {
-  const dir = setupTempProject(t);
-
-  runInstaller(dir);
-  const claudeMd = join(dir, '.agent-skills', 'CLAUDE.md');
-  writeFileSync(claudeMd, STALE_MARKER, 'utf8');
-  writeFileSync(join(dir, '.agent-skills', '.version'), '0.0.0', 'utf8');
-
-  runInstaller(dir);
-
-  assert.notEqual(
-    readFileSync(claudeMd, 'utf8'),
-    STALE_MARKER,
-    'Issue #164: config files were SKIPped during upgrade; content stayed stale',
-  );
-});
-
-test('--force overwrites regardless of version state', (t) => {
-  const dir = setupTempProject(t);
-
-  runInstaller(dir);
-  const sentinel = join(dir, '.agent-skills', SENTINEL_PATH);
-  writeFileSync(sentinel, STALE_MARKER, 'utf8');
-
-  // .version still equals PKG_VERSION (no upgrade), but --force overrides
-  runInstaller(dir, ['--force']);
-
-  assert.notEqual(
-    readFileSync(sentinel, 'utf8'),
-    STALE_MARKER,
-    '--force must always overwrite, even on same-version re-run',
-  );
+  // execFileSync throws if exit code != 0; the absence of a throw is the assertion.
+  runShim(dir);
+  runShim(dir, ['--uninstall']);
+  runShim(dir, ['--definitely-not-a-flag']);
 });
