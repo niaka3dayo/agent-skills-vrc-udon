@@ -1063,6 +1063,47 @@ public class ManagedVideoLoader : UdonSharpBehaviour
 
 ---
 
+## GameObject Reference Cost Tiers
+
+`GameObject.Find` is not deprecated — but its cost depends entirely on **when** and **how often** you call it. Use this tier table to choose the cheapest approach that fits the situation.
+
+| Tier | Approach | Cost | When |
+|------|----------|------|------|
+| 1 | `[SerializeField]` + Inspector | 0 (compile-time wire) | Default. Targets known at scene-design time. |
+| 2 | Lazy-cached `GameObject.Find` once in `Start()` / `OnEnable()` / first use | 1× O(N) at boot | Targets initially inactive, dynamically generated, or in another scene root that the Inspector cannot reach. |
+| 3 | `GameObject.Find` inside `Update()` / per-frame events | per-frame O(N), GC pressure | **Avoid.** Frame-budget killer; equivalent to a hash-table lookup over the entire scene every frame. |
+
+See [`constraints.md`](constraints.md) `Lazy Initialization Pattern` for the Tier 2 implementation (`_initialized` flag + null-fallback caching).
+
+### Why Tier 1 is preferred (beyond cost)
+
+`GameObject.Find("Name")` couples runtime behavior to a string literal. If the target GameObject is renamed during scene editing, the call returns `null` silently — no compile error, no warning. This makes string-based lookup a **maintainability hazard** in addition to a performance concern.
+
+`[SerializeField]` references break visibly in the Inspector when the target is renamed or removed (shown as `Missing`), surfacing the problem **before runtime** rather than after a player joins the world.
+
+---
+
+## Array Filtering — `Array.FindAll` Alternative
+
+`Predicate<T>`-based APIs (`Array.FindAll`, `Array.Find`, `Array.FindIndex`) are impractical in UdonSharp — either the delegate type is not exposed, or call-site overhead defeats the purpose. The standard form for filtering an array is the following **3-step temp-array pattern**:
+
+1. Allocate a **temp array** sized to the input (worst case = all elements pass).
+2. Walk the input once, packing matches into the temp array via a `count` cursor.
+3. Allocate the final array of `count` and copy with `Array.Copy`.
+
+### Implementation Index
+
+| Use case | Where to find the pattern |
+|----------|---------------------------|
+| Distance / range filter | [`patterns-core.md` — Get All Players in Range](patterns-core.md#get-all-players-in-range) |
+| Local-player exclusion | [`patterns-core.md` — Get Remote Players](patterns-core.md#get-remote-players) |
+
+### Why "impractical" instead of "blocked"
+
+We deliberately avoid claiming `FindAll` is *blocked*. UdonSharp's type-exposure table can change between SDK releases, and a future SDK could surface `Predicate<T>`. The performance argument (manual loops avoid delegate dispatch) holds regardless, so this guidance ages well.
+
+---
+
 
 ## See Also
 
