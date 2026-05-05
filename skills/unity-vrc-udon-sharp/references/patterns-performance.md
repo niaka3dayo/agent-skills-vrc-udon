@@ -1083,6 +1083,27 @@ See [`constraints.md`](constraints.md) `Lazy Initialization Pattern` for the Tie
 
 ---
 
+## Array Filtering — `Array.FindAll` Alternative
+
+`Predicate<T>`-based APIs (`Array.FindAll`, `Array.Find`, `Array.FindIndex`) are impractical in UdonSharp — either the delegate type is not exposed, or call-site overhead defeats the purpose. The standard form for filtering an array is the following **3-step temp-array pattern**:
+
+1. Allocate a **temp array** sized to the input (worst case = all elements pass).
+2. Walk the input once, packing matches into the temp array via a `count` cursor.
+3. Allocate the final array of `count` and copy with `Array.Copy`.
+
+### Implementation Index
+
+| Use case | Where to find the pattern |
+|----------|---------------------------|
+| Distance / range filter | [`patterns-core.md` — Get All Players in Range](patterns-core.md#get-all-players-in-range) |
+| Local-player exclusion | [`patterns-core.md` — Get Remote Players](patterns-core.md#get-remote-players) |
+
+### Why "impractical" instead of "blocked"
+
+We deliberately avoid claiming `FindAll` is *blocked*. UdonSharp's type-exposure table can change between SDK releases, and a future SDK could surface `Predicate<T>`. The performance argument (manual loops avoid delegate dispatch) holds regardless, so this guidance ages well.
+
+---
+
 
 ## See Also
 
