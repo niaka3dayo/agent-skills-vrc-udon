@@ -4,11 +4,11 @@
 
 This repository is a **knowledge base** (Markdown files, C# templates, shell scripts). It does not contain application code that processes user data.
 
-The only executable component is a small **deprecation shim** (`bin/install.mjs`), which prints a migration banner and exits without writing any files. This shim is scheduled for removal in v2.0.0 (see [Issue #180](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/180)).
 
 ## Reporting
 
-If you find a security issue in the installer script, please report it via [GitHub Issues](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues).
+If you find a security issue, please use [GitHub Security Advisories (private reporting)](https://github.com/niaka3dayo/agent-skills-vrc-udon/security/advisories/new).
+If private reporting is unavailable, contact the maintainer through a non-public channel first and avoid posting exploit details publicly.
 
 ## npm Provenance
 

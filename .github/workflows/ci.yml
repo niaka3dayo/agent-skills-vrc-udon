@@ -83,7 +83,7 @@ jobs:
           npm pack --dry-run 2>&1 | tee pack-output.txt
           echo ""
           echo "--- Verifying required files ---"
-          for f in "bin/install.mjs" "skills/" "templates/" "LICENSE" "README.md"; do
+          for f in "skills/" "templates/" "LICENSE" "README.md"; do
             if grep -q "$f" pack-output.txt; then
               echo "OK: $f"
             else
@@ -92,29 +92,6 @@ jobs:
             fi
           done
 
-      - name: Smoke-test deprecation shim (Issue #180)
-        run: |
-          OUT=$(node bin/install.mjs)
-          echo "$OUT"
-          echo "$OUT" | grep -q 'npx skills add niaka3dayo/agent-skills-vrc-udon' \
-            || { echo "ERROR: deprecation banner missing canonical command"; exit 1; }
-          PKG_VERSION=$(node -p "require('./package.json').version")
-          echo "$OUT" | grep -q "v$PKG_VERSION" \
-            || { echo "ERROR: deprecation banner missing version v$PKG_VERSION"; exit 1; }
-          echo "OK: deprecation banner present"
-
-  installer-tests:
-    name: Installer Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
-        with:
-          node-version: "22"
-
-      - name: Run installer tests
-        run: npm test
 
   editorconfig:
     name: EditorConfig

@@ -53,10 +53,6 @@ case "/$FILE_PATH" in
         NEEDS_REMINDER=true
         CONTEXT="Distribution template changed - check README.md Install/Structure section"
         ;;
-    */bin/install.mjs)
-        NEEDS_REMINDER=true
-        CONTEXT="Installer changed - check README.md Install section, CLAUDE.md Testing section"
-        ;;
 esac
 
 if [ "$NEEDS_REMINDER" = true ]; then
