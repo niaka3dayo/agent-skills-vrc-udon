@@ -8,6 +8,11 @@ using UnityEngine;
 /// C# delegates and events are unavailable in UdonSharp. This pattern maintains
 /// a UdonSharpBehaviour[] subscriber list. Raising an event iterates the list and
 /// calls SendCustomEvent(methodName) on each entry.
+///
+/// Hot-path caveat: each RaiseEvent dispatches SendCustomEvent per subscriber.
+/// Use for low-frequency broadcasts (Interact, toggle changes, Inspector hooks).
+/// See patterns-performance.md "Event Dispatch & Cross-Behaviour Call Cost Tiers"
+/// before using inside Update() or many-instance broadcasts.
 /// </summary>
 public class EventBus : UdonSharpBehaviour
 {

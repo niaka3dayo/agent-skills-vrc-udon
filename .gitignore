@@ -6,3 +6,9 @@ node_modules/
 *.tgz
 .npm/
 plans/
+
+# Local Unity project for SDK API verification (see unity-project-for-sdk-search/README.md).
+# The directory itself is gitignored so the SDK never gets bundled into the npm tarball;
+# only its README.md is tracked so the convention is discoverable on clone.
+unity-project-for-sdk-search/*
+!unity-project-for-sdk-search/README.md

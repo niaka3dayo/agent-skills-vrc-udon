@@ -75,11 +75,7 @@ npx skills add niaka3dayo/agent-skills-vrc-udon
 claude plugin add niaka3dayo/agent-skills-vrc-udon
 ```
 
-### 방법 3: npx 직접 설치 (v1.9.0부터 사용 중단)
-
-> **사용 중단되었습니다.** `npx agent-skills-vrc-udon`은 더 이상 파일을 복사하지 않으며, 마이그레이션 안내 메시지를 출력하고 종료합니다. 위의 방법 1(`npx skills add ...`)을 사용해 주세요. v2.0.0에서 이 명령은 완전히 제거될 예정입니다. 배경 및 마이그레이션 안내는 [Issue #180](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/180)을 참고하세요.
-
-### 방법 4: git clone
+### 방법 3: git clone
 
 ```bash
 git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git

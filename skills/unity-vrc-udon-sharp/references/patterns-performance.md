@@ -1063,6 +1063,55 @@ public class ManagedVideoLoader : UdonSharpBehaviour
 
 ---
 
+## Event Dispatch & Cross-Behaviour Call Cost Tiers
+
+Udon dispatches cross-behaviour method calls via `SendCustomEvent` internally, and per the [official UdonSharp performance pointers](https://udonsharp.docs.vrchat.com/random-tips-&-performance-pointers/) "Udon can take on the order of 200x to 1000x longer to run a piece of code than the equivalent in normal C#" and "Calls across behaviours will be somewhat slower than local method calls due to how Udon handles SendCustomEvent which is used internally for those cases." The same docs note that "Due to how Udon searches for methods to call, the fewer public methods you have, the better performance-wise" and recommend "Prefer to keep methods as private if they are not being called from other scripts."
+
+This section consolidates the cost-vs-shape trade-offs across three axes — method visibility, cross-behaviour calls, and periodic / time-distributed work — so the right tier can be chosen per situation. None of these tiers is forbidden; the (Avoid) row is reserved for combinations that produce frame-time spikes.
+
+- See [`Cross-Class Call Overhead`](#cross-class-call-overhead) above for the ~1.5x benchmark and the underlying dispatch mechanism.
+- See [`Public Method Lookup Cost`](constraints.md#public-method-lookup-cost) for the method-table lookup explanation.
+
+### Method visibility cost tiers
+
+| Tier | Approach | Cost | When |
+|---|---|---|---|
+| 1 | `private` method on the same behaviour | Lowest (direct call) | Default for any method not invoked from another UdonBehaviour, Inspector wiring, or `SendCustomEvent`. |
+| 2 | `public` method invoked from Inspector / `SendCustomEvent` / `[NetworkCallable]` | Bounded (string-name lookup, scales with `public` count per behaviour) | When the method must be reachable from the Inspector, another behaviour, or the network. |
+| 3 | `public` methods kept for "consistency" or "future use" with no actual external caller | Same as Tier 2, paid for nothing | **Avoid.** Adds to every `SendCustomEvent` dispatch lookup on this behaviour with zero benefit. |
+
+### Cross-behaviour call cost tiers
+
+| Tier | Approach | Cost | When |
+|---|---|---|---|
+| 1 | Private method call inside the same `UdonSharpBehaviour` | Lowest | Default for tightly coupled, frequent calls. |
+| 2 | `partial class` split across files (still one behaviour) | Same as Tier 1 (benchmarked ~0.68 ms / 1000 calls) | Same-class performance with multi-file organization. See [`Partial Class Pattern`](#partial-class-pattern) above. |
+| 3 | Cross-behaviour call via direct reference or `SendCustomEvent` | ~1.5x slower (benchmarked ~1.04 ms / 1000 calls); internally dispatches through `SendCustomEvent` | When the target is a genuinely independent system (a different manager, a different gameplay element, Inspector-wired event handlers). |
+
+### Event dispatch cost tiers for periodic / time-distributed work
+
+| Tier | Approach | When |
+|---|---|---|
+| 1 | `[FieldChangeCallback]` or direct property setter on the same behaviour | State propagation triggered by value changes. Default. See [`networking.md`](networking.md). |
+| 2 | Single coordinator `UdonSharpBehaviour` with `Update` + `deltaTime` accumulation, enabled only when needed | Steady-cadence time-sliced work on **one** manager. Smooths per-frame load. Combine with the [`Update Handler Pattern`](#update-handler-pattern) to disable when idle. |
+| 3 | Self-recursive `SendCustomEventDelayedSeconds` loop (single instance, low frequency) | Sparse timers, single-instance state machines, one-shot retries. See `CHEATSHEET.md` Delayed Execution. |
+| (Avoid) | Self-recursive `SendCustomEventDelayedSeconds` on **many** instances at short period **or** `EventBus.RaiseEvent` from `Update()` on a producer with many subscribers | Event firings concentrate on the same frames, producing frame-time spikes even when steady-state cost looks low. Use Tier 1 or Tier 2 instead. |
+
+> **Caveat (preserved verbatim from reporter):** Tier 2 is not "Update always wins." Adding `Update()` to many behaviours defeats the point — only use Tier 2 on a **dedicated manager** that needs steady-cadence work, and disable the manager via `enabled = false` or the [`Update Handler Pattern`](#update-handler-pattern) when its work is idle.
+
+### Quick decision tree
+
+```text
+One-shot interaction (Interact, Inspector OnClick)?  -> SendCustomEvent (Tier 3 cross-behaviour, fine)
+State changed on owner, react on all clients?         -> FieldChangeCallback (Tier 1 event dispatch)
+Tightly-coupled per-frame work on one system?         -> private methods on same behaviour (Tier 1) or partial class (Tier 2)
+Periodic work on a single coordinator?                -> Update + deltaTime on one manager (Tier 2)
+Periodic work on many instances at short period?      -> Re-architect to one coordinator — use Tier 1 or Tier 2 instead
+One-to-many broadcast at low frequency?               -> EventBus (acceptable for Interact, joystick toggles, etc.)
+```
+
+---
+
 ## GameObject Reference Cost Tiers
 
 `GameObject.Find` is not deprecated — but its cost depends entirely on **when** and **how often** you call it. Use this tier table to choose the cheapest approach that fits the situation.

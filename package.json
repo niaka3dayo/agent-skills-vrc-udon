@@ -1,6 +1,6 @@
 {
   "name": "agent-skills-vrc-udon",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "description": "AI Agent Skills for VRChat UdonSharp - Rules, validation hooks, and knowledge base for correct UdonSharp code generation",
   "license": "MIT",
   "author": "niaka3dayo",
@@ -13,14 +13,7 @@
     "url": "https://github.com/niaka3dayo/agent-skills-vrc-udon/issues"
   },
   "type": "module",
-  "bin": {
-    "agent-skills-vrc-udon": "./bin/install.mjs"
-  },
-  "scripts": {
-    "test": "node --test 'tests/**/*.test.mjs'"
-  },
   "files": [
-    "bin/",
     "skills/",
     "templates/",
     "README.md",
