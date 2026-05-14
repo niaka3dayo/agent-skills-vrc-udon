@@ -87,6 +87,7 @@ Note that other shorter tokens (e.g. a plain `Return` string with no `__` framin
 - Do not redistribute the SDK contents. VRChat's SDK license is non-redistribution.
 - Do not symlink this directory into another location that gets packed into npm. The `npm Pack Test` CI catches this, but avoid the round-trip.
 - Do not assume "Shuffle exists in the wrapper DLL" means the method is publicly supported. It only means Udon can call it. Confirm runtime behavior (owner-only? network-synced?) by additional means (Unity Editor IntelliSense, SDK release notes, hands-on test) before documenting it in the skill.
+- Do not infer **runtime semantics** (ownership rules, event scoping, sync timing, side effects, silent-failure modes) from method existence alone. `strings | grep` confirms whether a method is callable via Udon — it does NOT confirm whether the method is owner-only, what client receives a network event, what state syncs and when, or what happens when called in an invalid context. Runtime contracts must be verified against [creators.vrchat.com](https://creators.vrchat.com/) or hands-on **multi-client** testing in Unity. Precedent: PR #194 (Issue #190) shipped an initially-broken `NetworkEventTarget.Owner` example because the DLL confirmed method existence while the runtime target-resolution rule lived only in the public docs — caught pre-merge by independent reviewers (CodeRabbit + Codex Connector) citing creators.vrchat.com.
 
 ## Updating SDK versions
 
