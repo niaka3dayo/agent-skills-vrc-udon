@@ -196,6 +196,14 @@ The highest bump wins. If no label matches, default to **patch**. Release Drafte
 - Do NOT push directly to `main` (branch protection blocks it; use the release PR flow).
 - Do NOT merge feature branches directly to `main` (always go through `dev`).
 
+## SDK Verification
+
+Public VRChat creator docs and the `vrchat-community/UdonSharp` API page sometimes lag behind the actual SDK binary. When triaging a knowledge-request Issue that hinges on whether a specific API exists, the authoritative source is the SDK DLL itself.
+
+This repo uses a gitignored local workspace pattern at `unity-project-for-sdk-search/` for that verification. The directory is intentionally not packed into the npm tarball — only its `README.md` is tracked so the convention is discoverable on clone. See [`unity-project-for-sdk-search/README.md`](unity-project-for-sdk-search/README.md) for one-time setup steps, the canonical `strings | grep` command, and the Udon wrapper symbol legend.
+
+Use this verification path before documenting any API that you cannot confirm against the official public docs.
+
 ## Editing Skills
 
 When modifying skill content in `skills/`:
