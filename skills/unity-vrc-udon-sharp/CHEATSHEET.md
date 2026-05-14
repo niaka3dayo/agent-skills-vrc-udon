@@ -192,7 +192,8 @@ SendCustomEventDelayedFrames(nameof(MyMethod), 1);
 SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
 SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
 
-// Repeating
+// Repeating (single-instance, sparse timers only — see patterns-performance.md
+// "Event Dispatch & Cross-Behaviour Call Cost Tiers" for many-instance / short-period alternatives)
 public void StartLoop() {
     _running = true;
     DoLoop();
