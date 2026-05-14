@@ -105,6 +105,8 @@ MyScript s = GetComponent<MyScript>();
 
 Prefer `private` methods. Public methods slow down Udon's method lookup.
 
+See [`Event Dispatch & Cross-Behaviour Call Cost Tiers`](../references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers) for the full method-visibility tier table.
+
 ### 6. Recursive Methods
 
 The `[RecursiveMethod]` attribute is required for recursive calls.
