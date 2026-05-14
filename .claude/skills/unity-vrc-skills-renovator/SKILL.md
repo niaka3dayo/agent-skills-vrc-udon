@@ -10,7 +10,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "1.9.0"
+    version: "2.0.0"
     tags: skill-maintenance, sdk-update, knowledge-management
     internal: true
 ---
