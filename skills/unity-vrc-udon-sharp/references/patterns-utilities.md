@@ -64,6 +64,8 @@ Maintain a `UdonSharpBehaviour[]` subscriber list. Raising an event iterates the
 
 **Template:** [assets/templates/EventBus.cs](../assets/templates/EventBus.cs)
 
+> **Hot-path caveat.** `RaiseEvent` calls `SendCustomEvent` per subscriber, which scales with subscriber count and incurs per-call dispatch cost. Use `EventBus` for low-frequency one-to-many broadcasts (Interact, toggle changes, Inspector-wired hooks). For per-frame or many-instance broadcasts, see [`Event Dispatch & Cross-Behaviour Call Cost Tiers`](patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers) in `patterns-performance.md`.
+
 The `EventBus` class keeps a `UdonSharpBehaviour[]` array capped at `MaxListeners` (32). `RegisterListener` appends with duplicate check; `UnregisterListener` compacts the array in place. `RaiseEvent(string eventMethodName)` iterates the list, skips null entries with an in-place compaction pass, and calls `SendCustomEvent(eventMethodName)` on each live subscriber.
 
 **Consumer example:**
