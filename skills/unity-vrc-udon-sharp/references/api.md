@@ -468,7 +468,7 @@ public class PoolManager : UdonSharpBehaviour
 
 ### Usage Pattern: Interact-Driven (User-Triggered)
 
-The Master-Managed pattern above is owner-driven: spawning happens inside `OnPlayerJoined`, which is only called on the pool owner's client. When the trigger is `Interact()`, any client fires the event regardless of pool ownership. Writing `pool.TryToSpawn()` directly inside `Interact()` works on the pool owner's client but silently no-ops for everyone else. There are two correct resolutions, presented as a cost tier below.
+The Master-Managed pattern above protects its pool calls with an `IsOwner` guard inside `OnPlayerJoined`. `OnPlayerJoined` runs on every client when a new player joins; the guard ensures only the pool owner's client actually executes `TryToSpawn()` / `Return()` — non-owner clients early-return safely without hitting a silent no-op at the pool method itself. When the trigger is `Interact()`, the handler body runs only on the interacting player's local client. Writing `pool.TryToSpawn()` directly there works only when the interacting player happens to own the pool — for everyone else the call reaches the pool method and silently no-ops with no exception. There are two correct resolutions, presented as a cost tier below.
 
 | Tier | Approach | Cost | When |
 |---|---|---|---|
@@ -477,6 +477,8 @@ The Master-Managed pattern above is owner-driven: spawning happens inside `OnPla
 
 #### Tier 1 — Forward to owner (recommended)
 
+> **Setup precondition**: Attach `PoolInteractForwarded` to the **same GameObject as the `VRCObjectPool`** it references. `NetworkEventTarget.Owner` resolves to the owner of the *sending UdonBehaviour's* GameObject (per [creators.vrchat.com networking events](https://creators.vrchat.com/worlds/udon/networking/events/)), not to `objectPool.gameObject`. Co-location ensures the event is delivered to the pool owner. If you need the interactor and the pool on separate GameObjects, see Tier 2 instead.
+
 ```csharp
 using UdonSharp;
 using UnityEngine;
@@ -484,18 +486,25 @@ using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
+// Attach this script to the SAME GameObject as the VRCObjectPool it references.
 public class PoolInteractForwarded : UdonSharpBehaviour
 {
     public VRCObjectPool objectPool;
 
     public override void Interact()
     {
-        // Ask the current pool owner to do the work; no ownership change.
+        // NetworkEventTarget.Owner targets the owner of THIS UdonBehaviour's
+        // GameObject. Since this script is co-located with objectPool, the
+        // event is delivered to the pool owner — no ownership change needed.
         SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerSpawn));
     }
 
     public void OwnerSpawn()
     {
+        // Defensive: if ownership transferred between the event send and arrival,
+        // the new owner will still see this fire on the old owner's client; the
+        // guard makes the call a safe no-op rather than silently spawning on
+        // a stale owner.
         if (!Networking.IsOwner(objectPool.gameObject)) return;
         objectPool.Shuffle();
         GameObject spawned = objectPool.TryToSpawn();
@@ -504,7 +513,7 @@ public class PoolInteractForwarded : UdonSharpBehaviour
 }
 ```
 
-`OwnerSpawn` runs only on the player that currently owns `objectPool.gameObject`. The `IsOwner` guard is defensive against a race where ownership transfers between the `SendCustomNetworkEvent` call and the handler arriving on the previous owner's client.
+`OwnerSpawn` runs on the client that owns this script's GameObject (which, per the co-location precondition above, is the pool owner). The `IsOwner` guard is defensive against a race where ownership transfers between the `SendCustomNetworkEvent` call and the handler arriving on the previous owner's client.
 
 #### Tier 2 — Take ownership first (acceptable)
 
