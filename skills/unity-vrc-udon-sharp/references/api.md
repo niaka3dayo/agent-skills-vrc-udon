@@ -337,22 +337,34 @@ Object pooling for network-aware objects. The pool manages and synchronizes the 
 
 ### Methods
 
+| Method | Signature | Owner-only | Network-synchronized |
+|---|---|---|---|
+| `TryToSpawn()` | `GameObject TryToSpawn()` | Yes | Yes |
+| `Return(obj)` | `void Return(GameObject obj)` | Yes | Yes |
+| `Shuffle()` | `void Shuffle()` | Yes | Yes |
+
+`TryToSpawn()` and `Return()` are publicly documented on creators.vrchat.com; `Shuffle()` is observed in the SDK 3.10.3 Udon wrapper symbols (`__Shuffle__SystemVoid` in `VRC.Udon.VRCWrapperModules.dll`) but absent from public API docs at the time of writing — its owner-only / synced behavior follows the same runtime contract as the other two methods. All three methods silently no-op when called by a non-owner at runtime; for patterns that require any client to trigger pool operations, see [Usage Pattern: Interact-Driven (User-Triggered)](#usage-pattern-interact-driven-user-triggered).
+
 ```csharp
 public VRCObjectPool pool;
 
-// Activate an unused object (pool owner only). Returns null if all objects are in use.
+// Activate an unused object; returns null if all objects are in use.
 GameObject spawned = pool.TryToSpawn();
 
-// Return an object to the pool (pool owner only). Deactivates the object.
-pool.Return(GameObject obj);
+// Return an object to the pool (deactivates it).
+pool.Return(spawned);
+
+// Shuffle the internal order of available objects.
+pool.Shuffle();
 ```
 
 ### Ownership Behavior
 
-The VRCObjectPool itself is a networked object; only its **owner** can call `TryToSpawn()` and `Return()`.
+The VRCObjectPool itself is a networked object; only its **owner** can call `TryToSpawn()`, `Return()`, or `Shuffle()`. Non-owner calls silently no-op at runtime (see Methods table above). To support callers from any client (e.g. `Interact()` handlers), see [Usage Pattern: Interact-Driven (User-Triggered)](#usage-pattern-interact-driven-user-triggered).
 
 - **`TryToSpawn()`** activates an available pooled object and returns it. The ownership of the activated object is **not** automatically transferred to any specific player — call `Networking.SetOwner()` explicitly after spawning if you need the spawned object to be owned by a particular player.
 - **`Return()`** deactivates the object and returns it to the pool. Only the pool owner can call this method.
+- **`Shuffle()`** randomizes the internal order of available pooled objects, synchronized across all clients. Only the pool owner can call this method.
 
 ### Network Synchronization
 
@@ -453,6 +465,83 @@ public class PoolManager : UdonSharpBehaviour
     }
 }
 ```
+
+### Usage Pattern: Interact-Driven (User-Triggered)
+
+The Master-Managed pattern above protects its pool calls with an `IsOwner` guard inside `OnPlayerJoined`. `OnPlayerJoined` runs on every client when a new player joins; the guard ensures only the pool owner's client actually executes `TryToSpawn()` / `Return()` — non-owner clients early-return safely without hitting a silent no-op at the pool method itself. When the trigger is `Interact()`, the handler body runs only on the interacting player's local client. Writing `pool.TryToSpawn()` directly there works only when the interacting player happens to own the pool — for everyone else the call reaches the pool method and silently no-ops with no exception. There are two correct resolutions, presented as a cost tier below.
+
+| Tier | Approach | Cost | When |
+|---|---|---|---|
+| 1 | Forward to current pool owner via `SendCustomNetworkEvent(NetworkEventTarget.Owner, …)`; do spawn inside the owner-side handler | One network event, no ownership change | Default. Preserves whatever ownership scheme the pool already uses (master-managed, last-interactor, etc.). |
+| 2 | Take ownership locally with `Networking.SetOwner(LocalPlayer, pool.gameObject)`, then call `TryToSpawn()` / `Shuffle()` directly | One ownership transfer per Interact, no separate event | When the interaction semantically implies "this player now owns the next spawn" (e.g. each player owns their own ammo pool). |
+
+#### Tier 1 — Forward to owner (recommended)
+
+> **Setup precondition**: Attach `PoolInteractForwarded` to the **same GameObject as the `VRCObjectPool`** it references. `NetworkEventTarget.Owner` resolves to the owner of the *sending UdonBehaviour's* GameObject (per [creators.vrchat.com networking events](https://creators.vrchat.com/worlds/udon/networking/events/)), not to `objectPool.gameObject`. Co-location ensures the event is delivered to the pool owner. If you need the interactor and the pool on separate GameObjects, see Tier 2 instead.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Components;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
+// Attach this script to the SAME GameObject as the VRCObjectPool it references.
+public class PoolInteractForwarded : UdonSharpBehaviour
+{
+    public VRCObjectPool objectPool;
+
+    public override void Interact()
+    {
+        // NetworkEventTarget.Owner targets the owner of THIS UdonBehaviour's
+        // GameObject. Since this script is co-located with objectPool, the
+        // event is delivered to the pool owner — no ownership change needed.
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerSpawn));
+    }
+
+    public void OwnerSpawn()
+    {
+        // Defensive: if ownership transferred between the event send and arrival,
+        // the new owner will still see this fire on the old owner's client; the
+        // guard makes the call a safe no-op rather than silently spawning on
+        // a stale owner.
+        if (!Networking.IsOwner(objectPool.gameObject)) return;
+        objectPool.Shuffle();
+        GameObject spawned = objectPool.TryToSpawn();
+        // ... assign ownership of `spawned` if needed
+    }
+}
+```
+
+`OwnerSpawn` runs on the client that owns this script's GameObject (which, per the co-location precondition above, is the pool owner). The `IsOwner` guard is defensive against a race where ownership transfers between the `SendCustomNetworkEvent` call and the handler arriving on the previous owner's client.
+
+#### Tier 2 — Take ownership first (acceptable)
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Components;
+using VRC.SDKBase;
+
+public class PoolInteractTakeOwnership : UdonSharpBehaviour
+{
+    public VRCObjectPool objectPool;
+
+    public override void Interact()
+    {
+        Networking.SetOwner(Networking.LocalPlayer, objectPool.gameObject);
+        objectPool.Shuffle();
+        GameObject spawned = objectPool.TryToSpawn();
+        // ... assign ownership of `spawned` if needed
+    }
+}
+```
+
+`Networking.SetOwner` is locally immediate post-SDK 2021.2.2, so it is safe to call pool methods on the next line under an `IsOwner` invariant. See [networking.md](networking.md) for the full ownership model.
+
+#### Choosing between Tier 1 and Tier 2
+
+Use Tier 1 by default. Use Tier 2 when the interaction conceptually transfers ownership of the pool to the interacting player — for example, per-player ammo pools or individual draw-card decks. Mixing both patterns in one world is fine when each pool's role is different; Tier framing applies per-pool, not globally.
 
 ### VRCObjectPool vs VRCInstantiate
 
