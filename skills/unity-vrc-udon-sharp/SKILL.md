@@ -41,7 +41,7 @@ Four architectural decisions that must be made before choosing sync modes or wri
 2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. Always `SetOwner` → modify → `RequestSerialization`.
 3. **Late Joiner Correctness** — State must be correct for players who join after events have occurred. Design for re-serialization, not just live updates.
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
-5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()`.
+5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()` **for state-change reactions; for hot-path or periodic work, see [Event Dispatch & Cross-Behaviour Call Cost Tiers](references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers)**.
 
 ## Common Mistakes (NEVER List)
 
