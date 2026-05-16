@@ -558,6 +558,145 @@ Syncs `currentState` (byte[]), `stateHistory` (flat byte[] of N×stateSize), and
 | Saving state before the operation | Undo goes back 2 steps instead of 1 | Save state after the operation |
 | Not making history synced | Undo results differ between players | Share history as synced variables |
 
+## Distant-Room Pseudo-Multi-Room Pattern
+
+Reuse a single local room model to render the illusion of multiple rooms by separating **synced room-assignment state** from **local presentation placement**, and teleporting same-`roomIndex` players to a shared distant origin on each client.
+
+**When to use this pattern:**
+- Multiple rooms with identical or near-identical interiors (escape rooms, hub-and-spoke lounges, voice-isolated breakout rooms)
+- Authoring one Unity scene cost is acceptable, but authoring N parallel copies is not
+- Some level of voice isolation between rooms is desired (a side effect of physical separation)
+- Players in the same room must visibly share the same space; players in different rooms must not collide
+
+Requires SDK >= 3.7.4 for the recommended `VRCPlayerObject` tier. The other tiers (fixed-size synced array, local-only) work on older SDKs.
+
+### Architecture (state vs presentation split)
+
+Two responsibilities, each on a separate UdonBehaviour with a different sync mode:
+
+| Layer | Sync mode | What it holds | Where it lives |
+|---|---|---|---|
+| **State** — `RoomAssignment` | `[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]` | `[UdonSynced] int roomIndex` | On a `VRCPlayerObject` prefab — auto-spawned per player, auto-owned by that player |
+| **Presentation** — `LocalRoomPresenter` | `[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]` | `Transform roomRoot`, `Transform[] roomOrigins` | One scene-level instance, per-client local view only |
+
+Each client computes "where is **my** room?" from the local player's `RoomAssignment.roomIndex`, then locally moves `roomRoot` to `roomOrigins[roomIndex]` and `TeleportTo`s the local player to that same origin. **Two players who hold the same `roomIndex` independently run this on their own clients and therefore collocate at the same world coordinate** — they appear together because they were each sent there, not because the room object itself was synced.
+
+### Why this works
+
+`VRCPlayerApi.TeleportTo` only affects the local player; calling it on a remote player is a no-op (ClientSim emits *"Teleporting remote players will do nothing"*). Each client teleporting **its own** `Networking.LocalPlayer` to the world coordinate returned by `roomOrigins[myRoomIndex]` is what produces the shared-room illusion. The room `GameObject` itself never participates in network sync — only the integer room assignment does.
+
+### Cost Tier 1: How is `roomIndex` synced?
+
+| Choice | When to use | Trade-off |
+|---|---|---|
+| **`VRCPlayerObject` + per-player `RoomAssignment`** (recommended) | Open-world worlds, frequent joins/leaves, rooms come and go organically | Each player auto-owns their `RoomAssignment` — no master, no manager, no slot allocator. Late joiners receive existing assignments through PlayerObject's standard restoration. |
+| **Fixed-size synced array on a manager** (`int[] roomIndexBySlot`) | Small lobby worlds with a hard player cap, room capacity limits, master-driven assignment | See [Master-Managed Player Object Pool](#master-managed-player-object-pool) — same shape, with `roomIndex` instead of `poolIndex`. Reuses its master-handoff and slot-recycling logic. |
+| **Local-only (no sync)** | Single-player preview / debug only | Other players cannot tell which room you are in; late joiners cannot see existing assignments. Not viable as a main route for multi-player play. |
+
+### Cost Tier 2: Who can write `roomIndex`?
+
+| Choice | When to use | Implementation |
+|---|---|---|
+| **Self-owned** (recommended starting point) | No capacity limits, lottery is acceptable, players simply choose or randomise their own room | Each player writes only their own `RoomAssignment.roomIndex` under an `IsOwner` guard, then calls `RequestSerialization`. Interact buttons or a local random pick drive the write. |
+| **Master-approved** | Capacity caps, fair lottery across all players, reservation systems, banlist-style exclusion | Player sends a request via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)` to a Master-owned manager. The manager validates against the synced occupancy table, then writes the assignment (or rejects). See [Master-Managed Player Object Pool](#master-managed-player-object-pool) for the master-handoff race-condition mitigation. |
+
+The self-owned tier avoids the master-handoff race entirely. Escalate to master-approved only when cross-player validation is actually required.
+
+### Key Design Decisions
+
+**Why `NoVariableSync` on the presenter?**
+The presenter holds no shared state — only local view placement derived from the synced `roomIndex`. `NoVariableSync` makes the design intent explicit: *this object's fields must never participate in network sync, even by accident*. Editor warnings will flag attempts to add `[UdonSynced]` later.
+
+**Why `Manual` sync mode on the assignment script?**
+Room assignment changes are discrete user actions (Interact, button press, lottery roll), not continuous values. `Manual` + `RequestSerialization()` after each write minimises bandwidth and avoids per-frame churn. Matches NEVER list rule #11 (do not mix continuous-rate and discrete state on one behaviour).
+
+**Why `VRCPlayerObject` rather than a master-managed slot table by default?**
+PlayerObject infrastructure already solves ownership-per-player, late-joiner restoration, and lifecycle cleanup on player leave. There is no need to reinvent slot allocation, and `Networking.SetOwner` is not required because VRChat auto-assigns ownership of each instance to its player (see [persistence.md](persistence.md#playerobject)). `VRCEnablePersistence` is optional — without it the prefab still instantiates per-player but `roomIndex` resets when the player rejoins, which is appropriate for volatile room state.
+
+**Replication-lag window for self-owned assignment.**
+When Player A switches rooms locally, their own client moves them immediately. Remote clients see the new `roomIndex` only after A's `RequestSerialization` arrives via `OnDeserialization` — typically sub-second under Manual sync. During that window, B's client may still place A's avatar at the old room's origin. Voice attenuation, pickup interactions, and any room-affiliation UI will resync once deserialization fires. Do not build gameplay that requires *all* clients to agree on A's room within the same frame.
+
+### Caveats
+
+The pattern silently breaks if any of these are violated:
+
+| Issue | Why it breaks | What to do |
+|---|---|---|
+| **`VRCObjectSync` on anything under `roomRoot`** | `VRCObjectSync` broadcasts world-space transforms. Since each client's `roomRoot` is at a different world position, a `VRCObjectSync` child appears at the owner's world coordinate on every client — inside the owner's room only, and in the empty void on everyone else | Keep all `VRCObjectSync` objects outside `roomRoot`, or replicate per-room without `VRCObjectSync` |
+| **`roomOrigins` at inconsistent offsets across clients** | If a client's `roomOrigins[1]` differs from another client's `roomOrigins[1]` (e.g., procedurally placed without seeding), same-`roomIndex` players land on different coordinates and stop seeing each other | `roomOrigins` must be Inspector-set Transforms baked into the scene; never compute them with `Random.Range` or `Time.time`-seeded math at runtime |
+| **Cameras not anchored to the local player's room** — Drone (`VRCDroneApi`), Stream Camera, scene-fixed render textures aimed at remote-room coordinates | Players are physically at their teleported coordinates, but only the local client's `roomRoot` is positioned at the matching origin. A camera that pans toward another room's coordinates renders those players "in the void" — no walls, no room interior | Place visual occlusion at each `roomOrigin` (opaque box, light-fog volume, view-limiting geometry) so off-room cameras cannot reveal floating avatars |
+| **Distant offsets that approach Unity's float-precision band** | Beyond roughly +/-5000 units, position jitter and physics drift become observable; beyond +/-100000, floats lose sub-meter precision | Keep `roomOrigins` within a few thousand units of the world origin. For very large room counts, prefer rotation around a central pivot over linear offset |
+
+### Code Sketch (self-owned + `VRCPlayerObject` tier)
+
+The two scripts together. UI plumbing — how an Interact button on the local client finds and calls into the local player's `RoomAssignment` instance — follows the standard PlayerObject-child to scene-controller registration idiom and is out of scope here.
+
+```csharp
+// On a VRCPlayerObject prefab.
+// VRChat auto-spawns one per player and auto-assigns ownership to that player —
+// Networking.SetOwner is not required for PlayerObject behaviours.
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class RoomAssignment : UdonSharpBehaviour
+{
+    [UdonSynced] public int roomIndex = 0;
+
+    [SerializeField] private LocalRoomPresenter presenter;
+
+    // Called by your UI on the local client only.
+    public void SetRoom(int newIndex)
+    {
+        if (!Networking.IsOwner(gameObject)) return; // Self-owned; guard anyway per Rule 12.
+        roomIndex = newIndex;
+        RequestSerialization();
+
+        // Local apply happens immediately; OnDeserialization does not fire for the
+        // writer's own client, so the local view will not update from sync alone.
+        presenter.ApplyLocalRoom(newIndex);
+    }
+}
+```
+
+```csharp
+// One instance in the scene. Holds the room model and the origin transforms.
+// NoVariableSync makes it explicit: this object's state is per-client local.
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class LocalRoomPresenter : UdonSharpBehaviour
+{
+    [SerializeField] private Transform roomRoot;
+    [SerializeField] private Transform[] roomOrigins;
+
+    public void ApplyLocalRoom(int roomIndex)
+    {
+        if (roomIndex < 0 || roomIndex >= roomOrigins.Length) return;
+
+        Transform origin = roomOrigins[roomIndex];
+
+        // Local-only move of the room model. roomRoot has no VRCObjectSync.
+        roomRoot.SetPositionAndRotation(origin.position, origin.rotation);
+
+        // Per-client local teleport. Each player's client teleports its own
+        // LocalPlayer to the same origin; same-roomIndex players collocate.
+        Networking.LocalPlayer.TeleportTo(origin.position, origin.rotation);
+    }
+}
+```
+
+The wiring for capacity-limited or master-approved variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above — substitute `roomIndex` for `poolIndex` and route writes through a master-owned manager via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`.
+
+### See Also
+
+- [Master-Managed Player Object Pool](#master-managed-player-object-pool) — slot allocation pattern, reusable for master-approved room assignment
+- [persistence.md PlayerObject section](persistence.md#playerobject) — PlayerObject lifecycle, auto-ownership, `OnPlayerRestored`
+- [api.md VRCPlayerApi](api.md) — `TeleportTo` overloads and per-client local teleport semantics
+
 ## Delayed Event Debounce
 
 ### Problem
