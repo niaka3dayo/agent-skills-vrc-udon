@@ -583,7 +583,7 @@ Each client computes "where is **my** room?" from the local player's `RoomAssign
 
 ### Why this works
 
-`VRCPlayerApi.TeleportTo` only affects the local player; calling it on a remote player is a no-op (ClientSim emits *"Teleporting remote players will do nothing"*). Each client teleporting **its own** `Networking.LocalPlayer` to the world coordinate returned by `roomOrigins[myRoomIndex]` is what produces the shared-room illusion. The room `GameObject` itself never participates in network sync — only the integer room assignment does.
+`VRCPlayerApi.TeleportTo` only affects the local player; calling it on a remote player is a no-op (ClientSim emits *"Teleporting remote players will do nothing"*). Each client teleporting **its own** `Networking.LocalPlayer` to the world coordinate returned by `roomOrigins[myRoomIndex]` is what produces the shared-room illusion. The room `GameObject` itself never participates in network sync — only the integer room assignment does. Voice attenuation, avatar proximity audio, and pickup proximity all follow the new world position automatically because they operate on post-teleport world coordinates, not on `roomIndex`.
 
 ### Cost Tier 1: How is `roomIndex` synced?
 
@@ -608,13 +608,13 @@ The self-owned tier avoids the master-handoff race entirely. Escalate to master-
 The presenter holds no shared state — only local view placement derived from the synced `roomIndex`. `NoVariableSync` makes the design intent explicit: *this object's fields must never participate in network sync, even by accident*. Editor warnings will flag attempts to add `[UdonSynced]` later.
 
 **Why `Manual` sync mode on the assignment script?**
-Room assignment changes are discrete user actions (Interact, button press, lottery roll), not continuous values. `Manual` + `RequestSerialization()` after each write minimises bandwidth and avoids per-frame churn. Matches NEVER list rule #11 (do not mix continuous-rate and discrete state on one behaviour).
+Room assignment changes are discrete user actions (Interact, button press, lottery roll), not continuous values. `Manual` + `RequestSerialization()` after each write minimises bandwidth and avoids per-frame churn. Discrete user-action state maps to Manual sync per the Sync Mode Quick Decision in [SKILL.md](../SKILL.md).
 
 **Why `VRCPlayerObject` rather than a master-managed slot table by default?**
 PlayerObject infrastructure already solves ownership-per-player, late-joiner restoration, and lifecycle cleanup on player leave. There is no need to reinvent slot allocation, and `Networking.SetOwner` is not required because VRChat auto-assigns ownership of each instance to its player (see [persistence.md](persistence.md#playerobject)). `VRCEnablePersistence` is optional — without it the prefab still instantiates per-player but `roomIndex` resets when the player rejoins, which is appropriate for volatile room state.
 
 **Replication-lag window for self-owned assignment.**
-When Player A switches rooms locally, their own client moves them immediately. Remote clients see the new `roomIndex` only after A's `RequestSerialization` arrives via `OnDeserialization` — typically sub-second under Manual sync. During that window, B's client may still place A's avatar at the old room's origin. Voice attenuation, pickup interactions, and any room-affiliation UI will resync once deserialization fires. Do not build gameplay that requires *all* clients to agree on A's room within the same frame.
+When Player A switches rooms locally, their own client moves them immediately. A's avatar position then propagates to remote clients through the normal avatar transform channel — this is a separate, much faster sync than `[UdonSynced]` Manual sync — so voice attenuation and pickup proximity react to the new location within ~100 ms. What does lag is the *application-level* `roomIndex` value: B's client only sees A's new `roomIndex` when A's `RequestSerialization` arrives via `OnDeserialization`, typically sub-second under Manual sync. During that window any room-affiliation UI (room labels, occupant lists, room-scoped event routing) on B's client still reflects A's previous room. Do not build gameplay that requires *all* clients to agree on A's `roomIndex` value within the same frame; the physical-presence aspects of the move are already correct.
 
 ### Caveats
 
@@ -623,7 +623,7 @@ The pattern silently breaks if any of these are violated:
 | Issue | Why it breaks | What to do |
 |---|---|---|
 | **`VRCObjectSync` on anything under `roomRoot`** | `VRCObjectSync` broadcasts world-space transforms. Since each client's `roomRoot` is at a different world position, a `VRCObjectSync` child appears at the owner's world coordinate on every client — inside the owner's room only, and in the empty void on everyone else | Keep all `VRCObjectSync` objects outside `roomRoot`, or replicate per-room without `VRCObjectSync` |
-| **`roomOrigins` at inconsistent offsets across clients** | If a client's `roomOrigins[1]` differs from another client's `roomOrigins[1]` (e.g., procedurally placed without seeding), same-`roomIndex` players land on different coordinates and stop seeing each other | `roomOrigins` must be Inspector-set Transforms baked into the scene; never compute them with `Random.Range` or `Time.time`-seeded math at runtime |
+| **`roomOrigins` at inconsistent offsets across clients** | If a client's `roomOrigins[1]` differs from another client's `roomOrigins[1]`, same-`roomIndex` players land on different coordinates and stop seeing each other | `roomOrigins` must be Inspector-set Transforms baked into the scene. Never compute them at runtime — even seeded RNG is unsafe because Udon does not guarantee identical `UnityEngine.Random` sequences across clients, and `Time.time`-derived math is per-client by definition |
 | **Cameras not anchored to the local player's room** — Drone (`VRCDroneApi`), Stream Camera, scene-fixed render textures aimed at remote-room coordinates | Players are physically at their teleported coordinates, but only the local client's `roomRoot` is positioned at the matching origin. A camera that pans toward another room's coordinates renders those players "in the void" — no walls, no room interior | Place visual occlusion at each `roomOrigin` (opaque box, light-fog volume, view-limiting geometry) so off-room cameras cannot reveal floating avatars |
 | **Distant offsets that approach Unity's float-precision band** | Beyond roughly +/-5000 units, position jitter and physics drift become observable; beyond +/-100000, floats lose sub-meter precision | Keep `roomOrigins` within a few thousand units of the world origin. For very large room counts, prefer rotation around a central pivot over linear offset |
 
@@ -642,6 +642,9 @@ using VRC.SDKBase;
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class RoomAssignment : UdonSharpBehaviour
 {
+    // By convention, roomIndex = 0 is the lobby / default room.
+    // If you need an explicit "unassigned" state, use -1 as a sentinel and
+    // check for it in LocalRoomPresenter.ApplyLocalRoom().
     [UdonSynced] public int roomIndex = 0;
 
     [SerializeField] private LocalRoomPresenter presenter;
@@ -678,6 +681,7 @@ public class LocalRoomPresenter : UdonSharpBehaviour
         if (roomIndex < 0 || roomIndex >= roomOrigins.Length) return;
 
         Transform origin = roomOrigins[roomIndex];
+        if (origin == null) return; // Defensive null check (Inspector slot may be empty).
 
         // Local-only move of the room model. roomRoot has no VRCObjectSync.
         roomRoot.SetPositionAndRotation(origin.position, origin.rotation);
@@ -689,13 +693,13 @@ public class LocalRoomPresenter : UdonSharpBehaviour
 }
 ```
 
-The wiring for capacity-limited or master-approved variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above — substitute `roomIndex` for `poolIndex` and route writes through a master-owned manager via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`.
+The wiring for capacity-limited or master-approved variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above — keep its `_assignments[]` synced array of player IDs and add a parallel `[UdonSynced] int[] _roomIndexBySlot` indexed by the same slot id, then route writes through a master-owned manager via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`.
 
 ### See Also
 
 - [Master-Managed Player Object Pool](#master-managed-player-object-pool) — slot allocation pattern, reusable for master-approved room assignment
 - [persistence.md PlayerObject section](persistence.md#playerobject) — PlayerObject lifecycle, auto-ownership, `OnPlayerRestored`
-- [api.md VRCPlayerApi](api.md) — `TeleportTo` overloads and per-client local teleport semantics
+- [api.md VRCPlayerApi Movement Methods](api.md#movement-methods) — `TeleportTo` overloads and per-client local teleport semantics
 
 ## Delayed Event Debounce
 
