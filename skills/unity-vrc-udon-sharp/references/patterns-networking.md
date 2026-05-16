@@ -660,6 +660,19 @@ public class RoomAssignment : UdonSharpBehaviour
         // writer's own client, so the local view will not update from sync alone.
         presenter.ApplyLocalRoom(newIndex);
     }
+
+    // Restoration entry point — fires once per player when their persistent
+    // data (under VRCEnablePersistence) has been loaded. Without persistence,
+    // this still fires but roomIndex is at its default value. Either way, apply
+    // the local view for the local owner so a rejoining player is placed back
+    // in their saved room rather than the scene default.
+    public override void OnPlayerRestored(VRCPlayerApi player)
+    {
+        if (!Networking.IsOwner(player, gameObject)) return; // Only this player's instance.
+        if (!player.isLocal) return; // Only apply on the local client's view.
+
+        presenter.ApplyLocalRoom(roomIndex);
+    }
 }
 ```
 
