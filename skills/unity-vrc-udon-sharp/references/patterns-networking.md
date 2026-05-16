@@ -608,7 +608,7 @@ The self-owned tier avoids the master-handoff race entirely. Escalate to master-
 The presenter holds no shared state — only local view placement derived from the synced `roomIndex`. `NoVariableSync` makes the design intent explicit: *this object's fields must never participate in network sync, even by accident*. Editor warnings will flag attempts to add `[UdonSynced]` later.
 
 **Why `Manual` sync mode on the assignment script?**
-Room assignment changes are discrete user actions (Interact, button press, lottery roll), not continuous values. `Manual` + `RequestSerialization()` after each write minimises bandwidth and avoids per-frame churn. Discrete user-action state maps to Manual sync per the Sync Mode Quick Decision in [SKILL.md](../SKILL.md).
+Room assignment changes are discrete user actions (Interact, button press, lottery roll), not continuous values. `Manual` + `RequestSerialization()` after each write minimises bandwidth and avoids per-frame churn. Discrete user-action state maps to Manual sync per the [Sync Mode Quick Decision](../SKILL.md#sync-mode-quick-decision) in SKILL.md.
 
 **Why `VRCPlayerObject` rather than a master-managed slot table by default?**
 PlayerObject infrastructure already solves ownership-per-player, late-joiner restoration, and lifecycle cleanup on player leave. There is no need to reinvent slot allocation, and `Networking.SetOwner` is not required because VRChat auto-assigns ownership of each instance to its player (see [persistence.md](persistence.md#playerobject)). `VRCEnablePersistence` is optional — without it the prefab still instantiates per-player but `roomIndex` resets when the player rejoins, which is appropriate for volatile room state.
