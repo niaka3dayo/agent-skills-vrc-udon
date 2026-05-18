@@ -14,7 +14,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.0.0"
+    version: "2.1.0"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
 ---
 
@@ -41,7 +41,7 @@ Four architectural decisions that must be made before choosing sync modes or wri
 2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. Always `SetOwner` → modify → `RequestSerialization`.
 3. **Late Joiner Correctness** — State must be correct for players who join after events have occurred. Design for re-serialization, not just live updates.
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
-5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()`.
+5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()` **for state-change reactions; for hot-path or periodic work, see [Event Dispatch & Cross-Behaviour Call Cost Tiers](references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers)**.
 
 ## Common Mistakes (NEVER List)
 
@@ -129,6 +129,7 @@ Building a UI, menu, or HUD?           -> patterns-ui.md
 VR finger/touch interaction on Canvas? -> patterns-ui.md
 Modular app with multiple screens?     -> patterns-ui.md
 Syncing state across players?           -> patterns-networking.md
+Multiple identical rooms from one model? -> patterns-networking.md (distant-room)
 Optimizing Update() or heavy loops?     -> patterns-performance.md
 Heavy rebuild, replay, or reset/cancel?  -> patterns-performance.md
 Playing or streaming video?             -> patterns-video.md
@@ -222,7 +223,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data; storage usage query API (SDK 3.10.0+) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
 | `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) | PhysBone, ContactReceiver, ContactSender, VRCConstraint, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard, remote players | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo, remote players, GetRemotePlayers, exclude local player, FindAll alternative |
-| `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
+| `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, distant-room pseudo-multi-room (state/presentation split, self-owned vs master-approved tiers), delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, distant room, pseudo multi-room, room assignment, roomIndex, LocalRoomPresenter, RoomAssignment, NoVariableSync, TeleportTo per-client, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
 | `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization, frame budget Stopwatch, heavy processing architecture (rebuild, replay, reset/cancel), rate limit resolver, GameObject lookup cost tiers | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rebuild, replay, reset, cancel, operation log, authoritative data, derived state, cursor rebuild, rate limit, URL scheduler, video load queue, GameObject.Find, Find cost, lookup cost tier, SerializeField vs Find, silent failure on rename, SendCustomEvent cost, cross-behaviour call, EventBus hot path, delayed loop spike, public method lookup, event dispatch tier |
 | `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, abstract class callback, cancellable delayed event, re-entrance guard, UdonEvent pseudo-delegate | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray, object array, pseudo struct, double cast, abstract class, callback, interface alternative, cancellable timer, re-entrance, emitting guard, UdonEvent, pseudo delegate |
 | `patterns-ui.md` | UI/Canvas patterns: immobilize guard, avatar-scale-aware UI, FOV-responsive positioning, platform-adaptive layout, dynamic player list, scroll input abstraction, lookup-table localization, toggle-animator bridge, settings persistence via PlayerObject, listener-based menu events, finger touch interaction, modular app architecture | Canvas, UI, menu, Immobilize, avatar scale, FOV, platform, Quest, VR, desktop, player list, scroll, localization, language, Toggle, Animator, PlayerObject, settings, persistence, listener, broadcast, finger touch, fingertip, haptic, FingerPointer, FingerTouchCanvas, touch canvas, app architecture, AppModule, AppManager, plugin lifecycle, CanvasGroup transition |
