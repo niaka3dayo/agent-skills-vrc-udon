@@ -955,7 +955,7 @@ VRCContactSender sender = GetComponent<VRCContactSender>();
 float radius = sender.radius;             // Collision radius (both shapes; max 3 m)
 float height = sender.height;             // Capsule height along Y, half-spheres included (max 6 m)
 ContactBase.ShapeType shapeType = sender.shapeType; // Sphere or Capsule
-string contentType = sender.contentType;
+string contentType = sender.contentType;  // Contact tag string (e.g. "Finger", "Hand", or custom)
 ```
 
 Shape and dimension properties are read/write from Udon. `height` is only meaningful when `shapeType` is `ContactBase.ShapeType.Capsule`.
