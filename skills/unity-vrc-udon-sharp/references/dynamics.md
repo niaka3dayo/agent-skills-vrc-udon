@@ -32,7 +32,7 @@ Contacts provide a collision detection system between **Senders** and **Receiver
 3. Configure `Radius` (and `Height` for Capsule)
 4. Set `Content Type` (identifies what kind of contact this is)
 
-```
+```text
 VRC Contact Sender (Sphere)
 ├── Shape Type: Sphere
 ├── Radius: 0.02 (finger-sized; max 3 m)
@@ -60,7 +60,7 @@ VRC Contact Sender (Capsule)
 4. Configure allowed content types
 5. Implement contact events in Udon
 
-```
+```text
 VRC Contact Receiver (Sphere)
 ├── Shape Type: Sphere
 ├── Radius: 0.05 (max 3 m)
