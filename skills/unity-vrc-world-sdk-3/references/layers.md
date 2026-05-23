@@ -61,7 +61,7 @@ VRChat uses Unity's layer system to organize GameObjects, control collisions, an
 
 ### Commonly Used Custom Layers
 
-```
+```text
 Layer 22: "Intangible" - Decorations with no collision
 Layer 23: "LocalOnly" - Local-only objects
 Layer 24: "TriggerZone" - Trigger zones only
@@ -74,7 +74,7 @@ Layer 25: "Projectiles" - Projectiles
 
 ### Default (Layer 0)
 
-```
+```text
 Purpose:
 - General objects
 - Objects that don't need special handling
@@ -86,7 +86,7 @@ Notes:
 
 ### Environment (Layer 11)
 
-```
+```text
 Purpose:
 - Walls, floors, ceilings
 - Walkable terrain
@@ -99,7 +99,7 @@ Characteristics:
 
 ### Pickup (Layer 13)
 
-```
+```text
 Purpose:
 - Objects with VRC_Pickup
 
@@ -111,7 +111,7 @@ Characteristics:
 
 ### PickupNoEnvironment (Layer 14)
 
-```
+```text
 Purpose:
 - Pickups that pass through environment
 - Objects that can be handed through walls
@@ -123,7 +123,7 @@ Characteristics:
 
 ### Walkthrough (Layer 17)
 
-```
+```text
 Purpose:
 - Walk-through objects
 - Visual barriers
@@ -136,7 +136,7 @@ Characteristics:
 
 ### MirrorReflection (Layer 18)
 
-```
+```text
 Purpose:
 - Objects to display in mirrors
 - Mirror-only layer
@@ -152,13 +152,13 @@ Notes:
 
 ### Checking the Current Matrix
 
-```
+```text
 Edit > Project Settings > Physics > Layer Collision Matrix
 ```
 
 ### VRChat Default Collision Matrix
 
-```
+```text
 Important collision pairs:
 
 ✅ Collide:
@@ -237,7 +237,7 @@ void Start()
 
 ### Recommendations
 
-```
+```text
 ✅ Choose the appropriate layer:
 - Floors, walls → Environment
 - Grabbable items → Pickup
@@ -250,7 +250,7 @@ void Start()
 
 ### Prohibited Actions
 
-```
+```text
 ❌ Avoid:
 - Renaming VRChat reserved layers
 - Using Player/PlayerLocal layers (VRChat exclusive)
@@ -287,7 +287,7 @@ Debug.Log($"Layers {layerA} and {layerB} collision: {willCollide}");
 
 ### Layer Number List
 
-```
+```text
 0  = Default
 9  = Player
 10 = PlayerLocal

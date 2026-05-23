@@ -802,7 +802,7 @@ The Unity/VRChat per-frame execution order (steady state, every frame):
 
 When you are the first player to enter an instance:
 
-```
+```text
 _onEnable → _start
     ↓
 OnPlayerJoined(self)          ← fires for yourself
@@ -819,7 +819,7 @@ OnMasterChanged               ← master transferred from nobody to you
 
 When you join an existing instance:
 
-```
+```text
 _onEnable → _start
     ↓
 OnPlayerJoined(player A)      ← for each player already in the instance
@@ -849,7 +849,7 @@ In this specific edge case (most likely when the late joiner is the **first inst
 
 When a new player joins while you are already in the instance:
 
-```
+```text
 OnPlayerJoined(newPlayer)     ← fires only for the newly joined player
 ```
 

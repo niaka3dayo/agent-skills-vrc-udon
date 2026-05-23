@@ -22,7 +22,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Error saying SceneDescriptor is missing during build
 
 **Solution**:
-```
+```text
 1. VRChat SDK > Show Control Panel
 2. Builder tab
 3. "Add VRChat World" or add VRCWorld Prefab
@@ -46,7 +46,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Upload succeeded but world doesn't appear
 
 **Solution**:
-```
+```text
 1. Log in to the VRChat website
 2. Check "My Worlds"
 3. Check privacy settings
@@ -59,7 +59,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Build was cancelled
 
 **Solution**:
-```
+```text
 1. Check Unity Console for errors
 2. Resolve script compilation errors
 3. Fix Missing References
@@ -75,7 +75,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Appears at an unexpected location when joining
 
 **Solution**:
-```
+```text
 1. Check the VRC_SceneDescriptor Spawns array
 2. Confirm valid Transforms are set in Spawns
 3. Verify spawn positions aren't inside obstacles
@@ -87,7 +87,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Keeps respawning immediately after joining
 
 **Solution**:
-```
+```text
 1. Check Respawn Height
 2. Confirm spawn positions are above Respawn Height
 3. Verify spawn positions aren't below the floor
@@ -99,7 +99,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Camera settings aren't being applied
 
 **Solution**:
-```
+```text
 1. Confirm the Reference Camera's Camera component is disabled
 2. Verify it's correctly assigned to SceneDescriptor's Reference Camera field
 3. For Post Processing, also check the Volume
@@ -127,7 +127,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Grabbed object not visible to other players
 
 **Solution**:
-```
+```text
 1. Add VRC_ObjectSync component
 2. Confirm a Rigidbody exists
 3. Check Is Kinematic settings
@@ -138,7 +138,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Can't release a grabbed object
 
 **Solution**:
-```
+```text
 1. Check Auto Hold settings (SDK 3.9+)
 2. Check if an Udon script is preventing Drop
 3. Re-add the VRC_Pickup component
@@ -149,7 +149,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Can't interact with the Station
 
 **Solution**:
-```
+```text
 1. Check that a Collider exists
 2. Confirm VRC_Station's Disable Station Exit is false
 3. If using UseAttachedStation() in Udon,
@@ -161,7 +161,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Can't exit after sitting
 
 **Solution**:
-```
+```text
 1. If Disable Station Exit is true, set it to false
 2. Verify Exit Transform isn't inside an obstacle
 3. Implement forced exit in Udon
@@ -172,7 +172,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Nothing displays in the mirror
 
 **Solution**:
-```
+```text
 1. Check MirrorReflection layer settings
 2. Confirm the mirror is enabled
 3. Check the camera's Near/Far Clip
@@ -184,7 +184,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Synced object position differs between players
 
 **Solution**:
-```
+```text
 1. Call FlagDiscontinuity() on teleport
 2. Check Allow Collision Ownership Transfer settings
 3. Avoid frequent ownership transfers
@@ -199,7 +199,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Passes through walls or objects
 
 **Solution**:
-```
+```text
 1. Set walls to Environment layer
 2. Confirm a Collider exists
 3. Check Collider's Is Trigger is false
@@ -223,7 +223,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: Specific objects don't appear in the mirror
 
 **Solution**:
-```
+```text
 1. Check the object's layer
 2. Verify relationship with MirrorReflection layer
 3. Confirm the object's Renderer is enabled
@@ -253,7 +253,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: FPS drops drastically when mirror is enabled
 
 **Solution**:
-```
+```text
 1. Lower mirror resolution
 2. Limit to 1 mirror
 3. Default OFF with toggle
@@ -265,7 +265,7 @@ Common problems encountered during world development and their solutions.
 **Symptom**: FPS drops near lights
 
 **Solution**:
-```
+```text
 1. Remove realtime lights
 2. Change to Mixed or Baked
 3. Bake lightmaps
@@ -347,7 +347,7 @@ public override void OnDeserialization()
 
 #### Step 1: Check Unity Console
 
-```
+```text
 Window > General > Console
 - Prioritize errors (red)
 - Also check warnings (yellow)
@@ -356,7 +356,7 @@ Window > General > Console
 
 #### Step 2: VRChat SDK Validation
 
-```
+```text
 VRChat SDK > Show Control Panel
 Builder tab > Validations section
 - Auto-fixable issues have buttons for fixing
@@ -374,13 +374,13 @@ Builder tab > "Build & Test New Build"
 
 #### Step 4: Search Official Documentation (WebSearch)
 
-```
+```yaml
 WebSearch: "error message or keyword site:creators.vrchat.com"
 ```
 
 #### Step 5: VRChat Forums Search (WebSearch)
 
-```
+```yaml
 WebSearch:
   query: "error message site:ask.vrchat.com"
   allowed_domains: ["ask.vrchat.com"]
@@ -388,7 +388,7 @@ WebSearch:
 
 #### Step 6: Canny (Known Bugs) Search
 
-```
+```yaml
 WebSearch:
   query: "issue site:feedback.vrchat.com"
   allowed_domains: ["feedback.vrchat.com"]
@@ -396,7 +396,7 @@ WebSearch:
 
 #### Step 7: GitHub Issues Search
 
-```
+```yaml
 WebSearch:
   query: "issue site:github.com/vrchat-community"
   allowed_domains: ["github.com"]

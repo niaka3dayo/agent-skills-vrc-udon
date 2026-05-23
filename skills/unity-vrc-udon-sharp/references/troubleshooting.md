@@ -24,7 +24,7 @@ Common errors, causes, and solutions for VRChat UdonSharp development.
 ### "UdonSharp does not support X"
 
 **Symptoms:**
-```
+```text
 UdonSharpException: UdonSharp does not currently support [feature]
 ```
 
@@ -49,7 +49,7 @@ Use the alternatives documented. See `constraints.md` for the complete list.
 ### "The type or namespace 'X' could not be found"
 
 **Symptoms:**
-```
+```text
 CS0246: The type or namespace name 'List' could not be found
 ```
 
@@ -78,7 +78,7 @@ list.Add(new DataToken(42));
 ### "'UdonSharpBehaviour' does not contain a definition for 'X'"
 
 **Symptoms:**
-```
+```text
 CS1061: 'UdonSharpBehaviour' does not contain a definition for 'StartCoroutine'
 ```
 
@@ -100,7 +100,7 @@ CS1061: 'UdonSharpBehaviour' does not contain a definition for 'StartCoroutine'
 ### "Field 'X' is not serializable"
 
 **Symptoms:**
-```
+```text
 UdonSharp: Field 'X' is not serializable
 ```
 
@@ -138,7 +138,7 @@ public VRCPlayerApi GetTargetPlayer()
 ### "NullReferenceException"
 
 **Symptoms:**
-```
+```text
 NullReferenceException: Object reference not set to an instance of an object
 ```
 
@@ -190,7 +190,7 @@ public void DoSomethingWithPlayer()
 ### "SendCustomEvent: Method 'X' not found"
 
 **Symptoms:**
-```
+```text
 [UdonBehaviour] SendCustomEvent: Method 'MyMethod' not found
 ```
 
@@ -221,7 +221,7 @@ otherScript.SendCustomEvent("ProcessInput");
 ### "Heap ran out of memory"
 
 **Symptoms:**
-```
+```text
 Udon heap ran out of memory
 ```
 
@@ -271,7 +271,7 @@ for (int i = 0; i < 100; i++)
 ### "ArrayIndexOutOfRangeException"
 
 **Symptoms:**
-```
+```text
 IndexOutOfRangeException: Index was outside the bounds of the array
 ```
 
@@ -463,7 +463,7 @@ void Start()
 ### "Method 'X' is not network callable"
 
 **Symptoms:**
-```
+```text
 Method 'X' cannot be called as a network event
 ```
 
@@ -1616,13 +1616,13 @@ For errors not covered in this document, follow these investigation steps:
 
 ### Step 1: Search Official Docs (WebSearch)
 
-```
+```yaml
 WebSearch: "error message or keyword site:creators.vrchat.com"
 ```
 
 ### Step 2: Search VRChat Forums (WebSearch)
 
-```
+```yaml
 WebSearch:
   query: "error message site:ask.vrchat.com"
   allowed_domains: ["ask.vrchat.com"]
@@ -1632,7 +1632,7 @@ Look for solutions from community members who encountered the same issue.
 
 ### Step 3: Search Canny (Known Bugs)
 
-```
+```yaml
 WebSearch:
   query: "error message site:feedback.vrchat.com"
   allowed_domains: ["feedback.vrchat.com"]
@@ -1642,7 +1642,7 @@ Check whether VRChat officially recognizes the bug and if workarounds exist.
 
 ### Step 4: Search GitHub Issues
 
-```
+```yaml
 WebSearch:
   query: "error message site:github.com/vrchat-community/UdonSharp"
   allowed_domains: ["github.com"]

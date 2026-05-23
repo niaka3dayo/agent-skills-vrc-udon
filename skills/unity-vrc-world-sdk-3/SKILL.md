@@ -127,7 +127,7 @@ If a world runs at 72 FPS on Quest with a single test client, it will typically 
 
 Exactly **one** is required in every VRChat world.
 
-```
+```text
 [VRCWorld Prefab]
 ├── VRC_SceneDescriptor (Required)
 ├── VRC_PipelineManager (Auto-added)
@@ -178,7 +178,7 @@ Exactly **one** is required in every VRChat world.
 
 ### Required Setup Checklist
 
-```
+```text
 □ Exactly one VRCWorld Prefab exists in the scene
 □ At least one Transform set in Spawns
 □ Respawn Height set to an appropriate value (well below the floor)
@@ -236,7 +236,7 @@ Exactly **one** is required in every VRChat world.
 
 ### Layer Setup Steps
 
-```
+```text
 1. VRChat SDK > Show Control Panel
 2. Builder tab
 3. Click "Setup Layers for VRChat"
@@ -281,7 +281,7 @@ Exactly **one** is required in every VRChat world.
 
 If FPS is below target, follow this workflow — measure before guessing:
 
-```
+```text
 1. Measure
    ├── Unity Profiler: standard profiling in Play mode (primary; Deep Profile only for function-level deep dives — avoid on Quest, misleading results)
    ├── VRChat overlay: type "/perf" in-game
@@ -313,7 +313,7 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ### Baked Lighting (Required)
 
-```
+```text
 ✅ Recommended settings:
 ├── Lightmapper: Progressive GPU
 ├── Lightmap Resolution: 10-20 texels/unit
@@ -361,7 +361,7 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ### Upload Steps
 
-```
+```text
 1. Check Validation
    └── VRChat SDK > Build Panel > Validations
 
@@ -380,7 +380,7 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ### Pre-Upload Checklist
 
-```
+```text
 □ VRC_SceneDescriptor × 1
 □ Spawns configured
 □ Respawn Height appropriate

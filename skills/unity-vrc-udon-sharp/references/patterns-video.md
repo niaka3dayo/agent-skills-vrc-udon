@@ -171,7 +171,7 @@ The playback position is never synced directly. Instead, the owner records *when
 started the video (using server clock), and every client recomputes the current position
 independently:
 
-```
+```text
 currentPosition = syncStartTime
                 + (Networking.GetServerTimeInMilliseconds() - syncClockTime) / 1000f
                 * syncSpeed
@@ -304,7 +304,7 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 
 ### Flow
 
-```
+```text
 OnDeserialization
   → URL in synced state?
       → PlayURL(syncUrl)
@@ -495,7 +495,7 @@ public class AVProTextureStabilizer : UdonSharpBehaviour
 
 ### Retry Logic
 
-```
+```text
 OnVideoError
   → permanent error?  → SetState(Error), notify user, stop
   → retriable error?

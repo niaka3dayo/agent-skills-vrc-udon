@@ -25,7 +25,7 @@ Lighting settings and optimization guide for VRChat worlds.
 
 ### Recommended Approach
 
-```
+```text
 ✅ Recommended:
 1. Environment lights → Baked
 2. Light Probes → For dynamic objects
@@ -43,7 +43,7 @@ Lighting settings and optimization guide for VRChat worlds.
 
 ### Lightmap Settings
 
-```
+```text
 Window > Rendering > Lighting
 
 Recommended settings:
@@ -60,7 +60,7 @@ Recommended settings:
 
 ### Object Settings
 
-```
+```text
 Static objects (Static):
 ├── Inspector > Static check
 ├── Contribute GI: ✅
@@ -73,7 +73,7 @@ Dynamic objects:
 
 ### Baking Procedure
 
-```
+```text
 1. Set all lights to Baked/Mixed
 2. Mark static objects as Static
 3. Place Light Probes
@@ -88,7 +88,7 @@ Dynamic objects:
 
 ### Purpose
 
-```
+```text
 Light Probes:
 - Apply baked lighting influence to
   dynamic objects (players, pickups)
@@ -98,7 +98,7 @@ Light Probes:
 
 ### Placement Guidelines
 
-```
+```text
 Place at:
 ✅ Where players walk
 ✅ Light/dark boundaries
@@ -114,7 +114,7 @@ Do NOT place at:
 
 ### Creation Steps
 
-```
+```text
 1. GameObject > Light > Light Probe Group
 2. Click Edit Light Probes button
 3. Add/move probes
@@ -124,7 +124,7 @@ Do NOT place at:
 
 ### Placement Density
 
-```
+```text
 Recommended density:
 ├── Indoor corridors: 2-3m intervals
 ├── Large open spaces: 3-5m intervals
@@ -138,7 +138,7 @@ Recommended density:
 
 ### Purpose
 
-```
+```text
 Reflection Probes:
 - Provide environmental reflections
 - Improve quality of metallic/glossy surfaces
@@ -147,7 +147,7 @@ Reflection Probes:
 
 ### Settings
 
-```
+```text
 Recommended settings:
 ├── Type: Baked (avoid Realtime)
 ├── Resolution: 128-256
@@ -159,7 +159,7 @@ Recommended settings:
 
 ### Placement
 
-```
+```text
 Place at:
 ├── One per room
 ├── One large one outdoors
@@ -177,7 +177,7 @@ Notes:
 
 ### Quest-Specific Settings
 
-```
+```text
 Required:
 ├── All lights set to Baked
 ├── Directional Mode: Non-Directional
@@ -193,7 +193,7 @@ Recommended shaders:
 
 ### Quest Lighting Procedure
 
-```
+```text
 1. Switch Platform to Android
 2. Remove all Realtime lights
 3. Change Mixed → Baked
@@ -210,7 +210,7 @@ Recommended shaders:
 ### Blurry Lightmaps
 
 **Solution**:
-```
+```text
 1. Increase Lightmap Resolution (10→20)
 2. Increase Lightmap Size (1024→2048)
 3. Check object UV2
@@ -220,7 +220,7 @@ Recommended shaders:
 ### Visible Seams
 
 **Solution**:
-```
+```text
 1. Increase Lightmap Padding (2→4)
 2. Check object scale
 3. Adjust UV2 seams
@@ -229,7 +229,7 @@ Recommended shaders:
 ### Dark Dynamic Objects
 
 **Solution**:
-```
+```text
 1. Place Light Probes
 2. Set Receive GI to Light Probes
 3. Re-run Generate Lighting
@@ -238,7 +238,7 @@ Recommended shaders:
 ### Slow Baking
 
 **Solution**:
-```
+```text
 1. Use Progressive GPU
 2. Lower Lightmap Resolution
 3. Remove unnecessary objects from Static
@@ -266,7 +266,7 @@ Recommended shaders:
 
 ### Settings Checklist
 
-```
+```text
 □ All lights are Baked/Mixed
 □ Static objects are marked Static
 □ Light Probes placed
