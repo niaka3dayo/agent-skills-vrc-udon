@@ -26,6 +26,7 @@ Lighting settings and optimization guide for VRChat worlds.
 ### Recommended Approach
 
 ```text
+
 ✅ Recommended:
 1. Environment lights → Baked
 2. Light Probes → For dynamic objects
@@ -35,6 +36,7 @@ Lighting settings and optimization guide for VRChat worlds.
 1. Realtime lights (dynamic shadows)
 2. Excessive lightmap resolution
 3. Many Mixed lights
+
 ```
 
 ---
@@ -44,6 +46,7 @@ Lighting settings and optimization guide for VRChat worlds.
 ### Lightmap Settings
 
 ```text
+
 Window > Rendering > Lighting
 
 Recommended settings:
@@ -56,11 +59,13 @@ Recommended settings:
 │   ├── Max Distance: 1-3
 │   └── Indirect/Direct Contribution: 0.5-1
 └── Directional Mode: Non-Directional (Quest)
+
 ```
 
 ### Object Settings
 
 ```text
+
 Static objects (Static):
 ├── Inspector > Static check
 ├── Contribute GI: ✅
@@ -69,17 +74,20 @@ Static objects (Static):
 Dynamic objects:
 ├── Contribute GI: ❌
 └── Receive GI: Light Probes
+
 ```
 
 ### Baking Procedure
 
 ```text
+
 1. Set all lights to Baked/Mixed
 2. Mark static objects as Static
 3. Place Light Probes
 4. Click "Generate Lighting" in the Lighting window
 5. Wait for completion (minutes to hours)
 6. Review results and adjust as needed
+
 ```
 
 ---
@@ -89,16 +97,19 @@ Dynamic objects:
 ### Purpose
 
 ```text
+
 Light Probes:
 - Apply baked lighting influence to
   dynamic objects (players, pickups)
 - For objects that can't use Lightmaps
 - Achieve dynamic lighting effects at low cost
+
 ```
 
 ### Placement Guidelines
 
 ```text
+
 Place at:
 ✅ Where players walk
 ✅ Light/dark boundaries
@@ -110,26 +121,31 @@ Do NOT place at:
 ❌ Inside walls
 ❌ Unreachable areas
 ❌ Areas with only static objects
+
 ```
 
 ### Creation Steps
 
 ```text
+
 1. GameObject > Light > Light Probe Group
 2. Click Edit Light Probes button
 3. Add/move probes
 4. Place in 3D (not just on the floor, include height)
 5. Update with Generate Lighting
+
 ```
 
 ### Placement Density
 
 ```text
+
 Recommended density:
 ├── Indoor corridors: 2-3m intervals
 ├── Large open spaces: 3-5m intervals
 ├── Light/dark boundaries: 1m or less
 └── Height: Multiple levels at 0.5m, 1.5m, 3m, etc.
+
 ```
 
 ---
@@ -139,15 +155,18 @@ Recommended density:
 ### Purpose
 
 ```text
+
 Reflection Probes:
 - Provide environmental reflections
 - Improve quality of metallic/glossy surfaces
 - Alternative to realtime reflections
+
 ```
 
 ### Settings
 
 ```text
+
 Recommended settings:
 ├── Type: Baked (avoid Realtime)
 ├── Resolution: 128-256
@@ -155,11 +174,13 @@ Recommended settings:
 ├── Box Projection: Only when needed
 ├── Importance: 1 (default)
 └── Blend Distance: 1-3
+
 ```
 
 ### Placement
 
 ```text
+
 Place at:
 ├── One per room
 ├── One large one outdoors
@@ -169,6 +190,7 @@ Place at:
 Notes:
 - Too many increases overhead
 - Proper Bounds settings are important
+
 ```
 
 ---
@@ -178,6 +200,7 @@ Notes:
 ### Quest-Specific Settings
 
 ```text
+
 Required:
 ├── All lights set to Baked
 ├── Directional Mode: Non-Directional
@@ -189,11 +212,13 @@ Recommended shaders:
 ├── Mobile/VRChat/Lightmapped
 ├── Mobile/Diffuse
 └── Mobile/Particles
+
 ```
 
 ### Quest Lighting Procedure
 
 ```text
+
 1. Switch Platform to Android
 2. Remove all Realtime lights
 3. Change Mixed → Baked
@@ -201,6 +226,7 @@ Recommended shaders:
 5. Place Light Probes
 6. Generate Lighting
 7. Test on Quest hardware
+
 ```
 
 ---
@@ -210,39 +236,51 @@ Recommended shaders:
 ### Blurry Lightmaps
 
 **Solution**:
+
 ```text
+
 1. Increase Lightmap Resolution (10→20)
 2. Increase Lightmap Size (1024→2048)
 3. Check object UV2
 4. Enable Generate Lightmap UVs
+
 ```
 
 ### Visible Seams
 
 **Solution**:
+
 ```text
+
 1. Increase Lightmap Padding (2→4)
 2. Check object scale
 3. Adjust UV2 seams
+
 ```
 
 ### Dark Dynamic Objects
 
 **Solution**:
+
 ```text
+
 1. Place Light Probes
 2. Set Receive GI to Light Probes
 3. Re-run Generate Lighting
+
 ```
 
 ### Slow Baking
 
 **Solution**:
+
 ```text
+
 1. Use Progressive GPU
 2. Lower Lightmap Resolution
 3. Remove unnecessary objects from Static
 4. Reduce Bounces (2-3)
+
 ```
 
 ---
@@ -250,6 +288,7 @@ Recommended shaders:
 ## Shader Global Variables
 
 ```csharp
+
 // Lighting-related shader variables
 // _VRChatCameraMode:
 //   0 = Normal
@@ -258,6 +297,7 @@ Recommended shaders:
 //   3 = Screenshot
 
 // Available for use in custom shaders
+
 ```
 
 ---
@@ -267,6 +307,7 @@ Recommended shaders:
 ### Settings Checklist
 
 ```text
+
 □ All lights are Baked/Mixed
 □ Static objects are marked Static
 □ Light Probes placed
@@ -274,6 +315,7 @@ Recommended shaders:
 □ Lightmaps baked
 □ Quest: Realtime lights = 0
 □ Quest: Directional Mode = Non-Directional
+
 ```
 
 ### Performance Guidelines
@@ -313,9 +355,12 @@ Bounces control how many times indirect light reflects off surfaces. More bounce
 | PC | 3–4 | Use 4 only for complex interiors with many reflective surfaces (approximate guideline — adjust based on profiling) |
 
 In Unity Lighting Settings:
+
 ```text
+
 Window > Rendering > Lighting > Lightmapping Settings
 └── Indirect Bounces: 2  (Quest)  /  3  (PC)
+
 ```
 
 ### Baked vs Mixed Lighting: Quest Guidance
@@ -323,11 +368,13 @@ Window > Rendering > Lighting > Lightmapping Settings
 On Quest, **Baked lighting is strongly preferred over Mixed**. Use this decision guide:
 
 ```text
+
 Does the world have any moving lights or real-time shadows?
 ├── Yes → Is this required? (gameplay mechanic, not just aesthetics)
 │   ├── Yes → Use Mixed (PC only); remove or replace with Baked on Android build
 │   └── No  → Switch to Baked and use light probes for dynamics
 └── No  → Use Baked for everything
+
 ```
 
 | Mode | Quest Support | Notes |
@@ -344,6 +391,7 @@ Practical rule: **convert all Mixed lights to Baked before the Android build**. 
 Baked AO adds depth cues where surfaces meet, at zero runtime cost. Screen-space AO (SSAO) is unavailable on Quest.
 
 ```text
+
 Window > Rendering > Lighting > Lightmapping Settings
 
 Recommended settings for Quest:
@@ -353,6 +401,7 @@ Recommended settings for Quest:
 └── Direct AO:          0 (default — direct AO can look artificial)
 
 PC can use higher Max Distance (2–3 m) for richer results.
+
 ```
 
 > Baked AO is included in the base lightmap texture — no extra textures or memory.
@@ -387,6 +436,7 @@ Aim for one probe per enclosed room and one large probe outdoors. Avoid overlapp
 ## Lighting Workflow Summary: PC vs Quest
 
 ```text
+
 PC Build                           Quest/Android Build
 ────────────────────────────────   ──────────────────────────────────
 Resolution: 10–20 texels/unit      Resolution: 5–10 texels/unit
@@ -397,6 +447,7 @@ Compress:   Optional               Compress:   Required
 AO:         Optional (baked)       AO:         Baked only (no SSAO)
 Refl. res:  256                    Refl. res:  128
 Lights:     Mixed or Baked         Lights:     Baked only
+
 ```
 
 ## See Also

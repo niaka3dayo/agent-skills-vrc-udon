@@ -24,8 +24,11 @@ Common errors, causes, and solutions for VRChat UdonSharp development.
 ### "UdonSharp does not support X"
 
 **Symptoms:**
+
 ```text
+
 UdonSharpException: UdonSharp does not currently support [feature]
+
 ```
 
 **Common unsupported features:**
@@ -49,8 +52,11 @@ Use the alternatives documented. See `constraints.md` for the complete list.
 ### "The type or namespace 'X' could not be found"
 
 **Symptoms:**
+
 ```text
+
 CS0246: The type or namespace name 'List' could not be found
+
 ```
 
 **Causes:**
@@ -61,6 +67,7 @@ CS0246: The type or namespace name 'List' could not be found
 **Solution:**
 
 ```csharp
+
 // Wrong - List<T> not supported
 using System.Collections.Generic;
 List<int> numbers = new List<int>();
@@ -71,6 +78,7 @@ int[] numbers = new int[10];
 // Or use DataList for dynamic sizing
 DataList list = new DataList();
 list.Add(new DataToken(42));
+
 ```
 
 ---
@@ -78,8 +86,11 @@ list.Add(new DataToken(42));
 ### "'UdonSharpBehaviour' does not contain a definition for 'X'"
 
 **Symptoms:**
+
 ```text
+
 CS1061: 'UdonSharpBehaviour' does not contain a definition for 'StartCoroutine'
+
 ```
 
 **Cause:** Attempting to use MonoBehaviour methods not exposed to Udon.
@@ -100,8 +111,11 @@ CS1061: 'UdonSharpBehaviour' does not contain a definition for 'StartCoroutine'
 ### "Field 'X' is not serializable"
 
 **Symptoms:**
+
 ```text
+
 UdonSharp: Field 'X' is not serializable
+
 ```
 
 **Cause:** Attempting to sync an unsupported type.
@@ -118,7 +132,9 @@ UdonSharp: Field 'X' is not serializable
 - `VRCPlayerApi`
 
 **Solution:**
+
 ```csharp
+
 // Wrong - Cannot sync VRCPlayerApi
 [UdonSynced] private VRCPlayerApi targetPlayer;
 
@@ -129,6 +145,7 @@ public VRCPlayerApi GetTargetPlayer()
 {
     return VRCPlayerApi.GetPlayerById(targetPlayerId);
 }
+
 ```
 
 ---
@@ -138,8 +155,11 @@ public VRCPlayerApi GetTargetPlayer()
 ### "NullReferenceException"
 
 **Symptoms:**
+
 ```text
+
 NullReferenceException: Object reference not set to an instance of an object
+
 ```
 
 **Common causes:**
@@ -151,6 +171,7 @@ NullReferenceException: Object reference not set to an instance of an object
 **Solution:**
 
 ```csharp
+
 // Always validate Inspector references
 void Start()
 {
@@ -183,6 +204,7 @@ public void DoSomethingWithPlayer()
     }
     // Safe to use player
 }
+
 ```
 
 ---
@@ -190,8 +212,11 @@ public void DoSomethingWithPlayer()
 ### "SendCustomEvent: Method 'X' not found"
 
 **Symptoms:**
+
 ```text
+
 [UdonBehaviour] SendCustomEvent: Method 'MyMethod' not found
+
 ```
 
 **Causes:**
@@ -202,6 +227,7 @@ public void DoSomethingWithPlayer()
 **Solution:**
 
 ```csharp
+
 // Wrong - Method is private
 private void MyMethod() { }
 
@@ -214,6 +240,7 @@ public void MyMethod() { }
 // For passing data, use SetProgramVariable first
 otherScript.SetProgramVariable("inputValue", 42);
 otherScript.SendCustomEvent("ProcessInput");
+
 ```
 
 ---
@@ -221,8 +248,11 @@ otherScript.SendCustomEvent("ProcessInput");
 ### "Heap ran out of memory"
 
 **Symptoms:**
+
 ```text
+
 Udon heap ran out of memory
+
 ```
 
 **Causes:**
@@ -234,6 +264,7 @@ Udon heap ran out of memory
 **Solution:**
 
 ```csharp
+
 // Wrong - Creates new array every frame
 void Update()
 {
@@ -264,6 +295,7 @@ for (int i = 0; i < 100; i++)
 
 // Correct - Use char array or limit concatenation
 // For display purposes, just show final result
+
 ```
 
 ---
@@ -271,8 +303,11 @@ for (int i = 0; i < 100; i++)
 ### "ArrayIndexOutOfRangeException"
 
 **Symptoms:**
+
 ```text
+
 IndexOutOfRangeException: Index was outside the bounds of the array
+
 ```
 
 **Common causes:**
@@ -283,6 +318,7 @@ IndexOutOfRangeException: Index was outside the bounds of the array
 **Solution:**
 
 ```csharp
+
 // Always check array bounds
 public void ProcessArray(int[] data)
 {
@@ -303,6 +339,7 @@ public override void OnPlayerLeft(VRCPlayerApi player)
     // GetPlayers() count has already changed!
     // Cache count before iteration if needed
 }
+
 ```
 
 ---
@@ -318,24 +355,32 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 **Checklist:**
 
 1. **Is the variable properly marked?**
+
 ```csharp
+
 // Correct
 [UdonSynced] private int myValue;
+
 ```
 
 2. **Is the type syncable?** (See syncable types above)
 
 3. **Did you call RequestSerialization()?**
+
 ```csharp
+
 public void ChangeValue()
 {
     myValue = 42;
     RequestSerialization(); // Required for Manual sync mode!
 }
+
 ```
 
 4. **Do you have ownership?**
+
 ```csharp
+
 public void ChangeValue()
 {
     if (!Networking.IsOwner(gameObject))
@@ -345,15 +390,19 @@ public void ChangeValue()
     myValue = 42;
     RequestSerialization();
 }
+
 ```
 
 5. **Check sync mode:**
+
 ```csharp
+
 // For infrequent changes (buttons, toggles)
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 
 // For continuous changes (position, rotation)
 [UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
+
 ```
 
 ---
@@ -365,7 +414,9 @@ public void ChangeValue()
 **Checklist:**
 
 1. **Correct attribute syntax?**
+
 ```csharp
+
 // Correct - nameof() points to PROPERTY
 [UdonSynced, FieldChangeCallback(nameof(MyProperty))]
 private int _myValue;
@@ -379,15 +430,19 @@ public int MyProperty
         OnValueChanged();
     }
 }
+
 ```
 
 2. **Using property everywhere locally?**
+
 ```csharp
+
 // Wrong - Bypasses callback
 _myValue = 10;
 
 // Correct - Uses property
 MyProperty = 10;
+
 ```
 
 3. **Sync mode compatibility:**
@@ -410,6 +465,7 @@ MyProperty = 10;
 `Networking.SetOwner` is **locally immediate** on the calling client — `Networking.IsOwner(gameObject)` returns `true` synchronously after the call. There is no need to defer the action to `OnOwnershipTransferred`. Concurrent callers each succeed locally; the network resolves the durable owner by arrival order, and the loser's write is overwritten on the next deserialization. Guard writes with `IsOwner` and accept that property of the network.
 
 ```csharp
+
 public override void Interact()
 {
     if (!Networking.IsOwner(gameObject))
@@ -427,6 +483,7 @@ private void DoAction()
     // synced variables here.
     RequestSerialization();
 }
+
 ```
 
 > For owner-side protection during critical actions (e.g., reject ownership requests mid-transaction), use `OnOwnershipRequest` — see [networking.md §"Ownership Arbitration with OnOwnershipRequest"](networking.md#ownership-arbitration-with-onownershiprequest).
@@ -438,7 +495,9 @@ private void DoAction()
 **Problem:** Late joiners do not see the correct state.
 
 **Solution:**
+
 ```csharp
+
 public override void OnPlayerJoined(VRCPlayerApi player)
 {
     // Only owner needs to sync
@@ -454,6 +513,7 @@ void Start()
     // This runs after OnDeserialization for late joiners
     ApplyState();
 }
+
 ```
 
 ---
@@ -463,8 +523,11 @@ void Start()
 ### "Method 'X' is not network callable"
 
 **Symptoms:**
+
 ```text
+
 Method 'X' cannot be called as a network event
+
 ```
 
 **Causes:**
@@ -474,7 +537,9 @@ Method 'X' cannot be called as a network event
 4. Method has more than 8 parameters
 
 **Solution:**
+
 ```csharp
+
 // WRONG
 public void MyMethod(int value) { } // Missing attribute
 
@@ -483,6 +548,7 @@ private void MyMethod(int value) { } // Private
 // CORRECT
 [NetworkCallable]
 public void MyMethod(int value) { }
+
 ```
 
 ---
@@ -502,6 +568,7 @@ public void MyMethod(int value) { }
 3. Ensure all clients are on SDK 3.8.1+
 
 ```csharp
+
 // WRONG - VRCPlayerApi is not syncable
 [NetworkCallable]
 public void SetTarget(VRCPlayerApi player) { }
@@ -509,6 +576,7 @@ public void SetTarget(VRCPlayerApi player) { }
 // CORRECT - Use player ID instead
 [NetworkCallable]
 public void SetTarget(int playerId) { }
+
 ```
 
 ---
@@ -518,7 +586,9 @@ public void SetTarget(int playerId) { }
 **Symptoms:** Events are dropped and do not reach all clients
 
 **Solution:**
+
 ```csharp
+
 // Increase rate limit (max 100/sec)
 [NetworkCallable(100)]
 public void HighFrequencyEvent(float value) { }
@@ -533,6 +603,7 @@ public void SendIfReady(int value)
     lastSendTime = Time.time;
     SendCustomNetworkEvent(NetworkEventTarget.All, nameof(MyEvent), value);
 }
+
 ```
 
 ---
@@ -549,7 +620,9 @@ public void SendIfReady(int value)
 3. Wrong player reference
 
 **Solution:**
+
 ```csharp
+
 private bool dataReady = false;
 
 public override void OnPlayerRestored(VRCPlayerApi player)
@@ -573,6 +646,7 @@ public void SaveScore(int score)
     }
     PlayerData.SetInt(Networking.LocalPlayer, "score", score);
 }
+
 ```
 
 ---
@@ -587,7 +661,9 @@ public void SaveScore(int score)
 3. Key name too long (max 128 characters)
 
 **Solution:**
+
 ```csharp
+
 // WRONG - Trying to write to other player's data
 PlayerData.SetInt(otherPlayer, "score", 100); // Will fail silently
 
@@ -597,6 +673,7 @@ PlayerData.SetInt(Networking.LocalPlayer, "score", 100);
 // Debug storage usage
 string[] keys = PlayerData.GetKeys(Networking.LocalPlayer);
 Debug.Log($"Using {keys.Length} keys");
+
 ```
 
 ---
@@ -634,6 +711,7 @@ Debug.Log($"Using {keys.Length} keys");
 3. Check Allow Self/Allow Others settings (applies to avatar contacts only)
 
 ```csharp
+
 // Verify receiver is on this GameObject
 void Start()
 {
@@ -643,6 +721,7 @@ void Start()
         Debug.LogError("No VRCContactReceiver on this GameObject!");
     }
 }
+
 ```
 
 ---
@@ -657,7 +736,9 @@ void Start()
 3. No debounce logic
 
 **Solution:**
+
 ```csharp
+
 private float lastContactTime;
 private const float DEBOUNCE = 0.1f;
 
@@ -668,6 +749,7 @@ public override void OnContactEnter(ContactEnterInfo info)
 
     // Handle contact
 }
+
 ```
 
 ---
@@ -695,7 +777,9 @@ public override void OnContactEnter(ContactEnterInfo info)
 **Cause:** Contact is from a world object, not from an avatar
 
 **Solution:**
+
 ```csharp
+
 public override void OnContactEnter(ContactEnterInfo info)
 {
     if (info.isAvatar)
@@ -712,6 +796,7 @@ public override void OnContactEnter(ContactEnterInfo info)
         Debug.Log("Contact from world object");
     }
 }
+
 ```
 
 ---
@@ -741,6 +826,7 @@ For stations with `PlayerMobility = Immobilize`, the seated position is fixed. C
 > one script per station.
 
 ```csharp
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -809,6 +895,7 @@ public class StationZoneCheckStatic : UdonSharpBehaviour
         Debug.Log($"[StationZoneCheck] {player.displayName} exited zone (unseated)");
     }
 }
+
 ```
 
 ---
@@ -818,6 +905,7 @@ public class StationZoneCheckStatic : UdonSharpBehaviour
 For stations that can move (avatar stations, moving platforms), poll seated player positions periodically. This approach checks every 0.5 seconds instead of every frame to reduce overhead.
 
 ```csharp
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -941,6 +1029,7 @@ public class StationZoneCheckPolling : UdonSharpBehaviour
         Debug.Log($"[StationZonePoll] {player.displayName} exited zone");
     }
 }
+
 ```
 
 ---
@@ -956,6 +1045,7 @@ When neither static bounds check nor position polling is suitable — e.g., avat
 > from the proxy collider.
 
 ```csharp
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -1033,6 +1123,7 @@ public class PlayerFollowCollider : UdonSharpBehaviour
         followCollider.gameObject.SetActive(false);
     }
 }
+
 ```
 
 **Key considerations:**
@@ -1049,6 +1140,7 @@ public class PlayerFollowCollider : UdonSharpBehaviour
 `OnStationExited` may **not fire** when a seated player leaves the instance. Always pair station tracking with `OnPlayerLeft` cleanup to prevent stale data.
 
 ```csharp
+
 public override void OnPlayerLeft(VRCPlayerApi player)
 {
     if (!Utilities.IsValid(player)) return;
@@ -1060,6 +1152,7 @@ public override void OnPlayerLeft(VRCPlayerApi player)
         _isPlayerInZone = false;
     }
 }
+
 ```
 
 ---
@@ -1105,12 +1198,15 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 **Cause:** UdonSharp uses a proxy system, and changes to the proxy are not auto-saved.
 
 **Solution:**
+
 ```csharp
+
 #if UNITY_EDITOR
 // In custom editor or after programmatic changes
 UdonSharpEditorUtility.CopyProxyToUdon(behaviour);
 EditorUtility.SetDirty(behaviour);
 #endif
+
 ```
 
 ---
@@ -1173,17 +1269,20 @@ This commonly happens when AI agents automate Unity setup (Unity MCP servers, cu
 Prefer the UdonSharp helper that wires `programSource` automatically:
 
 ```csharp
+
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UdonSharpEditor;
 
     // Creates UdonBehaviour AND sets programSource in one call
     MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
 #endif
+
 ```
 
 If the `UdonBehaviour` was created without `AddUdonSharpComponent`, assign manually:
 
 ```csharp
+
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
 
@@ -1195,6 +1294,7 @@ using UnityEditor;
     ub.programSource = programAsset;
     EditorUtility.SetDirty(ub);
 #endif
+
 ```
 
 Or, in the Inspector, drag the `.asset` from the Project window into the `Program Source` slot.
@@ -1212,7 +1312,9 @@ When automating UdonBehaviour creation, verify `programSource` is set as a post-
 **Checklist:**
 
 1. **Disable Update() when not needed:**
+
 ```csharp
+
 // Don't do this
 void Update()
 {
@@ -1235,16 +1337,22 @@ void Update()
 {
     // Only runs when enabled
 }
+
 ```
 
 2. **Reduce cross-script calls:**
+
 ```csharp
+
 // Cross-script calls have ~1.5x overhead
 // Use partial classes for large scripts instead
+
 ```
 
 3. **Cache component references:**
+
 ```csharp
+
 // Wrong - GetComponent every frame
 void Update()
 {
@@ -1263,6 +1371,7 @@ void Update()
 {
     _renderer.material.color = newColor;
 }
+
 ```
 
 4. **Use spatial partitioning:**
@@ -1280,7 +1389,9 @@ void Update()
 **Solution:**
 
 1. **Reduce sync frequency:**
+
 ```csharp
+
 // Don't sync every frame
 private float _lastSyncTime;
 private const float SYNC_INTERVAL = 0.1f; // 10 times per second
@@ -1293,25 +1404,32 @@ void Update()
         _lastSyncTime = Time.time;
     }
 }
+
 ```
 
 2. **Use smaller data types:**
+
 ```csharp
+
 // byte = 1 byte, int = 4 bytes
 [UdonSynced] private byte smallValue; // 0-255 range
 
 // short = 2 bytes
 [UdonSynced] private short mediumValue; // -32768 to 32767
+
 ```
 
 3. **Use Continuous sync mode for smoothly changing values:**
+
 ```csharp
+
 [UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
 public class SmoothSync : UdonSharpBehaviour
 {
     [UdonSynced(UdonSyncMode.Smooth)] // Interpolated locally
     private Vector3 position;
 }
+
 ```
 
 ---
@@ -1321,7 +1439,9 @@ public class SmoothSync : UdonSharpBehaviour
 ### Start() Not Called on Inactive Objects
 
 **Problem:**
+
 ```csharp
+
 // Inactive GameObjects do not call Start()
 public class BrokenGimmick : UdonSharpBehaviour
 {
@@ -1338,6 +1458,7 @@ public class BrokenGimmick : UdonSharpBehaviour
         audioSource.Play(); // NullReferenceException!
     }
 }
+
 ```
 
 **Symptoms:**
@@ -1346,7 +1467,9 @@ public class BrokenGimmick : UdonSharpBehaviour
 - "Should work but doesn't" situation
 
 **Solution:**
+
 ```csharp
+
 // OnEnable + initialization flag pattern
 public class RobustGimmick : UdonSharpBehaviour
 {
@@ -1380,6 +1503,7 @@ public class RobustGimmick : UdonSharpBehaviour
         }
     }
 }
+
 ```
 
 **Situations where this occurs:**
@@ -1393,13 +1517,18 @@ public class RobustGimmick : UdonSharpBehaviour
 ### Field Initializers Not Working
 
 **Problem:**
+
 ```csharp
+
 // This doesn't work as expected
 public int maxHealth = 100; // Serialized value from Inspector wins
+
 ```
 
 **Solution:**
+
 ```csharp
+
 // Use Start() or explicit initialization
 private int _maxHealth;
 
@@ -1410,6 +1539,7 @@ void Start()
         _maxHealth = 100;
     }
 }
+
 ```
 
 ---
@@ -1417,24 +1547,33 @@ void Start()
 ### GetComponent Returns Proxy Instead of UdonSharpBehaviour
 
 **Problem:**
+
 ```csharp
+
 // Returns UdonBehaviour, not your type
 var myScript = other.GetComponent<MyScript>();
+
 ```
 
 **Solution (Runtime):**
+
 ```csharp
+
 // Cast works at runtime in VRChat
 var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
+
 ```
 
 **Solution (Editor):**
+
 ```csharp
+
 #if UNITY_EDITOR
 var myScript = other.GetUdonSharpComponent<MyScript>();
 #else
 var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
 #endif
+
 ```
 
 ---
@@ -1442,16 +1581,22 @@ var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
 ### Struct Modifications Not Persisting
 
 **Problem:**
+
 ```csharp
+
 transform.position.x = 5; // Doesn't work!
+
 ```
 
 **Solution:**
+
 ```csharp
+
 // Assign full struct
 Vector3 pos = transform.position;
 pos.x = 5;
 transform.position = pos;
+
 ```
 
 ---
@@ -1461,7 +1606,9 @@ transform.position = pos;
 **Problem:** No built-in way to cancel delayed events.
 
 **Solution:**
+
 ```csharp
+
 private bool _shouldExecute = true;
 
 public void ScheduleAction()
@@ -1480,6 +1627,7 @@ public void DelayedAction()
     if (!_shouldExecute) return;
     // Do action
 }
+
 ```
 
 ---
@@ -1489,7 +1637,9 @@ public void DelayedAction()
 **Problem:** Holding a `VRCPlayerApi` reference, but the player has left.
 
 **Solution:**
+
 ```csharp
+
 // Wrong - Storing reference
 private VRCPlayerApi _targetPlayer;
 
@@ -1513,6 +1663,7 @@ public VRCPlayerApi GetTarget()
     }
     return player;
 }
+
 ```
 
 ---
@@ -1522,6 +1673,7 @@ public VRCPlayerApi GetTarget()
 ### Logging Best Practices
 
 ```csharp
+
 // Use consistent format
 private void Log(string message)
 {
@@ -1538,11 +1690,13 @@ private void LogDebug(string message)
         Debug.Log($"[DEBUG:{gameObject.name}] {message}");
     }
 }
+
 ```
 
 ### State Visualization
 
 ```csharp
+
 // Show state in world using TextMeshPro
 public TextMeshProUGUI debugText;
 
@@ -1555,11 +1709,13 @@ void Update()
                         $"IsLocal: {Networking.IsOwner(gameObject)}";
     }
 }
+
 ```
 
 ### Network Debugging
 
 ```csharp
+
 public override void OnPreSerialization()
 {
     LogDebug($"Sending: value={_syncedValue}");
@@ -1574,6 +1730,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 {
     LogDebug($"Ownership -> {player.displayName}");
 }
+
 ```
 
 ---
@@ -1617,15 +1774,19 @@ For errors not covered in this document, follow these investigation steps:
 ### Step 1: Search Official Docs (WebSearch)
 
 ```yaml
+
 WebSearch: "error message or keyword site:creators.vrchat.com"
+
 ```
 
 ### Step 2: Search VRChat Forums (WebSearch)
 
 ```yaml
+
 WebSearch:
   query: "error message site:ask.vrchat.com"
   allowed_domains: ["ask.vrchat.com"]
+
 ```
 
 Look for solutions from community members who encountered the same issue.
@@ -1633,9 +1794,11 @@ Look for solutions from community members who encountered the same issue.
 ### Step 3: Search Canny (Known Bugs)
 
 ```yaml
+
 WebSearch:
   query: "error message site:feedback.vrchat.com"
   allowed_domains: ["feedback.vrchat.com"]
+
 ```
 
 Check whether VRChat officially recognizes the bug and if workarounds exist.
@@ -1643,9 +1806,11 @@ Check whether VRChat officially recognizes the bug and if workarounds exist.
 ### Step 4: Search GitHub Issues
 
 ```yaml
+
 WebSearch:
   query: "error message site:github.com/vrchat-community/UdonSharp"
   allowed_domains: ["github.com"]
+
 ```
 
 Check for UdonSharp-specific bugs and fix status.
