@@ -108,6 +108,14 @@ VRChat-specific input events. Called when the player presses/releases buttons.
 | `void OnInputMethodChanged(VRCInputMethod inputMethod)` | Player switches input method (keyboard, controller, touch) |
 
 ```csharp
+public override void OnInputMethodChanged(VRCInputMethod inputMethod)
+{
+    // Adjust UI layout when player switches between controller, keyboard, or touch
+    UpdateControlHints(inputMethod);
+}
+```
+
+```csharp
 public override void InputJump(bool value, VRC.Udon.Common.UdonInputEventArgs args)
 {
     if (value) // Button pressed (not released)
@@ -222,6 +230,8 @@ Called during PlayerData persistence operations.
 | `void OnPlayerDataStorageWarning(VRCPlayerApi player)` | Player data storage approaching limit |
 | `void OnPlayerObjectStorageExceeded(VRCPlayerApi player)` | Player object storage limit exceeded |
 | `void OnPlayerObjectStorageWarning(VRCPlayerApi player)` | Player object storage approaching limit |
+
+> **SDK Note**: `OnPersistenceUsageUpdated` and the storage warning/exceeded events require SDK 3.10.0+. The `OnPlayerRestored` and `OnPlayerDataUpdated` events above are available from SDK 3.7.4+.
 
 ```csharp
 public override void OnPlayerRestored(VRCPlayerApi player)
@@ -639,7 +649,7 @@ public override void OnSpawn()
 
 ## Settings & Rendering Events
 
-Called when VRChat settings or rendering state changes.
+Called when VRChat settings or rendering state changes. These events require SDK 3.10.0+.
 
 | Event | When Called |
 |-------|-------------|
