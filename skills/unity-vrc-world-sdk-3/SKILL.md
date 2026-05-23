@@ -104,7 +104,7 @@ If a world runs at 72 FPS on Quest with a single test client, it will typically 
 Quest required? → Yes
   ├── Shaders: Mobile-only (Standard Lite, Toon Lit)
   ├── Lighting: Fully baked (no realtime shadows)
-  ├── Geometry: < 50K triangles per world
+  ├── Geometry: 50K-100K triangles (target range)
   ├── Materials: < 25 unique materials
   ├── Audio: Mono, compressed, limited concurrent sources
   └── Physics: Simplified colliders, minimal Rigidbodies
