@@ -10,11 +10,11 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnDroneTriggerEnter`, `OnDroneTriggerExit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
+`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnControllerColliderHitPlayer`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnDroneTriggerEnter`, `OnDroneTriggerExit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
 
 ### override Not Required (Standard Unity Callbacks)
 
-`Start`, `Update`, `LateUpdate`, `FixedUpdate`, `OnEnable`, `OnDisable`, `OnDestroy`, `OnTriggerEnter/Stay/Exit`, `OnCollisionEnter/Stay/Exit`, `OnAnimatorMove`, `OnAnimatorIK`, `OnWillRenderObject`, `OnBecameVisible/Invisible`
+`Start`, `Update`, `LateUpdate`, `FixedUpdate`, `OnEnable`, `OnDisable`, `OnDestroy`, `OnTriggerEnter/Stay/Exit`, `OnCollisionEnter/Stay/Exit`, `OnControllerColliderHit`, `OnAnimatorMove`, `OnAnimatorIK`, `OnWillRenderObject`, `OnBecameVisible/Invisible`
 
 ```csharp
 // WRONG: CS0115 error
@@ -325,6 +325,45 @@ Called when players enter/exit triggers or collide.
 | `void OnPlayerCollisionEnter(VRCPlayerApi player)` | Player collision starts |
 | `void OnPlayerCollisionStay(VRCPlayerApi player)` | Player collision ongoing |
 | `void OnPlayerCollisionExit(VRCPlayerApi player)` | Player collision ends |
+
+### CharacterController Collision Events
+
+Called when a CharacterController on this GameObject collides with a player or another collider.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnControllerColliderHitPlayer(ControllerColliderPlayerHit hit)` | CharacterController on this GameObject hits a player |
+
+**`ControllerColliderPlayerHit` fields** (`VRC.SDK3.ControllerColliderPlayerHit`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `player` | `VRCPlayerApi` | The player who was hit |
+| `moveDirection` | `Vector3` | Direction the CharacterController was moving |
+| `moveLength` | `float` | Distance the CharacterController moved |
+| `normal` | `Vector3` | Surface normal at the collision point |
+| `point` | `Vector3` | World-space collision point |
+
+```csharp
+public override void OnControllerColliderHitPlayer(ControllerColliderPlayerHit hit)
+{
+    VRCPlayerApi hitPlayer = hit.player;
+    if (hitPlayer == null || !hitPlayer.IsValid()) return;
+
+    // Apply knockback force based on collision direction
+    float knockbackStrength = hit.moveLength * 2.0f;
+    Vector3 knockbackDir = -hit.normal;
+    // Use the collision data to drive gameplay logic
+}
+```
+
+**Difference from OnPlayerCollisionEnter**: `OnPlayerCollisionEnter` fires when a player's capsule collider enters a Collider on this GameObject. `OnControllerColliderHitPlayer` fires when a CharacterController on this GameObject actively moves into a player — the direction of contact is reversed.
+
+**Non-player variant**: `OnControllerColliderHit(ControllerColliderHit hit)` is a standard Unity callback (no `override`) that fires when the CharacterController hits a non-player collider. VRChat internally routes the Unity `OnControllerColliderHit` callback to either the player or non-player event based on whether the hit object belongs to a player.
+
+**Requirements:**
+- GameObject must have a `CharacterController` component
+- Event fires on the GameObject that owns the CharacterController, not on the hit target
 
 ### Particle Collision Event
 
