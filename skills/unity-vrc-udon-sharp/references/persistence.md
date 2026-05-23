@@ -415,11 +415,11 @@ public class StorageMonitor : UdonSharpBehaviour
         SendCustomEventDelayedSeconds(nameof(RequestRefresh), RefreshInterval);
     }
 
-    // Called by VRChat when fresh storage usage data is available for a player
-    public override void OnPersistenceUsageUpdated(VRCPlayerApi player)
+    // Called by VRChat when fresh storage usage data is available.
+    // Always fires on the local player's UdonBehaviours.
+    public override void OnPersistenceUsageUpdated()
     {
-        if (!player.isLocal) return;
-        ShowUsage(player);
+        ShowUsage(Networking.LocalPlayer);
     }
 
     // Periodic refresh event
