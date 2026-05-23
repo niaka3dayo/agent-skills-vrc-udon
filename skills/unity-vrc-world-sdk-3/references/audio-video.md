@@ -28,7 +28,7 @@ Complete guide for audio and video configuration.
 
 ### Audio System Architecture
 
-```
+```text
 [Audio Source]
 ├── Unity AudioSource (base functionality)
 └── VRC_SpatialAudioSource (extended functionality)
@@ -57,7 +57,7 @@ VRC_SpatialAudioSource is added alongside a Unity AudioSource.
 
 ### Distance Attenuation Model
 
-```
+```text
 Near = 2m, Far = 10m example:
 
 Distance(m): 0    2    4    6    8    10   12
@@ -70,7 +70,7 @@ Far = Attenuation end (0%)
 
 ### Volumetric Radius
 
-```
+```text
 Volumetric Radius = 0 (point source):
 - Calculated from listener-to-source distance
 - For small objects
@@ -85,7 +85,7 @@ Volumetric Radius > 0 (volumetric source):
 
 #### Ambient Sound (BGM)
 
-```
+```text
 AudioSource:
 ├── Spatial Blend: 0 (2D)
 ├── Loop: true
@@ -99,7 +99,7 @@ VRC_SpatialAudioSource:
 
 #### 3D Sound Effects (footsteps, doors)
 
-```
+```text
 AudioSource:
 ├── Spatial Blend: 1 (3D)
 ├── Loop: false
@@ -115,7 +115,7 @@ VRC_SpatialAudioSource:
 
 #### Wide Area Source (waterfall, crowd)
 
-```
+```text
 AudioSource:
 ├── Spatial Blend: 1 (3D)
 ├── Loop: true
@@ -210,7 +210,7 @@ The initial Steam Audio release is designed to **match ONSP behavior**. Advanced
 
 For the initial release, behavior is intentionally preserved:
 
-```
+```text
 Initial Steam Audio release:
 ├── Same Near/Far attenuation curves as ONSP
 ├── Same VRC_SpatialAudioSource property semantics
@@ -239,7 +239,7 @@ These APIs control per-player voice spatialization and remain the correct way to
 
 When Steam Audio becomes the default (no action required before then):
 
-```
+```text
 VRC_SpatialAudioSource components:
 □ Verify Near/Far values still achieve the intended effect
 □ Check Gain values — behavior is preserved but double-check critical audio
@@ -291,7 +291,7 @@ No world-side changes are required to test in the beta.
 
 ### Selection Guide
 
-```
+```text
 Use AVPro:
 ✅ Want to play YouTube/Twitch URLs
 ✅ Want to display live streams
@@ -309,7 +309,7 @@ Use Unity Video Player:
 
 ### AVPro Video Player
 
-```
+```text
 [Setup]
 1. Use the VRCAVProVideoPlayer Prefab included in the VRChat SDK
 2. Or add the VRC_AVProVideoPlayer component
@@ -331,7 +331,7 @@ Use Unity Video Player:
 
 ### Unity Video Player
 
-```
+```text
 [Setup]
 1. Use the VRCUnityVideoPlayer Prefab
 2. Or add the VRC_UnityVideoPlayer component
@@ -355,7 +355,7 @@ Use Unity Video Player:
 
 ### AVPro Video Player Setup
 
-```
+```text
 [AVPro Video Player Object]
 ├── VRC_AVProVideoPlayer
 │   ├── Auto Play: false (recommended)
@@ -372,7 +372,7 @@ Use Unity Video Player:
 
 ### Unity Video Player Setup
 
-```
+```text
 [Unity Video Player Object]
 ├── VRC_UnityVideoPlayer
 │   ├── Auto Play: false (recommended)
@@ -493,7 +493,7 @@ public class SyncedVideoPlayer : UdonSharpBehaviour
 
 ### Audio Optimization
 
-```
+```text
 Compression settings:
 
 BGM (long audio):
@@ -517,7 +517,7 @@ Ambient sounds (looping):
 
 ### Video Optimization
 
-```
+```text
 ⚠️ Limitations:
 
 Video players per world:
@@ -536,7 +536,7 @@ Resolution settings:
 
 ### Memory Considerations
 
-```
+```text
 Video player memory impact:
 
 RenderTexture size:
@@ -616,7 +616,7 @@ Debug.Log($"Video playing: {videoPlayer.IsPlaying}");
 
 ### VRC_SpatialAudioSource Defaults
 
-```
+```text
 Gain: 0 dB (World: +10 dB)
 Near: 0 m
 Far: 40 m

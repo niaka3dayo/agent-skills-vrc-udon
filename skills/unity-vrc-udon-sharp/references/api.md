@@ -910,7 +910,7 @@ public class CameraMonitor : UdonSharpBehaviour
 
 ### Notes
 
-```
+```text
 - All properties are read-only from Udon. Camera settings cannot be set via this API.
 - OnVRCCameraSettingsChanged fires for both ScreenCamera and PhotoCamera changes;
   filter by comparing the parameter with VRCCameraSettings.ScreenCamera.
@@ -937,7 +937,12 @@ receiver.UpdateContentTypes(allowedTypes);
 // Properties
 bool allowSelf = receiver.allowSelf;     // Allow contacts from same avatar
 bool allowOthers = receiver.allowOthers; // Allow contacts from other avatars
+float radius = receiver.radius;          // Collision radius (both shapes; max 3 m)
+float height = receiver.height;          // Capsule height along Y, half-spheres included (max 6 m)
+ContactBase.ShapeType shapeType = receiver.shapeType; // Sphere or Capsule
 ```
+
+Shape and dimension properties are read/write from Udon. `height` is only meaningful when `shapeType` is `ContactBase.ShapeType.Capsule`.
 
 ### VRCContactSender
 
@@ -947,9 +952,13 @@ Sends contact events to receivers.
 VRCContactSender sender = GetComponent<VRCContactSender>();
 
 // Properties
-float radius = sender.radius;
-string contentType = sender.contentType;
+float radius = sender.radius;             // Collision radius (both shapes; max 3 m)
+float height = sender.height;             // Capsule height along Y, half-spheres included (max 6 m)
+ContactBase.ShapeType shapeType = sender.shapeType; // Sphere or Capsule
+string contentType = sender.contentType;  // Contact tag string (e.g. "Finger", "Hand", or custom)
 ```
+
+Shape and dimension properties are read/write from Udon. `height` is only meaningful when `shapeType` is `ContactBase.ShapeType.Capsule`.
 
 ### VRCPhysBone
 

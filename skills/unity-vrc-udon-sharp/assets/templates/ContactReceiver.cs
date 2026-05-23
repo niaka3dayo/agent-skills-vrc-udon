@@ -10,8 +10,9 @@ using VRC.Udon;
 ///
 /// Setup:
 /// 1. Add "VRC Contact Receiver" component to this GameObject.
-/// 2. Configure Radius, Allow Self, Allow Others, and Content Types on it.
-/// 3. Assign the public fields below in the Inspector.
+/// 2. Set Shape Type to Sphere or Capsule. Capsule also requires Height (Y-axis).
+/// 3. Configure Radius, Allow Self, Allow Others, and Content Types on it.
+/// 4. Assign the public fields below in the Inspector.
 ///
 /// See references/dynamics.md "Contacts" for full API documentation.
 /// </summary>

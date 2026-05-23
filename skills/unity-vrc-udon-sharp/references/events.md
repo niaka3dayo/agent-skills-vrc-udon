@@ -10,11 +10,11 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnDroneTriggerEnter`, `OnDroneTriggerExit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`
+`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnMasterTransferred`, `OnPlayerSuspendChanged`, `OnAvatarChanged`, `OnAvatarEyeHeightChanged`, `OnLanguageChanged`, `OnVRCPlusMassGift`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnControllerColliderHitPlayer`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnPersistenceUsageUpdated`, `OnPlayerDataStorageExceeded/Warning`, `OnPlayerObjectStorageExceeded/Warning`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnPhysBonePosed`, `OnPhysBoneUnPosed`, `OnDroneTriggerEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `OnInputMethodChanged`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`, `OnSpawn`, `OnVRCQualitySettingsChanged`, `OnVRCCameraSettingsChanged`, `OnScreenUpdate`, `OnAsyncGpuReadbackComplete`, `OnPurchaseConfirmed`, `OnPurchaseConfirmedMultiple`, `OnPurchaseExpired`, `OnPurchasesLoaded`, `OnListAvailableProducts`, `OnListProductOwners`, `OnListPurchases`, `OnProductEvent`
 
 ### override Not Required (Standard Unity Callbacks)
 
-`Start`, `Update`, `LateUpdate`, `FixedUpdate`, `OnEnable`, `OnDisable`, `OnDestroy`, `OnTriggerEnter/Stay/Exit`, `OnCollisionEnter/Stay/Exit`, `OnAnimatorMove`, `OnAnimatorIK`, `OnWillRenderObject`, `OnBecameVisible/Invisible`
+`Start`, `Update`, `LateUpdate`, `FixedUpdate`, `OnEnable`, `OnDisable`, `OnDestroy`, `OnTriggerEnter/Stay/Exit`, `OnCollisionEnter/Stay/Exit`, `OnControllerColliderHit`, `OnAnimatorMove`, `OnAnimatorIK`, `OnWillRenderObject`, `OnBecameVisible/Invisible`
 
 ```csharp
 // WRONG: CS0115 error
@@ -101,6 +101,20 @@ VRChat-specific input events. Called when the player presses/releases buttons.
 | `InputLookHorizontal(float value, UdonInputEventArgs args)` | Look left/right |
 | `InputLookVertical(float value, UdonInputEventArgs args)` | Look up/down |
 
+### Input Method Events
+
+| Event | When Called |
+|-------|-------------|
+| `void OnInputMethodChanged(VRCInputMethod inputMethod)` | Player switches input method (keyboard, controller, touch) |
+
+```csharp
+public override void OnInputMethodChanged(VRCInputMethod inputMethod)
+{
+    // Adjust UI layout when player switches between controller, keyboard, or touch
+    UpdateControlHints(inputMethod);
+}
+```
+
 ```csharp
 public override void InputJump(bool value, VRC.Udon.Common.UdonInputEventArgs args)
 {
@@ -177,6 +191,12 @@ Called when players join, leave, or change state.
 | `void OnPlayerJoined(VRCPlayerApi player)` | Player joins instance |
 | `void OnPlayerLeft(VRCPlayerApi player)` | Player leaves instance |
 | `void OnPlayerRespawn(VRCPlayerApi player)` | Player respawns |
+| `void OnMasterTransferred(VRCPlayerApi newMaster)` | Instance master role transfers to a new player |
+| `void OnPlayerSuspendChanged(VRCPlayerApi player)` | Player suspend state changes (headset removed, app backgrounded) |
+| `void OnAvatarChanged(VRCPlayerApi player)` | Player changes their avatar |
+| `void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)` | Player avatar eye height changes |
+| `void OnLanguageChanged(string language)` | Player changes their display language |
+| `void OnVRCPlusMassGift(VRCPlayerApi gifter, int numGifts)` | VRC+ mass gift event occurs in the instance |
 
 ```csharp
 public override void OnPlayerJoined(VRCPlayerApi player)
@@ -205,6 +225,13 @@ Called during PlayerData persistence operations.
 |-------|-------------|
 | `void OnPlayerRestored(VRCPlayerApi player)` | Player's saved data has been loaded |
 | `void OnPlayerDataUpdated(VRCPlayerApi player, PlayerData.Info[] infos)` | PlayerData was updated |
+| `void OnPersistenceUsageUpdated()` | Persistence usage statistics are updated |
+| `void OnPlayerDataStorageExceeded(VRCPlayerApi player)` | Player data storage limit exceeded |
+| `void OnPlayerDataStorageWarning(VRCPlayerApi player)` | Player data storage approaching limit |
+| `void OnPlayerObjectStorageExceeded(VRCPlayerApi player)` | Player object storage limit exceeded |
+| `void OnPlayerObjectStorageWarning(VRCPlayerApi player)` | Player object storage approaching limit |
+
+> **SDK Note**: `OnPersistenceUsageUpdated` and the storage warning/exceeded events require SDK 3.10.0+. The `OnPlayerRestored` and `OnPlayerDataUpdated` events above are available from SDK 3.7.4+.
 
 ```csharp
 public override void OnPlayerRestored(VRCPlayerApi player)
@@ -272,6 +299,8 @@ public override void OnContactExit(ContactExitInfo info)
 | `void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
 | `void OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues to intersect the bone chain |
 | `void OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting the bone chain |
+| `void OnPhysBonePosed(PhysBonePosedInfo physBoneInfo)` | A PhysBone is manually posed by a player |
+| `void OnPhysBoneUnPosed(PhysBoneUnPosedInfo physBoneInfo)` | A PhysBone pose is released |
 
 ```csharp
 public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
@@ -326,6 +355,45 @@ Called when players enter/exit triggers or collide.
 | `void OnPlayerCollisionStay(VRCPlayerApi player)` | Player collision ongoing |
 | `void OnPlayerCollisionExit(VRCPlayerApi player)` | Player collision ends |
 
+### CharacterController Collision Events
+
+Called when a CharacterController on this GameObject collides with a player or another collider.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnControllerColliderHitPlayer(ControllerColliderPlayerHit hit)` | CharacterController on this GameObject hits a player |
+
+**`ControllerColliderPlayerHit` fields** (`VRC.SDK3.ControllerColliderPlayerHit`):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `player` | `VRCPlayerApi` | The player who was hit |
+| `moveDirection` | `Vector3` | Direction the CharacterController was moving |
+| `moveLength` | `float` | Distance the CharacterController moved |
+| `normal` | `Vector3` | Surface normal at the collision point |
+| `point` | `Vector3` | World-space collision point |
+
+```csharp
+public override void OnControllerColliderHitPlayer(ControllerColliderPlayerHit hit)
+{
+    VRCPlayerApi hitPlayer = hit.player;
+    if (hitPlayer == null || !hitPlayer.IsValid()) return;
+
+    // Apply knockback force based on collision direction
+    float knockbackStrength = hit.moveLength * 2.0f;
+    Vector3 knockbackDir = -hit.normal;
+    // Use the collision data to drive gameplay logic
+}
+```
+
+**Difference from OnPlayerCollisionEnter**: `OnPlayerCollisionEnter` fires when a player's capsule collider enters a Collider on this GameObject. `OnControllerColliderHitPlayer` fires when a CharacterController on this GameObject actively moves into a player — the direction of contact is reversed.
+
+**Non-player variant**: `OnControllerColliderHit(ControllerColliderHit hit)` is a standard Unity callback (no `override`) that fires when the CharacterController hits a non-player collider. VRChat internally routes the Unity `OnControllerColliderHit` callback to either the player or non-player event based on whether the hit object belongs to a player.
+
+**Requirements:**
+- GameObject must have a `CharacterController` component
+- Event fires on the GameObject that owns the CharacterController, not on the hit target
+
 ### Particle Collision Event
 
 | Event | When Called |
@@ -354,6 +422,7 @@ Called when a player's drone enters or exits a trigger collider attached to the 
 | Event | When Called |
 |-------|-------------|
 | `void OnDroneTriggerEnter(Collider other)` | Drone enters the trigger |
+| `void OnDroneTriggerStay(Collider other)` | Drone stays in the trigger (called each frame) |
 | `void OnDroneTriggerExit(Collider other)` | Drone exits the trigger |
 
 ```csharp
@@ -557,6 +626,90 @@ public override void MidiNoteOn(int channel, int note, int velocity)
 }
 ```
 
+## Object Pool Events
+
+Called on GameObjects spawned from a VRCObjectPool.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnSpawn()` | This object is spawned from a VRCObjectPool |
+
+```csharp
+public override void OnSpawn()
+{
+    // Initialize state when this pooled object becomes active
+    _isActive = true;
+    _spawnTime = Time.time;
+}
+```
+
+**Requirements:**
+- GameObject must be part of a VRCObjectPool's Pool array
+- Called after the object is enabled by `Pool.TryToSpawn()`
+
+## Settings & Rendering Events
+
+Called when VRChat settings or rendering state changes. These events require SDK 3.10.0+.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnVRCQualitySettingsChanged()` | VRChat quality settings change |
+| `void OnVRCCameraSettingsChanged(VRCCameraSettings cameraSettings)` | VRChat camera settings change |
+| `void OnScreenUpdate(ScreenUpdateData data)` | Screen update data is available |
+| `void OnAsyncGpuReadbackComplete(VRCAsyncGPUReadbackRequest request)` | Async GPU readback operation completes |
+
+```csharp
+public override void OnVRCQualitySettingsChanged()
+{
+    // Adapt visual effects when the player changes quality settings
+    UpdateParticleEffects();
+}
+
+public override void OnAsyncGpuReadbackComplete(VRCAsyncGPUReadbackRequest request)
+{
+    if (request.hasError) return;
+    // Process GPU readback data
+}
+```
+
+## VRC Economy Events
+
+Called in response to VRChat Creator Economy operations. Requires Udon Products configured in the world.
+
+| Event | When Called |
+|-------|-------------|
+| `void OnPurchaseConfirmed(IProduct product, VRCPlayerApi player, bool purchasedNow)` | A product purchase is confirmed |
+| `void OnPurchaseConfirmedMultiple(IProduct product, VRCPlayerApi player, bool purchasedNow, int quantity)` | Multiple product purchases confirmed |
+| `void OnPurchaseExpired(IProduct product, VRCPlayerApi player)` | A product purchase expires |
+| `void OnPurchasesLoaded(IProduct[] products, VRCPlayerApi player)` | Player's purchase data finishes loading |
+| `void OnListAvailableProducts(IProduct[] products)` | Available products list is returned |
+| `void OnListProductOwners(IProduct product, string[] owners)` | Product owner list is returned |
+| `void OnListPurchases(IProduct[] products, VRCPlayerApi player)` | Player's purchase list is returned |
+| `void OnProductEvent(IProduct product, VRCPlayerApi player)` | A product-related event occurs |
+
+```csharp
+public override void OnPurchaseConfirmed(IProduct product, VRCPlayerApi player, bool purchasedNow)
+{
+    if (!player.isLocal) return;
+    // Grant access to purchased content
+    UnlockContent(product);
+}
+
+public override void OnPurchasesLoaded(IProduct[] products, VRCPlayerApi player)
+{
+    if (!player.isLocal) return;
+    // Restore previously purchased items on join
+    foreach (var product in products)
+    {
+        UnlockContent(product);
+    }
+}
+```
+
+**Requirements:**
+- World must have Udon Products configured in the VRChat Creator Economy dashboard
+- Types `IProduct` are from `VRC.Economy` namespace
+
 ## Standard Unity Events
 
 Standard Unity events that work in UdonSharp.
@@ -649,7 +802,7 @@ The Unity/VRChat per-frame execution order (steady state, every frame):
 
 When you are the first player to enter an instance:
 
-```
+```text
 _onEnable → _start
     ↓
 OnPlayerJoined(self)          ← fires for yourself
@@ -666,7 +819,7 @@ OnMasterChanged               ← master transferred from nobody to you
 
 When you join an existing instance:
 
-```
+```text
 _onEnable → _start
     ↓
 OnPlayerJoined(player A)      ← for each player already in the instance
@@ -696,7 +849,7 @@ In this specific edge case (most likely when the late joiner is the **first inst
 
 When a new player joins while you are already in the instance:
 
-```
+```text
 OnPlayerJoined(newPlayer)     ← fires only for the newly joined player
 ```
 

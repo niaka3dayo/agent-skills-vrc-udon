@@ -20,7 +20,7 @@ Complete upload procedure and best practices.
 
 ### Required Checks
 
-```
+```text
 □ Scene Setup
   □ Exactly 1 VRC_SceneDescriptor exists
   □ Transforms set in Spawns
@@ -51,7 +51,7 @@ Complete upload procedure and best practices.
 
 ### Recommended Checks
 
-```
+```text
 □ Local verification with Build & Test
 □ Multi-player testing conducted
 □ Quest support (if applicable)
@@ -65,7 +65,7 @@ Complete upload procedure and best practices.
 
 ### Local Testing Procedure
 
-```
+```text
 1. VRChat SDK > Show Control Panel
 2. Builder tab
 3. "Build & Test New Build" section
@@ -76,7 +76,7 @@ Complete upload procedure and best practices.
 
 ### Test Items
 
-```
+```text
 Single Player Test:
 □ Spawn position is correct
 □ Respawn Height causes correct respawn
@@ -98,7 +98,7 @@ Multi-Player Test (multiple clients):
 
 ### Number of Clients Settings
 
-```
+```text
 Recommended by test purpose:
 
 Basic functionality: 1 client
@@ -117,7 +117,7 @@ Notes:
 
 ### Validation Check Procedure
 
-```
+```text
 1. VRChat SDK > Show Control Panel
 2. Builder tab
 3. Check Validations section
@@ -137,7 +137,7 @@ Notes:
 
 ### Auto-Fix Feature
 
-```
+```text
 Some issues can be auto-fixed:
 
 Items with "Auto Fix" button:
@@ -157,7 +157,7 @@ Items that can't be auto-fixed:
 
 ### Upload Procedure
 
-```
+```text
 1. Confirm no Validation errors
 
 2. VRChat SDK > Show Control Panel
@@ -183,7 +183,7 @@ Items that can't be auto-fixed:
 
 ### Blueprint ID
 
-```
+```text
 Blueprint ID:
 - Unique identifier for the world
 - Stored in VRC_PipelineManager
@@ -200,7 +200,7 @@ Updating an existing world:
 
 ### World Thumbnail
 
-```
+```text
 Thumbnail settings:
 
 Method 1: Screenshot
@@ -232,7 +232,7 @@ Recommended specifications:
 
 ### Release Status
 
-```
+```text
 Private:
 - Only you and invited people can access
 - For testing and development
@@ -255,7 +255,7 @@ Public:
 
 ### Required Settings
 
-```
+```text
 Must be set if applicable:
 
 □ Adult Language
@@ -279,7 +279,7 @@ Must be set if applicable:
 
 ### Importance of Warning Settings
 
-```
+```text
 ⚠️ Warning:
 
 If not set:
@@ -308,7 +308,7 @@ Best practices:
 
 ### Configuration Guidelines
 
-```
+```text
 Recommended Capacity:
 - Number of players for comfortable play
 - Number where performance is maintained
@@ -327,7 +327,7 @@ Examples:
 
 ### Capacity Best Practices
 
-```
+```text
 ✅ Recommended:
 
 1. Determine through performance testing
@@ -355,7 +355,7 @@ Examples:
 
 ### Verification Items
 
-```
+```text
 1. Verify on VRChat website
    - https://vrchat.com/home/
    - "My Worlds" section
@@ -372,7 +372,7 @@ Examples:
 
 ### Notes After Updating
 
-```
+```text
 After update:
 - Existing instances remain on the old version
 - Only new instances use the new version
@@ -385,7 +385,7 @@ Propagation time:
 
 ### World Management
 
-```
+```text
 On the VRChat website:
 
 □ Change Release Status
@@ -415,7 +415,7 @@ On the VRChat website:
 
 #### World not found
 
-```
+```text
 Cause:
 1. Still set to Private
 2. Search index not yet updated
@@ -430,7 +430,7 @@ Solution:
 
 #### Upload takes too long
 
-```
+```text
 Cause:
 1. Build size is large
 2. Slow network
@@ -444,7 +444,7 @@ Solution:
 
 #### Changes not reflected
 
-```
+```text
 Cause:
 1. Joined an old instance
 2. Cache issue
@@ -458,7 +458,7 @@ Solution:
 
 ### Debug Checklist
 
-```
+```text
 □ No errors in Console
 □ All Validations pass
 □ Blueprint ID is correct
@@ -473,7 +473,7 @@ Solution:
 
 ### PC + Quest Cross-Platform
 
-```
+```yaml
 Procedure:
 
 1. Build for PC
@@ -495,7 +495,7 @@ Notes:
 
 ### Quest-Only World
 
-```
+```text
 Settings:
 
 1. Platform: Android
@@ -513,7 +513,7 @@ Notes:
 
 ### Upload Checklist (Minimum)
 
-```
+```text
 □ VRC_SceneDescriptor × 1
 □ Spawns configured
 □ Validation passed
@@ -524,7 +524,7 @@ Notes:
 
 ### SDK Panel Shortcuts
 
-```
+```text
 VRChat SDK > Show Control Panel
 
 Builder tab:

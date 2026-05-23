@@ -28,29 +28,53 @@ Contacts provide a collision detection system between **Senders** and **Receiver
 #### Contact Sender
 
 1. Add `VRC Contact Sender` component to a GameObject
-2. Configure `Radius` (collision size)
-3. Set `Content Type` (identifies what kind of contact this is)
+2. Choose `Shape Type`: `Sphere` or `Capsule`
+3. Configure `Radius` (and `Height` for Capsule)
+4. Set `Content Type` (identifies what kind of contact this is)
 
+```text
+VRC Contact Sender (Sphere)
+├── Shape Type: Sphere
+├── Radius: 0.02 (finger-sized; max 3 m)
+└── Content Type: "Finger"
+
+VRC Contact Sender (Capsule)
+├── Shape Type: Capsule
+├── Radius: 0.05 (max 3 m)
+├── Height: 0.3 (Y-axis, half-spheres included; max 6 m)
+└── Content Type: "Custom"
 ```
-VRC Contact Sender
-├── Radius: 0.02 (finger-sized)
-├── Content Type: "Finger"
-└── Shape: Sphere
-```
+
+**Shape comparison:**
+
+| Shape | Fields | Typical use |
+|-------|--------|-------------|
+| `Sphere` | `Radius` | Point contacts (fingers, small projectiles) |
+| `Capsule` | `Radius` + `Height` | Elongated contacts (arms, props, area triggers) |
 
 #### Contact Receiver
 
 1. Add `VRC Contact Receiver` component to a GameObject
 2. Add UdonBehaviour to the **same** GameObject
-3. Configure allowed content types
-4. Implement contact events in Udon
+3. Choose `Shape Type` and configure its dimensions
+4. Configure allowed content types
+5. Implement contact events in Udon
 
-```
-VRC Contact Receiver
-├── Radius: 0.05
+```text
+VRC Contact Receiver (Sphere)
+├── Shape Type: Sphere
+├── Radius: 0.05 (max 3 m)
 ├── Allow Self: true (contacts from same avatar)
 ├── Allow Others: true (contacts from other avatars)
 └── Content Types: ["Finger", "Hand"]
+
+VRC Contact Receiver (Capsule)
+├── Shape Type: Capsule
+├── Radius: 0.05 (max 3 m)
+├── Height: 0.5 (Y-axis, half-spheres included; max 6 m)
+├── Allow Self: true
+├── Allow Others: true
+└── Content Types: ["Hand"]
 ```
 
 ### Contact Events
@@ -189,7 +213,7 @@ PhysBones provide physics-based bone animation:
 2. Configure physics parameters
 3. Add UdonBehaviour for grab events (optional)
 
-```
+```text
 VRC Phys Bone
 ├── Root Transform: RopeStart
 ├── End Bone: (auto-detected or manual)
@@ -371,7 +395,7 @@ VRC Constraints replace Unity's built-in Constraints with a VRChat-optimized ver
 
 ### Constraints Setup
 
-```
+```text
 VRC Position Constraint
 ├── Sources: [Transform1 (weight 0.5), Transform2 (weight 0.5)]
 ├── Constraint Active: true

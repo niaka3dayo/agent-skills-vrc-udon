@@ -344,7 +344,7 @@ The `interface` keyword is blocked in UdonSharp. When building modular systems �
 
 Define an **abstract base class** with abstract callback methods. Concrete handlers subclass it and override those methods. A **mediator** bridges the string-based `SendCustomEvent` call from the worker to the typed method on the callback reference.
 
-```
+```text
 Worker ──SendCustomEvent──▶ Mediator ──typed call──▶ AbstractBase ──override──▶ ConcreteHandler
 ```
 

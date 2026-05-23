@@ -266,11 +266,11 @@ player.RequestStorageUsageUpdate();             // request a fresh value from se
 The `OnPersistenceUsageUpdated` event fires when updated usage data arrives:
 
 ```csharp
-public override void OnPersistenceUsageUpdated(VRCPlayerApi player)
+// Always fires on the local player's UdonBehaviours.
+public override void OnPersistenceUsageUpdated()
 {
-    if (!player.isLocal) return;
-    int used  = player.GetPlayerDataStorageUsage();
-    int limit = player.GetPlayerDataStorageLimit();
+    int used  = Networking.LocalPlayer.GetPlayerDataStorageUsage();
+    int limit = Networking.LocalPlayer.GetPlayerDataStorageLimit();
     Debug.Log($"Storage: {used}/{limit} bytes");
 }
 ```

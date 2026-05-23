@@ -884,7 +884,7 @@ All video-loading behaviours in the world hold a `[SerializeField]` reference to
 
 **Architecture:**
 
-```
+```text
 VideoPlayerA ──ScheduleLoad──▶ UrlLoadScheduler
 VideoPlayerB ──ScheduleLoad──▶  (shared singleton)
                                      │

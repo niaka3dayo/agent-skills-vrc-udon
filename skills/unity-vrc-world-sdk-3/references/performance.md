@@ -12,7 +12,7 @@
 
 ### Performance Tiers
 
-```
+```text
 Excellent: 90+ FPS (PC), 72 FPS stable (Quest)
 Good: 60-90 FPS (PC), 60-72 FPS (Quest)
 Acceptable: 45-60 FPS (PC), 45-60 FPS (Quest)
@@ -21,11 +21,40 @@ Poor: < 45 FPS - improvement required
 
 ---
 
+## Optimization Workflow
+
+If FPS is below target, follow this workflow — measure before guessing:
+
+```text
+1. Measure
+   ├── Unity Profiler: standard profiling in Play mode (primary; Deep Profile only for function-level deep dives — avoid on Quest, misleading results)
+   ├── VRChat overlay: type "/perf" in-game
+   └── Stats window: Draw Calls, Triangles, VRAM
+
+2. Identify bottleneck category
+   ├── CPU-bound (high Draw Calls): → Batching / LOD / Culling / Static flags
+   ├── GPU-bound (shader cost): → Mirror / Realtime lights / Post-Processing
+   ├── Memory (VRAM spikes): → Reduce texture resolution / video players
+   └── Physics: → Disable Rigidbodies / Cloth / Constraints on Quest
+
+3. Fix largest impact first, re-measure after each change
+   (estimates below are typical ranges; actual gains vary by world complexity)
+   Mirror ON by default    → Disable by default               (often -40-50% render cost)
+   Realtime shadows        → Bake all lights                  (often -30-50% GPU cost)
+   High lightmap resolution → Reduce and re-profile           (often -30-70% VRAM)
+   Unbatched static objects → Mark as Static + enable batching (often -30-60% draw calls)
+   Many active particles   → Pool; disable off-screen          (often -10-20% CPU)
+```
+
+**Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
+
+---
+
 ## Key Performance Factors
 
 ### 1. Mirrors
 
-```
+```text
 Impact: ⚠️ Very high
 
 Problem:
@@ -43,7 +72,7 @@ Countermeasures:
 
 ### 2. Video Players
 
-```
+```text
 Impact: ⚠️ High
 
 Problem:
@@ -58,7 +87,7 @@ Countermeasures:
 
 ### 3. Realtime Lights
 
-```
+```text
 Impact: ⚠️ High
 
 Problem:
@@ -74,7 +103,7 @@ Countermeasures:
 
 ### 4. Draw Calls
 
-```
+```text
 Impact: ⚠️ Medium to High
 
 Problem:
@@ -94,7 +123,7 @@ Countermeasures:
 
 ### Baked Lighting (Required)
 
-```
+```text
 ✅ Recommended settings:
 
 Lighting Settings:
@@ -111,7 +140,7 @@ Light Settings:
 
 ### Light Probes
 
-```
+```text
 Purpose:
 - Apply baked lighting influence to
   dynamic objects (players, pickups)
@@ -125,7 +154,7 @@ Placement:
 
 ### Reflection Probes
 
-```
+```text
 Purpose:
 - Improve reflection quality
 - Reduce load with baking
@@ -157,7 +186,7 @@ Settings:
 
 ### Quest/Android Shaders
 
-```
+```text
 ✅ Required:
 - Use Mobile shaders
 - Mobile/VRChat/Lightmapped (recommended)
@@ -171,7 +200,7 @@ Settings:
 
 ### Transparency Warning
 
-```
+```text
 ⚠️ Transparency (Alpha) issues:
 
 Mobile GPUs are weak at Alpha fill rate:
@@ -197,7 +226,7 @@ Countermeasures:
 
 ### Optimization Techniques
 
-```
+```text
 □ Set up LOD (Level of Detail)
 □ Enable Occlusion Culling
 □ Remove invisible meshes
@@ -222,7 +251,7 @@ Inspector:
 
 ### Setup
 
-```
+```text
 1. Window > Rendering > Occlusion Culling
 2. Set static objects as Occluder/Occludee
 3. Bake
@@ -235,7 +264,7 @@ Settings:
 
 ### Best Practices
 
-```
+```text
 □ Set walls, floors, ceilings as Occluder
 □ Small objects as Occludee only
 □ Don't set transparent objects as Occluder
@@ -262,7 +291,7 @@ Sound effects:
 
 ### Spatial Audio
 
-```
+```text
 □ Disable unnecessary audio sources
 □ Set Max Distance appropriately
 □ Fall back to 2D for distant sources
@@ -318,7 +347,7 @@ public void SlowUpdate()
 
 ### Quest Optimization Checklist
 
-```
+```text
 □ Polygon count < 100K
 □ Material count < 25
 □ Texture resolution ≤ 1024x1024
@@ -332,7 +361,7 @@ public void SlowUpdate()
 
 ### PC Optimization Checklist
 
-```
+```text
 □ 45+ FPS in VR
 □ Minimal realtime lights
 □ Mirror = default OFF
@@ -348,7 +377,7 @@ public void SlowUpdate()
 
 ### Unity Profiler
 
-```
+```text
 Window > Analysis > Profiler
 
 Items to check:
@@ -359,7 +388,7 @@ Items to check:
 
 ### Frame Debugger
 
-```
+```text
 Window > Analysis > Frame Debugger
 
 Use for:
@@ -370,7 +399,7 @@ Use for:
 
 ### VRChat Debug Menu
 
-```
+```text
 In-game checks:
 - FPS
 - Network stats
@@ -393,7 +422,7 @@ In-game checks:
 
 ## Quick Optimization Checklist
 
-```
+```text
 □ 45+ FPS (VR) achieved
 □ Light baking complete
 □ Realtime lights ≤ 1
@@ -429,7 +458,7 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 
 ### Features Not Available on Quest
 
-```
+```text
 ⚠️ Custom shaders (worlds only: allowed with caution; avoid complex HLSL/ShaderLab features that stress the mobile GPU. Avatar shaders are restricted to VRChat Mobile shaders.)
 ❌ Post-processing stack (any effect)
 ❌ Real-time shadow casting and receiving
@@ -443,7 +472,7 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 
 ### World Build Size Management
 
-```
+```text
 Target size breakdown (5–8 MB goal):
 
 Textures:       2–4 MB  (largest contributor — compress aggressively)
@@ -465,7 +494,7 @@ Reduction strategies:
 
 ### Texture Compression and Sizing
 
-```
+```text
 Quest-native format: ASTC (Adaptive Scalable Texture Compression)
 
 Settings per texture type:
@@ -489,7 +518,7 @@ Steps:
 
 ### Material Merging and Texture Atlasing
 
-```
+```text
 Goal: minimize unique material count (target < 25)
 
 Draw call reduction math:
@@ -508,7 +537,7 @@ Tools: Unity Sprite Atlas, third-party atlas packers, manual UV remap
 
 ### Mesh Optimization
 
-```
+```text
 LOD (Level of Detail) setup:
 ├── LOD0: full detail   (within ~10m)
 ├── LOD1: 50% tris      (10–30m)
@@ -529,7 +558,7 @@ Additional steps:
 
 ### Baked Lighting Workflow for Quest
 
-```
+```text
 Mandatory: all lighting must be baked before uploading the Quest build.
 
 Recommended settings for Quest:
@@ -551,7 +580,7 @@ Checklist:
 
 ### Draw Call Reduction
 
-```
+```text
 Target draw calls for Quest: < 50 (excellent), < 100 (acceptable)
 
 Techniques:
@@ -570,7 +599,7 @@ GPU Instancing in UdonSharp:
 
 ### Occlusion Culling for Quest
 
-```
+```text
 Occlusion culling is especially important on Quest due to limited fill rate.
 
 Aggressive settings for Quest:
@@ -593,7 +622,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ### Build Size
 
-```
+```text
 □ Android build size after compression < 100 MB
 □ Targeting 5–8 MB for typical worlds
 □ No uncompressed or oversized textures (check via Project > Stats)
@@ -602,7 +631,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ### Shaders and Materials
 
-```
+```text
 □ All materials use Mobile-compatible shaders:
     - Mobile/Diffuse
     - Mobile/Bumped Diffuse
@@ -616,7 +645,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ### Lighting
 
-```
+```text
 □ Lighting fully baked (Window > Rendering > Lighting shows no pending bake)
 □ Realtime lights = 0 (or removed entirely)
 □ No Mixed lights with Shadowmask (baked-only mode required)
@@ -628,7 +657,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ### Geometry
 
-```
+```text
 □ Total triangle count < 200K (target 50K–100K)
 □ LOD groups configured for all objects > 1K triangles
 □ No excessive particle systems (count ≤ 10, particles/system ≤ 100)
@@ -638,7 +667,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ### Platform-Specific Features
 
-```
+```text
 □ No AVPro video player components — replaced with Unity Video Player
 □ No post-processing components (Post Process Volume, etc.)
 □ No real-time shadow settings on any light
@@ -648,7 +677,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ### Testing
 
-```
+```text
 □ Build and Run targeting Android in Unity — check for shader errors
 □ Tested in VRChat on actual Quest hardware or using a Quest emulator
 □ Frame rate monitored: stable 72 FPS at spawn with 1 player
@@ -711,7 +740,7 @@ Reduce draw calls with Static Batching, GPU Instancing, and texture atlasing (se
 
 Quest uses the Qualcomm Adreno GPU, which natively supports **ASTC** (Adaptive Scalable Texture Compression). Always override textures to ASTC for the Android platform:
 
-```
+```text
 Inspector → Texture → Android override:
 ├── Format: ASTC 6x6 block  (diffuse, albedo — good quality/size balance)
 ├── Format: ASTC 4x4 block  (UI, normal maps — higher quality)

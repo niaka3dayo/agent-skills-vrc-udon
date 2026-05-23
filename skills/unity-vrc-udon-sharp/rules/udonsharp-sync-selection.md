@@ -5,7 +5,7 @@ See `../references/sync-examples.md` for practical patterns and code examples.
 
 ## Decision Tree
 
-```
+```text
 Q1: Does it need to be visible to other players?
   No  -> No sync (no [UdonSynced], NoVariableSync)
   Yes -> Q2
