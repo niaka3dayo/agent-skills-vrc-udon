@@ -98,6 +98,18 @@ If a world runs at 72 FPS on Quest with a single test client, it will typically 
 
 **NEVER optimize exclusively for PC with "Quest support added later"** — by that point, lighting, materials, and mesh density are all locked to PC quality, and the Quest port requires rebuilding everything.
 
+**Quest First Cascade** — when Quest is required, every downstream decision inherits constraints:
+
+```text
+Quest required? → Yes
+  ├── Shaders: Mobile-only (Standard Lite, Toon Lit)
+  ├── Lighting: Fully baked (no realtime shadows)
+  ├── Geometry: < 50K triangles per world
+  ├── Materials: < 25 unique materials
+  ├── Audio: Mono, compressed, limited concurrent sources
+  └── Physics: Simplified colliders, minimal Rigidbodies
+```
+
 ## SDK Versions
 
 **Supported versions**: SDK 3.7.1 - 3.10.3
@@ -277,32 +289,15 @@ Exactly **one** is required in every VRChat world.
 
 ### Performance Optimization Workflow
 
-If FPS is below target, follow this workflow — measure before guessing:
+| Bottleneck Type | Key Indicators | Reference |
+|----------------|---------------|-----------|
+| CPU-bound | High script time, physics overhead | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
+| GPU-bound | Draw calls, overdraw, shader complexity | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
+| Memory | VRAM usage, texture size, mesh count | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
 
-```text
-1. Measure
-   ├── Unity Profiler: standard profiling in Play mode (primary; Deep Profile only for function-level deep dives — avoid on Quest, misleading results)
-   ├── VRChat overlay: type "/perf" in-game
-   └── Stats window: Draw Calls, Triangles, VRAM
+**MANDATORY READ**: Load [performance.md](references/performance.md) before optimizing — measure first, then target the largest bottleneck.
 
-2. Identify bottleneck category
-   ├── CPU-bound (high Draw Calls): → Batching / LOD / Culling / Static flags
-   ├── GPU-bound (shader cost): → Mirror / Realtime lights / Post-Processing
-   ├── Memory (VRAM spikes): → Reduce texture resolution / video players
-   └── Physics: → Disable Rigidbodies / Cloth / Constraints on Quest
-
-3. Fix largest impact first, re-measure after each change
-   (estimates below are typical ranges; actual gains vary by world complexity)
-   Mirror ON by default    → Disable by default               (often -40-50% render cost)
-   Realtime shadows        → Bake all lights                  (often -30-50% GPU cost)
-   High lightmap resolution → Reduce and re-profile           (often -30-70% VRAM)
-   Unbatched static objects → Mark as Static + enable batching (often -30-60% draw calls)
-   Many active particles   → Pool; disable off-screen          (often -10-20% CPU)
-```
-
-**Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
-
-**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization. Run the profiling workflow above first to identify the bottleneck category before consulting references.
+**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization.
 **Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
