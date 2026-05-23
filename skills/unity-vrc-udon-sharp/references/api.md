@@ -910,7 +910,7 @@ public class CameraMonitor : UdonSharpBehaviour
 
 ### Notes
 
-```
+```text
 - All properties are read-only from Udon. Camera settings cannot be set via this API.
 - OnVRCCameraSettingsChanged fires for both ScreenCamera and PhotoCamera changes;
   filter by comparing the parameter with VRCCameraSettings.ScreenCamera.

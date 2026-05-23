@@ -213,7 +213,7 @@ PhysBones provide physics-based bone animation:
 2. Configure physics parameters
 3. Add UdonBehaviour for grab events (optional)
 
-```
+```text
 VRC Phys Bone
 ├── Root Transform: RopeStart
 ├── End Bone: (auto-detected or manual)
@@ -395,7 +395,7 @@ VRC Constraints replace Unity's built-in Constraints with a VRChat-optimized ver
 
 ### Constraints Setup
 
-```
+```text
 VRC Position Constraint
 ├── Sources: [Transform1 (weight 0.5), Transform2 (weight 0.5)]
 ├── Constraint Active: true

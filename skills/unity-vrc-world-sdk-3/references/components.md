@@ -94,7 +94,7 @@ Allows players to grab objects.
 
 ### Required Setup
 
-```
+```text
 [Pickup GameObject]
 ├── Collider (Required)
 │   └── IsTrigger = true recommended
@@ -200,7 +200,7 @@ Creates a location where players can sit.
 
 ### Required Setup
 
-```
+```text
 [Station GameObject]
 ├── Collider (Required - for Interact)
 └── VRC_Station
@@ -261,7 +261,7 @@ public class StationController : UdonSharpBehaviour
 
 ### Avatar Station Rules
 
-```
+```text
 ⚠️ Additional restrictions for Stations on avatars:
 - Maximum 6 Stations
 - Station Descriptor (red box) must be enabled at upload time
@@ -341,7 +341,7 @@ Creates a mirror.
 
 ### Performance Warning
 
-```
+```text
 ⚠️ Significant performance impact:
 - Renders the entire scene an additional time
 - VR: Both eyes × 2 = 4x rendering
@@ -428,7 +428,7 @@ Creates a portal to another world.
 
 ### Setup
 
-```
+```text
 [Portal GameObject] ← Place at the root of the scene hierarchy
 ├── VRC_PortalMarker
 │   ├── World ID: wrld_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -438,7 +438,7 @@ Creates a portal to another world.
 
 ### Important Restrictions
 
-```
+```text
 ⚠️ Portals must be placed at the root of the scene hierarchy
    Instance information from preceding players is synced to other players
 
@@ -485,7 +485,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 ### Avatar Restrictions
 
-```
+```text
 ⚠️ AudioSource on avatars:
 - Gain limit: 10 dB
 - Far limit: 40 m
@@ -501,7 +501,7 @@ Enables VRChat interaction with Unity UI (Canvas).
 
 ### Setup
 
-```
+```text
 [Canvas GameObject]
 ├── Canvas (Render Mode: World Space)
 ├── VRC_UIShape
@@ -532,7 +532,7 @@ Enables VRChat interaction with Unity UI (Canvas).
 
 ### TextMeshPro Recommendation
 
-```
+```text
 ✅ TextMeshPro:
 - High-quality text rendering
 - Better readability in VR
@@ -552,7 +552,7 @@ Displays avatars and allows switching.
 
 ### Setup
 
-```
+```text
 [Pedestal GameObject]
 ├── VRC_AvatarPedestal
 │   └── Avatar ID: avtr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -567,7 +567,7 @@ Moves the player's camera along a defined spline path (SDK 3.9+). Typically used
 
 ### Setup
 
-```
+```text
 [Dolly Track Root]
 ├── VRC_CameraDolly
 │   ├── Path (SplineContainer or CinemachinePath reference)
@@ -644,7 +644,7 @@ public class DollyController : UdonSharpBehaviour
 
 ### Ownership and Network Notes
 
-```
+```text
 - VRC_CameraDolly only affects the local player's camera.
 - Play/Stop calls are local — no network sync is built in.
 - To sync a cinematic across all players, call Play() via
@@ -768,7 +768,7 @@ Unity standard components available in VRChat.
 
 ### Disabled on Quest/Android
 
-```
+```text
 ❌ Dynamic Bones
 ❌ Cloth (allowed in worlds, not on avatars)
 ❌ Physics on Avatar (Rigidbody, Collider, Joint)

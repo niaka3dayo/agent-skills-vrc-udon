@@ -55,7 +55,7 @@ public class MyScript : UdonSharpBehaviour { }
 
 ## Sync Strategy Decision Tree
 
-```
+```text
 Q1: Does data need to persist across sessions / per-player?
   Yes -> PlayerData (SDK 3.7.4+) or PlayerObject
   No  -> Q2

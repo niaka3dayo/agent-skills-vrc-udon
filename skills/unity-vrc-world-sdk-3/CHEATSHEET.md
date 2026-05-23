@@ -22,7 +22,7 @@
 
 ### Checklist
 
-```
+```text
 □ VRCWorld prefab × 1
 □ Spawns configured
 □ Respawn Height set (below the floor)
@@ -44,7 +44,7 @@
 
 ### Spawn Order
 
-```
+```text
 Sequential: 0 → 1 → 2 → 0 → 1 (in order)
 Random:     Random selection
 Demo:       All players at Spawns[0]
@@ -66,7 +66,7 @@ Demo:       All players at Spawns[0]
 
 ### VRC_Pickup Setup
 
-```
+```text
 [GameObject]
 ├── Collider (IsTrigger recommended)
 ├── Rigidbody
@@ -87,7 +87,7 @@ OnPickupUseUp()      // Trigger released
 
 ### VRC_Station Setup
 
-```
+```text
 [GameObject]
 ├── Collider
 └── VRC_Station
@@ -190,7 +190,7 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 
 ### Optimization Checklist
 
-```
+```text
 □ Light baking complete
 □ Realtime lights ≤ 1
 □ Mirror default OFF
@@ -206,7 +206,7 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 
 ### Quick Setup
 
-```
+```text
 ✅ DO:
 ├── Lightmapper: Progressive GPU
 ├── Light Mode: Baked / Mixed
@@ -230,7 +230,7 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 
 ### Light Probes
 
-```
+```text
 Placement locations:
 ✅ Where players walk
 ✅ Light/dark boundaries
@@ -287,7 +287,7 @@ OnVideoReady()
 
 ### Pre-Upload Checklist
 
-```
+```text
 □ VRC_SceneDescriptor × 1
 □ Spawns configured
 □ Respawn Height appropriate
@@ -300,7 +300,7 @@ OnVideoReady()
 
 ### Upload Procedure
 
-```
+```text
 1. VRChat SDK > Show Control Panel
 2. Builder tab
 3. Check & fix Validations
@@ -324,7 +324,7 @@ OnVideoReady()
 
 ### Content Warnings
 
-```
+```text
 □ Adult Language
 □ Blood/Gore
 □ Fear/Horror

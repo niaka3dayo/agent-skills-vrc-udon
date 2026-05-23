@@ -29,7 +29,7 @@ to a C# object, the GC can reclaim it. However, `Texture2D` is a **Unity engine 
 it has a small C# wrapper, but the actual pixel data lives in **unmanaged GPU memory** (VRAM).
 The GC sees only the tiny C# wrapper and cannot reclaim the GPU allocation.
 
-```
+```text
 C# heap (managed):                  GPU VRAM (unmanaged):
 ┌──────────────────────────┐        ┌───────────────────────────────┐
 │ Texture2D wrapper  (40 B)│──────> │ Pixel data  (width×height×bpp)│
@@ -195,7 +195,7 @@ The solution is a **double-buffer**: two Renderer slots (A and B) that alternate
 The new image loads into the "back" slot, a fade animation plays, and once the fade is
 complete the old texture is safe to destroy.
 
-```
+```text
 State 0 — Image X is displayed on Renderer A (front)
            Renderer B is idle (back)
 
@@ -419,7 +419,7 @@ public class DoubleBufferImageDisplay : UdonSharpBehaviour
 Download the next image each cycle. After the fade, destroy the old texture. VRAM holds
 at most two textures at once regardless of how many images are in the playlist.
 
-```
+```text
 Cycle 1: Download A  → display A  → VRAM: A
 Cycle 2: Download B  → fade A→B  → Destroy A  → VRAM: B
 Cycle 3: Download C  → fade B→C  → Destroy B  → VRAM: C
@@ -434,7 +434,7 @@ Cycle 3: Download C  → fade B→C  → Destroy B  → VRAM: C
 Download all images once, store the textures in a `Material[]` array. On repeat visits
 to the same image, use the cached texture — no download, instant transition.
 
-```
+```text
 Startup: Download A, B, C, D  → VRAM: A + B + C + D
 Runtime: Cycle through cached textures  → no further downloads
 ```
@@ -621,7 +621,7 @@ player is far from an image display, while keeping it sharp up close.
 A logarithmic curve gives a natural feel: the bias increases slowly near the object
 and accelerates as distance grows.
 
-```
+```text
 bias = log2(distance / sharpDistance)
 ```
 
