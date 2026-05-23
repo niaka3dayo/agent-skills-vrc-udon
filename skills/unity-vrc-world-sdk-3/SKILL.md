@@ -59,17 +59,17 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 
 Load only what the task requires.
 
-| Task | MANDATORY READ | Optional | Do NOT Load |
-|------|---------------|----------|-------------|
-| Setting up a new scene from scratch | `components.md`, `layers.md` | `upload.md` | `audio-video.md`, `troubleshooting.md` |
-| Making objects grabbable (VRC_Pickup) | `components.md` | `layers.md` | `audio-video.md`, `lighting.md` |
-| Setting up seating (VRC_Station) | `components.md` | `layers.md` | `audio-video.md`, `performance.md` |
-| Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` |
-| Adding audio or video player | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` |
-| Baking lights / lightmap setup | `lighting.md`, `performance.md` | — | `audio-video.md`, `layers.md` |
-| World upload and publish | `upload.md` | `troubleshooting.md` | `audio-video.md`, `lighting.md` |
-| Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` |
-| Mirror setup and configuration | `components.md` | `performance.md` | `audio-video.md`, `upload.md` |
+| Task | MANDATORY READ | Optional | Do NOT Load | Load Rationale |
+|------|---------------|----------|-------------|----------------|
+| Setting up a new scene from scratch | `components.md`, `layers.md` | `upload.md` | `audio-video.md`, `troubleshooting.md` | Collision matrix non-obvious; component deps needed upfront |
+| Making objects grabbable (VRC_Pickup) | `components.md` | `layers.md` | `audio-video.md`, `lighting.md` | Pickup/Rigidbody requirements not in standard Unity docs |
+| Setting up seating (VRC_Station) | `components.md` | `layers.md` | `audio-video.md`, `performance.md` | Station collider + exit requirements are VRChat-specific |
+| Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` | Quest limits differ from PC; bake requirements non-obvious |
+| Adding audio or video player | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |
+| Baking lights / lightmap setup | `lighting.md`, `performance.md` | — | `audio-video.md`, `layers.md` | Lightmap resolution and probe placement affect Quest VRAM |
+| World upload and publish | `upload.md` | `troubleshooting.md` | `audio-video.md`, `lighting.md` | Upload steps and validation order are fragile; easy to miss |
+| Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` | VRChat collision matrix differs from Unity default |
+| Mirror setup and configuration | `components.md` | `performance.md` | `audio-video.md`, `upload.md` | Mirror layer mask requirements are VRChat-specific |
 
 ## Before Starting a New World — Design Decisions
 
@@ -82,8 +82,6 @@ These decisions shape every downstream choice. Make them first, before placing a
 | **Primary interaction?** | Grab (Pickup) / Sit (Station) / Watch (Video) / Explore | Determines which SDK components are mandatory |
 | **Lighting approach?** | Baked / Mixed / Realtime | Realtime is only viable on PC-only worlds; all lights must be baked before upload |
 | **Networked objects?** | None / Physics (Pickup+ObjectSync) / State (UdonSynced) | Determines sync architecture before Udon scripting begins |
-
-> **The most expensive mistake**: Designing for PC and adding Quest "later." By that point, lighting resolution, material complexity, and mesh density are locked. The Quest port then requires rebuilding the entire lighting and material pipeline.
 
 ---
 
@@ -99,6 +97,18 @@ Quest (Meta Quest 2/3/Pro) defines the performance budget:
 If a world runs at 72 FPS on Quest with a single test client, it will typically run at 90+ FPS on PC — though results vary by shader complexity, CPU-bound workloads, and hardware differences. The converse rarely holds. Verify against the [official VRChat optimization documentation](https://creators.vrchat.com/worlds/udon/performance-and-optimization/) before publishing.
 
 **NEVER optimize exclusively for PC with "Quest support added later"** — by that point, lighting, materials, and mesh density are all locked to PC quality, and the Quest port requires rebuilding everything.
+
+**Quest First Cascade** — when Quest is required, every downstream decision inherits constraints:
+
+```text
+Quest required? → Yes
+  ├── Shaders: Mobile-only (Standard Lite, Toon Lit)
+  ├── Lighting: Fully baked (no realtime shadows)
+  ├── Geometry: 50K-100K triangles (target range)
+  ├── Materials: < 25 unique materials
+  ├── Audio: Mono, compressed, limited concurrent sources
+  └── Physics: Simplified colliders, minimal Rigidbodies
+```
 
 ## SDK Versions
 
@@ -279,32 +289,15 @@ Exactly **one** is required in every VRChat world.
 
 ### Performance Optimization Workflow
 
-If FPS is below target, follow this workflow — measure before guessing:
+| Bottleneck Type | Key Indicators | Reference |
+|----------------|---------------|-----------|
+| CPU-bound | High script time, physics overhead | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
+| GPU-bound | Draw calls, overdraw, shader complexity | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
+| Memory | VRAM usage, texture size, mesh count | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
 
-```text
-1. Measure
-   ├── Unity Profiler: standard profiling in Play mode (primary; Deep Profile only for function-level deep dives — avoid on Quest, misleading results)
-   ├── VRChat overlay: type "/perf" in-game
-   └── Stats window: Draw Calls, Triangles, VRAM
+**MANDATORY READ**: Load [performance.md](references/performance.md) before optimizing — measure first, then target the largest bottleneck.
 
-2. Identify bottleneck category
-   ├── CPU-bound (high Draw Calls): → Batching / LOD / Culling / Static flags
-   ├── GPU-bound (shader cost): → Mirror / Realtime lights / Post-Processing
-   ├── Memory (VRAM spikes): → Reduce texture resolution / video players
-   └── Physics: → Disable Rigidbodies / Cloth / Constraints on Quest
-
-3. Fix largest impact first, re-measure after each change
-   (estimates below are typical ranges; actual gains vary by world complexity)
-   Mirror ON by default    → Disable by default               (often -40-50% render cost)
-   Realtime shadows        → Bake all lights                  (often -30-50% GPU cost)
-   High lightmap resolution → Reduce and re-profile           (often -30-70% VRAM)
-   Unbatched static objects → Mark as Static + enable batching (often -30-60% draw calls)
-   Many active particles   → Pool; disable off-screen          (often -10-20% CPU)
-```
-
-**Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
-
-**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization. Run the profiling workflow above first to identify the bottleneck category before consulting references.
+**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization.
 **Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
@@ -400,72 +393,29 @@ If FPS is below target, follow this workflow — measure before guessing:
 
 ## Troubleshooting
 
-### Diagnostic Router
+### Quick Router
 
-Identify the symptom category, then follow the diagnostic path:
+Identify the symptom category and jump to the reference section:
 
-**Physics / Collision**
-- **Player walks through walls or floor**
-  1. Did you run "Setup Layers for VRChat"? (SDK > Builder tab)
-     - No → Run it. The default collision matrix blocks player↔environment collision.
-     - Yes → Is the geometry on the **Environment layer (11)**?
-       - No → Move all walkable surfaces, walls, and floors to layer 11.
-       - Yes → Open Physics > Layer Collision Matrix: Environment × Player row must be **ON**.
-- **Pickup passes through floors / walls**
-  → Pickup must be on **Pickup layer (13)**, not Default (0). In the collision matrix, Pickup × Environment must be ON.
+| Symptom Category | Common Cause | Reference |
+|-----------------|-------------|-----------|
+| Player walks through walls / floor | Layer setup not run; geometry not on Environment (11) | [troubleshooting.md §Layer & Collision](references/troubleshooting.md#layer--collision-issues) |
+| Can't grab / Pickup not working | Missing Collider, Rigidbody, or VRC_Pickup component | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
+| Object not syncing / snaps back | Missing VRC_ObjectSync or ownership not transferred | [troubleshooting.md §Networking](references/troubleshooting.md#networking-issues) |
+| Can't sit / clips through Station | Missing Collider; Station Collision Transform needs adjustment | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
+| Mirror not reflecting | Layers mask missing Player/PlayerLocal/MirrorReflection | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
+| Build / Upload fails | Missing SceneDescriptor, script errors, layer warnings | [troubleshooting.md §Build](references/troubleshooting.md#build--upload-issues) |
+| Performance issues | Mirror ON, realtime lights, uncooked lightmaps | [performance.md](references/performance.md) |
+| Works in Editor but fails in VRChat | Editor Play ≠ SDK runtime; use Build & Test | [troubleshooting.md §Editor](references/troubleshooting.md#editor--runtime-discrepancy) |
+| UI visible but not clickable | VRC_UIShape on Screen Space / Overlay Canvas (see NEVER #11) | [troubleshooting.md §Editor](references/troubleshooting.md#editor--runtime-discrepancy) |
 
-**Grab / Interaction**
-- **Can't grab Pickup at all**
-  1. Collider present? No → Add a Collider component.
-  2. Rigidbody present? No → Add a Rigidbody component.
-  3. VRC_Pickup component present? No → Add it.
-- **Pickup grabbed but immediately released**
-  → Check **DisallowTheft** on VRC_Pickup. If the current holder already owns it, a second grab may be blocked.
-
-**Sync / Network**
-- **Pickup position doesn't update for other players**
-  → Add **VRC_ObjectSync** (requires Rigidbody). Without it, only the local client moves the object.
-- **Pickup returns to original position on drop**
-  → Ownership is not being transferred. Verify VRC_Pickup or UdonSharp script calls `Networking.SetOwner` before moving.
-
-**Seated / Station**
-- **Can't sit in Station (no interaction prompt)**
-  → **VRC_Station requires a Collider** on the same or a child GameObject to register the interaction ray.
-- **Player clips into Station geometry after sitting**
-  → Adjust the **Station Collision Transform** field in the VRC_Station Inspector.
-
-**Mirror**
-- **Mirror doesn't reflect players or world**
-  → Open VRC_MirrorReflection > Layers. Must include: **Player (9)**, **PlayerLocal (10)**, **MirrorReflection (18)**, **Environment (11)**.
-- **Mirror causes severe FPS drop**
-  → Remove unnecessary layers from the Layers mask, and ensure **Mirror is OFF by default** (see NEVER #1).
-
-**Build / Upload**
-- **SDK build error in VRChat Control Panel**
-  → Builder tab lists all ⚠️ and ✖️ blockers with descriptions. Resolve each before building.
-- **"Missing script" on a UdonSharp component**
-  → The `.cs` file must have a matching `.asset` file. See the "missing .asset / script-asset pairing" rule in the `unity-vrc-udon-sharp` skill.
-
-**Editor / Runtime Discrepancy**
-- **World works in Unity Editor Play mode but fails or behaves differently in VRChat**
-  → Unity Play mode does not replicate all SDK behaviors. Use **"Build & Test New Build"** (SDK > Builder tab) — this launches the actual VRChat client locally. Editor Play is useful only for quick UdonSharp iteration.
-- **Interactive UI element is visible but cannot be clicked in VRChat**
-  → VRC_UIShape on a Screen Space or Overlay Canvas (see NEVER #11). Set Canvas > Render Mode to **World Space**.
-
-**MANDATORY READ** [`references/troubleshooting.md`](references/troubleshooting.md) only if the Diagnostic Router above did not resolve the issue. **Do NOT Load** for non-troubleshooting tasks.
+**MANDATORY READ** [`references/troubleshooting.md`](references/troubleshooting.md) when diagnosing any issue. **Do NOT Load** for non-troubleshooting tasks.
 
 ---
 
 ## Related Skills
 
-| Task                     | Skill to Use              |
-| ------------------------ | ------------------------- |
-| C# code creation         | `unity-vrc-udon-sharp`    |
-| Network sync (Udon)      | `unity-vrc-udon-sharp`    |
-| Event implementation     | `unity-vrc-udon-sharp`    |
-| Scene setup              | **This skill**            |
-| Component placement      | **This skill**            |
-| Performance optimization | **This skill**            |
+For C# scripting, network sync, and UdonSharp event implementation, use the `unity-vrc-udon-sharp` skill.
 
 ---
 

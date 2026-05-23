@@ -160,6 +160,20 @@ Common problems encountered during world development and their solutions.
 
 ```
 
+### Pickup grabbed but immediately released by second player
+
+**Symptom**: A second player grabs the Pickup but it snaps back or releases immediately
+
+**Solution**:
+
+```text
+
+1. Check DisallowTheft on VRC_Pickup
+2. If DisallowTheft is true, the current holder owns it exclusively — a second grab is blocked
+3. Set DisallowTheft to false if shared grabbing is intended
+
+```
+
 ### Can't release VRC_Pickup
 
 **Symptom**: Can't release a grabbed object
@@ -182,10 +196,24 @@ Common problems encountered during world development and their solutions.
 
 ```text
 
-1. Check that a Collider exists
+1. Check that a Collider exists on the same or a child GameObject
 2. Confirm VRC_Station's Disable Station Exit is false
 3. If using UseAttachedStation() in Udon,
    verify the script is on the same object as the Station
+
+```
+
+### Player clips into Station geometry after sitting
+
+**Symptom**: Avatar visually penetrates the seat or floor after sitting
+
+**Solution**:
+
+```text
+
+1. Adjust the Station Collision Transform field in the VRC_Station Inspector
+2. Move the Station Collision Transform to an unobstructed position
+3. Ensure the Exit Transform is also clear of obstacles
 
 ```
 
@@ -211,8 +239,12 @@ Common problems encountered during world development and their solutions.
 
 ```text
 
-1. Check MirrorReflection layer settings
-2. Confirm the mirror is enabled
+1. Open VRC_MirrorReflection > Layers. Must include:
+   - Player (9)
+   - PlayerLocal (10)
+   - MirrorReflection (18)
+   - Environment (11)
+2. Confirm the mirror GameObject is enabled
 3. Check the camera's Near/Far Clip
 4. Check mirror resolution
 
@@ -353,6 +385,22 @@ Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
 ```
 
+### Pickup returns to original position on drop
+
+**Symptom**: Dropped object snaps back to its original position for remote players
+
+**Solution**:
+
+```csharp
+
+// Ownership is not being transferred. Call SetOwner before moving:
+Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+// Without ownership transfer, only the local client moves the object
+// and it snaps back when the local client releases it.
+
+```
+
 ### State doesn't sync for Late Joiners
 
 **Symptom**: State not reflected for players who join later
@@ -485,6 +533,40 @@ WebSearch:
 WebSearch:
   query: "issue site:github.com/vrchat-community"
   allowed_domains: ["github.com"]
+
+```
+
+---
+
+## Editor / Runtime Discrepancy
+
+### World works in Unity Editor but fails in VRChat
+
+**Symptom**: Behavior in Editor Play mode differs from actual VRChat client
+
+**Solution**:
+
+```text
+
+Unity Play mode does not replicate all SDK behaviors.
+Use "Build & Test New Build" (VRChat SDK > Builder tab) to launch the actual
+VRChat client locally. Editor Play is useful only for quick UdonSharp iteration.
+
+```
+
+### Interactive UI element is visible but cannot be clicked in VRChat
+
+**Symptom**: Canvas UI renders but is not interactive in VRChat
+
+**Solution**:
+
+```text
+
+VRC_UIShape requires World Space Canvas.
+Screen Space and Overlay modes throw a runtime Unity error in VRChat —
+the UI renders visually but is not interactive, with no visible error.
+
+Fix: Set Canvas > Render Mode to World Space before adding VRC_UIShape.
 
 ```
 

@@ -21,6 +21,35 @@ Poor: < 45 FPS - improvement required
 
 ---
 
+## Optimization Workflow
+
+If FPS is below target, follow this workflow — measure before guessing:
+
+```text
+1. Measure
+   ├── Unity Profiler: standard profiling in Play mode (primary; Deep Profile only for function-level deep dives — avoid on Quest, misleading results)
+   ├── VRChat overlay: type "/perf" in-game
+   └── Stats window: Draw Calls, Triangles, VRAM
+
+2. Identify bottleneck category
+   ├── CPU-bound (high Draw Calls): → Batching / LOD / Culling / Static flags
+   ├── GPU-bound (shader cost): → Mirror / Realtime lights / Post-Processing
+   ├── Memory (VRAM spikes): → Reduce texture resolution / video players
+   └── Physics: → Disable Rigidbodies / Cloth / Constraints on Quest
+
+3. Fix largest impact first, re-measure after each change
+   (estimates below are typical ranges; actual gains vary by world complexity)
+   Mirror ON by default    → Disable by default               (often -40-50% render cost)
+   Realtime shadows        → Bake all lights                  (often -30-50% GPU cost)
+   High lightmap resolution → Reduce and re-profile           (often -30-70% VRAM)
+   Unbatched static objects → Mark as Static + enable batching (often -30-60% draw calls)
+   Many active particles   → Pool; disable off-screen          (often -10-20% CPU)
+```
+
+**Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
+
+---
+
 ## Key Performance Factors
 
 ### 1. Mirrors
