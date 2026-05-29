@@ -16,6 +16,10 @@ skills/                          # Skill content (distributed to users)
     doc-sync-reminder.sh         # PostToolUse hook: reminds about doc updates
   skills/
     unity-vrc-skills-renovator/  # Meta-skill for maintaining skills (dev only, not distributed)
+  audit/                         # SDK coverage-audit tooling + ledger (maintainer-only, not distributed)
+    README.md                    # How to run the SDK-bump diff audit
+    sdk-coverage-ledger.md       # Decision ledger (candidates, verdicts, skips)
+    scripts/                     # census / diff / refine pipeline
 templates/                       # AI tool config templates (distributed to users)
   CLAUDE.md                      # Claude Code project instructions
   AGENTS.md                      # Codex CLI / generic agent instructions
@@ -203,6 +207,10 @@ Public VRChat creator docs and the `vrchat-community/UdonSharp` API page sometim
 This repo uses a gitignored local workspace pattern at `unity-project-for-sdk-search/` for that verification. The directory is intentionally not packed into the npm tarball — only its `README.md` is tracked so the convention is discoverable on clone. See [`unity-project-for-sdk-search/README.md`](unity-project-for-sdk-search/README.md) for one-time setup steps, the canonical `strings | grep` command, and the Udon wrapper symbol legend.
 
 Use this verification path before documenting any API that you cannot confirm against the official public docs.
+
+### Coverage audit (SDK bumps)
+
+Beyond point verification of a single API, the same workspace backs a repeatable **coverage audit** that diffs the full Udon-callable surface against current skill coverage to surface undocumented-but-shipped gaps — the structural problem behind #190 (`VRCObjectPool.Shuffle()`) and #213/#214 (missing events). Run it on each SDK bump and triage only what changed. The procedure and tooling are in [`.claude/audit/README.md`](.claude/audit/README.md); the inclusion policy it feeds — binary presence is a discovery signal only, never grounds for inclusion — is in [`CONTRIBUTING.md`](CONTRIBUTING.md) ("Content Scope").
 
 ## Editing Skills
 
