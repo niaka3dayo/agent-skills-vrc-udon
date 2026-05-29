@@ -74,13 +74,22 @@ VRCPlayerApi.TrackingData trackingData = player.GetTrackingData(TrackingDataType
 ### Voice and Audio
 
 ```csharp
-// Voice settings (affects how others hear this player)
+// Voice settings — how the local (listening) player hears the target player
 player.SetVoiceGain(float gain);              // 0-24 dB, default 15
 player.SetVoiceDistanceNear(float distance);  // Default: 0
 player.SetVoiceDistanceFar(float distance);   // Default: 25
 player.SetVoiceVolumetricRadius(float radius); // Default: 0
 player.SetVoiceLowpass(bool enabled);         // Default: true
+
+// Getters for the same settings (release-noted in SDK 3.6.1; see Note)
+float gain    = player.GetVoiceGain();
+float near    = player.GetVoiceDistanceNear();
+float far     = player.GetVoiceDistanceFar();
+float radius  = player.GetVoiceVolumetricRadius();
+bool  lowpass = player.GetVoiceLowpass();
 ```
+
+> **Note**: The voice getters are named in the [SDK 3.6.1 release notes](https://creators.vrchat.com/releases/release-3-6-1/) — added to `VRCPlayerApi` and exposed to Udon — but do not appear on the current [Player Audio](https://creators.vrchat.com/worlds/udon/players/player-audio/), Players, or UdonSharp API reference pages. Each is parameterless and returns the value type of its matching setter (4 `float`, 1 `bool`). This entry records that they exist and their signatures; it does not specify runtime read semantics. What a getter returns before its setter has run, whether it reflects the last value set versus the live effective value, and whether local- and remote-player reads behave identically, are not verified here — confirm against your SDK/client before relying on a getter's return value (for example, before using one in place of your own tracked state). Re-check after the Voice Audio Rework (SDK 3.10.4) lands.
 
 ### Avatar Methods
 
