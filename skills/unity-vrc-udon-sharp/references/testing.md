@@ -251,6 +251,7 @@ Run through this checklist before publishing any world.
 
 - [api.md](api.md) - VRCObjectPool API, VRCPlayerApi methods, and Camera Dolly API reference
 - [networking.md](networking.md) - Ownership model, sync modes, and RequestSerialization
+- [context-preservation.md](context-preservation.md) - Lightweight task-context notes for resumed or ownership-sensitive work
 - [networking-antipatterns.md](networking-antipatterns.md) - Common networking mistakes and how to avoid them
 - [troubleshooting.md](troubleshooting.md) - Common errors and solutions
 - [events.md](events.md) - Complete event list including OnDeserialization and OnPlayerRestored

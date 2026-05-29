@@ -42,6 +42,13 @@ Use web search to reference official documentation and community resources:
 | `site:feedback.vrchat.com` | Known bugs and feature requests | `site:feedback.vrchat.com PhysBones worlds` |
 | `site:github.com/vrchat-community` | Samples and libraries | `site:github.com/vrchat-community ClientSim` |
 
+## Context Preservation
+
+For complex synced systems, ownership-sensitive multi-file refactors, or work resumed after context compaction/handoff, consider the lightweight guide at `skills/unity-vrc-udon-sharp/references/context-preservation.md`.
+Use it to preserve task-specific source of truth, sync strategy, ownership, late-joiner, owner-left, and validation decisions.
+Skip it for small mechanical edits.
+Keep secrets, private data, and raw transcripts out of any note.
+
 ## Hooks
 
 PostToolUse auto-validation when editing `.cs` files:

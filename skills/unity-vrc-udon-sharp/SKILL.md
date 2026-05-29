@@ -35,6 +35,13 @@ Four architectural decisions that must be made before choosing sync modes or wri
 - **What do late joiners see?** State set only by one-time events (`SendCustomNetworkEvent`) is invisible to late joiners. Persistent state requires `[UdonSynced]` variables; the owner calls `RequestSerialization()` on join events to push current state to newcomers.
 - **What if the owner leaves mid-session?** Without explicit `OnPlayerLeft` handling, the object's synced state can never change again. Decide upfront: auto-transfer to master, reset to a known default, or the next interacting player claims ownership.
 
+## Context Preservation
+
+For complex synced systems, ownership-sensitive refactors, or work resumed after compaction/handoff, consider loading `references/context-preservation.md`.
+It provides a lightweight task-context note for source of truth, transport, sync mode, storage, ownership, late-joiner behavior, and validation rationale.
+This is optional guidance for complex work, not a step for small mechanical edits.
+Keep private data and raw transcripts out of any note.
+
 ## Core Principles
 
 1. **Constraints First** — Assume standard C# features are blocked until verified. Check `udonsharp-constraints.md` before using any API.
@@ -117,6 +124,7 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
 | Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
+| Resuming complex work after compaction / handoff / ownership-sensitive multi-file refactor | Current task's primary references | `context-preservation.md` | Unrelated domain references |
 | Writing new UdonSharp scripts (not sure if sync needed) | `constraints.md` | `networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 
@@ -238,6 +246,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback, VRCStation, seated player, trigger zone, OnPlayerTriggerEnter not firing, station collider, position polling, OnStationEntered |
 | `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |
 | `testing.md` | Testing and debugging guide: ClientSim editor testing, Build and Test (single and multi-client), Debug.Log patterns, pre-release cleanup, testing checklist | ClientSim, Build and Test, multi-client, late joiner test, debug, Debug.Log, ownership test, sync test, testing checklist |
+| `context-preservation.md` | Context-preservation guide: recording task-specific design intent (source of truth, sync strategy, ownership, late-joiner behavior, validation) across context compaction/handoff; minimal task-context note; privacy guidance; resume checklist | context preservation, design intent, compaction, handoff, resume, task context note, why this design, ownership rationale, design-context loss |
 
 ## Templates (`assets/templates/`)
 
