@@ -848,4 +848,5 @@ public void DebugPrintAllData()
 
 - [sync-examples.md](sync-examples.md) - Practical patterns for syncing persistent state with other players
 - [networking.md](networking.md) - Ownership and serialization needed for PlayerObject sync
+- [context-preservation.md](context-preservation.md) - Task-context notes for persistence, source-of-truth, ownership, and restore decisions
 - [events.md](events.md) - `OnPlayerRestored` and `OnPersistenceUsageUpdated` event reference

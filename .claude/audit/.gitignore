@@ -1,0 +1,5 @@
+# Generated census/diff output is a near-complete symbol listing. Keep it out of
+# git so the repo does not read as an SDK API mirror (the tooling reproduces it
+# on demand). Curated decisions live in sdk-coverage-ledger.md instead.
+*.json
+.generated/
