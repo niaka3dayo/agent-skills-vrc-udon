@@ -12,16 +12,25 @@ Status values: `candidate` (found, not yet behavior-verified) · `verified`
 (behavior confirmed, eligible for inclusion) · `included` (in a skill) ·
 `skip` (decided against — reason required) · `inconclusive` (doc status unresolved).
 
-> **Nothing in this ledger is in the skill yet.** A `candidate` is a discovery
-> pending behavior verification (gate 3), not an inclusion decision.
+> A `candidate` is a discovery pending behavior verification (gate 3), not an
+> inclusion decision. Rows marked `included` have shipped to a skill — see the
+> status column. An item may go `candidate → included` without a `verified`
+> stop when it ships as a reference-gap entry: documented signatures with
+> runtime behavior explicitly disclaimed in its notes (gate-3 verification
+> recorded as out-of-scope).
 
 ## Audit: SDK 3.10.3 (initial)
+
+### Included
+
+| API | methods | doc status (oracle) | AI-relevance | status | notes |
+|-----|---------|---------------------|--------------|--------|-------|
+| VRCPlayerApi voice getters | `GetVoiceGain`, `GetVoiceDistanceNear`, `GetVoiceDistanceFar`, `GetVoiceLowpass`, `GetVoiceVolumetricRadius` | release-noted, reference-missing — named in [SDK 3.6.1 release notes](https://creators.vrchat.com/releases/release-3-6-1/) (added to VRCPlayerApi, exposed to Udon); absent from player-audio / players / udonsharp-api pages (15/15 cells verified absent) | high — clean setter/getter asymmetry; agents know the documented setters but not these | `included` | Shipped in api.md (Issue #230). Reclassified from `undocumented` during verification: the 3.6.1 release note names them, so this is a reference-gap, not a binary-only discovery. Behavior edge-cases (value-before-set, last-set vs effective, local vs remote read) intentionally NOT asserted — out of scope without hands-on. Voice Audio Rework (#209) verified not to touch this surface. |
 
 ### Candidates — undocumented-but-shipped, pending behavior verification
 
 | API | methods | doc status (oracle) | AI-relevance | status | notes |
 |-----|---------|---------------------|--------------|--------|-------|
-| VRCPlayerApi voice getters | `GetVoiceGain`, `GetVoiceDistanceNear`, `GetVoiceDistanceFar`, `GetVoiceLowpass`, `GetVoiceVolumetricRadius` | undocumented — player-audio page documents all 5 **setters**, getters absent there + on players + udonsharp api pages (decisive page checked) | high — clean setter/getter asymmetry; agents know the documented setters but not these | `candidate` | strongest, lowest-risk candidate. Gate 3: confirm getter return semantics (current vs last-set; local vs remote) before any claim |
 | VRCPlayerApi Combat | `CombatSetup`, `CombatSetMaxHitpoints`, `CombatGetCurrentHitpoints`, `CombatSetCurrentHitpoints`, `CombatSetDamageGraphic`, `CombatSetRespawn`, `CombatGetDestructible` | undocumented — absent from players page, udonsharp api; no combat-system doc page exists | high (existence) | `candidate` | purest undocumented-but-shipped, but **legacy** (SDK2-era). Inclusion is a value call: is it used enough today to warrant skill space? |
 | VRCPlayerApi voice moderation | `ClearSilence`, `SetSilencedToTagged`, `SetSilencedToUntagged` | undocumented — absent from player-audio (canonical), players, api | med-high | `candidate` | framing-sensitive (moderation). Behavior unverified |
 | PlayerData | `IsType` | undocumented — absent from player-data page, persistence overview, api; documented siblings are `GetType`/`TryGetType` | med-high — agents confuse it with the documented siblings | `candidate` | lower-confidence negative; re-verify independently before inclusion |
