@@ -32,8 +32,8 @@ Four architectural decisions that must be made before choosing sync modes or wri
 
 - **Who owns this state?** One owner writes; all others read. If two players can both write (e.g., a shared toggle), you need an ownership transfer protocol — writes without ownership are silently discarded.
 - **When does ownership transfer?** On grab? Interact? Game event? `OnPlayerLeft`? `Networking.SetOwner` is **locally immediate** on the calling client — `Networking.IsOwner(gameObject)` is `true` synchronously after the call, and writing `[UdonSynced]` fields plus `RequestSerialization()` immediately afterwards is safe under an `IsOwner` guard. Concurrent `SetOwner` calls from multiple clients are resolved by network arrival order — there is no client-side arbitration, so accept that the loser's write is overwritten.
-- **What do late joiners see?** State set only by one-time events (`SendCustomNetworkEvent`) is invisible to late joiners. Persistent state requires `[UdonSynced]` variables; the owner calls `RequestSerialization()` on join events to push current state to newcomers.
-- **What if the owner leaves mid-session?** Without explicit `OnPlayerLeft` handling, the object's synced state can never change again. Decide upfront: auto-transfer to master, reset to a known default, or the next interacting player claims ownership.
+- **What do late joiners see?** State set only by one-time events (`SendCustomNetworkEvent`) is invisible to late joiners. Late-joiner-visible state must live in `[UdonSynced]` variables, which are delivered automatically via `OnDeserialization`; no manual `RequestSerialization()` on join is needed.
+- **What if the owner leaves mid-session?** VRChat automatically transfers ownership to a remaining player (selection rule is not publicly documented), and `OnOwnershipTransferred` fires on all clients. Synced variables are preserved, so state is not frozen; decide upfront whether to keep the current value, reset to a known default, or re-apply/re-broadcast derived state in `OnOwnershipTransferred`.
 
 ## Context Preservation
 
