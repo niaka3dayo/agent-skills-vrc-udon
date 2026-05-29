@@ -25,7 +25,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--diff", default=".claude/audit/.generated/diff.json")
     args = ap.parse_args()
-    d = json.load(open(args.diff, encoding="utf-8"))
+    with open(args.diff, encoding="utf-8") as f:
+        d = json.load(f)
 
     print("== TIER 1 high-signal: missing NON-ACCESSOR methods on skill-taught components ==")
     rows = []

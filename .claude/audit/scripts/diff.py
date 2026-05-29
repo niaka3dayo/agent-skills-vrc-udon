@@ -71,13 +71,15 @@ def main():
     ap.add_argument("--out", default=DEFAULT_OUT)
     args = ap.parse_args()
 
-    data = json.load(open(args.census, encoding="utf-8"))
+    with open(args.census, encoding="utf-8") as f:
+        data = json.load(f)
     census, boiler = data["census"], set(data["boilerplate"])
 
     texts = []
     for ext in ("**/*.md", "**/*.cs"):
         for p in glob.glob(os.path.join(args.skill_dir, ext), recursive=True):
-            texts.append(open(p, encoding="utf-8", errors="ignore").read())
+            with open(p, encoding="utf-8", errors="ignore") as f:
+                texts.append(f.read())
     skill = "\n".join(texts)
 
     def in_skill(tok):
@@ -107,7 +109,8 @@ def main():
     tier1.sort(key=lambda r: -len(r["missing_from_skill"]))
     tier2.sort(key=lambda r: -r["n_distinct"])
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-    json.dump({"tier1": tier1, "tier2": tier2}, open(args.out, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    with open(args.out, "w", encoding="utf-8") as f:
+        json.dump({"tier1": tier1, "tier2": tier2}, f, indent=1, ensure_ascii=False)
     print(f"wrote {args.out}: tier1={len(tier1)} (covered-but-incomplete), tier2={len(tier2)} (unmentioned)")
 
 
