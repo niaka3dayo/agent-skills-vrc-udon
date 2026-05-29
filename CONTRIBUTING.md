@@ -45,7 +45,7 @@ If the only reason "this is bad" is "the community dislikes it" or "it's ethical
 
 **NEVER #19** (removed in v1.7.1 via [PR #157](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/157)) prescribed against VRChat+ gameplay-gating. It was removed because the failure mode was a community/design preference, not a technical or platform-enforced one. That removal is the precedent for this policy: rules whose justification collapses to "social consequence only" are rejected going forward.
 
-### SDK API knowledge — documented vs undocumented-but-shipped
+### SDK API knowledge — documented, release-noted, or undocumented-but-shipped
 
 The Reviewer test above gates on *why* something is bad (technical/platform vs
 social). A second, **orthogonal** axis governs SDK API coverage: *where the
@@ -64,6 +64,18 @@ reference. The skills add the *delta* the docs miss.
   at creators.vrchat.com or udonsharp.docs.vrchat.com (signature + description),
   the docs already cover it. The skill adds something only when the API also
   clears the Reviewer test (a non-obvious, VRChat-specific footgun).
+- **Release-noted but reference-missing → may be included.** An API named on an
+  official VRChat SDK release page (creators.vrchat.com/releases/), but with no
+  reference-page entry (signature + description on creators.vrchat.com /
+  udonsharp.docs.vrchat.com), is a distinct, *stronger* case than binary-only
+  discovery: the release note is official evidence the API exists and was meant to
+  be used. Still confirm it ships in the target SDK binary — the release note
+  establishes intent, the wrapper DLL confirms delivery. It is still **not
+  "documented"** in the skip sense above — an agent consulting the reference pages
+  cannot find it, so the misleads-by-omission bar is met. Include it with the same
+  labeling discipline as undocumented-but-shipped entries (classification +
+  observed SDK version + evidence + verified-vs-unknown behavior). The
+  `VRCPlayerApi` voice getters (#230) are the worked example.
 - **Undocumented-but-shipped APIs may be included — carefully.** When an API is
   in the shipped SDK, used in practice, and **absent from official docs**, an AI
   agent cannot know it exists and will mislead users by omission. That is exactly
