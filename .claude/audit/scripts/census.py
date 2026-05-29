@@ -45,19 +45,19 @@ INFRA_NAMES = {".ctor", ".cctor", "get_Name", "get_GetterType"}
 
 
 def sval(x):
+    """Return the plain string value of a dnfile string-heap field."""
     return x.value if hasattr(x, "value") else str(x)
 
 
 def is_infra(name):
+    """True for wrapper-class members that are not Udon extern signatures."""
     if name in INFRA_NAMES:
         return True
     if name.startswith("GetExternFunction"):
         return True
     if "." in name:  # interface-explicit re-implementations (dup of __ form)
         return True
-    if not name.startswith("__"):
-        return True
-    return False
+    return not name.startswith("__")
 
 
 def decode(sym):
@@ -74,6 +74,7 @@ def decode(sym):
 
 
 def main():
+    """Parse the wrapper DLL and write the per-type method census to --out."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--dll", default=DEFAULT_DLL, help="path to VRC.Udon.VRCWrapperModules.dll")
     ap.add_argument("--out", default=DEFAULT_OUT)

@@ -14,12 +14,14 @@ import json
 
 
 def split(ms):
+    """Partition method names into (verb methods, get_/set_ accessors)."""
     methods = [m for m in ms if not m.startswith(("get_", "set_"))]
     acc = [m for m in ms if m.startswith(("get_", "set_"))]
     return methods, acc
 
 
 def main():
+    """Print the high-signal Tier-1 verb-method gaps from --diff."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--diff", default=".claude/audit/.generated/diff.json")
     args = ap.parse_args()

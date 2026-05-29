@@ -38,6 +38,7 @@ NS = sorted([
 
 
 def clean_name(extern):
+    """Recover a component's short name by stripping namespace segments."""
     s = extern[len("Extern"):] if extern.startswith("Extern") else extern
     changed = True
     while changed:
@@ -51,16 +52,19 @@ def clean_name(extern):
 
 
 def cand2(extern):
+    """Fallback short name: the trailing VRC-prefixed token, if any."""
     s = extern[len("Extern"):] if extern.startswith("Extern") else extern
     m = re.search(r"(VRC[A-Za-z0-9]+)$", s)
     return m.group(1) if m else None
 
 
 def prop_token(name):
+    """Strip a get_/set_ accessor prefix to the underlying property name."""
     return name.split("_", 1)[1] if name.startswith(("get_", "set_")) else name
 
 
 def main():
+    """Diff the census against skill text; write tiered gaps to --out."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--census", default=DEFAULT_CENSUS)
     ap.add_argument("--skill-dir", default=DEFAULT_SKILL_DIR)
@@ -77,6 +81,7 @@ def main():
     skill = "\n".join(texts)
 
     def in_skill(tok):
+        """True if token appears in skill text on a word-ish boundary."""
         return bool(tok) and re.search(r"(?<![A-Za-z0-9])" + re.escape(tok) + r"(?![A-Za-z0-9])", skill) is not None
 
     tier1, tier2 = [], []

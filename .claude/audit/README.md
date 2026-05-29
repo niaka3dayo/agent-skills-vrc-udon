@@ -17,9 +17,16 @@ justifies inclusion on its own; see the policy.
 
 ## When to run
 
-On each **SDK version bump**. Run the census against the new SDK, diff against
-the previous run, and triage only what changed. Do not re-audit the full surface
-every time — that is the treadmill this procedure is designed to avoid.
+On each **SDK version bump**. Re-run the pipeline against the new SDK, then
+triage its output against the [ledger](sdk-coverage-ledger.md): any API already
+recorded there (`included` / `skip` / `inconclusive`) needs no re-work — only
+APIs new to this SDK, or whose status changed, deserve attention.
+
+The pipeline recomputes the full binary-minus-skill set each run (it does not
+diff one census against another — the generated census is gitignored and
+overwritten). The **ledger is the cross-version memory** that keeps this from
+being a re-audit-from-scratch treadmill: it persists every prior decision, so a
+bump is "what's not already in the ledger", not "read 78 types again".
 
 ## Prerequisites
 
