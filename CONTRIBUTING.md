@@ -45,6 +45,45 @@ If the only reason "this is bad" is "the community dislikes it" or "it's ethical
 
 **NEVER #19** (removed in v1.7.1 via [PR #157](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/157)) prescribed against VRChat+ gameplay-gating. It was removed because the failure mode was a community/design preference, not a technical or platform-enforced one. That removal is the precedent for this policy: rules whose justification collapses to "social consequence only" are rejected going forward.
 
+### SDK API knowledge — documented vs undocumented-but-shipped
+
+The Reviewer test above gates on *why* something is bad (technical/platform vs
+social). A second, **orthogonal** axis governs SDK API coverage: *where the
+knowledge comes from*. An API earns a skill slot only if it clears **both**.
+
+The skills are not an API reference and do not aim for exhaustive SDK coverage.
+The official docs (creators.vrchat.com, udonsharp.docs.vrchat.com) are the API
+reference. The skills add the *delta* the docs miss.
+
+- **Binary presence is discovery, not grounds for inclusion.** A symbol being
+  callable from Udon (visible in the wrapper DLL / Udon graph) only means it is
+  *callable* — it is never, by itself, a reason to document it. Most of the SDK
+  surface is adequately documented officially and belongs to the docs, not here.
+  Mirroring it would dilute the skills' knowledge-delta value.
+- **Documented APIs → skip.** If an API is documented on a human-readable page
+  at creators.vrchat.com or udonsharp.docs.vrchat.com (signature + description),
+  the docs already cover it. The skill adds something only when the API also
+  clears the Reviewer test (a non-obvious, VRChat-specific footgun).
+- **Undocumented-but-shipped APIs may be included — carefully.** When an API is
+  in the shipped SDK, used in practice, and **absent from official docs**, an AI
+  agent cannot know it exists and will mislead users by omission. That is exactly
+  the delta the skill should carry (e.g. `VRCObjectPool.Shuffle()`, #190). Such
+  entries must be labeled as undocumented-but-shipped, with the observed SDK
+  version, the evidence, and — separately — what behavior is verified vs unknown.
+- **Never infer behavior from existence.** The binary confirms a method is
+  *callable*; it says nothing about ownership, sync timing, late-joiner effects,
+  or return semantics. Those must be verified against official docs or hands-on
+  multi-client testing before any behavioral claim is written (the [#194](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/194) lesson).
+- **Events vs methods.** Udon events/callbacks are a small, bounded set where
+  knowing one *exists* is itself the technical-relevance bar — an agent that does
+  not know an event exists cannot write correct code (the misleads-by-omission
+  case), so the event still clears the Reviewer test rather than bypassing it,
+  and near-complete coverage is justified. Component methods are a long tail —
+  curate hard; do not bulk-add.
+
+Maintainer tooling and the decision ledger for this audit live under
+[`.claude/audit/`](.claude/audit/README.md) (not distributed in the npm package).
+
 ## What to Report
 
 - **Incorrect constraints**: A rule says something is blocked but it actually works (or vice versa)
