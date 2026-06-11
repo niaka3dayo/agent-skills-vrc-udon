@@ -496,7 +496,7 @@ private void DoAction()
 
 **Solution:**
 
-Read synced state in `OnDeserialization`; it fires after the joining client receives current values. `Start()` may run before the first deserialization, so do not read synced variables there.
+Read synced state in `OnDeserialization`; it fires after the joining client receives current values. `Start()` runs before the first deserialization, so do not read synced variables there.
 
 ```csharp
 
@@ -1555,7 +1555,7 @@ var myScript = other.GetComponent<MyScript>();
 
 ```
 
-On SDK 3.8+, `GetComponent<MyScript>()` works for direct `UdonSharpBehaviour` subclasses. Fetching `UdonBehaviour` itself returns the first `UdonBehaviour` regardless of program type.
+On SDK 3.8+, `GetComponent<MyScript>()` works for `UdonSharpBehaviour` subclasses (including inherited types — see sdk-migration.md). Fetching `UdonBehaviour` itself returns the first `UdonBehaviour` regardless of program type.
 
 **Solution (Runtime, pre-SDK 3.8):**
 

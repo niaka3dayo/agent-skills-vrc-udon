@@ -844,7 +844,7 @@ If the current owner calls `RequestSerialization()` at or very close to the time
 
 1. Synced variable value arrives and changes.
 2. The `[FieldChangeCallback]` property setter runs for the changed field.
-3. `OnDeserialization` fires immediately after.
+3. `OnDeserialization` follows.
 
 In this specific edge case (most likely when the late joiner is the **first instance** on its client), the `[FieldChangeCallback]` setter can run **before** `Start()` has returned. Guard against this with an initialization flag (see pattern below).
 
@@ -892,13 +892,14 @@ public override void OnDeserialization()
 
 #### Initialization Flag Guard
 
-Use a `_isInitialized` flag to ensure setup code runs exactly once after the first `OnDeserialization`, and to guard against a `[FieldChangeCallback]` setter running before `Start()` completes:
+Use a pair of flags: `_isInitialized` suppresses `[FieldChangeCallback]` side effects until `Start()` completes, and `_hasReceivedState` runs one-time setup exactly once after the first `OnDeserialization`:
 
 ```csharp
 [UdonSynced, FieldChangeCallback(nameof(Value))]
 private int _syncedValue;
 
-private bool _isInitialized;
+private bool _isInitialized;    // true once Start() has completed
+private bool _hasReceivedState; // true after the first OnDeserialization
 
 public int Value
 {
@@ -906,6 +907,8 @@ public int Value
     set
     {
         _syncedValue = value;
+        // Suppress side effects until Start() completes — the setter can run
+        // during initial deserialization, before Start() returns.
         if (!_isInitialized) return;
         UpdateDisplay();
     }
@@ -913,14 +916,17 @@ public int Value
 
 void Start()
 {
-    _isInitialized = false;
+    // Render defaults here: on the instance creator's client,
+    // OnDeserialization never fires on initial load.
+    UpdateDisplay();
+    _isInitialized = true;
 }
 
 public override void OnDeserialization()
 {
-    if (!_isInitialized)
+    if (!_hasReceivedState)
     {
-        _isInitialized = true;
+        _hasReceivedState = true;
         InitializeFromSyncedState();
     }
     UpdateDisplay();
@@ -928,7 +934,6 @@ public override void OnDeserialization()
 
 private void InitializeFromSyncedState()
 {
-    UpdateDisplay();
     // Perform any one-time setup that depends on synced variables
 }
 ```

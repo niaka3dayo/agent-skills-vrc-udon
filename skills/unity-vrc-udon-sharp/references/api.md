@@ -1213,6 +1213,7 @@ dollyAnimation.Import();
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components;
 
 public class DollyController : UdonSharpBehaviour
 {
