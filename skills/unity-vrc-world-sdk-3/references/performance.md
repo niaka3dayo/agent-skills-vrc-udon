@@ -80,7 +80,7 @@ Problem:
 - Simultaneous playback increases load
 
 Countermeasures:
-□ Keep to 1-2 players (recommended; no documented hard limit)
+□ Keep to 1-2 players on PC, 1 on Quest (recommended; no documented hard limit)
 □ Avoid simultaneous playback
 □ Provide a low-resolution option
 ```
