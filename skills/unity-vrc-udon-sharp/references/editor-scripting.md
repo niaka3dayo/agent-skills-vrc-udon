@@ -303,6 +303,182 @@ public class MyToolWindow : EditorWindow
 #endif
 ```
 
+## Editor-Only Setup Components (IEditorOnly)
+
+### The Problem
+
+In-scene setup tooling such as light-probe placers, multi-component wiring helpers, and prefab configurators is editor-only by nature. A plain `MonoBehaviour` in a world scene is not on the world component whitelist, so SDK validation reports it as an incompatible script. It would never execute in the VRChat client anyway, because custom MonoBehaviour scripts do not run in the client — Udon is the only user scripting runtime in worlds. Creators need a supported way to keep these helpers in the scene without validation complaints.
+
+### The IEditorOnly Marker Interface
+
+`VRC.SDKBase.IEditorOnly` is a marker interface with no members (verified against SDK 3.10.3). The [official build-pipeline callbacks and interfaces docs](https://creators.vrchat.com/sdk/build-pipeline-callbacks-and-interfaces/) state that implementing it marks a script as editor-only for SDK validation, so the SDK ignores the component when scanning a world or avatar for incompatible scripts. Non-whitelisted components do not function in the VRChat client (see the [world component whitelist](https://creators.vrchat.com/worlds/whitelisted-world-components/)), so the helper has no runtime effect either way — `IEditorOnly` is about passing SDK validation cleanly and declaring intent.
+
+```csharp
+using UnityEngine;
+using VRC.SDKBase;
+
+// Setup-only helper: SDK validation ignores it and it does not run in the client
+public class LightProbeSetupHelper : MonoBehaviour, IEditorOnly
+{
+    public float spacing = 2.0f;
+    public Bounds targetArea;
+
+#if UNITY_EDITOR
+    [ContextMenu("Generate Probes")]
+    private void GenerateProbes()
+    {
+        // Place light probes from spacing / targetArea
+        // (a real implementation uses UnityEditor APIs — hence the directive)
+    }
+#endif
+}
+```
+
+Two key rules:
+
+1. The script must live in a runtime assembly. A component cannot come from an `Editor` folder, so any use of `UnityEditor` APIs inside it must be wrapped in `#if UNITY_EDITOR`; otherwise platform builds fail to compile. Attributes such as `[ContextMenu]`, `[Header]`, `[Range]`, and `[Tooltip]` are `UnityEngine` types and need no directive.
+2. `UdonSharpBehaviour` cannot implement interfaces (see [constraints.md](constraints.md)), so `IEditorOnly` is exclusively for plain `MonoBehaviour` helpers. That is exactly the niche it fills: editor tooling that UdonSharp cannot express.
+
+### IEditorOnly vs the EditorOnly Tag
+
+| Aspect | `IEditorOnly` interface | `EditorOnly` tag |
+|--------|-------------------------|------------------|
+| Granularity | Single component | Entire GameObject (with its children) |
+| Mechanism | VRChat SDK validation treats the component as editor-only | Unity standard: tagged GameObjects are excluded from builds |
+| Runtime components on the same GameObject | Keep working | Removed together with the GameObject |
+| Typical use | Setup helper attached next to runtime components | Dev-only objects (test rigs, reference geometry, measurement guides) |
+
+Use the tag when the whole object is development-only; use the interface when only the tooling component is.
+
+### Setup Helper Pattern: One-Click Udon Configuration
+
+An `IEditorOnly` helper can expose a small set of designer-facing fields, then a custom inspector or `[ContextMenu]` method applies them to one or more `UdonSharpBehaviour` components through the editor APIs covered in [Proxy System](#proxy-system): `Undo.RecordObject`, field assignment, `UdonSharpEditorUtility.CopyProxyToUdon`, then `EditorUtility.SetDirty` or scene dirty marking. Prefab users get explicit, simplified configuration in one place and one button instead of hand-editing serialized fields across several Udon components. Missing references can be surfaced before upload via an inspector help box.
+
+The pattern splits across two files: the runtime `UdonSharpBehaviour` in its own file (the class name must match the file name, paired with its program asset — see [UdonSharpProgramAsset Auto-Generation](#udonsharpprogramasset-auto-generation)), and the editor-only helper with its custom inspector in another.
+
+```csharp
+// TeleporterController.cs — runtime behaviour, ships with the world
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+public class TeleporterController : UdonSharpBehaviour
+{
+    public Transform exit;
+
+    public override void Interact()
+    {
+        if (exit == null || Networking.LocalPlayer == null)
+        {
+            return;
+        }
+
+        Networking.LocalPlayer.TeleportTo(exit.position, exit.rotation);
+    }
+}
+```
+
+```csharp
+// TeleporterSetupHelper.cs — editor-only setup component, ignored by SDK validation
+using UnityEngine;
+using VRC.SDKBase;
+
+#if UNITY_EDITOR
+using UdonSharpEditor;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+#endif
+
+public class TeleporterSetupHelper : MonoBehaviour, IEditorOnly
+{
+    public Transform entrance;
+    public Transform exit;
+    public TeleporterController controller;
+
+    private void OnDrawGizmosSelected()
+    {
+        if (entrance == null || exit == null)
+        {
+            return;
+        }
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawLine(entrance.position, exit.position);
+        Gizmos.DrawWireSphere(entrance.position, 0.25f);
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(exit.position, 0.25f);
+    }
+}
+
+#if UNITY_EDITOR
+[CustomEditor(typeof(TeleporterSetupHelper))]
+public class TeleporterSetupHelperEditor : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        serializedObject.Update();
+        DrawPropertiesExcluding(serializedObject, "m_Script");
+        serializedObject.ApplyModifiedProperties();
+
+        TeleporterSetupHelper helper = (TeleporterSetupHelper)target;
+        bool missingReferences =
+            helper.entrance == null ||
+            helper.exit == null ||
+            helper.controller == null;
+
+        if (missingReferences)
+        {
+            EditorGUILayout.HelpBox(
+                "Assign entrance, exit, and controller before applying setup.",
+                MessageType.Warning
+            );
+        }
+
+        using (new EditorGUI.DisabledScope(missingReferences))
+        {
+            if (GUILayout.Button("Apply Setup"))
+            {
+                ApplySetup(helper);
+            }
+        }
+    }
+
+    private static void ApplySetup(TeleporterSetupHelper helper)
+    {
+        TeleporterController controller = helper.controller;
+
+        // Move the interactable to the entrance, then wire the destination
+        Undo.RecordObject(controller.transform, "Apply Teleporter Setup");
+        controller.transform.SetPositionAndRotation(
+            helper.entrance.position, helper.entrance.rotation);
+
+        Undo.RecordObject(controller, "Apply Teleporter Setup");
+        controller.exit = helper.exit;
+
+        UdonSharpEditorUtility.CopyProxyToUdon(controller);
+        EditorUtility.SetDirty(controller);
+
+        if (!Application.isPlaying)
+        {
+            EditorSceneManager.MarkSceneDirty(controller.gameObject.scene);
+        }
+    }
+}
+#endif
+```
+
+This inspector is for the plain helper, not for a `UdonSharpBehaviour`, so it does not call `UdonSharpGUI.DrawDefaultUdonSharpBehaviourHeader`. Plain `#if UNITY_EDITOR` is also sufficient in the helper file: `!COMPILER_UDONSHARP` guards code against the UdonSharp compile pass (see [Preprocessor Directives](#preprocessor-directives)) and only matters in files containing an `UdonSharpBehaviour`.
+
+### Choosing the Right Mechanism
+
+| Goal | Use |
+|------|-----|
+| Editor-only methods, gizmos, or validation on a U# script itself | `#if UNITY_EDITOR && !COMPILER_UDONSHARP` blocks (see [Preprocessor Directives](#preprocessor-directives)) |
+| Friendly inspector for a single UdonSharpBehaviour | Custom inspector with `DrawDefaultUdonSharpBehaviourHeader` (see [Custom Inspectors](#custom-inspectors)) |
+| Scene-wide or multi-component setup tooling living in the scene | Plain `MonoBehaviour` + `IEditorOnly` (+ custom inspector) |
+| Exclude an entire dev-only GameObject from upload | `EditorOnly` tag |
+
 ## Property Drawers
 
 ```csharp
