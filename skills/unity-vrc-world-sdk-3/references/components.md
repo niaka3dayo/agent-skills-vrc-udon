@@ -119,7 +119,7 @@ Allows players to grab objects.
 | Exact Grip | Transform | Exact grip position | null |
 | Exact Gun | Transform | Exact gun position | null |
 | Proximity | float | Pickup distance | 2.0 |
-| **Auto Hold** | enum | Yes/No/AutoDetect | No |
+| **Auto Hold** | enum | Yes/No (v1.1; AutoDetect is v1.0-only) | No |
 
 ### Auto Hold (SDK 3.9+)
 

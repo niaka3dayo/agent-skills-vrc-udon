@@ -453,7 +453,7 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 | Custom shaders | Supported with caution | Custom shaders are allowed for worlds; use mobile-compatible shaders to avoid GPU overload. Avatars are restricted to VRChat Mobile shaders. |
 | Post-processing effects | Not supported | Bloom, depth of field, color grading unavailable |
 | Real-time shadows | Not supported | Baked lighting only |
-| Video players | Work with some limitations | See audio-video.md (Quest URL resolution caveats) |
+| Video players | Work with some limitations | See audio-video.md (some URLs unsupported on Quest) |
 | Particle systems | Limited | Reduce count and complexity |
 
 ### Features Not Available on Quest

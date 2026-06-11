@@ -122,7 +122,7 @@ AudioSource:
 └── Volume: 1.0
 
 VRC_SpatialAudioSource:
-├── Gain: +6 dB (louder)
+├── Gain: 12 dB (above the 10 dB default)
 ├── Near: 5 m
 ├── Far: 50 m
 ├── Volumetric Radius: 10 m

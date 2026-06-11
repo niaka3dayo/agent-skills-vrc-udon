@@ -49,7 +49,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
 | 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile with post-processing disabled |
 | 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
-| 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use Animator-driven transforms (no constraints) or remove cloth from Quest meshes |
+| 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use VRC Constraints (SDK 3.10.0+, world-supported) or Animator-driven transforms, and remove cloth from Quest meshes |
 | 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit (PC) / 5-10 (Quest) as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
@@ -330,7 +330,7 @@ Exactly **one** is required in every VRChat world.
 
 | Property              | Description           | Default            |
 | --------------------- | --------------------- | ------------------ |
-| Gain                  | Volume (dB)           | 0 (World: +10)    |
+| Gain                  | Volume boost (0-24 dB) | 10 dB (world default) |
 | Near                  | Attenuation start     | 0m                 |
 | Far                   | Attenuation end       | 40m                |
 | Volumetric Radius     | Source spread          | 0m                 |
@@ -435,9 +435,9 @@ Starter templates for common SDK component patterns. Each template compiles with
 | ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
 | `references/components.md`      | All component details, component whitelist, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
 | `references/layers.md`          | Layers & collision                                                                               | 300+          |
-| `references/performance.md`     | Performance optimization                                                                         | 500+          |
+| `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |
-| `references/audio-video.md`     | Audio & video                                                                                    | 400+          |
+| `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
 | `references/upload.md`          | Upload procedure                                                                                 | 300+          |
 | `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
 | `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |

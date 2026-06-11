@@ -335,7 +335,7 @@ components with `IEditorOnly` — see
 1. Set mirror to default OFF
 2. Reduce/remove realtime lights
 3. Bake lights
-4. Check video player count (max 2)
+4. Check video player count (1-2 recommended)
 5. Reduce Draw Calls
 6. Reduce polygon count
 7. Lower texture resolution
