@@ -31,7 +31,8 @@ Does another player need to see this value?
           │                 └─ Yes ─→ PlayerObject (synced UdonBehaviour per player)
           │
           └─ Shared ─────── Does a late joiner need to see the current value?
-                            ├─ No ──→ SendCustomNetworkEvent (fire-and-forget, no payload)
+                            ├─ No ──→ SendCustomNetworkEvent (fire-and-forget, no payload;
+                            │          or up to 8 parameters with [NetworkCallable], SDK 3.8.1+)
                             └─ Yes ─→ [UdonSynced] variable (Continuous or Manual)
 ```
 
@@ -41,9 +42,9 @@ Does another player need to see this value?
 |-------|-------|----------|----------|-------------|
 | **Non-synced field** | Self only | Until scene reload | Unlimited | UI state, timers, cooldown flags |
 | **[UdonSynced]** | All players in instance | Instance lifetime (late joiners receive current value) | ~200 B continuous / ~280KB (280,496 bytes) manual per behaviour | Shared game state, scores, toggles |
-| **SendCustomNetworkEvent** | All players in instance | Instant (no persistence, late joiners miss it) | Event name only (no payload) | Sound effects, particle triggers, one-shot notifications |
+| **SendCustomNetworkEvent** | All players in instance | Instant (no persistence, late joiners miss it) | Event name only, or up to 8 parameters with `[NetworkCallable]` (SDK 3.8.1+) | Sound effects, particle triggers, one-shot notifications |
 | **PlayerData** | Per player, readable by all | Cross-session (permanent until deleted) | 100 KB per player per world | Settings, unlocks, high scores |
-| **PlayerObject** | Per player, synced behaviour | Instance lifetime (+ cross-session if `VRCEnablePersistence` is on) | One UdonBehaviour per player | Complex per-player state with frequent updates |
+| **PlayerObject** | Per player, synced behaviour | Instance lifetime (+ cross-session if `VRCEnablePersistence` is on) | Multiple UdonBehaviours per prefab (combined toward the 100 KB limit) | Complex per-player state with frequent updates |
 
 ### Common Mistakes
 
@@ -183,13 +184,13 @@ PlayerObject is a more powerful system for per-player state management. When a p
 
 ### Required Components
 
-All three components must be on the same root GameObject of your prefab:
+These components live on the same root GameObject of your prefab; `VRCEnablePersistence` is only required when the data must persist:
 
 | Component | Purpose |
 |-----------|---------|
 | `VRCPlayerObject` | Marks the prefab as a per-player object; triggers auto-instantiation |
 | `UdonBehaviour` | Holds `[UdonSynced]` variables and logic |
-| `VRCEnablePersistence` | Opts the UdonBehaviour's synced data into cloud persistence |
+| `VRCEnablePersistence` | Optional: opts the UdonBehaviour's synced data into cloud persistence |
 
 > Note: `VRCEnablePersistence` must be placed on the **same GameObject** as each `UdonBehaviour` whose data you want persisted. A PlayerObject prefab with no `VRCEnablePersistence` still instantiates per-player but does not persist data.
 
@@ -198,7 +199,7 @@ All three components must be on the same root GameObject of your prefab:
 1. Create a prefab in your project
 2. Add `VRC Player Object` component to the root of the prefab
 3. Add your `UdonSharpBehaviour` script as an `UdonBehaviour` component
-4. Add `VRC Enable Persistence` component to the same root GameObject
+4. If data must persist, add `VRC Enable Persistence` component to the same root GameObject
 5. Place **one instance** of the prefab in the scene — VRChat handles instantiation for all players automatically
 
 ### OnPlayerRestored on PlayerObjects
@@ -371,21 +372,21 @@ public class PlayerBadge : UdonSharpBehaviour
 
 ## Persistence Storage Information API (SDK 3.10.0+)
 
-Since SDK 3.10.0, VRChat exposes methods to query how much persistence storage each player is using. This applies to **both** PlayerData and PlayerObject data combined.
+Since SDK 3.10.0, VRChat exposes methods to query how much PlayerData persistence storage each player is using. PlayerObject has a separate 100 KB per-player quota.
 
 ### API Methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `player.GetPlayerDataStorageUsage()` | `int` (bytes) | Current persistence bytes used by this player |
-| `player.GetPlayerDataStorageLimit()` | `int` (bytes) | Maximum bytes allowed (typically 102400 = 100 KB) |
+| `player.GetPlayerDataStorageUsage()` | `int` (bytes) | Current PlayerData bytes used by this player |
+| `player.GetPlayerDataStorageLimit()` | `int` (bytes) | Maximum PlayerData bytes allowed (typically 102400 = 100 KB) |
 | `player.RequestStorageUsageUpdate()` | `void` | Requests a fresh usage value from the server |
 
 ### OnPersistenceUsageUpdated Event
 
 `OnPersistenceUsageUpdated` fires on the local player's UdonBehaviours when updated storage
 usage data is available (e.g., after a `RequestStorageUsageUpdate()` call or after a write).
-The event signature takes the player whose usage changed.
+The event is parameterless; query `Networking.LocalPlayer` for the updated usage.
 
 ### Storage Monitoring Example
 
@@ -472,7 +473,6 @@ public class StorageMonitor : UdonSharpBehaviour
 | Limit | Value |
 |-------|-------|
 | Total per player per world | 100 KB |
-| String max length | ~50 characters |
 | Key name max length | 128 characters |
 
 ### PlayerObject Limits
@@ -480,7 +480,6 @@ public class StorageMonitor : UdonSharpBehaviour
 | Limit | Value |
 |-------|-------|
 | Total per player per world | 100 KB |
-| Per UdonBehaviour with VRC Enable Persistence | 108 bytes per variable type |
 
 ### Bandwidth Considerations
 

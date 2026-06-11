@@ -543,13 +543,13 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 `OnOwnershipRequest` allows the current owner to **accept or reject** ownership transfer requests:
 
 ```csharp
-private bool _isProcessingCriticalAction = false;
+[UdonSynced] private bool _isProcessingCriticalAction = false; // Shared gate: requester and owner must evaluate identical state.
 
 public override bool OnOwnershipRequest(
     VRCPlayerApi requestingPlayer,
     VRCPlayerApi requestedOwner)
 {
-    // Reject ownership transfers during critical game logic
+    // Reject ownership transfers during critical game logic using synced state
     if (_isProcessingCriticalAction)
     {
         Debug.Log($"Rejected ownership request from {requestingPlayer.displayName} " +
@@ -769,10 +769,10 @@ public class NetworkCallableExample : UdonSharpBehaviour
 
 ### Rate Limiting
 
-`[NetworkCallable]` accepts an optional integer parameter that controls the maximum call rate (in calls per second) allowed for that method per behaviour instance. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
+`[NetworkCallable]` accepts an optional integer parameter that controls the maximum call rate (in calls per second) allowed for that event per behaviour instance. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
 
 ```csharp
-// Default: 5 calls/sec per behaviour (no argument)
+// Default: 5 calls/sec per event per behaviour (no argument)
 [NetworkCallable]
 public void NormalEvent(int value) { }
 
@@ -785,7 +785,7 @@ public void HighFrequencyEvent(float value) { }
 public void RareBroadcast(string message) { }
 ```
 
-**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per behaviour.
+**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
 
 ### Types Usable as Parameters
 
@@ -918,34 +918,28 @@ private void ProcessData()
 
 ### Workaround: Targeting Specific Players
 
-Since direct player targeting is not available, use synced variables:
+Since direct player targeting is not available, include the target player's ID as a `[NetworkCallable]` parameter and let each receiver filter locally:
 
 ```csharp
-[UdonSynced] private int targetPlayerId;
-[UdonSynced] private string message;
-
 public void SendMessageToPlayer(VRCPlayerApi player, string msg)
 {
-    if (!Networking.IsOwner(gameObject))
-    {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-    }
-
-    targetPlayerId = player.playerId;
-    message = msg;
-    RequestSerialization();
-
-    SendCustomNetworkEvent(NetworkEventTarget.All, "CheckMessage");
+    SendCustomNetworkEvent(
+        NetworkEventTarget.All,
+        nameof(CheckMessage),
+        player.playerId,
+        msg
+    );
 }
 
-public void CheckMessage()
+[NetworkCallable]
+public void CheckMessage(int targetPlayerId, string message)
 {
-    if (Networking.LocalPlayer.playerId == targetPlayerId)
-    {
-        ProcessMessage(message);
-    }
+    if (Networking.LocalPlayer.playerId != targetPlayerId) return;
+    ProcessMessage(message);
 }
 ```
+
+Passing both the target and payload as event parameters avoids the synced-variable/event ordering race described above. For pre-3.8.1 SDKs, use synced variables and react in `OnDeserialization`/`FieldChangeCallback`, not in a paired network event.
 
 ## Data Limits
 
@@ -997,7 +991,7 @@ void Update()
 
 ## Object Pooling
 
-Dynamic instantiation is not network-supported in VRChat. Use object pooling with pre-placed GameObjects.
+Avoid instantiating networked objects mid-game. Use object pooling — pre-placed GameObjects or a pool built once in `Start()` (see patterns-networking.md).
 
 For full implementations, see:
 - Simple pool: [patterns-networking.md](patterns-networking.md#object-pooling)
@@ -1012,7 +1006,7 @@ public override void OnPlayerJoined(VRCPlayerApi player)
 
     Debug.Log($"{player.displayName} joined");
 
-    // Sync state for new player if we're owner
+    // Late joiners receive current synced values automatically; this owner refresh is defensive only.
     if (Networking.IsOwner(gameObject))
     {
         RequestSerialization();
@@ -1079,14 +1073,19 @@ public void OnInteract()
 ### Synced Timer
 
 ```csharp
-[UdonSynced] private float gameStartTime;
+[UdonSynced] private double gameStartTime;
 [UdonSynced] private bool gameRunning;
 
 public void StartGame()
 {
-    if (!Networking.IsMaster) return;
+    if (!Networking.IsOwner(gameObject))
+    {
+        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+    }
 
-    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    if (!Networking.IsOwner(gameObject)) return;
+
+    gameStartTime = Networking.GetServerTimeInSeconds();
     gameRunning = true;
     RequestSerialization();
 }
@@ -1095,7 +1094,7 @@ void Update()
 {
     if (!gameRunning) return;
 
-    float elapsed = (float)Networking.GetServerTimeInSeconds() - gameStartTime;
+    double elapsed = Networking.GetServerTimeInSeconds() - gameStartTime;
     timerDisplay.text = elapsed.ToString("F1");
 }
 ```
