@@ -833,6 +833,18 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
 
     public override void OnVideoEnd()
     {
+        // RepeatOne (and a single-entry RepeatAll wrap) changes no synced state,
+        // so non-owners replay locally; _repeatMode and _queueCount are synced.
+        if (!Networking.IsOwner(gameObject))
+        {
+            if (_repeatMode == RepeatOne ||
+                (_repeatMode == RepeatAll && _queueCount == 1))
+            {
+                PlayCurrentEntry();
+            }
+            return;
+        }
+
         AdvanceQueue();
     }
 }
