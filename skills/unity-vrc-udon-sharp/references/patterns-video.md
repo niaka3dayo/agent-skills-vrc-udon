@@ -633,14 +633,15 @@ public class VideoErrorHandler : UdonSharpBehaviour
 
 | Synced variable | Type | Purpose |
 |-----------------|------|---------|
-| `_queueUrl0` ... `_queueUrl7` | `VRCUrl` fields | Fixed-capacity ordered URL slots |
+| `_queueUrls` | `VRCUrl[]` | Fixed-capacity ordered URL slots |
 | `_queuePlayerTypes` | `byte[]` | Player type per slot (0 = Unity, 1 = AVPro) |
 | `_queueHead` | `int` | Index of the currently playing entry |
 | `_queueCount` | `int` | Number of occupied queue slots |
 
 The queue is FIFO: `_queueHead` advances on each video end. Add appends to the logical
-tail. `VRCUrl[]` cannot be synced, so the URL slots use the individual-field workaround
-from [constraints.md](constraints.md#vrcurl-array-sync-workaround).
+tail. `VRCUrl[]` syncs like other arrays (see [constraints.md](constraints.md#synced-vrcurl-lists));
+both arrays are fixed-capacity and must be initialized — an uninitialized synced array
+prevents the behaviour from syncing.
 
 ### Repeat Modes
 
@@ -673,16 +674,10 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
 
     private const int QueueCapacity = 8;
 
-    // VRCUrl[] cannot be [UdonSynced]; see constraints.md "VRCUrl Array Sync Workaround".
-    [UdonSynced] private VRCUrl _queueUrl0 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl1 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl2 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl3 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl4 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl5 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl6 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl _queueUrl7 = VRCUrl.Empty;
-    [UdonSynced] private byte[] _queuePlayerTypes = new byte[QueueCapacity];
+    // VRCUrl[] syncs like other arrays (VRChat 2021.3.2+); initialize synced
+    // arrays — an uninitialized synced array prevents the behaviour from syncing.
+    [UdonSynced] private VRCUrl[] _queueUrls       = new VRCUrl[QueueCapacity];
+    [UdonSynced] private byte[]   _queuePlayerTypes = new byte[QueueCapacity];
     [UdonSynced] private int      _queueHead        = 0;
     [UdonSynced] private int      _queueCount       = 0;
     [UdonSynced] private byte     _repeatMode       = RepeatNone;
@@ -695,7 +690,7 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
         int len = _queueCount;
         if (len >= QueueCapacity) return;
 
-        SetQueueUrl(len, url);
+        _queueUrls[len]        = url;
         _queuePlayerTypes[len] = playerType;
         _queueCount = len + 1;
         RequestSerialization();
@@ -753,11 +748,11 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
         {
             int j = Random.Range(start, i + 1);
 
-            VRCUrl tempUrl  = GetQueueUrl(i);
+            VRCUrl tempUrl  = _queueUrls[i];
             byte   tempType = _queuePlayerTypes[i];
-            SetQueueUrl(i, GetQueueUrl(j));
+            _queueUrls[i]        = _queueUrls[j];
             _queuePlayerTypes[i] = _queuePlayerTypes[j];
-            SetQueueUrl(j, tempUrl);
+            _queueUrls[j]        = tempUrl;
             _queuePlayerTypes[j] = tempType;
         }
 
@@ -793,42 +788,11 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
         _lastSeenCount = _queueCount;
         if (_queueHead < 0 || _queueHead >= _queueCount) return;
 
-        VRCUrl url        = GetQueueUrl(_queueHead);
+        VRCUrl url        = _queueUrls[_queueHead];
         byte   playerType = _queuePlayerTypes[_queueHead];
 
         BaseVRCVideoPlayer player = (playerType == 1) ? _avProPlayer : _unityPlayer;
         player.PlayURL(url);
-    }
-
-    private void SetQueueUrl(int index, VRCUrl url)
-    {
-        switch (index)
-        {
-            case 0: _queueUrl0 = url; break;
-            case 1: _queueUrl1 = url; break;
-            case 2: _queueUrl2 = url; break;
-            case 3: _queueUrl3 = url; break;
-            case 4: _queueUrl4 = url; break;
-            case 5: _queueUrl5 = url; break;
-            case 6: _queueUrl6 = url; break;
-            case 7: _queueUrl7 = url; break;
-        }
-    }
-
-    private VRCUrl GetQueueUrl(int index)
-    {
-        switch (index)
-        {
-            case 0: return _queueUrl0;
-            case 1: return _queueUrl1;
-            case 2: return _queueUrl2;
-            case 3: return _queueUrl3;
-            case 4: return _queueUrl4;
-            case 5: return _queueUrl5;
-            case 6: return _queueUrl6;
-            case 7: return _queueUrl7;
-            default: return VRCUrl.Empty;
-        }
     }
 
     public override void OnVideoEnd()
