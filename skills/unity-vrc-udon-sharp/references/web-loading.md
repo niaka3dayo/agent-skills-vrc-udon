@@ -596,7 +596,7 @@ private void OnAllDownloadsComplete()
 | Want to download faster than every 5 seconds | Rate limiting | Not possible. Requests are only queued. Processing order is random |
 | Image events not received in UdonSharp | `udonBehaviour` parameter not specified | Explicitly pass `(IUdonEventReceiver)this` |
 | JSON numbers are not `int` | VRCJson specification | Cast with `(int)token.Double` |
-| Memory usage keeps growing | Old textures not Disposed | Release with `IVRCImageDownload.Dispose()` |
+| Memory usage keeps growing | Old textures not destroyed | Call `Destroy(oldTexture)` before replacing textures; `IVRCImageDownload.Dispose()` only releases the wrapper state |
 | Error inside JSON after successful parse | Lazy parsing specification | Check for false on `TryGetValue` for nested values |
 
 ---
@@ -615,6 +615,6 @@ private void OnAllDownloadsComplete()
 ## See Also
 
 - [api.md](api.md) - `VRCUrl`, `VRCStringDownloader`, and `VRCImageDownloader` API quick reference
-- [troubleshooting.md](troubleshooting.md) - Web loading error table and debugging tips
+- [troubleshooting.md](troubleshooting.md) - General UdonSharp compile, runtime, networking, persistence, and performance troubleshooting
 - [image-loading-vram.md](image-loading-vram.md) - Advanced VRAM management: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias
 - [web-loading-advanced.md](web-loading-advanced.md) - Advanced data loading: Base64 texture embedding, cross-platform compression, LRU cache

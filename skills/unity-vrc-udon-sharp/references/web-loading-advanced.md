@@ -19,7 +19,7 @@ become bottlenecks in resource-heavy worlds:
 |---|---|---|
 | Rate limit | 1 image per 5 seconds, **shared across the entire scene** | 10 images = 50+ seconds to load |
 | Resolution cap | 2048 × 2048 maximum | Server must pre-resize, or download is rejected |
-| Trusted domain list | Separate, shorter list from string loading | Limits hosting options |
+| Trusted domain list | Separate list from string loading | Limits hosting options |
 | Images per request | 1 | No way to batch a thumbnail strip into one download |
 | Format | PNG / JPG / GIF only | Cannot use GPU-compressed formats (DXT, ETC2) directly |
 
@@ -883,7 +883,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
 | Index file parses but `TryGetAddress` always returns false | Resource ID string case mismatch between JSON and `_slotResourceIds` inspector values | Ensure exact string match; JSON keys are case-sensitive |
 | Pack parses but inner texture is blank | `innerIndex` out of range for the decoded `blocks` array | Log `blocks.Length` and `innerIdx`; confirm JSON `entries` array length matches the pack |
 | All downloads stall after one error | `_pendingUrlIndex` is not reset in `OnStringLoadError`; next callback is misrouted | Reset `_pendingUrlIndex = -1` and `_pendingSlotIndex = -1` in `OnStringLoadError` |
-| UI slots load slowly even with cache hits | `LoadNextSlot` delays 5.5 s between all slots, including cache hits | Skip the 5.5 s delay when dispatching `LoadNextSlot` for a cache hit; only delay when a network download is initiated |
+| UI slots load slowly even with cache hits | Your implementation delays `LoadNextSlot` even when serving from cache | Follow the example above: dispatch `LoadNextSlot` immediately on cache hits; only delay when a network download is initiated |
 
 ---
 

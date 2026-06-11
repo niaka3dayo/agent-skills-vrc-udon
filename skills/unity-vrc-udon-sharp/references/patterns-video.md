@@ -38,6 +38,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -210,6 +211,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class PlaybackTimeSynchronizer : UdonSharpBehaviour
@@ -333,6 +335,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class LateJoinerVideoSync : UdonSharpBehaviour
@@ -493,6 +496,11 @@ public class AVProTextureStabilizer : UdonSharpBehaviour
 | `PlayerError` | Decoder / codec mismatch | Retry N times; then try alternate player |
 | `Unknown` | Unclassified failure | Retry once; give up on second failure |
 
+On AVPro players, a too-frequent `PlayURL` can surface as `VideoError.RateLimited`
+through `OnVideoError`. Requests can also be dropped without any callback (see the
+rate-limit dispatcher discussion in patterns-performance.md); space requests more than
+5 seconds apart instead of relying on the error.
+
 ### Retry Logic
 
 ```text
@@ -513,6 +521,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class VideoErrorHandler : UdonSharpBehaviour
@@ -624,12 +633,15 @@ public class VideoErrorHandler : UdonSharpBehaviour
 
 | Synced variable | Type | Purpose |
 |-----------------|------|---------|
-| `_queueUrls` | `VRCUrl[]` | Ordered list of URLs |
-| `_queuePlayerTypes` | `byte[]` | Player type per entry (0 = Unity, 1 = AVPro) |
+| `_queueUrls` | `VRCUrl[]` | Fixed-capacity ordered URL slots |
+| `_queuePlayerTypes` | `byte[]` | Player type per slot (0 = Unity, 1 = AVPro) |
 | `_queueHead` | `int` | Index of the currently playing entry |
+| `_queueCount` | `int` | Number of occupied queue slots |
 
 The queue is FIFO: `_queueHead` advances on each video end. Add appends to the logical
-tail; the owner compacts the array only when removing mid-queue entries.
+tail. `VRCUrl[]` syncs like other arrays (see [constraints.md](constraints.md#synced-vrcurl-lists));
+both arrays are fixed-capacity and must be initialized — an uninitialized synced array
+prevents the behaviour from syncing.
 
 ### Repeat Modes
 
@@ -647,6 +659,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class SyncedPlaylistManager : UdonSharpBehaviour
@@ -659,9 +672,24 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
     [SerializeField] private BaseVRCVideoPlayer _unityPlayer;
     [SerializeField] private BaseVRCVideoPlayer _avProPlayer;
 
-    [UdonSynced] private VRCUrl[] _queueUrls        = new VRCUrl[0];
-    [UdonSynced] private byte[]   _queuePlayerTypes = new byte[0];
+    private const int QueueCapacity = 8;
+
+    // VRCUrl[] syncs like other arrays (VRChat 2021.3.2+); initialize synced
+    // arrays — an uninitialized synced array prevents the behaviour from syncing.
+    [UdonSynced] private VRCUrl[] _queueUrls       = new VRCUrl[QueueCapacity];
+    [UdonSynced] private byte[]   _queuePlayerTypes = new byte[QueueCapacity];
+
+    void Start()
+    {
+        // Fill every slot so no null VRCUrl element is ever serialized;
+        // late joiners get these overwritten by the first deserialization.
+        for (int i = 0; i < QueueCapacity; i++)
+        {
+            if (_queueUrls[i] == null) _queueUrls[i] = VRCUrl.Empty;
+        }
+    }
     [UdonSynced] private int      _queueHead        = 0;
+    [UdonSynced] private int      _queueCount       = 0;
     [UdonSynced] private byte     _repeatMode       = RepeatNone;
 
     // Owner-only: add a URL to the end of the queue
@@ -669,20 +697,12 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
     {
         if (!Networking.IsOwner(gameObject)) return;
 
-        int len = _queueUrls.Length;
-        VRCUrl[] newUrls  = new VRCUrl[len + 1];
-        byte[]   newTypes = new byte[len + 1];
+        int len = _queueCount;
+        if (len >= QueueCapacity) return;
 
-        for (int i = 0; i < len; i++)
-        {
-            newUrls[i]  = _queueUrls[i];
-            newTypes[i] = _queuePlayerTypes[i];
-        }
-        newUrls[len]  = url;
-        newTypes[len] = playerType;
-
-        _queueUrls        = newUrls;
-        _queuePlayerTypes = newTypes;
+        _queueUrls[len]        = url;
+        _queuePlayerTypes[len] = playerType;
+        _queueCount = len + 1;
         RequestSerialization();
 
         // Start playback if queue was empty
@@ -702,7 +722,7 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
 
         int nextIndex = _queueHead + 1;
 
-        if (nextIndex >= _queueUrls.Length)
+        if (nextIndex >= _queueCount)
         {
             if (_repeatMode == RepeatAll)
             {
@@ -710,8 +730,9 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
             }
             else
             {
-                // RepeatNone: queue exhausted
-                _queueHead = _queueUrls.Length;
+                // RepeatNone: queue exhausted — reset so future adds start fresh
+                _queueHead = 0;
+                _queueCount = 0;
                 RequestSerialization();
                 return;
             }
@@ -731,7 +752,7 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) return;
 
         int start = _queueHead + 1;
-        int end   = _queueUrls.Length - 1;
+        int end   = _queueCount - 1;
 
         for (int i = end; i > start; i--)
         {
@@ -755,9 +776,27 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
         RequestSerialization();
     }
 
+    // PlayURL does not propagate to remote clients, so non-owners and late
+    // joiners start playback from the synced queue state on deserialization.
+    private int _lastSeenHead  = -1;
+    private int _lastSeenCount = 0;
+
+    public override void OnDeserialization()
+    {
+        bool headChanged    = _queueHead != _lastSeenHead;
+        bool queueRestarted = _lastSeenCount == 0 && _queueCount > 0;
+        _lastSeenCount = _queueCount;
+        // Appends behind the playing entry change neither condition,
+        // so they do not restart playback mid-entry.
+        if (!headChanged && !queueRestarted) return;
+        PlayCurrentEntry();
+    }
+
     private void PlayCurrentEntry()
     {
-        if (_queueHead < 0 || _queueHead >= _queueUrls.Length) return;
+        _lastSeenHead  = _queueHead;
+        _lastSeenCount = _queueCount;
+        if (_queueHead < 0 || _queueHead >= _queueCount) return;
 
         VRCUrl url        = _queueUrls[_queueHead];
         byte   playerType = _queuePlayerTypes[_queueHead];
@@ -768,6 +807,18 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
 
     public override void OnVideoEnd()
     {
+        // RepeatOne (and a single-entry RepeatAll wrap) changes no synced state,
+        // so non-owners replay locally; _repeatMode and _queueCount are synced.
+        if (!Networking.IsOwner(gameObject))
+        {
+            if (_repeatMode == RepeatOne ||
+                (_repeatMode == RepeatAll && _queueCount == 1))
+            {
+                PlayCurrentEntry();
+            }
+            return;
+        }
+
         AdvanceQueue();
     }
 }
@@ -800,6 +851,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PlatformUrlSelector : UdonSharpBehaviour

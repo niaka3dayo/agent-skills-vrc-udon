@@ -418,8 +418,8 @@ public class DataProcessor : UdonSharpBehaviour
         ResultData    = output;
 
         // Notify mediator via string event.
-        // String literal used instead of nameof(ProcessMediator.OnResultReady) because
-        // UdonSharp's nameof support for cross-class members is unreliable at runtime.
+        // SendCustomEvent dispatches by method-name string; the literal spells
+        // out the cross-behaviour contract at the call site.
         _mediator.SendCustomEvent("OnResultReady");
     }
 }
@@ -506,13 +506,13 @@ public class MyResultHandler : ProcessCallbackBase
 
 ### Problem
 
-`SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The generation-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
+`SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The pending-callback-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
 
 ### Solution
 
 Instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
 
-**Trade-off:** Allocates a `GameObject` per timer instance. Use the generation-counter pattern for high-frequency debounce; use this pattern only when the callback truly must not fire.
+**Trade-off:** Allocates a `GameObject` per timer instance. Use the pending-callback-counter pattern for high-frequency debounce; use this pattern only when the callback truly must not fire.
 
 **When to use:**
 - Retry timers that must be cancelled when the user changes their action before the retry fires
@@ -562,7 +562,7 @@ using UnityEngine;
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class RetryController : UdonSharpBehaviour
 {
-    [SerializeField] private GameObject _timerPrefab; // Prefab with CancellableTimer attached
+    [SerializeField] private GameObject _timerTemplate; // Disabled scene GameObject with CancellableTimer attached
     [SerializeField] private float      _retryDelay = 5f;
 
     private GameObject _pendingTimer;
@@ -574,17 +574,20 @@ public class RetryController : UdonSharpBehaviour
     {
         CancelPendingRetry();
 
-        if (_timerPrefab == null) { Debug.LogError("[RetryController] Timer prefab not assigned"); return; }
+        if (_timerTemplate == null) { Debug.LogError("[RetryController] Timer template not assigned"); return; }
 
-        _pendingTimer = VRCInstantiate(_timerPrefab);
+        _pendingTimer = Object.Instantiate(_timerTemplate);
         CancellableTimer timer = _pendingTimer.GetComponent<CancellableTimer>();
         if (timer == null) { Debug.LogError("[RetryController] CancellableTimer component missing"); Destroy(_pendingTimer); _pendingTimer = null; return; }
         timer.CallbackTarget = this;
         timer.CallbackMethod = nameof(OnRetryFired);
+        _pendingTimer.SetActive(true);
 
         // The callback fires on the helper; destroying _pendingTimer before
-        // retryDelay seconds cancels it without any generation-counter bookkeeping.
-        timer.SendCustomEventDelayedSeconds(nameof(CancellableTimer._Fire), _retryDelay);
+        // retryDelay seconds cancels it without any pending-counter bookkeeping.
+        // SendCustomEvent dispatches by method-name string; the literal spells
+        // out the cross-behaviour contract at the call site.
+        timer.SendCustomEventDelayedSeconds("_Fire", _retryDelay);
     }
 
     /// <summary>
