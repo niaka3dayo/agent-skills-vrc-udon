@@ -506,13 +506,13 @@ public class MyResultHandler : ProcessCallbackBase
 
 ### Problem
 
-`SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The generation-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
+`SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The pending-callback-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
 
 ### Solution
 
 Instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
 
-**Trade-off:** Allocates a `GameObject` per timer instance. Use the generation-counter pattern for high-frequency debounce; use this pattern only when the callback truly must not fire.
+**Trade-off:** Allocates a `GameObject` per timer instance. Use the pending-callback-counter pattern for high-frequency debounce; use this pattern only when the callback truly must not fire.
 
 **When to use:**
 - Retry timers that must be cancelled when the user changes their action before the retry fires
@@ -584,7 +584,7 @@ public class RetryController : UdonSharpBehaviour
         _pendingTimer.SetActive(true);
 
         // The callback fires on the helper; destroying _pendingTimer before
-        // retryDelay seconds cancels it without any generation-counter bookkeeping.
+        // retryDelay seconds cancels it without any pending-counter bookkeeping.
         // String literal used instead of nameof(CancellableTimer._Fire) because
         // UdonSharp's nameof support for cross-class members is unreliable at runtime.
         timer.SendCustomEventDelayedSeconds("_Fire", _retryDelay);
