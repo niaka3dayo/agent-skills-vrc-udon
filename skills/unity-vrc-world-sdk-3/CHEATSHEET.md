@@ -384,5 +384,10 @@ site:github.com/vrchat-community "issue keyword"
 |-------|------|
 | Performance targets, Quest optimization checklist | [references/performance.md](references/performance.md) |
 | Lightmap settings, Quest bake parameter reference | [references/lighting.md](references/lighting.md) |
+| Full SDK 3.7.1-3.10.3 world component reference | [references/components.md](references/components.md) |
+| VRChat layer system, collision, and selective rendering reference | [references/layers.md](references/layers.md) |
+| Audio and video configuration, voice settings, Steam Audio, and video players | [references/audio-video.md](references/audio-video.md) |
+| Upload procedure, pre-upload checklist, validation, world settings, and post-upload steps | [references/upload.md](references/upload.md) |
+| Build/upload, scene setup, component, layer, performance, networking, and Quest troubleshooting | [references/troubleshooting.md](references/troubleshooting.md) |
 | Pickup + Rigidbody template | [assets/templates/VRC_Pickup_Rigidbody.cs](assets/templates/VRC_Pickup_Rigidbody.cs) |
 | Station (sit) template | [assets/templates/VRC_Station_Basic.cs](assets/templates/VRC_Station_Basic.cs) |
