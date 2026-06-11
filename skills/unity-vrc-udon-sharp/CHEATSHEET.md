@@ -322,7 +322,7 @@ private void Log(string msg) {
 |-------|-----|
 | Sync not working | `SetOwner()` -> modify -> `RequestSerialization()` |
 | NullReference on player | Check `player != null && player.IsValid()` |
-| Method not found | Make method `public` and remove parameters |
+| Method not found (SendCustomEvent / network event target) | Make the target method public; plain network events take no parameters ([NetworkCallable] allows up to 8) |
 | FieldChangeCallback not firing | Use property setter even for local changes |
 | Cannot modify struct | `var v = struct; v.x = 1; struct = v;` |
 | Start() not called | Inactive object support: `OnEnable()` + `Initialize()` |
@@ -379,4 +379,19 @@ For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` arr
 | UI / Canvas patterns | [references/patterns-ui.md](references/patterns-ui.md) |
 | Video player patterns | [references/patterns-video.md](references/patterns-video.md) |
 | Custom inspectors, editor-only setup components (IEditorOnly) | [references/editor-scripting.md](references/editor-scripting.md) |
-
+| UdonSharp C# feature constraints and compiler behavior | [references/constraints.md](references/constraints.md) |
+| UdonSharp event overrides and Unity callback rules | [references/events.md](references/events.md) |
+| Common compile, runtime, networking, persistence, dynamics, editor, and performance issues | [references/troubleshooting.md](references/troubleshooting.md) |
+| Networking mistakes, data-loss causes, and advanced sync patterns | [references/networking-antipatterns.md](references/networking-antipatterns.md) |
+| Network bandwidth throttling, request serialization, bit packing, and owner-centric architecture | [references/networking-bandwidth.md](references/networking-bandwidth.md) |
+| Object pooling, synced game state, NetworkCallable, persistence, dynamics, and debouncing patterns | [references/patterns-networking.md](references/patterns-networking.md) |
+| Practical synced gimmick examples for local, event, and synced-variable patterns | [references/sync-examples.md](references/sync-examples.md) |
+| Persistent PlayerData and PlayerObject storage | [references/persistence.md](references/persistence.md) |
+| PhysBones, Contacts, and VRC Constraints in worlds | [references/dynamics.md](references/dynamics.md) |
+| Initialization, interaction, player detection, timer, audio, pickup, animation, UI, and teleportation patterns | [references/patterns-core.md](references/patterns-core.md) |
+| Cross-class call overhead, partial classes, update handlers, PostLateUpdate, spatial queries, and animator hashes | [references/patterns-performance.md](references/patterns-performance.md) |
+| Array helpers, event bus, GameObject relay communication, pseudo-struct double-cast, and callback patterns | [references/patterns-utilities.md](references/patterns-utilities.md) |
+| VRCImageDownloader GPU memory lifecycle, safe texture cleanup, fades, and staggering | [references/image-loading-vram.md](references/image-loading-vram.md) |
+| Advanced packed resource loading with VRCStringDownloader | [references/web-loading-advanced.md](references/web-loading-advanced.md) |
+| SDK upgrade steps, version-by-version changes, and migration checklists | [references/sdk-migration.md](references/sdk-migration.md) |
+| Preserving task-specific design intent across long or resumed work | [references/context-preservation.md](references/context-preservation.md) |

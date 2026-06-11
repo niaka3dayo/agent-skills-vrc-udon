@@ -124,9 +124,10 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
 | Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
+| Migrating between SDK versions / fixing post-upgrade breakage | `sdk-migration.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 | Resuming complex work after compaction / handoff / ownership-sensitive multi-file refactor | Current task's primary references | `context-preservation.md` | Unrelated domain references |
 | Writing new UdonSharp scripts (not sure if sync needed) | `constraints.md` | `networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
-| Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
+| Setting up new script files (.cs/.asset wiring, program asset generation) | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
 | Building editor setup tools / placement UX (custom inspectors, scene wiring helpers, IEditorOnly) | `editor-scripting.md` | `constraints.md` | `networking.md`, `dynamics.md`, `web-loading.md` |
 
 ## Pattern Selection Guide

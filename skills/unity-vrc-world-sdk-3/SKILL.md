@@ -65,7 +65,7 @@ Load only what the task requires.
 | Making objects grabbable (VRC_Pickup) | `components.md` | `layers.md` | `audio-video.md`, `lighting.md` | Pickup/Rigidbody requirements not in standard Unity docs |
 | Setting up seating (VRC_Station) | `components.md` | `layers.md` | `audio-video.md`, `performance.md` | Station collider + exit requirements are VRChat-specific |
 | Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` | Quest limits differ from PC; bake requirements non-obvious |
-| Adding audio or video player | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |
+| Adding audio or video player / voice zones (SetVoiceGain, Steam Audio) | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |
 | Baking lights / lightmap setup | `lighting.md`, `performance.md` | — | `audio-video.md`, `layers.md` | Lightmap resolution and probe placement affect Quest VRAM |
 | World upload and publish | `upload.md` | `troubleshooting.md` | `audio-video.md`, `lighting.md` | Upload steps and validation order are fragile; easy to miss |
 | Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` | VRChat collision matrix differs from Unity default |
@@ -217,6 +217,7 @@ Exactly **one** is required in every VRChat world.
 | **VRC_UIShape**            | Canvas (World Space)     | Unity UI interaction           | -    |
 | **VRC_AvatarPedestal**     | -                        | Avatar display/switch          | -    |
 | **VRC_CameraDolly**        | -                        | Camera dolly                   | 3.9+ |
+| **VRCCameraSettings**      | None (static API)        | Read camera info from Udon     | 3.8.1 |
 
 ### VRC_ObjectSync vs UdonSynced
 
