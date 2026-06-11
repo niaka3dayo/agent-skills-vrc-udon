@@ -130,7 +130,7 @@ public class AvatarScaleUI : UdonSharpBehaviour
 > **Key notes:**
 > - `GetTrackingData(Head).position.y` returns the world-space Y of the player's head, which correlates with avatar scale.
 > - Clamp the scale factor to avoid UI becoming invisible (tiny avatars) or enormous (giant avatars).
-> - Call `ApplyScale()` from `OnAvatarEyeHeightChanged(VRCPlayerApi, float)` or `OnAvatarChanged(VRCPlayerApi)`; `player.GetAvatarEyeHeightAsMeters()` is the direct avatar scale source when you do not need the head-Y heuristic.
+> - Call `ApplyScale()` from `OnAvatarEyeHeightChanged(VRCPlayerApi, float)` or `OnAvatarChanged(VRCPlayerApi)` — both fire for every player, so early-return unless `player.isLocal`. `player.GetAvatarEyeHeightAsMeters()` is the direct avatar scale source when you do not need the head-Y heuristic.
 
 ---
 
@@ -189,9 +189,8 @@ public class FovResponsiveUI : UdonSharpBehaviour
         // Apply distance adjustment only on desktop.
         if (_isVR) return;
 
-        float currentFov = 60.0f;
         VRCCameraSettings screenCam = VRCCameraSettings.ScreenCamera;
-        currentFov = screenCam.FieldOfView;
+        float currentFov = screenCam.FieldOfView;
 
         // Compute viewport-relative scale factor
         float refTan = Mathf.Tan((referenceFov / 2.0f) * Mathf.Deg2Rad);

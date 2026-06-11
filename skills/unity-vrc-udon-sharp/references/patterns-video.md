@@ -38,6 +38,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -210,6 +211,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class PlaybackTimeSynchronizer : UdonSharpBehaviour
@@ -333,6 +335,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class LateJoinerVideoSync : UdonSharpBehaviour
@@ -494,8 +497,9 @@ public class AVProTextureStabilizer : UdonSharpBehaviour
 | `Unknown` | Unclassified failure | Retry once; give up on second failure |
 
 On AVPro players, a too-frequent `PlayURL` can surface as `VideoError.RateLimited`
-through `OnVideoError`. Some request paths can also drop too-frequent requests without
-a callback; space requests more than 5 seconds apart instead of relying on the error.
+through `OnVideoError`. Requests can also be dropped without any callback (see the
+rate-limit dispatcher discussion in patterns-performance.md); space requests more than
+5 seconds apart instead of relying on the error.
 
 ### Retry Logic
 
@@ -517,6 +521,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class VideoErrorHandler : UdonSharpBehaviour
@@ -653,6 +658,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class SyncedPlaylistManager : UdonSharpBehaviour
@@ -719,8 +725,9 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
             }
             else
             {
-                // RepeatNone: queue exhausted
-                _queueHead = _queueCount;
+                // RepeatNone: queue exhausted — reset so future adds start fresh
+                _queueHead = 0;
+                _queueCount = 0;
                 RequestSerialization();
                 return;
             }
@@ -764,8 +771,26 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
         RequestSerialization();
     }
 
+    // PlayURL does not propagate to remote clients, so non-owners and late
+    // joiners start playback from the synced queue state on deserialization.
+    private int _lastSeenHead  = -1;
+    private int _lastSeenCount = 0;
+
+    public override void OnDeserialization()
+    {
+        bool headChanged    = _queueHead != _lastSeenHead;
+        bool queueRestarted = _lastSeenCount == 0 && _queueCount > 0;
+        _lastSeenCount = _queueCount;
+        // Appends behind the playing entry change neither condition,
+        // so they do not restart playback mid-entry.
+        if (!headChanged && !queueRestarted) return;
+        PlayCurrentEntry();
+    }
+
     private void PlayCurrentEntry()
     {
+        _lastSeenHead  = _queueHead;
+        _lastSeenCount = _queueCount;
         if (_queueHead < 0 || _queueHead >= _queueCount) return;
 
         VRCUrl url        = GetQueueUrl(_queueHead);
@@ -840,6 +865,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
+using VRC.SDK3.Video.Components.Base;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PlatformUrlSelector : UdonSharpBehaviour
