@@ -678,6 +678,16 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
     // arrays — an uninitialized synced array prevents the behaviour from syncing.
     [UdonSynced] private VRCUrl[] _queueUrls       = new VRCUrl[QueueCapacity];
     [UdonSynced] private byte[]   _queuePlayerTypes = new byte[QueueCapacity];
+
+    void Start()
+    {
+        // Fill every slot so no null VRCUrl element is ever serialized;
+        // late joiners get these overwritten by the first deserialization.
+        for (int i = 0; i < QueueCapacity; i++)
+        {
+            if (_queueUrls[i] == null) _queueUrls[i] = VRCUrl.Empty;
+        }
+    }
     [UdonSynced] private int      _queueHead        = 0;
     [UdonSynced] private int      _queueCount       = 0;
     [UdonSynced] private byte     _repeatMode       = RepeatNone;
