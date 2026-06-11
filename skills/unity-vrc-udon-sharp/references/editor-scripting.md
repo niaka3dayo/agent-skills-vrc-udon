@@ -479,6 +479,104 @@ This inspector is for the plain helper, not for a `UdonSharpBehaviour`, so it do
 | Scene-wide or multi-component setup tooling living in the scene | Plain `MonoBehaviour` + `IEditorOnly` (+ custom inspector) |
 | Exclude an entire dev-only GameObject from upload | `EditorOnly` tag |
 
+## Build Pipeline Callbacks
+
+The SDK exposes two documented hooks for running custom code when a world or avatar build starts. Both are verified against SDK 3.10.3 and documented on the [official build pipeline page](https://creators.vrchat.com/sdk/build-pipeline-callbacks-and-interfaces/).
+
+### IVRCSDKBuildRequestedCallback
+
+`IVRCSDKBuildRequestedCallback` lives in the `VRC.SDKBase.Editor.BuildPipeline` namespace. Implement it on an editor-side class in an `Editor` folder, not on a scene component.
+
+Members to implement:
+
+```csharp
+public int callbackOrder { get; }
+
+public bool OnBuildRequested(VRCSDKRequestedBuildType requestedBuildType)
+{
+    return true;
+}
+```
+
+This callback runs before the SDK starts building. Returning `false` from `OnBuildRequested` aborts the build. `VRCSDKRequestedBuildType` is an enum with `Avatar` and `Scene`; worlds are requested as `Scene`.
+
+```csharp
+// Editor/TeleporterSetupBuildGate.cs — aborts the SDK build when setup is incomplete
+using UnityEditor;
+using UnityEngine;
+using VRC.SDKBase.Editor.BuildPipeline;
+
+public class TeleporterSetupBuildGate : IVRCSDKBuildRequestedCallback
+{
+    public int callbackOrder => 0;
+
+    public bool OnBuildRequested(VRCSDKRequestedBuildType requestedBuildType)
+    {
+        if (requestedBuildType != VRCSDKRequestedBuildType.Scene)
+        {
+            return true;
+        }
+
+        foreach (TeleporterSetupHelper helper in
+            Object.FindObjectsOfType<TeleporterSetupHelper>())
+        {
+            if (helper.controller == null || helper.exit == null)
+            {
+                Debug.LogError(
+                    $"Teleporter setup incomplete on '{helper.name}' — aborting build.",
+                    helper);
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+```
+
+`TeleporterSetupHelper` is the setup-helper example class defined in the previous section.
+
+### IPreprocessCallbackBehaviour
+
+`IPreprocessCallbackBehaviour` lives in the `VRC.SDKBase` namespace and is implemented by a `MonoBehaviour` on the content itself.
+
+Members to implement:
+
+```csharp
+public void OnPreprocess()
+{
+}
+
+public int PreprocessOrder { get; }
+```
+
+This callback runs when the build process is about to begin, before content gets built and uploaded to VRChat. The official docs note that this does not automatically bypass SDK validation; they also recommend using `IEditorOnly` if the script exists directly on the avatar being uploaded.
+
+```csharp
+using UnityEngine;
+using VRC.SDKBase;
+
+public class BuildInfoStamp : MonoBehaviour, IEditorOnly, IPreprocessCallbackBehaviour
+{
+    public int PreprocessOrder => 0;
+
+    public void OnPreprocess()
+    {
+        Debug.Log($"Build started for {gameObject.scene.name}");
+    }
+}
+```
+
+The example pairs both interfaces per that recommendation; in a world scene the pairing also keeps the helper out of the component whitelist scan (see [Editor-Only Setup Components](#editor-only-setup-components-ieditoronly)).
+
+### When to Use Which
+
+| Goal | Use |
+|------|-----|
+| Validate or abort a build from editor tooling | `IVRCSDKBuildRequestedCallback` (Editor folder, not in the scene) |
+| Run code on a scene component when the build begins | `IPreprocessCallbackBehaviour` (pair with `IEditorOnly` per official docs) |
+| Hide a setup-only component from SDK validation | `IEditorOnly` (see [Editor-Only Setup Components](#editor-only-setup-components-ieditoronly)) |
+
 ## Property Drawers
 
 ```csharp
