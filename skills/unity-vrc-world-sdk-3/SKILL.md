@@ -120,8 +120,8 @@ Quest required? → Yes
 | 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | ✅             |
 | 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | ✅             |
 | 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | ✅             |
-| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets          | ✅             |
-| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings              | ✅             |
+| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings | ✅ |
+| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) | ✅ |
 | 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | ✅             |
 | 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅             |

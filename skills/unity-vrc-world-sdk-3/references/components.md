@@ -659,7 +659,7 @@ public class DollyController : UdonSharpBehaviour
 
 ## VRCCameraSettings API
 
-Retrieves camera information (SDK 3.9+).
+Retrieves camera information (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0).
 
 ### Properties
 
