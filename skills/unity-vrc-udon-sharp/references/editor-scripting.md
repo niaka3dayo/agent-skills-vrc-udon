@@ -502,7 +502,6 @@ This callback runs before the SDK starts building. Returning `false` from `OnBui
 
 ```csharp
 // Editor/TeleporterSetupBuildGate.cs — aborts the SDK build when setup is incomplete
-using UnityEditor;
 using UnityEngine;
 using VRC.SDKBase.Editor.BuildPipeline;
 
@@ -517,10 +516,11 @@ public class TeleporterSetupBuildGate : IVRCSDKBuildRequestedCallback
             return true;
         }
 
+        // includeInactive: disabled helpers must not slip through the gate
         foreach (TeleporterSetupHelper helper in
-            Object.FindObjectsOfType<TeleporterSetupHelper>())
+            Object.FindObjectsOfType<TeleporterSetupHelper>(true))
         {
-            if (helper.controller == null || helper.exit == null)
+            if (helper.entrance == null || helper.exit == null || helper.controller == null)
             {
                 Debug.LogError(
                     $"Teleporter setup incomplete on '{helper.name}' — aborting build.",
@@ -543,12 +543,15 @@ public class TeleporterSetupBuildGate : IVRCSDKBuildRequestedCallback
 Members to implement:
 
 ```csharp
-public void OnPreprocess()
+public bool OnPreprocess()
 {
+    return true;
 }
 
 public int PreprocessOrder { get; }
 ```
+
+> **Docs discrepancy**: the official page shows `void OnPreprocess()`, but the SDK 3.10.3 binary declares `bool OnPreprocess()` (verified via .NET metadata). Implement the `bool` form — the `void` signature fails to compile against the interface. The meaning of the return value is not documented; return `true` unless you have verified otherwise.
 
 This callback runs when the build process is about to begin, before content gets built and uploaded to VRChat. The official docs note that this does not automatically bypass SDK validation; they also recommend using `IEditorOnly` if the script exists directly on the avatar being uploaded.
 
@@ -560,9 +563,10 @@ public class BuildInfoStamp : MonoBehaviour, IEditorOnly, IPreprocessCallbackBeh
 {
     public int PreprocessOrder => 0;
 
-    public void OnPreprocess()
+    public bool OnPreprocess()
     {
         Debug.Log($"Build started for {gameObject.scene.name}");
+        return true;
     }
 }
 ```
