@@ -37,7 +37,7 @@ MyScript s = GetComponent<MyScript>();
 public class BaseGimmick : UdonSharpBehaviour { }
 public class DerivedGimmick : BaseGimmick { }
 
-BaseGimmick base = GetComponent<BaseGimmick>();     // finds DerivedGimmick too
+BaseGimmick baseGimmick = GetComponent<BaseGimmick>(); // finds DerivedGimmick too
 DerivedGimmick derived = GetComponent<DerivedGimmick>();
 BaseGimmick[] all = GetComponents<BaseGimmick>();   // plural form also works
 ```
@@ -124,9 +124,9 @@ None that affect standard UdonSharp worlds. The `GetComponent<T>` behavior chang
 
 #### Camera Dolly Udon API (SDK 3.9.0+)
 
-SDK 3.9.0 added a Udon-accessible Camera Dolly system. Camera dolly tracks can be authored in the scene and controlled at runtime from UdonSharp, enabling cinematic camera movement sequences.
+SDK 3.9.0 added the Camera Dolly system. Animations are authored in the scene (VRC Camera Dolly Animation / Path / Point components) and applied to the local player's camera from UdonSharp.
 
-Key usage pattern: create a Camera Dolly track in the scene, assign a `VRCCameraDolly` reference in your UdonBehaviour, then call the track control methods.
+Key usage pattern: author the dolly animation in the scene, assign a `VRCCameraDollyAnimation` reference in your UdonBehaviour, then call `Import()` to apply it — the only documented scripting entry point (see api.md).
 
 #### Auto Hold Mode Simplification for Pickups (SDK 3.9.0+)
 
@@ -141,9 +141,9 @@ The `Auto Hold` field on `VRC_Pickup` was simplified. The old three-value enum (
 
 Worlds upgrading from 3.8 should audit all `VRC_Pickup` components and confirm the auto hold setting is intentional, since `AutoDetect` no longer exists as a fallback.
 
-#### VRCCameraSettings API (SDK 3.9.0+)
+#### VRCCameraSettings API (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0)
 
-Read-only access to the player's active camera properties. Namespace: `VRC.SDK3.Rendering`.
+Read-only access to the player's active camera properties. Introduced in SDK 3.8.1; SDK 3.9.0 added `CullingMask` and `VRCCameraSettings.GetCurrentCamera`. Namespace: `VRC.SDK3.Rendering`.
 
 ```csharp
 using VRC.SDK3.Rendering;
@@ -255,12 +255,12 @@ VRC Constraint types: `VRCPositionConstraint`, `VRCRotationConstraint`, `VRCScal
 
 #### Persistence Storage Information API (SDK 3.10.0+)
 
-New `VRCPlayerApi` methods to query how much persistence storage (PlayerData + PlayerObject combined) a player is consuming.
+New static methods on `VRC.SDKBase.Networking` to query how much PlayerData persistence storage a player is consuming (PlayerObject data has a separate 100 KB per-player quota).
 
 ```csharp
-int used  = player.GetPlayerDataStorageUsage(); // bytes
-int limit = player.GetPlayerDataStorageLimit(); // bytes (typically 102400)
-player.RequestStorageUsageUpdate();             // request a fresh value from server
+int used  = Networking.GetPlayerDataStorageUsage(player); // bytes
+int limit = Networking.GetPlayerDataStorageLimit();        // bytes (typically 102400)
+Networking.RequestStorageUsageUpdate();                    // request recalculation; result arrives via OnPersistenceUsageUpdated
 ```
 
 The `OnPersistenceUsageUpdated` event fires when updated usage data arrives:
@@ -269,8 +269,8 @@ The `OnPersistenceUsageUpdated` event fires when updated usage data arrives:
 // Always fires on the local player's UdonBehaviours.
 public override void OnPersistenceUsageUpdated()
 {
-    int used  = Networking.LocalPlayer.GetPlayerDataStorageUsage();
-    int limit = Networking.LocalPlayer.GetPlayerDataStorageLimit();
+    int used  = Networking.GetPlayerDataStorageUsage(Networking.LocalPlayer);
+    int limit = Networking.GetPlayerDataStorageLimit();
     Debug.Log($"Storage: {used}/{limit} bytes");
 }
 ```

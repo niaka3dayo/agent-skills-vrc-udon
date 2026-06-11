@@ -150,11 +150,11 @@ public class MapData : UdonSharpBehaviour
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class MapData : UdonSharpBehaviour
 {
-    // Manual sync budget: ~280KB = 286,720 bytes
+    // Manual sync data limit: 280,496 bytes
     // byte[] uses 1 byte/element vs int[] at 4 bytes/element
     // 256 x 256 as byte = 65,536 bytes — well within budget
     private const int MapSize = 256;
-    private const int MaxSyncBytes = 280 * 1024; // 286,720 bytes
+    private const int MaxSyncBytes = 280_000; // safely under the 280,496-byte Manual sync limit
 
     [UdonSynced] private byte[] tiles = new byte[MapSize * MapSize];
 
@@ -173,7 +173,7 @@ public class MapData : UdonSharpBehaviour
     }
 
     // For very large maps: chunk into multiple behaviours or use delta sync
-    // See: Delta Sync section above
+    // See: Delta Sync (Send Only Changes) in networking-bandwidth.md
 }
 ```
 

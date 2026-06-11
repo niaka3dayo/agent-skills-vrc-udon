@@ -18,7 +18,7 @@ using VRC.Udon; // Kept for consistency with other UdonSharp templates; not dire
 /// Sync mode note:
 ///   BehaviourSyncMode.Manual is used so that synced variables (if you add any) are
 ///   serialised on demand via RequestSerialization. If you add VRC_ObjectSync and have
-///   no UdonSynced variables, you can safely switch to BehaviourSyncMode.None instead.
+///   no UdonSynced variables, switch to BehaviourSyncMode.NoVariableSync (None would also disable SendCustomNetworkEvent, breaking the use-effect broadcast below).
 ///
 /// Ownership note:
 ///   VRC_ObjectSync automatically transfers ownership to the grabbing player on pickup.

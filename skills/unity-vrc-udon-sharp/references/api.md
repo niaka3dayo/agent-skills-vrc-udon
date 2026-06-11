@@ -143,6 +143,15 @@ string value = player.GetPlayerTag(string tagName);
 player.ClearPlayerTags();
 ```
 
+### Language Methods
+
+```csharp
+string language = VRCPlayerApi.GetCurrentLanguage(); // local user's selected language, RFC 5646: en, ja, zh-CN
+string[] languages = VRCPlayerApi.GetAvailableLanguages(); // selectable languages
+```
+
+These are local-user getters, not per-remote-player reads.
+
 ### PlayerObject Methods
 
 ```csharp
@@ -606,7 +615,7 @@ For details on the Web Loading API, see `references/web-loading.md`.
 - Rate limit: **Once every 5 seconds** (for String/Image each)
 - Max image resolution: **2048 x 2048**
 - Trusted URLs: Domain allowlist restrictions apply
-- Memory management: Must release with `IVRCImageDownload.Dispose()`
+- Memory management: `IVRCImageDownload.Dispose()` releases the download wrapper, not the GPU texture — destroy the assigned `Texture2D` (see `image-loading-vram.md`)
 
 ```csharp
 // String Loading (VRC.SDK3.StringLoading)
@@ -628,6 +637,8 @@ using VRC.Udon.Common.Interfaces;
 
 NetworkEventTarget.All    // Send to all players including self
 NetworkEventTarget.Owner  // Send to object owner only
+NetworkEventTarget.Others // Send to all players except self (SDK 3.8.1+)
+NetworkEventTarget.Self   // Send to local player only (SDK 3.8.1+)
 ```
 
 ### TrackingDataType
@@ -788,7 +799,7 @@ PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
 | `SetInt` / `TryGetInt` | `int` | 4 bytes |
 | `SetFloat` / `TryGetFloat` | `float` | 4 bytes |
 | `SetDouble` / `TryGetDouble` | `double` | 8 bytes |
-| `SetString` / `TryGetString` | `string` | ~50 chars |
+| `SetString` / `TryGetString` | `string` | No documented per-string cap — bounded by the 100 KB total |
 | `SetBytes` / `TryGetBytes` | `byte[]` | ~100KB total |
 | `SetVector3` / `TryGetVector3` | `Vector3` | 12 bytes |
 | `SetQuaternion` / `TryGetQuaternion` | `Quaternion` | 16 bytes |
@@ -800,7 +811,6 @@ PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
 |------|------|
 | PlayerData per player per world | 100 KB |
 | PlayerObject per player per world | 100 KB |
-| Single UdonBehaviour with VRC Enable Persistence | 108 bytes per variable type |
 
 ### Usage Pattern
 
@@ -835,7 +845,7 @@ public class PersistentScore : UdonSharpBehaviour
 }
 ```
 
-## VRCCameraSettings API (SDK 3.9.0+)
+## VRCCameraSettings API (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0)
 
 Read-only access to VRChat's built-in camera parameters. Provides two static instances and an event callback when settings change.
 
@@ -1201,6 +1211,8 @@ dollyAnimation.Import();
 ```csharp
 using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
+using VRC.SDK3.Components;
 
 public class DollyController : UdonSharpBehaviour
 {
@@ -1221,7 +1233,7 @@ public class DollyController : UdonSharpBehaviour
 ### Limitations
 
 - The API applies the animation to the **local player only**. To trigger it for all players, use `SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayDolly))`.
-- No properties of the animation, paths, or points are readable or writable from UdonSharp at runtime.
+- `Import()` is the only scripting entry point on the official page; runtime reads or writes of animation, path, or point parameters from UdonSharp are not documented — treat anything beyond `Import()` as unverified.
 - There is no event callback when the animation completes.
 - No ClientSim preview; Build and Test is required to see the animation.
 

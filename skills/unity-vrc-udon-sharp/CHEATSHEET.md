@@ -293,11 +293,12 @@ public override void OnPhysBoneGrab(PhysBoneGrabInfo info) {
 | `short` | 2 | |
 | `int` | 4 | |
 | `float` | 4 | |
-| `string` | Variable | Subject to sync buffer size limit |
+| `string` | 2 bytes/char | Subject to sync buffer size limit |
 | `Vector3` | 12 | |
 | `Quaternion` | 16 | |
 | `Color` | 16 | |
 | `T[]` | Variable | Arrays of the above types |
+| `VRCUrl` | 2 bytes/char | Arrays sync too (VRChat 2021.3.2+) |
 
 **Not syncable:** `GameObject`, `Transform`, `VRCPlayerApi`, custom classes
 
@@ -321,7 +322,7 @@ private void Log(string msg) {
 |-------|-----|
 | Sync not working | `SetOwner()` -> modify -> `RequestSerialization()` |
 | NullReference on player | Check `player != null && player.IsValid()` |
-| Method not found | Make method `public` and remove parameters |
+| Method not found (SendCustomEvent / network event target) | Make the target method public and parameterless (pass data via `SetProgramVariable`); plain network events are also parameterless ([NetworkCallable] allows up to 8) |
 | FieldChangeCallback not firing | Use property setter even for local changes |
 | Cannot modify struct | `var v = struct; v.x = 1; struct = v;` |
 | Start() not called | Inactive object support: `OnEnable()` + `Initialize()` |
@@ -341,7 +342,7 @@ using VRC.SDK3.Data;           // VRCJson
 VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
 // -> OnStringLoadSuccess(IVRCStringDownload) / OnStringLoadError
 
-// Image download (Dispose required!)
+// Image download (Dispose the wrapper + Destroy the assigned Texture2D — see image-loading-vram.md)
 var dl = new VRCImageDownloader();
 dl.DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo);
 // -> OnImageLoadSuccess(IVRCImageDownload) / OnImageLoadError
@@ -360,7 +361,7 @@ if (VRCJson.TryDeserializeFromJson(result.Result, out DataToken json))
 | Max size | - | 2048x2048 |
 | Redirects | Trusted only | Not allowed |
 | Trusted URL | Separate domain list | Separate domain list |
-| Memory management | Not required | `Dispose()` required |
+| Memory management | Not required | `Dispose()` releases the wrapper; also `Destroy()` the assigned `Texture2D` |
 
 **Dynamic VRCUrl generation: Not possible** -- `new VRCUrl(stringVar)` is blocked by the Udon VM at runtime.
 For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` array (predefined), (3) server-side routing
@@ -371,10 +372,26 @@ For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` arr
 
 | Topic | File |
 |-------|------|
-| Camera Dolly API, VRCObjectPool API | [references/api.md](references/api.md) |
+| Full VRChat API quick reference (VRCPlayerApi, networking, camera, persistence, data containers) | [references/api.md](references/api.md) |
 | Testing in Editor (ClientSim), multi-client debugging | [references/testing.md](references/testing.md) |
 | Networking ownership, sync modes, IsMaster migration | [references/networking.md](references/networking.md) |
 | Web / Image loading, VRCUrl constraints | [references/web-loading.md](references/web-loading.md) |
 | UI / Canvas patterns | [references/patterns-ui.md](references/patterns-ui.md) |
 | Video player patterns | [references/patterns-video.md](references/patterns-video.md) |
-
+| Custom inspectors, editor-only setup components (IEditorOnly) | [references/editor-scripting.md](references/editor-scripting.md) |
+| UdonSharp C# feature constraints and compiler behavior | [references/constraints.md](references/constraints.md) |
+| UdonSharp event overrides and Unity callback rules | [references/events.md](references/events.md) |
+| Common compile, runtime, networking, persistence, dynamics, editor, and performance issues | [references/troubleshooting.md](references/troubleshooting.md) |
+| Networking mistakes, data-loss causes, and advanced sync patterns | [references/networking-antipatterns.md](references/networking-antipatterns.md) |
+| Network bandwidth throttling, request serialization, bit packing, and owner-centric architecture | [references/networking-bandwidth.md](references/networking-bandwidth.md) |
+| Object pooling, synced game state, NetworkCallable, persistence, dynamics, and debouncing patterns | [references/patterns-networking.md](references/patterns-networking.md) |
+| Practical synced gimmick examples for local, event, and synced-variable patterns | [references/sync-examples.md](references/sync-examples.md) |
+| Persistent PlayerData and PlayerObject storage | [references/persistence.md](references/persistence.md) |
+| PhysBones, Contacts, and VRC Constraints in worlds | [references/dynamics.md](references/dynamics.md) |
+| Initialization, interaction, player detection, timer, audio, pickup, animation, UI, and teleportation patterns | [references/patterns-core.md](references/patterns-core.md) |
+| Cross-class call overhead, partial classes, update handlers, PostLateUpdate, spatial queries, and animator hashes | [references/patterns-performance.md](references/patterns-performance.md) |
+| Array helpers, event bus, GameObject relay communication, pseudo-struct double-cast, and callback patterns | [references/patterns-utilities.md](references/patterns-utilities.md) |
+| VRCImageDownloader GPU memory lifecycle, safe texture cleanup, fades, and staggering | [references/image-loading-vram.md](references/image-loading-vram.md) |
+| Advanced packed resource loading with VRCStringDownloader | [references/web-loading-advanced.md](references/web-loading-advanced.md) |
+| SDK upgrade steps, version-by-version changes, and migration checklists | [references/sdk-migration.md](references/sdk-migration.md) |
+| Preserving task-specific design intent across long or resumed work | [references/context-preservation.md](references/context-preservation.md) |

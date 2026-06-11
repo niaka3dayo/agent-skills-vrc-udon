@@ -14,7 +14,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.3.0"
+    version: "2.4.0"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
 ---
 
@@ -73,7 +73,7 @@ These constraints cause either **compile-time failures** or **silent runtime fai
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
 | 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
 | 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
-| 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and their simple arrays are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
+| 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and simple arrays of these are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
 
 ## Sync Mode Quick Decision
 
@@ -99,10 +99,10 @@ Remote players don't see my state change?
 
 RequestSerialization() called but still not syncing?
   ├── Is Networking.IsClogged == true?           → Throttle; retry after delay
-  └── Writing in OnPreSerialization scope?       → Move write before OnPreSerialization fires
+  └── Non-owner writing the field?               → Acquire ownership first — a non-owner RequestSerialization() is a silent no-op (see NEVER #12)
 
 Late joiners don't see current state?
-  ├── State set only on event (e.g., player trigger)?  → Also set in Start() + RequestSerialization() on owner
+  ├── State set only on event (e.g., player trigger)?  → Verify the state lives in a [UdonSynced] field — synced values are delivered to late joiners automatically; SendCustomNetworkEvent calls before join are never replayed
   └── Using SendCustomNetworkEvent for persistent state? → Use [UdonSynced] variables instead
 
 OnOwnershipTransferred not firing on a remote client?
@@ -124,9 +124,11 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
 | Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
+| Migrating between SDK versions / fixing post-upgrade breakage | `sdk-migration.md` | `troubleshooting.md`, `networking.md`, `dynamics.md` | `web-loading.md`, `image-loading-vram.md` |
 | Resuming complex work after compaction / handoff / ownership-sensitive multi-file refactor | Current task's primary references | `context-preservation.md` | Unrelated domain references |
 | Writing new UdonSharp scripts (not sure if sync needed) | `constraints.md` | `networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
-| Creating new UdonSharp scripts | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
+| Setting up new script files (.cs/.asset wiring, program asset generation) | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
+| Building editor setup tools / placement UX (custom inspectors, scene wiring helpers, IEditorOnly) | `editor-scripting.md` | `constraints.md` | `networking.md`, `dynamics.md`, `web-loading.md` |
 
 ## Pattern Selection Guide
 
@@ -224,11 +226,11 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 | File | Contents | Search Hints |
 |------|----------|--------------|
-| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; advanced workarounds (object array pseudo-struct, VRCUrl array sync) | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
+| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; advanced workarounds (object array pseudo-struct); synced VRCUrl lists | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
 | `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network events, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, master leave, ownership cascade |
 | `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
 | `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
-| `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data; storage usage query API (SDK 3.10.0+) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
+| `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data; storage usage query API (SDK 3.10.0+) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, GetPlayerObjectStorageUsage, GetPlayerObjectStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
 | `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) | PhysBone, ContactReceiver, ContactSender, VRCConstraint, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard, remote players | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo, remote players, GetRemotePlayers, exclude local player, FindAll alternative |
 | `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, distant-room pseudo-multi-room (state/presentation split, self-owned vs master-approved tiers), delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, distant room, pseudo multi-room, room assignment, roomIndex, LocalRoomPresenter, RoomAssignment, NoVariableSync, TeleportTo per-client, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
@@ -241,7 +243,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | `web-loading-advanced.md` | Advanced data loading: Base64 texture embedding via StringDownloader, cross-platform compression, URL double-key indexing, LRU decode cache | Base64, LoadRawTextureData, StringDownloader texture, DXT1, ETC_RGB4, UNITY_ANDROID, LRU cache, packed resources, binary format |
 | `api.md` | VRCPlayerApi, Networking, enums reference, VRCObjectPool methods + Interact-driven ownership patterns | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, Drone, VRCDroneApi, VRCObjectPool, TryToSpawn, Return, Shuffle, pool owner, Interact pool, pool forwarded spawn, pool ownership transfer |
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred, OnControllerColliderHitPlayer, CharacterController, OnMasterTransferred, OnAvatarChanged, OnSpawn, VRC Economy, OnPurchaseConfirmed, OnAsyncGpuReadbackComplete |
-| `editor-scripting.md` | Editor scripting, proxy system, and UdonSharpProgramAsset auto-generation | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject, UdonSharpProgramAsset, auto-generate, AssetPostprocessor, .asset missing |
+| `editor-scripting.md` | Editor scripting, proxy system, custom inspectors, editor-only setup components (IEditorOnly), build pipeline callbacks, and UdonSharpProgramAsset auto-generation | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject, UdonSharpProgramAsset, auto-generate, AssetPostprocessor, .asset missing, IEditorOnly, EditorOnly tag, setup helper, setup component, build exclusion, custom inspector, ContextMenu, IVRCSDKBuildRequestedCallback, OnBuildRequested, build callback, IPreprocessCallbackBehaviour, OnPreprocess |
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) | Continuous, Manual, NoVariableSync, sync example |
 | `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback, VRCStation, seated player, trigger zone, OnPlayerTriggerEnter not firing, station collider, position polling, OnStationEntered |
 | `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |

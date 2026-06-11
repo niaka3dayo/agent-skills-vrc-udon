@@ -102,9 +102,11 @@ public class ManualSyncExample : UdonSharpBehaviour
 - Much larger data capacity
 - Low network overhead for infrequent updates
 
-### None (No Variable Sync)
+### NoVariableSync
 
-Completely disables variable synchronization. Uses network events for communication.
+NoVariableSync disables variable synchronization while keeping network events available.
+
+`BehaviourSyncMode` has both `None` and `NoVariableSync`; `None` also disables `SendCustomNetworkEvent` on the behaviour, while `NoVariableSync` keeps network events working. For event-driven behaviours, use `NoVariableSync`. Source: UdonSharp source XML docs (verified SDK 3.10.3).
 
 **Characteristics:**
 - No synced variables supported (`[UdonSynced]` will error)
@@ -145,7 +147,7 @@ public class NoSyncExample : UdonSharpBehaviour
 |--------|-------------|------|-------------|
 | Continuous | ~200 bytes | High (10Hz) | Position/rotation tracking |
 | Manual | ~280KB (280,496 bytes) | On-demand | Game state, scores, settings |
-| None | N/A | N/A | Event-only communication |
+| NoVariableSync | N/A | N/A | Event-only communication |
 
 ## VRC_ObjectSync Warning
 
@@ -266,9 +268,9 @@ public void StartGame()
 
 When a late joiner enters a world, `OnDeserialization` fires for all synced variables. If side effects (audio, animations, particles) are triggered directly in `OnDeserialization`, they will play unintentionally on join.
 
-#### The `_isInitialized` Flag Pattern
+#### The `_hasReceivedState` Flag Pattern
 
-Use an initialization flag to skip side effects on the first `OnDeserialization` call:
+Use a first-sync flag to skip side effects on the first `OnDeserialization` call. (Distinct from the `_isInitialized` guard in events.md, which tracks `Start()` completion — this flag tracks whether the first synced state has been received.)
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -280,7 +282,7 @@ public class SafeSyncedObject : UdonSharpBehaviour
     public AudioSource sfx;
     public Animator animator;
 
-    private bool _isInitialized = false;
+    private bool _hasReceivedState = false;
 
     public int GameState
     {
@@ -295,9 +297,9 @@ public class SafeSyncedObject : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        if (!_isInitialized)
+        if (!_hasReceivedState)
         {
-            _isInitialized = true;
+            _hasReceivedState = true;
             // First deserialization (late joiner): apply state silently
             ApplyStateWithoutSideEffects();
             return;
@@ -312,7 +314,7 @@ public class SafeSyncedObject : UdonSharpBehaviour
         UpdateDisplay();
 
         // Side effects only after initialization
-        if (_isInitialized && previousState != _gameState)
+        if (_hasReceivedState && previousState != _gameState)
         {
             sfx.Play();
             animator.SetTrigger("StateChange");
@@ -330,7 +332,7 @@ public class SafeSyncedObject : UdonSharpBehaviour
 
 #### Using `OnDeserialization(DeserializationResult)` Overload
 
-The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_isInitialized` flag pattern for late-joiner guards:
+The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_hasReceivedState` flag pattern for late-joiner guards:
 
 ##### DeserializationResult Properties
 
@@ -355,10 +357,10 @@ public override void OnDeserialization(DeserializationResult result)
 
     // Guard side effects: skip on initial sync for late joiners
     // Note: DeserializationResult does not provide a late-joiner flag;
-    // use _isInitialized for this purpose
-    if (!_isInitialized)
+    // use _hasReceivedState for this purpose
+    if (!_hasReceivedState)
     {
-        _isInitialized = true;
+        _hasReceivedState = true;
         return;
     }
 
@@ -543,13 +545,16 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 `OnOwnershipRequest` allows the current owner to **accept or reject** ownership transfer requests:
 
 ```csharp
-private bool _isProcessingCriticalAction = false;
+[UdonSynced] private bool _isProcessingCriticalAction = false; // Shared gate: requester and owner must evaluate identical state.
+// The owner sets this flag and calls RequestSerialization() around the critical action.
+// A synced gate still has a propagation window — a requester can read a stale value
+// until the owner's write deserializes — so keep gated sections short.
 
 public override bool OnOwnershipRequest(
     VRCPlayerApi requestingPlayer,
     VRCPlayerApi requestedOwner)
 {
-    // Reject ownership transfers during critical game logic
+    // Reject ownership transfers during critical game logic using synced state
     if (_isProcessingCriticalAction)
     {
         Debug.Log($"Rejected ownership request from {requestingPlayer.displayName} " +
@@ -769,10 +774,10 @@ public class NetworkCallableExample : UdonSharpBehaviour
 
 ### Rate Limiting
 
-`[NetworkCallable]` accepts an optional integer parameter that controls the maximum call rate (in calls per second) allowed for that method per behaviour instance. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
+`[NetworkCallable]` accepts an optional integer parameter that controls the maximum call rate (in calls per second) allowed for that event per behaviour instance. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
 
 ```csharp
-// Default: 5 calls/sec per behaviour (no argument)
+// Default: 5 calls/sec per event per behaviour (no argument)
 [NetworkCallable]
 public void NormalEvent(int value) { }
 
@@ -785,7 +790,7 @@ public void HighFrequencyEvent(float value) { }
 public void RareBroadcast(string message) { }
 ```
 
-**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per behaviour.
+**Note**: Events exceeding the rate limit are queued on the local client until the limit allows them to be sent. The server silently drops events only in one documented case: players in the same instance running different world versions whose rate limits disagree. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
 
 ### Types Usable as Parameters
 
@@ -918,34 +923,28 @@ private void ProcessData()
 
 ### Workaround: Targeting Specific Players
 
-Since direct player targeting is not available, use synced variables:
+Since direct player targeting is not available, include the target player's ID as a `[NetworkCallable]` parameter and let each receiver filter locally:
 
 ```csharp
-[UdonSynced] private int targetPlayerId;
-[UdonSynced] private string message;
-
 public void SendMessageToPlayer(VRCPlayerApi player, string msg)
 {
-    if (!Networking.IsOwner(gameObject))
-    {
-        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-    }
-
-    targetPlayerId = player.playerId;
-    message = msg;
-    RequestSerialization();
-
-    SendCustomNetworkEvent(NetworkEventTarget.All, "CheckMessage");
+    SendCustomNetworkEvent(
+        NetworkEventTarget.All,
+        nameof(CheckMessage),
+        player.playerId,
+        msg
+    );
 }
 
-public void CheckMessage()
+[NetworkCallable]
+public void CheckMessage(int targetPlayerId, string message)
 {
-    if (Networking.LocalPlayer.playerId == targetPlayerId)
-    {
-        ProcessMessage(message);
-    }
+    if (Networking.LocalPlayer.playerId != targetPlayerId) return;
+    ProcessMessage(message);
 }
 ```
+
+Passing both the target and payload as event parameters avoids the synced-variable/event ordering race described above. For pre-3.8.1 SDKs, use synced variables and react in `OnDeserialization`/`FieldChangeCallback`, not in a paired network event.
 
 ## Data Limits
 
@@ -997,7 +996,7 @@ void Update()
 
 ## Object Pooling
 
-Dynamic instantiation is not network-supported in VRChat. Use object pooling with pre-placed GameObjects.
+Runtime-instantiated objects are never network-synced (`VRCInstantiate` results are local-only). Use object pooling — pre-placed GameObjects for synced objects, or a pool built once in `Start()` for local-only objects (see patterns-networking.md).
 
 For full implementations, see:
 - Simple pool: [patterns-networking.md](patterns-networking.md#object-pooling)
@@ -1012,7 +1011,7 @@ public override void OnPlayerJoined(VRCPlayerApi player)
 
     Debug.Log($"{player.displayName} joined");
 
-    // Sync state for new player if we're owner
+    // Late joiners receive current synced values automatically; this owner refresh is defensive only.
     if (Networking.IsOwner(gameObject))
     {
         RequestSerialization();
@@ -1079,14 +1078,19 @@ public void OnInteract()
 ### Synced Timer
 
 ```csharp
-[UdonSynced] private float gameStartTime;
+[UdonSynced] private double gameStartTime;
 [UdonSynced] private bool gameRunning;
 
 public void StartGame()
 {
-    if (!Networking.IsMaster) return;
+    if (!Networking.IsOwner(gameObject))
+    {
+        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+    }
 
-    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    if (!Networking.IsOwner(gameObject)) return;
+
+    gameStartTime = Networking.GetServerTimeInSeconds();
     gameRunning = true;
     RequestSerialization();
 }
@@ -1095,7 +1099,7 @@ void Update()
 {
     if (!gameRunning) return;
 
-    float elapsed = (float)Networking.GetServerTimeInSeconds() - gameStartTime;
+    double elapsed = Networking.GetServerTimeInSeconds() - gameStartTime;
     timerDisplay.text = elapsed.ToString("F1");
 }
 ```
@@ -1131,7 +1135,7 @@ public void StartGame()
 {
     if (!Networking.IsMaster) return;  // Fragile: master may leave mid-check
 
-    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameStartTime = Networking.GetServerTimeInSeconds();
     gameRunning = true;
     RequestSerialization();
 }
@@ -1147,7 +1151,7 @@ public void StartGame()
 {
     if (!Networking.IsOwner(gameObject)) return;  // Stable: exactly one owner
 
-    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameStartTime = Networking.GetServerTimeInSeconds();
     gameRunning = true;
     RequestSerialization();
 }

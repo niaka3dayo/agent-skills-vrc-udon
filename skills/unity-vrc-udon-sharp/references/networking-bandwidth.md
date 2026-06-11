@@ -283,7 +283,7 @@ VRChat's transmission bandwidth is approximately **11KB/sec**. Large synced data
 Pack multiple small values into fewer variables to reduce sync overhead.
 See [Bit Packing](#bit-packing) above for the complete bit-count reference table and pack/unpack examples.
 
-Quick example — 40 color IDs (0-7, 3 bits each) into 15 bytes:
+Quick example — 40 color IDs (0-7, 3 bits each) into 15 bytes, with a guarded final two-byte read:
 
 ```csharp
 // 40 colors x 3 bits = 120 bits = 15 bytes (160 bytes from int[40] -> 93% reduction)
@@ -293,7 +293,8 @@ private byte GetColor(int index)
 {
     int byteIdx = (index * 3) / 8;
     int bitOffset = (index * 3) % 8;
-    int raw = packedColors[byteIdx] | (packedColors[byteIdx + 1] << 8);
+    int hi = (byteIdx + 1 < packedColors.Length) ? packedColors[byteIdx + 1] : 0;
+    int raw = packedColors[byteIdx] | (hi << 8);
     return (byte)((raw >> bitOffset) & 0x07);
 }
 ```

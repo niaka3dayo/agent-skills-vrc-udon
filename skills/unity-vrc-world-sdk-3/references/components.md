@@ -29,7 +29,7 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
 | Spawns | Transform[] | Array of spawn points | Descriptor position |
-| Spawn Order | SpawnOrder | Sequential/Random/Demo | Sequential |
+| Spawn Order | SpawnOrder | First/Sequential/Random/Demo | Sequential |
 | Respawn Height | float | Respawn Y coordinate | -100 |
 | Object Behaviour At Respawn | enum | Respawn/Destroy | Respawn |
 | Reference Camera | Camera | Camera settings reference | None |
@@ -44,14 +44,18 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 ### Spawn Order Details
 
 ```csharp
+// First: Always use the first spawn
+// Every player appears at Spawns[0]
+
 // Sequential: Spawn in order
 // Join order: Player1→Spawn0, Player2→Spawn1, Player3→Spawn2, Player4→Spawn0...
 
 // Random: Random selection
 // Different spawn point each time
 
-// Demo: All at the same location
-// All players appear at Spawns[0]
+// Demo: Room-scale alignment mode
+// The spawn point represents the center of the player's room scale —
+// standing a meter from your room-scale center spawns you a meter from the spawn
 ```
 
 ### Reference Camera Settings
@@ -119,7 +123,7 @@ Allows players to grab objects.
 | Exact Grip | Transform | Exact grip position | null |
 | Exact Gun | Transform | Exact gun position | null |
 | Proximity | float | Pickup distance | 2.0 |
-| **Auto Hold** | enum | Yes/No/AutoDetect | No |
+| **Auto Hold** | enum | Yes/No (v1.1; AutoDetect is v1.0-only) | No |
 
 ### Auto Hold (SDK 3.9+)
 
@@ -178,6 +182,8 @@ public class PickupHandler : UdonSharpBehaviour
 }
 ```
 
+On desktop, `OnPickupUseDown` and `OnPickupUseUp` require Auto Hold = Yes to fire.
+
 ### Network Sync
 
 ```csharp
@@ -204,8 +210,8 @@ Creates a location where players can sit.
 [Station GameObject]
 ├── Collider (Required - for Interact)
 └── VRC_Station
-    ├── Entry Transform (optional)
-    └── Exit Transform (optional)
+    ├── Station Enter Player Location (optional)
+    └── Station Exit Player Location (optional)
 ```
 
 ### All Properties
@@ -456,7 +462,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 | Property | Type | Description | Default | Range |
 |----------|------|-------------|---------|-------|
-| Gain | float | Additional volume | 0 dB | 0-24 dB |
+| Gain | float | Additional volume | 10 dB (world audio sources) | 0-24 dB |
 | Near | float | Attenuation start distance | 0 m | - |
 | Far | float | Attenuation end distance | 40 m | - |
 | Volumetric Radius | float | Source size | 0 m | < Far |
@@ -487,7 +493,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 ```text
 ⚠️ AudioSource on avatars:
-- Gain limit: 10 dB
+- Avatar gain cap: 10 dB
 - Far limit: 40 m
 - Always add VRC_SpatialAudioSource
   (If not added, SDK auto-generates one, causing unexpected behavior)
@@ -563,101 +569,61 @@ Displays avatars and allows switching.
 
 ## VRC_CameraDolly
 
-Moves the player's camera along a defined spline path (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
+Applies a camera animation along defined paths to the local player's VRChat user camera (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
 
-### Setup
+### Components
 
 ```text
-[Dolly Track Root]
-├── VRC_CameraDolly
-│   ├── Path (SplineContainer or CinemachinePath reference)
-│   ├── Duration (float, seconds for a full traversal)
-│   └── Loop (bool)
-└── UdonController (UdonSharpBehaviour)
+GameObject (VRC Camera Dolly Animation)
+├── GameObject (VRC Camera Dolly Path)
+│   ├── GameObject (VRC Camera Dolly Point)
+│   └── GameObject (VRC Camera Dolly Point)
+└── GameObject (VRC Camera Dolly Path)
 ```
 
-### VRC_CameraDolly Udon API
+Animation-level parameters (Path Type, Loop Type, Capture Type, Focus Mode, Anchor Mode, ...) and per-point parameters (Zoom, Duration, Speed, Focal Distance, ...) are configured in the Inspector — see the official VRC_CameraDolly page for the full list.
 
-```csharp
-VRCCameraDolly dolly = (VRCCameraDolly)GetComponent(typeof(VRCCameraDolly));
+### Scripting
 
-// Start playback from position 0
-dolly.Play();
-
-// Stop playback and release camera control
-dolly.Stop();
-
-// Pause at the current position
-dolly.Pause();
-
-// Resume from paused position
-dolly.Resume();
-
-// Jump to a normalized position along the path (0.0 = start, 1.0 = end)
-dolly.SetPosition(float normalizedT);
-
-// Get current normalized position
-float t = dolly.GetPosition();
-
-// Set playback speed multiplier (1.0 = normal, 2.0 = double speed, -1.0 = reverse)
-dolly.SetSpeed(float speedMultiplier);
-
-// Check if currently playing
-bool isPlaying = dolly.IsPlaying;
-
-// Check if looping is enabled
-bool loops = dolly.Loop;
-```
-
-### Udon Control Example
+`VRCCameraDollyAnimation.Import()` applies the defined settings and animation to the local player's VRC user camera. It is the only documented scripting entry point; runtime reads or writes of the parameters from Udon are not documented.
 
 ```csharp
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components;
 
-public class DollyController : UdonSharpBehaviour
+public class DollyTrigger : UdonSharpBehaviour
 {
-    [SerializeField] private VRCCameraDolly dolly;
+    [SerializeField] private VRCCameraDollyAnimation dollyAnimation;
 
-    // Call from UI button or trigger
     public override void Interact()
     {
-        if (dolly.IsPlaying)
-        {
-            dolly.Stop();
-        }
-        else
-        {
-            dolly.SetPosition(0f);
-            dolly.Play();
-        }
-    }
-
-    // Jump to midpoint on demand
-    public void JumpToMid()
-    {
-        dolly.SetPosition(0.5f);
+        if (!Utilities.IsValid(dollyAnimation)) return;
+        dollyAnimation.Import();
     }
 }
 ```
 
-### Ownership and Network Notes
+> **Editor step**: before entering Play mode or building, select the `VRC Camera Dolly Animation` object and click **Collect Paths & Points**; repeat whenever child paths or points change.
+
+### Notes
 
 ```text
-- VRC_CameraDolly only affects the local player's camera.
-- Play/Stop calls are local — no network sync is built in.
-- To sync a cinematic across all players, call Play() via
-  SendCustomNetworkEvent(NetworkEventTarget.All, nameof(StartDolly)).
-- Only one dolly can be active per player at a time.
-  Calling Play() on a second dolly automatically stops the first.
+- The animation applies to the local player's camera only.
+- To trigger it for everyone, route the call through
+  SendCustomNetworkEvent(NetworkEventTarget.All, ...).
+- No ClientSim preview — use Build and Test to see the animation.
 ```
+
+For the full scripting reference, see the udon-sharp skill's
+[`api.md` Camera Dolly section](../../unity-vrc-udon-sharp/references/api.md#vrc-camera-dolly-api-sdk-390).
 
 ---
 
 ## VRCCameraSettings API
 
-Retrieves camera information (SDK 3.9+).
+Retrieves camera information (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0).
 
 ### Properties
 
@@ -708,7 +674,10 @@ Some avatar-side features fire rays or cast queries into the world and react to 
 
 ## Allowed Unity Components
 
-Unity standard components available in VRChat.
+VRChat worlds run only whitelisted components. The authoritative list is the official
+[whitelisted world components](https://creators.vrchat.com/worlds/whitelisted-world-components/)
+page; per that page, components that are not in the list will not work. The Unity
+standard components below are the commonly used whitelisted subset.
 
 ### Physics
 
@@ -768,15 +737,38 @@ Unity standard components available in VRChat.
 
 ### Disabled on Quest/Android
 
+Entries marked "on Avatar" come from avatar-side limitations and are listed here for completeness; unmarked entries are world-relevant where applicable.
+
 ```text
 ❌ Dynamic Bones
-❌ Cloth (allowed in worlds, not on avatars)
+❌ Cloth — completely disabled on Android/Quest
 ❌ Physics on Avatar (Rigidbody, Collider, Joint)
 ❌ Cameras on Avatar
 ❌ Lights on Avatar
 ❌ Audio Sources on Avatar
 ❌ Unity Constraints (use VRC equivalents: VRCPositionConstraint, VRCRotationConstraint, VRCScaleConstraint, VRCParentConstraint, VRCAimConstraint, VRCLookAtConstraint)
 ```
+
+### Editor-Only Objects and Components
+
+For dev-only GameObjects such as test rigs, reference geometry, and measurement guides,
+assign the Unity `EditorOnly` tag. Unity excludes GameObjects with the `EditorOnly`
+tag in a Scene, including their child GameObjects, from builds.
+
+For editor-only components that must sit next to runtime components, such as setup-helper
+MonoBehaviours, implement the `VRC.SDKBase.IEditorOnly` marker interface. `IEditorOnly`
+has no members; VRChat SDK validation ignores `IEditorOnly` scripts when scanning the
+world for incompatible scripts.
+
+Use the `EditorOnly` tag when the whole GameObject and its children are dev-only. Use
+`IEditorOnly` when only one setup-helper component is editor-only and runtime components
+on the same GameObject should remain. For the full `IEditorOnly` pattern, `EditorOnly`
+comparison table, and worked setup-helper example, see
+[editor-scripting.md](../../unity-vrc-udon-sharp/references/editor-scripting.md).
+
+Custom MonoBehaviour scripts are not whitelisted and do not run in the client either way;
+the `EditorOnly` tag and `IEditorOnly` interface are about passing SDK validation cleanly
+and keeping dev-only content out of the upload intentionally.
 
 ## See Also
 

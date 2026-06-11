@@ -48,7 +48,7 @@ VRC_SpatialAudioSource is added alongside a Unity AudioSource.
 
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
-| **Gain** | float (dB) | Volume adjustment (-24 ~ +24) | 0 dB |
+| **Gain** | float (dB) | Volume adjustment (0-24 dB) | 10 dB |
 | **Near** | float (m) | Attenuation start distance | 0 m |
 | **Far** | float (m) | Attenuation end distance (0=infinite) | 40 m |
 | **Volumetric Radius** | float (m) | Source spread | 0 m |
@@ -92,7 +92,7 @@ AudioSource:
 └── Volume: 0.5
 
 VRC_SpatialAudioSource:
-├── Gain: 0 dB
+├── Gain: 10 dB (default)
 ├── Enable Spatialization: false
 └── (Near/Far ignored in 2D mode)
 ```
@@ -106,7 +106,7 @@ AudioSource:
 └── Volume: 1.0
 
 VRC_SpatialAudioSource:
-├── Gain: 0 dB
+├── Gain: 10 dB (default)
 ├── Near: 1 m
 ├── Far: 15 m
 ├── Volumetric Radius: 0
@@ -122,7 +122,7 @@ AudioSource:
 └── Volume: 1.0
 
 VRC_SpatialAudioSource:
-├── Gain: +6 dB (louder)
+├── Gain: 10 dB (default — official guidance keeps Gain at default; Volumetric Radius below provides the area size)
 ├── Near: 5 m
 ├── Far: 50 m
 ├── Volumetric Radius: 10 m
@@ -522,7 +522,7 @@ Ambient sounds (looping):
 
 Video players per world:
 ├── Recommended: 1-2
-└── Maximum: No strict limit (performance dependent)
+└── Maximum: not documented — performance-bound in practice
 
 Simultaneous playback:
 ├── Avoid simultaneous playback
@@ -617,7 +617,7 @@ Debug.Log($"Video playing: {videoPlayer.IsPlaying}");
 ### VRC_SpatialAudioSource Defaults
 
 ```text
-Gain: 0 dB (World: +10 dB)
+Gain: 10 dB (world audio source default)
 Near: 0 m
 Far: 40 m
 Volumetric Radius: 0 m
