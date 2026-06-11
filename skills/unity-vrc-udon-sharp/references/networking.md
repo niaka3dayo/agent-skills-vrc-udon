@@ -788,7 +788,7 @@ public void HighFrequencyEvent(float value) { }
 public void RareBroadcast(string message) { }
 ```
 
-**Note**: Events exceeding the rate limit are queued on the local client until the limit allows them to be sent; sustained overload can still drop them server-side. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
+**Note**: Events exceeding the rate limit are queued on the local client until the limit allows them to be sent. The server silently drops events only in one documented case: players in the same instance running different world versions whose rate limits disagree. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
 
 ### Types Usable as Parameters
 
