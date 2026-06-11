@@ -45,9 +45,10 @@
 ### Spawn Order
 
 ```text
+First:      Always the first spawn
 Sequential: 0 → 1 → 2 → 0 → 1 (in order)
 Random:     Random selection
-Demo:       All players at Spawns[0]
+Demo:       Spawn point = center of room scale
 ```
 
 ---
@@ -93,7 +94,7 @@ OnPickupUseUp()      // Trigger released
 └── VRC_Station
     ├── Player Mobility: Mobile/Immobilize
     ├── Disable Station Exit: false
-    └── Entry/Exit Transform
+    └── Station Enter/Exit Player Location
 ```
 
 **Udon:**

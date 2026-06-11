@@ -44,7 +44,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | # | NEVER do this | Why it hurts | Use instead |
 |---|---------------|-------------|-------------|
 | 1 | Enable Mirror by default (active on world join) | Renders the entire scene twice — immediate FPS halving, catastrophic on Quest | Default Mirror OFF; add UdonSharp toggle or player-triggered activation |
-| 2 | Use realtime directional lights with real-time shadows | Quest has no hardware shadow acceleration; each shadow caster costs 10-30 FPS | Baked lightmaps + light probes; set lights to Baked or Mixed mode |
+| 2 | Use realtime directional lights with real-time shadows | Quest has no hardware shadow acceleration; shadow casters commonly cost on the order of 10-30 FPS in practice (varies by scene) | Baked lightmaps + light probes; set lights to Baked or Mixed mode |
 | 3 | Set Respawn Height at or above the world floor | Player respawns → falls → respawns again → infinite loop; players cannot recover | Set to an unreachable depth (e.g., floor at Y=0 → Respawn at Y=-100) |
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
 | 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile with post-processing disabled |
@@ -150,7 +150,8 @@ Exactly **one** is required in every VRChat world.
 | Property                        | Type        | Description                     | Default           |
 | ------------------------------- | ----------- | ------------------------------- | ------------------ |
 | **Spawns**                      | Transform[] | Array of spawn points           | Descriptor position |
-| **Spawn Order**                 | enum        | Sequential/Random/Demo (Demo: all players to Spawns[0]) | Sequential |
+| **Spawn Order**                 | enum        | First/Sequential/Random/Demo (First: always the first spawn; Demo: spawn point is the center of room scale) | Sequential |
+| **Spawn Orientation**           | enum        | Default/Align Player With Spawn Point/Align Room With Spawn Point | Default |
 | **Respawn Height**              | float       | Respawn height (Y axis)         | -100               |
 | **Object Behaviour At Respawn** | enum        | Respawn/Destroy                 | Respawn            |
 | **Reference Camera**            | Camera      | Player camera settings reference | None              |

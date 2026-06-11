@@ -44,14 +44,18 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 ### Spawn Order Details
 
 ```csharp
+// First: Always use the first spawn
+// Every player appears at Spawns[0]
+
 // Sequential: Spawn in order
 // Join order: Player1→Spawn0, Player2→Spawn1, Player3→Spawn2, Player4→Spawn0...
 
 // Random: Random selection
 // Different spawn point each time
 
-// Demo: All at the same location
-// All players appear at Spawns[0]
+// Demo: Room-scale alignment mode
+// The spawn point represents the center of the player's room scale —
+// standing a meter from your room-scale center spawns you a meter from the spawn
 ```
 
 ### Reference Camera Settings
@@ -206,8 +210,8 @@ Creates a location where players can sit.
 [Station GameObject]
 ├── Collider (Required - for Interact)
 └── VRC_Station
-    ├── Entry Transform (optional)
-    └── Exit Transform (optional)
+    ├── Station Enter Player Location (optional)
+    └── Station Exit Player Location (optional)
 ```
 
 ### All Properties

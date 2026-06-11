@@ -234,7 +234,7 @@ components with `IEditorOnly` — see
 ```text
 
 1. If Disable Station Exit is true, set it to false
-2. Verify Exit Transform isn't inside an obstacle
+2. Verify Station Exit Player Location isn't inside an obstacle
 3. Implement forced exit in Udon
 
 ```

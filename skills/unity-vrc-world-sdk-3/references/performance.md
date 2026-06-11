@@ -80,7 +80,7 @@ Problem:
 - Simultaneous playback increases load
 
 Countermeasures:
-□ Maximum 2
+□ Keep to 1-2 players (recommended; no documented hard limit)
 □ Avoid simultaneous playback
 □ Provide a low-resolution option
 ```
