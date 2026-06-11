@@ -1555,7 +1555,7 @@ var myScript = other.GetComponent<MyScript>();
 
 ```
 
-On SDK 3.8+, `GetComponent<MyScript>()` works for `UdonSharpBehaviour` subclasses (including inherited types — see sdk-migration.md). Fetching `UdonBehaviour` itself returns the first `UdonBehaviour` regardless of program type.
+On SDK 3.8+, `GetComponent<MyScript>()` works for `UdonSharpBehaviour` subclasses (including inherited types — see [sdk-migration.md](sdk-migration.md)). Fetching `UdonBehaviour` itself returns the first `UdonBehaviour` regardless of program type.
 
 **Solution (Runtime, pre-SDK 3.8):**
 
