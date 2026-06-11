@@ -844,7 +844,9 @@ If the current owner calls `RequestSerialization()` at or very close to the time
 
 1. Synced variable value arrives and changes.
 2. The `[FieldChangeCallback]` property setter runs for the changed field.
-3. `OnDeserialization` follows.
+3. `OnDeserialization` follows. The pre-`Start()` window applies only to the
+   `[FieldChangeCallback]` setter — `OnDeserialization` itself dispatches between
+   frames, after `Start()`, per the Initialization Guarantee above.
 
 In this specific edge case (most likely when the late joiner is the **first instance** on its client), the `[FieldChangeCallback]` setter can run **before** `Start()` has returned. Guard against this with an initialization flag (see pattern below).
 
