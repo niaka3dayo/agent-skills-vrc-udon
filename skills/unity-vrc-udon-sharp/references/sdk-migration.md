@@ -124,9 +124,9 @@ None that affect standard UdonSharp worlds. The `GetComponent<T>` behavior chang
 
 #### Camera Dolly Udon API (SDK 3.9.0+)
 
-SDK 3.9.0 added a Udon-accessible Camera Dolly system. Camera dolly tracks can be authored in the scene and controlled at runtime from UdonSharp, enabling cinematic camera movement sequences.
+SDK 3.9.0 added the Camera Dolly system. Animations are authored in the scene (VRC Camera Dolly Animation / Path / Point components) and applied to the local player's camera from UdonSharp.
 
-Key usage pattern: create a Camera Dolly track in the scene, assign a `VRCCameraDolly` reference in your UdonBehaviour, then call the track control methods.
+Key usage pattern: author the dolly animation in the scene, assign a `VRCCameraDollyAnimation` reference in your UdonBehaviour, then call `Import()` to apply it — the only documented scripting entry point (see api.md).
 
 #### Auto Hold Mode Simplification for Pickups (SDK 3.9.0+)
 
