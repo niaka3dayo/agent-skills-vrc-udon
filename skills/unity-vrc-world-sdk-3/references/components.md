@@ -178,6 +178,8 @@ public class PickupHandler : UdonSharpBehaviour
 }
 ```
 
+On desktop, `OnPickupUseDown` and `OnPickupUseUp` require Auto Hold = Yes to fire.
+
 ### Network Sync
 
 ```csharp
@@ -456,7 +458,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 | Property | Type | Description | Default | Range |
 |----------|------|-------------|---------|-------|
-| Gain | float | Additional volume | 0 dB | 0-24 dB |
+| Gain | float | Additional volume | 10 dB (world audio sources) | 0-24 dB |
 | Near | float | Attenuation start distance | 0 m | - |
 | Far | float | Attenuation end distance | 40 m | - |
 | Volumetric Radius | float | Source size | 0 m | < Far |
@@ -487,7 +489,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 ```text
 ⚠️ AudioSource on avatars:
-- Gain limit: 10 dB
+- Avatar gain cap: 10 dB
 - Far limit: 40 m
 - Always add VRC_SpatialAudioSource
   (If not added, SDK auto-generates one, causing unexpected behavior)
@@ -771,9 +773,11 @@ standard components below are the commonly used whitelisted subset.
 
 ### Disabled on Quest/Android
 
+Entries marked "on Avatar" come from avatar-side limitations and are listed here for completeness; unmarked entries are world-relevant where applicable.
+
 ```text
 ❌ Dynamic Bones
-❌ Cloth (allowed in worlds, not on avatars)
+❌ Cloth — completely disabled on Android/Quest
 ❌ Physics on Avatar (Rigidbody, Collider, Joint)
 ❌ Cameras on Avatar
 ❌ Lights on Avatar

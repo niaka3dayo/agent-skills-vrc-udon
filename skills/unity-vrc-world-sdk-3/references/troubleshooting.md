@@ -176,9 +176,9 @@ components with `IEditorOnly` — see
 
 ```text
 
-1. Check DisallowTheft on VRC_Pickup
-2. If DisallowTheft is true, the current holder owns it exclusively — a second grab is blocked
-3. Set DisallowTheft to false if shared grabbing is intended
+1. Check Allow Theft on VRC_Pickup
+2. If Allow Theft is disabled, the current holder owns it exclusively — a second grab is blocked
+3. Enable Allow Theft if shared grabbing is intended
 
 ```
 
@@ -219,9 +219,9 @@ components with `IEditorOnly` — see
 
 ```text
 
-1. Adjust the Station Collision Transform field in the VRC_Station Inspector
-2. Move the Station Collision Transform to an unobstructed position
-3. Ensure the Exit Transform is also clear of obstacles
+1. Adjust the Station Enter Player Location transform on the VRC_Station
+2. Move Station Enter Player Location to an unobstructed seated position
+3. Ensure Station Exit Player Location is also clear of obstacles
 
 ```
 

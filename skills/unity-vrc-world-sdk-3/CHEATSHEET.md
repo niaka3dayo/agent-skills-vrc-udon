@@ -71,7 +71,7 @@ Demo:       All players at Spawns[0]
 ├── Collider (IsTrigger recommended)
 ├── Rigidbody
 ├── VRC_Pickup
-│   ├── Auto Hold: Yes/No/AutoDetect
+│   ├── Auto Hold: Yes/No (v1.1; AutoDetect is v1.0-only)
 │   ├── Pickupable: true
 │   └── Allow Theft: true
 └── VRC_ObjectSync (for sync)
@@ -172,7 +172,7 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 |------|-----|-------|
 | FPS Target | 45+ VR, 60+ Desktop | 72 |
 | Mirrors | 1 (default OFF) | 0-1 |
-| Video Players | 2 | 1 |
+| Video Players | 1-2 recommended | 1 recommended |
 | Realtime Lights | 0-1 | 0 |
 | Polygons | 500K-1M | 50K-100K |
 | Materials | No limit | 25 or less |
@@ -194,7 +194,7 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 □ Light baking complete
 □ Realtime lights ≤ 1
 □ Mirror default OFF
-□ Video players ≤ 2
+□ Video players kept to 1-2 (recommended)
 □ Static Batching enabled
 □ Occlusion Culling configured
 □ LOD configured
@@ -250,7 +250,7 @@ Do NOT place:
 
 | Property | Default | Range |
 |----------|---------|-------|
-| Gain | 0 dB | -24 ~ +24 |
+| Gain | 10 dB | 0-24 dB |
 | Near | 0 m | Attenuation start |
 | Far | 40 m | Attenuation end |
 | Volumetric Radius | 0 m | Source spread |
