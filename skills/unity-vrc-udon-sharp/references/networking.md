@@ -102,7 +102,7 @@ public class ManualSyncExample : UdonSharpBehaviour
 - Much larger data capacity
 - Low network overhead for infrequent updates
 
-### None (No Variable Sync)
+### NoVariableSync
 
 NoVariableSync disables variable synchronization while keeping network events available.
 

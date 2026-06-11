@@ -99,7 +99,7 @@ Remote players don't see my state change?
 
 RequestSerialization() called but still not syncing?
   ├── Is Networking.IsClogged == true?           → Throttle; retry after delay
-  └── Non-owner writing the field?               → Acquire ownership first (see NEVER #12)
+  └── Non-owner writing the field?               → Acquire ownership first — a non-owner RequestSerialization() is a silent no-op (see NEVER #12)
 
 Late joiners don't see current state?
   ├── State set only on event (e.g., player trigger)?  → Verify the state lives in a [UdonSynced] field — synced values are delivered to late joiners automatically; SendCustomNetworkEvent calls before join are never replayed

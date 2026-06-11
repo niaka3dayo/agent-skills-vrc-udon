@@ -49,7 +49,7 @@ Estimate synced data volume before generating code.
 **Reference values** (typical world gimmicks):
 - Voting system: `int + int + bool` = **9 bytes**
 - Shooting manager: `bool + bool + string + int` = **~38 bytes**
-- Global counter: 1 synced `int` = **4 bytes** (late joiners need the current value; see sync-examples.md Pattern 3a)
+- Global counter: 1 synced `int` = **4 bytes** (late joiners need the current value; see ../references/sync-examples.md Pattern 3a)
 - Small to medium worlds total: typically **under 100 bytes**
 
 **Bandwidth**: 11KB/sec -> ~0.1 sec latency for a 1KB payload

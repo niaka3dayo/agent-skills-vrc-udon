@@ -293,7 +293,7 @@ public override void OnPhysBoneGrab(PhysBoneGrabInfo info) {
 | `short` | 2 | |
 | `int` | 4 | |
 | `float` | 4 | |
-| `string` | Variable | Subject to sync buffer size limit |
+| `string` | 2 bytes/char | Subject to sync buffer size limit |
 | `Vector3` | 12 | |
 | `Quaternion` | 16 | |
 | `Color` | 16 | |
