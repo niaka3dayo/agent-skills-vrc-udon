@@ -519,9 +519,14 @@ public class GrabbableRope : UdonSharpBehaviour
 
     public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
     {
-        isGrabbed = false;
-        grabberId = -1;
-        RequestSerialization();
+        // PhysBoneReleaseInfo carries no player field; the grabber owns the
+        // object after the grab, so gate the synced writes on ownership.
+        if (Networking.IsOwner(gameObject))
+        {
+            isGrabbed = false;
+            grabberId = -1;
+            RequestSerialization();
+        }
 
         releaseSound.Play();
     }
@@ -747,9 +752,12 @@ public class DebouncedSearch : UdonSharpBehaviour
 
     public void ExecuteSearch()
     {
+        // Public only because Udon event targets must be — do not call this
+        // directly; stray calls would drive the pending counter negative.
         _pendingCount--;
         // If another delayed callback is still pending, a newer input supersedes this one.
         if (_pendingCount > 0) return;
+        _pendingCount = 0; // Floor against stray external calls
 
         // Safe to execute: this is the last pending callback.
         PerformSearch();

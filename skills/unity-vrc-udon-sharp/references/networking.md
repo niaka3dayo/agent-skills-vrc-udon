@@ -544,6 +544,9 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 
 ```csharp
 [UdonSynced] private bool _isProcessingCriticalAction = false; // Shared gate: requester and owner must evaluate identical state.
+// The owner sets this flag and calls RequestSerialization() around the critical action.
+// A synced gate still has a propagation window — a requester can read a stale value
+// until the owner's write deserializes — so keep gated sections short.
 
 public override bool OnOwnershipRequest(
     VRCPlayerApi requestingPlayer,
@@ -785,7 +788,7 @@ public void HighFrequencyEvent(float value) { }
 public void RareBroadcast(string message) { }
 ```
 
-**Note**: Events exceeding the rate limit are dropped. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
+**Note**: Events exceeding the rate limit are queued on the local client until the limit allows them to be sent; sustained overload can still drop them server-side. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
 
 ### Types Usable as Parameters
 
@@ -991,7 +994,7 @@ void Update()
 
 ## Object Pooling
 
-Avoid instantiating networked objects mid-game. Use object pooling — pre-placed GameObjects or a pool built once in `Start()` (see patterns-networking.md).
+Runtime-instantiated objects are never network-synced (`VRCInstantiate` results are local-only). Use object pooling — pre-placed GameObjects for synced objects, or a pool built once in `Start()` for local-only objects (see patterns-networking.md).
 
 For full implementations, see:
 - Simple pool: [patterns-networking.md](patterns-networking.md#object-pooling)
@@ -1130,7 +1133,7 @@ public void StartGame()
 {
     if (!Networking.IsMaster) return;  // Fragile: master may leave mid-check
 
-    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameStartTime = Networking.GetServerTimeInSeconds();
     gameRunning = true;
     RequestSerialization();
 }
@@ -1146,7 +1149,7 @@ public void StartGame()
 {
     if (!Networking.IsOwner(gameObject)) return;  // Stable: exactly one owner
 
-    gameStartTime = (float)Networking.GetServerTimeInSeconds();
+    gameStartTime = Networking.GetServerTimeInSeconds();
     gameRunning = true;
     RequestSerialization();
 }

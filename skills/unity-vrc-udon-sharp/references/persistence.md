@@ -184,7 +184,7 @@ PlayerObject is a more powerful system for per-player state management. When a p
 
 ### Required Components
 
-These components live on the same root GameObject of your prefab; `VRCEnablePersistence` is only required when the data must persist:
+`VRCPlayerObject` sits on the prefab root; the `UdonBehaviour` and (when persisting) `VRCEnablePersistence` sit together on the same GameObject, root or child. `VRCEnablePersistence` is only required when the data must persist:
 
 | Component | Purpose |
 |-----------|---------|
@@ -199,7 +199,7 @@ These components live on the same root GameObject of your prefab; `VRCEnablePers
 1. Create a prefab in your project
 2. Add `VRC Player Object` component to the root of the prefab
 3. Add your `UdonSharpBehaviour` script as an `UdonBehaviour` component
-4. If data must persist, add `VRC Enable Persistence` component to the same root GameObject
+4. If data must persist, add `VRC Enable Persistence` component to the same GameObject as the UdonBehaviour
 5. Place **one instance** of the prefab in the scene — VRChat handles instantiation for all players automatically
 
 ### OnPlayerRestored on PlayerObjects
