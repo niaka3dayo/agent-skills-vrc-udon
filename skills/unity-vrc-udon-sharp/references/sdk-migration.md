@@ -255,12 +255,12 @@ VRC Constraint types: `VRCPositionConstraint`, `VRCRotationConstraint`, `VRCScal
 
 #### Persistence Storage Information API (SDK 3.10.0+)
 
-New `VRCPlayerApi` methods to query how much PlayerData persistence storage a player is consuming (PlayerObject data has a separate 100 KB per-player quota).
+New static methods on `VRC.SDKBase.Networking` to query how much PlayerData persistence storage a player is consuming (PlayerObject data has a separate 100 KB per-player quota).
 
 ```csharp
 int used  = Networking.GetPlayerDataStorageUsage(player); // bytes
 int limit = Networking.GetPlayerDataStorageLimit();        // bytes (typically 102400)
-Networking.RequestStorageUsageUpdate();                    // request a fresh value from server
+Networking.RequestStorageUsageUpdate();                    // request recalculation; result arrives via OnPersistenceUsageUpdated
 ```
 
 The `OnPersistenceUsageUpdated` event fires when updated usage data arrives:
@@ -269,8 +269,8 @@ The `OnPersistenceUsageUpdated` event fires when updated usage data arrives:
 // Always fires on the local player's UdonBehaviours.
 public override void OnPersistenceUsageUpdated()
 {
-    int used  = Networking.LocalPlayer.GetPlayerDataStorageUsage();
-    int limit = Networking.LocalPlayer.GetPlayerDataStorageLimit();
+    int used  = Networking.GetPlayerDataStorageUsage(Networking.LocalPlayer);
+    int limit = Networking.GetPlayerDataStorageLimit();
     Debug.Log($"Storage: {used}/{limit} bytes");
 }
 ```

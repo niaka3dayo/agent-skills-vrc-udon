@@ -372,7 +372,7 @@ public class PlayerBadge : UdonSharpBehaviour
 
 ## Persistence Storage Information API (SDK 3.10.0+)
 
-Since SDK 3.10.0, VRChat exposes methods to query how much PlayerData persistence storage each player is using. PlayerObject has a separate 100 KB per-player quota.
+Since SDK 3.10.0, VRChat exposes methods to query how much PlayerData and PlayerObject persistence storage each player is using (each has its own 100 KB per-player quota; the PlayerObject methods are verified present in SDK 3.10.3).
 
 ### API Methods
 
@@ -383,7 +383,7 @@ All five methods are statics on `VRC.SDKBase.Networking` (not `VRCPlayerApi` mem
 | `Networking.GetPlayerDataStorageUsage(player)` | `int` (bytes) | Last computed PlayerData bytes used by the target player |
 | `Networking.GetPlayerDataStorageLimit()` | `int` (bytes) | Maximum PlayerData bytes allowed (typically 102400 = 100 KB) |
 | `Networking.GetPlayerObjectStorageUsage(player)` | `int` (bytes) | Last computed PlayerObject bytes used by the target player |
-| `Networking.GetPlayerObjectStorageLimit()` | `int` (bytes) | Maximum PlayerObject bytes allowed |
+| `Networking.GetPlayerObjectStorageLimit()` | `int` (bytes) | Maximum PlayerObject bytes allowed (typically 102400 = 100 KB) |
 | `Networking.RequestStorageUsageUpdate()` | `void` | Requests calculation of the local player's PlayerData and PlayerObject usage; results arrive via `OnPersistenceUsageUpdated` |
 
 The official docs note storage information can become stale and advise against calling `RequestStorageUsageUpdate()` frequently.
