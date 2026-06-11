@@ -377,4 +377,5 @@ For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` arr
 | Web / Image loading, VRCUrl constraints | [references/web-loading.md](references/web-loading.md) |
 | UI / Canvas patterns | [references/patterns-ui.md](references/patterns-ui.md) |
 | Video player patterns | [references/patterns-video.md](references/patterns-video.md) |
+| Custom inspectors, editor-only setup components (IEditorOnly) | [references/editor-scripting.md](references/editor-scripting.md) |
 

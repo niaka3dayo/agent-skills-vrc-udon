@@ -307,17 +307,17 @@ public class MyToolWindow : EditorWindow
 
 ### The Problem
 
-In-scene setup tooling such as light-probe placers, multi-component wiring helpers, and prefab configurators is editor-only by nature. A plain `MonoBehaviour` in a world scene is not on the world component whitelist, so SDK validation reports it as an incompatible script. It would never execute in the VRChat client anyway, because only Udon programs run in worlds. Creators need a supported way to keep these helpers in the scene without validation complaints.
+In-scene setup tooling such as light-probe placers, multi-component wiring helpers, and prefab configurators is editor-only by nature. A plain `MonoBehaviour` in a world scene is not on the world component whitelist, so SDK validation reports it as an incompatible script. It would never execute in the VRChat client anyway, because custom MonoBehaviour scripts do not run in the client — Udon is the only user scripting runtime in worlds. Creators need a supported way to keep these helpers in the scene without validation complaints.
 
 ### The IEditorOnly Marker Interface
 
-`VRC.SDKBase.IEditorOnly` is a marker interface with no members (verified against SDK 3.10.3). The [official build-pipeline callbacks and interfaces docs](https://creators.vrchat.com/sdk/build-pipeline-callbacks-and-interfaces/) state that implementing it marks a script as editor-only for SDK validation, so the SDK ignores the component when scanning a world or avatar for incompatible scripts. Editor-side world validation excludes `IEditorOnly` components from illegal-component removal, while the client removes all non-whitelisted components. An `IEditorOnly` helper never reaches runtime.
+`VRC.SDKBase.IEditorOnly` is a marker interface with no members (verified against SDK 3.10.3). The [official build-pipeline callbacks and interfaces docs](https://creators.vrchat.com/sdk/build-pipeline-callbacks-and-interfaces/) state that implementing it marks a script as editor-only for SDK validation, so the SDK ignores the component when scanning a world or avatar for incompatible scripts. Non-whitelisted components do not function in the VRChat client (see the [world component whitelist](https://creators.vrchat.com/worlds/whitelisted-world-components/)), so the helper has no runtime effect either way — `IEditorOnly` is about passing SDK validation cleanly and declaring intent.
 
 ```csharp
 using UnityEngine;
 using VRC.SDKBase;
 
-// Setup-only helper: SDK validation ignores it and it never ships with the world
+// Setup-only helper: SDK validation ignores it and it does not run in the client
 public class LightProbeSetupHelper : MonoBehaviour, IEditorOnly
 {
     public float spacing = 2.0f;
@@ -328,6 +328,7 @@ public class LightProbeSetupHelper : MonoBehaviour, IEditorOnly
     private void GenerateProbes()
     {
         // Place light probes from spacing / targetArea
+        // (a real implementation uses UnityEditor APIs — hence the directive)
     }
 #endif
 }
@@ -340,8 +341,8 @@ Two key rules:
 
 ### IEditorOnly vs the EditorOnly Tag
 
-| | `IEditorOnly` interface | `EditorOnly` tag |
-|---|---|---|
+| Aspect | `IEditorOnly` interface | `EditorOnly` tag |
+|--------|-------------------------|------------------|
 | Granularity | Single component | Entire GameObject (with its children) |
 | Mechanism | VRChat SDK validation treats the component as editor-only | Unity standard: tagged GameObjects are excluded from builds |
 | Runtime components on the same GameObject | Keep working | Removed together with the GameObject |
@@ -378,7 +379,7 @@ public class TeleporterController : UdonSharpBehaviour
 ```
 
 ```csharp
-// TeleporterSetupHelper.cs — editor-only setup component, never ships
+// TeleporterSetupHelper.cs — editor-only setup component, ignored by SDK validation
 using UnityEngine;
 using VRC.SDKBase;
 
