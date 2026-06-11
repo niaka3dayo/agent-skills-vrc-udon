@@ -372,15 +372,21 @@ public class PlayerBadge : UdonSharpBehaviour
 
 ## Persistence Storage Information API (SDK 3.10.0+)
 
-Since SDK 3.10.0, VRChat exposes methods to query how much PlayerData persistence storage each player is using. PlayerObject has a separate 100 KB per-player quota.
+Since SDK 3.10.0, VRChat exposes methods to query how much PlayerData and PlayerObject persistence storage each player is using (each has its own 100 KB per-player quota; the PlayerObject methods are verified present in SDK 3.10.3).
 
 ### API Methods
 
+All five methods are statics on `VRC.SDKBase.Networking` (not `VRCPlayerApi` members — verified against SDK 3.10.3 metadata):
+
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `player.GetPlayerDataStorageUsage()` | `int` (bytes) | Current PlayerData bytes used by this player |
-| `player.GetPlayerDataStorageLimit()` | `int` (bytes) | Maximum PlayerData bytes allowed (typically 102400 = 100 KB) |
-| `player.RequestStorageUsageUpdate()` | `void` | Requests a fresh usage value from the server |
+| `Networking.GetPlayerDataStorageUsage(player)` | `int` (bytes) | Last computed PlayerData bytes used by the target player |
+| `Networking.GetPlayerDataStorageLimit()` | `int` (bytes) | Maximum PlayerData bytes allowed (typically 102400 = 100 KB) |
+| `Networking.GetPlayerObjectStorageUsage(player)` | `int` (bytes) | Last computed PlayerObject bytes used by the target player |
+| `Networking.GetPlayerObjectStorageLimit()` | `int` (bytes) | Maximum PlayerObject bytes allowed (typically 102400 = 100 KB) |
+| `Networking.RequestStorageUsageUpdate()` | `void` | Requests calculation of the local player's PlayerData and PlayerObject usage; results arrive via `OnPersistenceUsageUpdated` |
+
+The official docs note storage information can become stale and advise against calling `RequestStorageUsageUpdate()` frequently.
 
 ### OnPersistenceUsageUpdated Event
 
@@ -429,7 +435,7 @@ public class StorageMonitor : UdonSharpBehaviour
         VRCPlayerApi local = Networking.LocalPlayer;
         if (local == null || !local.IsValid()) return;
 
-        local.RequestStorageUsageUpdate();
+        Networking.RequestStorageUsageUpdate();
 
         // Schedule next refresh
         SendCustomEventDelayedSeconds(nameof(RequestRefresh), RefreshInterval);
@@ -439,8 +445,8 @@ public class StorageMonitor : UdonSharpBehaviour
     {
         if (player == null || !player.IsValid()) return;
 
-        int used = player.GetPlayerDataStorageUsage();
-        int limit = player.GetPlayerDataStorageLimit();
+        int used = Networking.GetPlayerDataStorageUsage(player);
+        int limit = Networking.GetPlayerDataStorageLimit();
         float percent = limit > 0 ? (used / (float)limit) * 100f : 0f;
 
         string text = $"Storage: {used} / {limit} bytes ({percent:F1}%)";
