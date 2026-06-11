@@ -255,7 +255,7 @@ VRC Constraint types: `VRCPositionConstraint`, `VRCRotationConstraint`, `VRCScal
 
 #### Persistence Storage Information API (SDK 3.10.0+)
 
-New `VRCPlayerApi` methods to query how much persistence storage (PlayerData + PlayerObject combined) a player is consuming.
+New `VRCPlayerApi` methods to query how much PlayerData persistence storage a player is consuming (PlayerObject data has a separate 100 KB per-player quota).
 
 ```csharp
 int used  = player.GetPlayerDataStorageUsage(); // bytes

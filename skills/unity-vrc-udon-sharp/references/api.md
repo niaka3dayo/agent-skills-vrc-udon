@@ -799,7 +799,7 @@ PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
 | `SetInt` / `TryGetInt` | `int` | 4 bytes |
 | `SetFloat` / `TryGetFloat` | `float` | 4 bytes |
 | `SetDouble` / `TryGetDouble` | `double` | 8 bytes |
-| `SetString` / `TryGetString` | `string` | ~50 chars |
+| `SetString` / `TryGetString` | `string` | No documented per-string cap — bounded by the 100 KB total |
 | `SetBytes` / `TryGetBytes` | `byte[]` | ~100KB total |
 | `SetVector3` / `TryGetVector3` | `Vector3` | 12 bytes |
 | `SetQuaternion` / `TryGetQuaternion` | `Quaternion` | 16 bytes |
@@ -811,7 +811,6 @@ PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
 |------|------|
 | PlayerData per player per world | 100 KB |
 | PlayerObject per player per world | 100 KB |
-| Single UdonBehaviour with VRC Enable Persistence | 108 bytes per variable type |
 
 ### Usage Pattern
 
