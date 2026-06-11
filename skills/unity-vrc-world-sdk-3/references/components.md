@@ -708,7 +708,10 @@ Some avatar-side features fire rays or cast queries into the world and react to 
 
 ## Allowed Unity Components
 
-Unity standard components available in VRChat.
+VRChat worlds run only whitelisted components. The authoritative list is the official
+[whitelisted world components](https://creators.vrchat.com/worlds/whitelisted-world-components/)
+page; per that page, components that are not in the list will not work. The Unity
+standard components below are the commonly used whitelisted subset.
 
 ### Physics
 
@@ -777,6 +780,27 @@ Unity standard components available in VRChat.
 ❌ Audio Sources on Avatar
 ❌ Unity Constraints (use VRC equivalents: VRCPositionConstraint, VRCRotationConstraint, VRCScaleConstraint, VRCParentConstraint, VRCAimConstraint, VRCLookAtConstraint)
 ```
+
+### Editor-Only Objects and Components
+
+For dev-only GameObjects such as test rigs, reference geometry, and measurement guides,
+assign the Unity `EditorOnly` tag. Unity excludes GameObjects with the `EditorOnly`
+tag in a Scene, including their child GameObjects, from builds.
+
+For editor-only components that must sit next to runtime components, such as setup-helper
+MonoBehaviours, implement the `VRC.SDKBase.IEditorOnly` marker interface. `IEditorOnly`
+has no members; VRChat SDK validation ignores `IEditorOnly` scripts when scanning the
+world for incompatible scripts.
+
+Use the `EditorOnly` tag when the whole GameObject and its children are dev-only. Use
+`IEditorOnly` when only one setup-helper component is editor-only and runtime components
+on the same GameObject should remain. For the full `IEditorOnly` pattern, `EditorOnly`
+comparison table, and worked setup-helper example, see
+[editor-scripting.md](../../unity-vrc-udon-sharp/references/editor-scripting.md).
+
+Custom MonoBehaviour scripts are not whitelisted and do not run in the client either way;
+the `EditorOnly` tag and `IEditorOnly` interface are about passing SDK validation cleanly
+and keeping dev-only content out of the upload intentionally.
 
 ## See Also
 

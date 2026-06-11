@@ -78,6 +78,14 @@ Common problems encountered during world development and their solutions.
 
 ```
 
+### "Unsupported component" warnings
+
+**Symptom**: SDK validation flags non-whitelisted scripts or components
+
+**Solution**: Remove them, tag dev-only objects `EditorOnly`, or mark setup-helper
+components with `IEditorOnly` — see
+[components.md](components.md#editor-only-objects-and-components).
+
 ---
 
 ## Scene Setup Issues

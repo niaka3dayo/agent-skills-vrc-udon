@@ -133,6 +133,7 @@ Notes:
 | Layer setup required | Layers not configured | Click "Setup Layers" |
 | Build size too large | Build is too big | Reduce assets |
 | Script errors | Compilation errors | Fix scripts |
+| Unsupported component warnings | Non-whitelisted scripts or components in the scene | Remove them, tag dev-only objects `EditorOnly`, or mark setup-helper components with `IEditorOnly` (see [components.md](components.md#editor-only-objects-and-components)) |
 | Missing references | Reference errors | Fix references |
 
 ### Auto-Fix Feature
