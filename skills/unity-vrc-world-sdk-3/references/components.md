@@ -569,7 +569,7 @@ Displays avatars and allows switching.
 
 ## VRC_CameraDolly
 
-Plays a camera animation along defined paths on the local player's VRChat user camera (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
+Applies a camera animation along defined paths to the local player's VRChat user camera (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
 
 ### Components
 
@@ -617,7 +617,9 @@ public class DollyTrigger : UdonSharpBehaviour
 ```
 
 For the full scripting reference, see the udon-sharp skill's
-[`api.md` Camera Dolly section](../../unity-vrc-udon-sharp/references/api.md).
+[`api.md` Camera Dolly section](../../unity-vrc-udon-sharp/references/api.md#vrc-camera-dolly-api-sdk-390).
+
+---
 
 ## VRCCameraSettings API
 
