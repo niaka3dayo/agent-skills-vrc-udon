@@ -418,8 +418,8 @@ public class DataProcessor : UdonSharpBehaviour
         ResultData    = output;
 
         // Notify mediator via string event.
-        // String literal used instead of nameof(ProcessMediator.OnResultReady) because
-        // UdonSharp's nameof support for cross-class members is unreliable at runtime.
+        // SendCustomEvent dispatches by method-name string; the literal spells
+        // out the cross-behaviour contract at the call site.
         _mediator.SendCustomEvent("OnResultReady");
     }
 }
@@ -585,8 +585,8 @@ public class RetryController : UdonSharpBehaviour
 
         // The callback fires on the helper; destroying _pendingTimer before
         // retryDelay seconds cancels it without any pending-counter bookkeeping.
-        // String literal used instead of nameof(CancellableTimer._Fire) because
-        // UdonSharp's nameof support for cross-class members is unreliable at runtime.
+        // SendCustomEvent dispatches by method-name string; the literal spells
+        // out the cross-behaviour contract at the call site.
         timer.SendCustomEventDelayedSeconds("_Fire", _retryDelay);
     }
 
