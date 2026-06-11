@@ -217,7 +217,7 @@ Exactly **one** is required in every VRChat world.
 | **VRC_UIShape**            | Canvas (World Space)     | Unity UI interaction           | -    |
 | **VRC_AvatarPedestal**     | -                        | Avatar display/switch          | -    |
 | **VRC_CameraDolly**        | -                        | Camera dolly                   | 3.9+ |
-| **VRCCameraSettings**      | None (static API)        | Read camera info from Udon     | 3.8.1 |
+| **VRCCameraSettings**      | None (static API)        | Read camera info from Udon     | 3.8.1+ |
 
 ### VRC_ObjectSync vs UdonSynced
 

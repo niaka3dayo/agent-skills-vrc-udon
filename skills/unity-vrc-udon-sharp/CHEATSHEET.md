@@ -322,7 +322,7 @@ private void Log(string msg) {
 |-------|-----|
 | Sync not working | `SetOwner()` -> modify -> `RequestSerialization()` |
 | NullReference on player | Check `player != null && player.IsValid()` |
-| Method not found (SendCustomEvent / network event target) | Make the target method public; plain network events take no parameters ([NetworkCallable] allows up to 8) |
+| Method not found (SendCustomEvent / network event target) | Make the target method public and parameterless (pass data via `SetProgramVariable`); plain network events are also parameterless ([NetworkCallable] allows up to 8) |
 | FieldChangeCallback not firing | Use property setter even for local changes |
 | Cannot modify struct | `var v = struct; v.x = 1; struct = v;` |
 | Start() not called | Inactive object support: `OnEnable()` + `Initialize()` |
@@ -372,7 +372,7 @@ For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` arr
 
 | Topic | File |
 |-------|------|
-| Camera Dolly API, VRCObjectPool API | [references/api.md](references/api.md) |
+| Full VRChat API quick reference (VRCPlayerApi, networking, camera, persistence, data containers) | [references/api.md](references/api.md) |
 | Testing in Editor (ClientSim), multi-client debugging | [references/testing.md](references/testing.md) |
 | Networking ownership, sync modes, IsMaster migration | [references/networking.md](references/networking.md) |
 | Web / Image loading, VRCUrl constraints | [references/web-loading.md](references/web-loading.md) |
