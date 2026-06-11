@@ -298,7 +298,7 @@ public override void OnPhysBoneGrab(PhysBoneGrabInfo info) {
 | `Quaternion` | 16 | |
 | `Color` | 16 | |
 | `T[]` | Variable | Arrays of the above types |
-| `VRCUrl` | 2 bytes/char | Individual fields only — `VRCUrl[]` arrays cannot be synced |
+| `VRCUrl` | 2 bytes/char | Arrays sync too (VRChat 2021.3.2+) |
 
 **Not syncable:** `GameObject`, `Transform`, `VRCPlayerApi`, custom classes
 

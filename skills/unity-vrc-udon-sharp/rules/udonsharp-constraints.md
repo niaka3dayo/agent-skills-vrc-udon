@@ -201,7 +201,7 @@ Types that can be used with `[UdonSynced]`:
 
 `bool`, `byte`, `sbyte`, `char`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
 `float`, `double`, `string` (2 bytes/char; bounded by sync mode budget — keep short in Continuous), `Vector2`, `Vector3`, `Vector4`,
-`Quaternion`, `Color`, `Color32`, `T[]` (arrays of the above types), `VRCUrl` (individual fields only — `VRCUrl[]` arrays cannot be synced)
+`Quaternion`, `Color`, `Color32`, `VRCUrl`, `T[]` (arrays of the above types)
 
 ## Validation Checklist
 
