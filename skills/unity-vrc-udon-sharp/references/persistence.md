@@ -44,7 +44,7 @@ Does another player need to see this value?
 | **[UdonSynced]** | All players in instance | Instance lifetime (late joiners receive current value) | ~200 B continuous / ~280KB (280,496 bytes) manual per behaviour | Shared game state, scores, toggles |
 | **SendCustomNetworkEvent** | All players in instance | Instant (no persistence, late joiners miss it) | Event name only, or up to 8 parameters with `[NetworkCallable]` (SDK 3.8.1+) | Sound effects, particle triggers, one-shot notifications |
 | **PlayerData** | Per player, readable by all | Cross-session (permanent until deleted) | 100 KB per player per world | Settings, unlocks, high scores |
-| **PlayerObject** | Per player, synced behaviour | Instance lifetime (+ cross-session if `VRCEnablePersistence` is on) | Multiple UdonBehaviours per prefab (combined toward the 100 KB limit) | Complex per-player state with frequent updates |
+| **PlayerObject** | Per player, synced behaviour | Instance lifetime (+ cross-session if `VRCEnablePersistence` is on) | Multiple UdonBehaviours per PlayerObject — their persisted data counts toward the per-player 100 KB total | Complex per-player state with frequent updates |
 
 ### Common Mistakes
 
