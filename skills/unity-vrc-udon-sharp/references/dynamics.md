@@ -1,8 +1,8 @@
 # VRChat Dynamics for Worlds Reference
 
-Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds (SDK 3.10.0+).
+Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds (SDK 3.10.0 - 3.10.3).
 
-**Supported SDK Versions**: 3.10.0+ (2025 onward)
+**Supported SDK Versions**: 3.10.0 - 3.10.3
 
 ## Overview
 
@@ -679,7 +679,7 @@ public class ConstraintSourceSwapper : UdonSharpBehaviour
 ```
 
 **Notes**:
-- `VRCConstraintSource` is a **struct** — always construct a new instance and assign it; do not attempt to mutate the value returned by `GetSource()` in place (see [struct mutation caveat](../rules/udonsharp-constraints.md#struct-mutation)).
+- `VRCConstraintSource` is a **struct** — always construct a new instance and assign it; do not attempt to mutate the value returned by `GetSource()` in place (see [struct mutation caveat](../rules/udonsharp-constraints.md#3-struct-mutation)).
 - Remove sources from the **highest index downward** when removing multiple at once, to avoid index shifting mid-loop.
 - `SetSourceWeight(index, weight)` is a shorthand for read-modify-write with `GetSource` / `SetSource`; both approaches are equivalent.
 

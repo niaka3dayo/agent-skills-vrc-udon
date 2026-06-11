@@ -562,7 +562,7 @@ using UnityEngine;
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class RetryController : UdonSharpBehaviour
 {
-    [SerializeField] private GameObject _timerPrefab; // Prefab with CancellableTimer attached
+    [SerializeField] private GameObject _timerTemplate; // Disabled scene GameObject with CancellableTimer attached
     [SerializeField] private float      _retryDelay = 5f;
 
     private GameObject _pendingTimer;
@@ -574,17 +574,20 @@ public class RetryController : UdonSharpBehaviour
     {
         CancelPendingRetry();
 
-        if (_timerPrefab == null) { Debug.LogError("[RetryController] Timer prefab not assigned"); return; }
+        if (_timerTemplate == null) { Debug.LogError("[RetryController] Timer template not assigned"); return; }
 
-        _pendingTimer = VRCInstantiate(_timerPrefab);
+        _pendingTimer = Object.Instantiate(_timerTemplate);
         CancellableTimer timer = _pendingTimer.GetComponent<CancellableTimer>();
         if (timer == null) { Debug.LogError("[RetryController] CancellableTimer component missing"); Destroy(_pendingTimer); _pendingTimer = null; return; }
         timer.CallbackTarget = this;
         timer.CallbackMethod = nameof(OnRetryFired);
+        _pendingTimer.SetActive(true);
 
         // The callback fires on the helper; destroying _pendingTimer before
         // retryDelay seconds cancels it without any generation-counter bookkeeping.
-        timer.SendCustomEventDelayedSeconds(nameof(CancellableTimer._Fire), _retryDelay);
+        // String literal used instead of nameof(CancellableTimer._Fire) because
+        // UdonSharp's nameof support for cross-class members is unreliable at runtime.
+        timer.SendCustomEventDelayedSeconds("_Fire", _retryDelay);
     }
 
     /// <summary>

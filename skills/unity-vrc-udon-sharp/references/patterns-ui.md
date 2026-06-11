@@ -130,7 +130,7 @@ public class AvatarScaleUI : UdonSharpBehaviour
 > **Key notes:**
 > - `GetTrackingData(Head).position.y` returns the world-space Y of the player's head, which correlates with avatar scale.
 > - Clamp the scale factor to avoid UI becoming invisible (tiny avatars) or enormous (giant avatars).
-> - Call `ApplyScale()` from an external trigger (e.g., avatar change event or a periodic timer) since there is no built-in "avatar changed" callback in UdonSharp.
+> - Call `ApplyScale()` from `OnAvatarEyeHeightChanged(VRCPlayerApi, float)` or `OnAvatarChanged(VRCPlayerApi)`; `player.GetAvatarEyeHeightAsMeters()` is the direct avatar scale source when you do not need the head-Y heuristic.
 
 ---
 
@@ -138,12 +138,14 @@ public class AvatarScaleUI : UdonSharpBehaviour
 
 When players change their camera FOV (e.g., through VRChat camera zoom settings), world-space
 UI panels can drift out of view. This pattern adjusts the Canvas offset using trigonometric
-FOV calculations and hooks `OnVRCCameraSettingsChanged()` for live updates.
+FOV calculations and hooks `OnVRCCameraSettingsChanged(VRCCameraSettings cameraSettings)`
+for live updates (SDK 3.8.1+).
 
 ```csharp
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Rendering;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class FovResponsiveUI : UdonSharpBehaviour
@@ -174,7 +176,7 @@ public class FovResponsiveUI : UdonSharpBehaviour
     /// <summary>
     /// Called by VRChat when camera settings (FOV, near/far plane) change.
     /// </summary>
-    public override void OnVRCCameraSettingsChanged()
+    public override void OnVRCCameraSettingsChanged(VRCCameraSettings cameraSettings)
     {
         RecalculatePosition();
     }
@@ -188,11 +190,8 @@ public class FovResponsiveUI : UdonSharpBehaviour
         if (_isVR) return;
 
         float currentFov = 60.0f;
-        Camera screenCam = VRCCameraSettings.ScreenCamera;
-        if (screenCam != null)
-        {
-            currentFov = screenCam.fieldOfView;
-        }
+        VRCCameraSettings screenCam = VRCCameraSettings.ScreenCamera;
+        currentFov = screenCam.FieldOfView;
 
         // Compute viewport-relative scale factor
         float refTan = Mathf.Tan((referenceFov / 2.0f) * Mathf.Deg2Rad);
@@ -214,7 +213,7 @@ public class FovResponsiveUI : UdonSharpBehaviour
 ```
 
 > **Key notes:**
-> - `OnVRCCameraSettingsChanged()` fires whenever the player adjusts camera zoom or near/far clip planes.
+> - `VRCCameraSettings` and `OnVRCCameraSettingsChanged(VRCCameraSettings cameraSettings)` require SDK 3.8.1+ and fire whenever the player adjusts camera zoom or near/far clip planes.
 > - VR headsets have a fixed FOV; this adjustment is only meaningful on desktop.
 > - The tangent ratio preserves the apparent angular size of the UI panel regardless of FOV.
 
@@ -230,6 +229,7 @@ UI layout at runtime based on platform and input mode.
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Rendering;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PlatformAdaptiveUI : UdonSharpBehaviour
@@ -278,10 +278,10 @@ public class PlatformAdaptiveUI : UdonSharpBehaviour
 
     private void ApplyAspectLayout()
     {
-        Camera screenCam = VRCCameraSettings.ScreenCamera;
-        if (screenCam == null) return;
+        VRCCameraSettings screenCam = VRCCameraSettings.ScreenCamera;
+        if (screenCam.PixelHeight <= 0) return;
 
-        float aspect = screenCam.aspect;
+        float aspect = (float)screenCam.PixelWidth / screenCam.PixelHeight;
         bool isLandscape = aspect >= 1.0f;
 
         if (landscapeSidebar != null) landscapeSidebar.SetActive(isLandscape);
@@ -293,7 +293,7 @@ public class PlatformAdaptiveUI : UdonSharpBehaviour
 > **Key notes:**
 > - `#if UNITY_ANDROID || UNITY_IOS` is evaluated at **compile time**, producing separate builds for PC and Quest with no runtime overhead.
 > - `IsUserInVR()` detects VR headsets at runtime — a PC user can be in either Desktop or VR mode.
-> - `VRCCameraSettings.ScreenCamera.aspect` returns the current viewport aspect ratio, useful for detecting portrait-mode streaming or unusual resolutions.
+> - `VRCCameraSettings.ScreenCamera` exposes `PixelWidth` and `PixelHeight`; compute aspect as `(float)PixelWidth / PixelHeight` after checking `PixelHeight > 0`.
 
 ---
 
@@ -301,7 +301,7 @@ public class PlatformAdaptiveUI : UdonSharpBehaviour
 
 Many worlds need a live player list for teleportation, team assignment, or voting.
 This pattern enumerates all players, creates a button for each, refreshes on join/leave,
-and dispatches click callbacks using button name parsing.
+and dispatches click callbacks through a parameterless per-button handler.
 
 ```csharp
 using UdonSharp;
@@ -318,8 +318,10 @@ public class DynamicPlayerList : UdonSharpBehaviour
     [SerializeField] private GameObject buttonTemplate;
 
     [Header("Configuration")]
-    [Tooltip("Prefix for button names used to identify player ID")]
+    [Tooltip("Prefix for generated button names")]
     [SerializeField] private string buttonPrefix = "PlayerBtn_";
+
+    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before OnPlayerButtonClicked
 
     private GameObject[] _activeButtons = new GameObject[0];
 
@@ -368,8 +370,16 @@ public class DynamicPlayerList : UdonSharpBehaviour
             btn.transform.SetParent(listParent, false);
             btn.SetActive(true);
 
-            // Encode player ID in button name for callback dispatch
+            // Name the clone for hierarchy/debugging
             btn.name = buttonPrefix + players[i].playerId.ToString();
+
+            ButtonHandler handler = btn.GetComponent<ButtonHandler>();
+            if (Utilities.IsValid(handler))
+            {
+                handler.buttonIndex = players[i].playerId;
+                handler.targetScript = this;
+                handler.methodName = nameof(OnPlayerButtonClicked);
+            }
 
             // Set display text
             TextMeshProUGUI label = btn.GetComponentInChildren<TextMeshProUGUI>();
@@ -383,34 +393,12 @@ public class DynamicPlayerList : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Called by each button's OnClick UnityEvent. The button passes
-    /// its own GameObject name so we can extract the player ID.
+    /// Called by ButtonHandler after it writes selectedIndex.
     /// </summary>
-    public void OnPlayerButtonClicked(string buttonName)
+    public void OnPlayerButtonClicked()
     {
-        if (buttonName == null) return;
-
-        // Parse player ID from button name
-        string idStr = buttonName.Replace(buttonPrefix, "");
-        int playerId = -1;
-
-        // Manual int parse (no int.TryParse in older Udon runtimes)
-        bool valid = true;
-        int result = 0;
-        for (int i = 0; i < idStr.Length; i++)
-        {
-            char c = idStr[i];
-            if (c < '0' || c > '9')
-            {
-                valid = false;
-                break;
-            }
-            result = result * 10 + (c - '0');
-        }
-        if (valid && idStr.Length > 0)
-        {
-            playerId = result;
-        }
+        int playerId = selectedIndex;
+        selectedIndex = -1;
 
         if (playerId < 0) return;
 
@@ -431,7 +419,7 @@ public class DynamicPlayerList : UdonSharpBehaviour
 
 > **Key notes:**
 > - `Object.Instantiate()` works in UdonSharp for scene objects. The template button must exist in the scene (not an asset prefab).
-> - Player IDs are encoded in the button `name` field and parsed back on click — this avoids needing per-button UdonBehaviours.
+> - Add the `ButtonHandler` component from `patterns-core.md` to the template button. Wire the Button's OnClick to `SendCustomEvent("OnClick")` on that handler; it writes `selectedIndex` before calling `OnPlayerButtonClicked`.
 > - Always check `IsValid()` before using a `VRCPlayerApi` reference, as players may leave between list refresh and click.
 > - For large player counts (80+), consider recycling buttons instead of Destroy/Instantiate every refresh.
 
@@ -498,7 +486,7 @@ public class ScrollInputAdapter : UdonSharpBehaviour
 
     private float GetVRScrollDelta()
     {
-        // InputLookVertical maps to the right-hand thumbstick Y axis
+        // Oculus_CrossPlatform_SecondaryThumbstickVertical maps to the right-hand thumbstick Y axis
         float axis = Input.GetAxis("Oculus_CrossPlatform_SecondaryThumbstickVertical");
 
         // Apply dead zone
@@ -744,6 +732,9 @@ public class UISettingsStore : UdonSharpBehaviour
     [Header("UI References")]
     [SerializeField] private Slider volumeSlider;
 
+    [Header("PlayerObject Lookup")]
+    [SerializeField] private UISettingsStore referenceStore;
+
     private bool _initialized = false;
     private VRCPlayerApi _localPlayer;
 
@@ -794,10 +785,16 @@ public class UISettingsStore : UdonSharpBehaviour
     /// <summary>
     /// Look up another player's settings store from their PlayerObjects.
     /// </summary>
-    public static UISettingsStore FindForPlayer(VRCPlayerApi player)
+    public UISettingsStore FindForPlayer(VRCPlayerApi player)
     {
-        // Returns the UISettingsStore component from the given player's PlayerObjects
-        return Networking.FindComponentInPlayerObjects<UISettingsStore>(player);
+        if (player == null) return null;
+        if (!player.IsValid()) return null;
+        if (!Utilities.IsValid(referenceStore)) return null;
+
+        Component found = player.FindComponentInPlayerObjects(referenceStore);
+        if (!Utilities.IsValid(found)) return null;
+
+        return (UISettingsStore)found;
     }
 
     /// <summary>
@@ -817,9 +814,10 @@ public class UISettingsStore : UdonSharpBehaviour
 
 > **Key notes:**
 > - PlayerObject instances are created per-player by VRChat. The component on the PlayerObject prefab becomes a per-player data store.
+> - Add `VRCEnablePersistence` to the same GameObject as this `UISettingsStore`; without it the PlayerObject instantiates but its synced fields do not persist (see `persistence.md`).
 > - The `-1` sentinel pattern lets you distinguish "player never set this" from "player explicitly chose value 0."
 > - `OnPlayerRestored()` fires after the player's persistent data is loaded. Apply saved state here, not in `Start()`.
-> - `Networking.FindComponentInPlayerObjects<T>(player)` retrieves another player's PlayerObject component, useful for displaying their preferences.
+> - Assign `referenceStore` to the UISettingsStore component on the PlayerObject prefab. `player.FindComponentInPlayerObjects(referenceStore)` returns the matching component for that player and must be cast and validity-checked.
 
 ---
 
@@ -1593,6 +1591,7 @@ public class AppManager : UdonSharpBehaviour
     // ownership-transfer code path only.
     // -2 = no pending operation, -1 = pending close, >= 0 = pending open index
     private int _pendingOpenIndex = -2;
+    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before OnIconButtonClicked
 
     /// <summary>
     /// Synced property: when the synced value changes, trigger a transition.
@@ -1682,6 +1681,14 @@ public class AppManager : UdonSharpBehaviour
             iconObj.SetActive(true);
             iconObj.name = "AppIcon_" + i.ToString();
 
+            ButtonHandler handler = iconObj.GetComponent<ButtonHandler>();
+            if (Utilities.IsValid(handler))
+            {
+                handler.buttonIndex = i;
+                handler.targetScript = this;
+                handler.methodName = nameof(OnIconButtonClicked);
+            }
+
             // Set icon texture if a RawImage is present on the template
             RawImage rawImage =
                 iconObj.GetComponentInChildren<RawImage>();
@@ -1701,8 +1708,7 @@ public class AppManager : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Open an app by index. Call from icon button OnClick events.
-    /// The button name must contain the index (e.g., "AppIcon_2").
+    /// Open an app by index. Call from icon button handlers.
     /// </summary>
     public void OpenApp(int appIndex)
     {
@@ -1758,36 +1764,13 @@ public class AppManager : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Called by icon buttons. Parse the button name to extract the app index.
-    /// Button name format: "AppIcon_N" where N is the app index.
+    /// Called by ButtonHandler after it writes selectedIndex.
     /// </summary>
-    public void OnIconButtonClicked(string buttonName)
+    public void OnIconButtonClicked()
     {
-        if (buttonName == null) return;
-
-        string prefix = "AppIcon_";
-        if (buttonName.Length <= prefix.Length) return;
-
-        string idxStr = buttonName.Substring(prefix.Length);
-
-        // Manual int parse
-        int result = 0;
-        bool valid = true;
-        for (int i = 0; i < idxStr.Length; i++)
-        {
-            char c = idxStr[i];
-            if (c < '0' || c > '9')
-            {
-                valid = false;
-                break;
-            }
-            result = result * 10 + (c - '0');
-        }
-
-        if (valid && idxStr.Length > 0)
-        {
-            OpenApp(result);
-        }
+        int appIndex = selectedIndex;
+        selectedIndex = -1;
+        OpenApp(appIndex);
     }
 
     private void BeginTransition(int targetIndex)
@@ -1945,7 +1928,7 @@ public class AppManager : UdonSharpBehaviour
 > - The `[FieldChangeCallback]` attribute on `SyncedAppIndex` ensures the property setter runs on all clients when the synced value changes, triggering the transition on remote players.
 > - App discovery iterates `appsParent` children at `Start()`. Adding or removing apps at runtime is not supported — all apps must be present in the scene hierarchy at load time.
 > - Pickup events (`OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`) are forwarded from the manager to the active app via `SendCustomEvent`, allowing each app to respond to device interactions independently.
-> - Icon buttons are instantiated from a scene template at startup. Wire each button's OnClick to call `OnIconButtonClicked` with the button's name.
+> - Icon buttons are instantiated from a scene template at startup. Add `ButtonHandler` from `patterns-core.md` to the template and wire each Button's OnClick to `SendCustomEvent("OnClick")` on that handler; the handler writes `selectedIndex` before calling `OnIconButtonClicked`.
 
 ---
 

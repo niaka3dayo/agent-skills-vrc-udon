@@ -301,7 +301,11 @@ public class DoubleBufferImageDisplay : UdonSharpBehaviour
 
     public override void OnImageLoadSuccess(IVRCImageDownload result)
     {
-        if (_isFading) return; // Ignore if a fade is already running
+        if (_isFading)
+        {
+            Destroy(result.Result); // Do not leak an abandoned texture while a fade is already running
+            return;
+        }
 
         Texture2D newTexture = result.Result;
 
@@ -923,6 +927,6 @@ public class StaggeredImageLoader : UdonSharpBehaviour
 
 - [web-loading.md](web-loading.md) — `VRCImageDownloader` API overview, rate limits, trusted URL list, and basic pattern
 - [api.md](api.md) — Quick reference for `VRCUrl`, `TextureInfo`, `IVRCImageDownload` properties
-- [troubleshooting.md](troubleshooting.md) — Web loading error table and HTTP error code reference
+- [troubleshooting.md](troubleshooting.md) — General UdonSharp compile, runtime, networking, persistence, and performance troubleshooting
 - [patterns-performance.md](patterns-performance.md) — Update Handler Pattern (disable per-frame polling when not needed)
 - [web-loading-advanced.md](web-loading-advanced.md) - Advanced data loading via StringDownloader with Base64 textures
