@@ -225,7 +225,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 | File | Contents | Search Hints |
 |------|----------|--------------|
-| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; advanced workarounds (object array pseudo-struct, VRCUrl array sync) | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
+| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; advanced workarounds (object array pseudo-struct); synced VRCUrl lists | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
 | `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network events, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, master leave, ownership cascade |
 | `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
 | `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
