@@ -80,7 +80,7 @@ Problem:
 - Simultaneous playback increases load
 
 Countermeasures:
-□ Maximum 2
+□ Keep to 1-2 players on PC, 1 on Quest (recommended; no documented hard limit)
 □ Avoid simultaneous playback
 □ Provide a low-resolution option
 ```
@@ -355,7 +355,7 @@ public void SlowUpdate()
 □ Lights fully baked
 □ Realtime lights = 0
 □ No mirrors or minimal
-□ Video players ≤ 1
+□ Video players kept to 1 (recommended)
 □ No Post Processing
 ```
 
@@ -427,7 +427,7 @@ In-game checks:
 □ Light baking complete
 □ Realtime lights ≤ 1
 □ Mirror default OFF
-□ Video players ≤ 2
+□ Video players kept to 1-2 (recommended)
 □ Static Batching enabled
 □ Occlusion Culling configured
 □ LOD configured (large objects)
@@ -453,7 +453,7 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 | Custom shaders | Supported with caution | Custom shaders are allowed for worlds; use mobile-compatible shaders to avoid GPU overload. Avatars are restricted to VRChat Mobile shaders. |
 | Post-processing effects | Not supported | Bloom, depth of field, color grading unavailable |
 | Real-time shadows | Not supported | Baked lighting only |
-| Video player (AVPro) | Not supported | Use Unity Video Player component instead |
+| Video players | Work with some limitations | See audio-video.md (some URLs unsupported on Quest) |
 | Particle systems | Limited | Reduce count and complexity |
 
 ### Features Not Available on Quest
@@ -462,7 +462,6 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 ⚠️ Custom shaders (worlds only: allowed with caution; avoid complex HLSL/ShaderLab features that stress the mobile GPU. Avatar shaders are restricted to VRChat Mobile shaders.)
 ❌ Post-processing stack (any effect)
 ❌ Real-time shadow casting and receiving
-❌ AVPro video player
 ❌ Screen-space ambient occlusion (SSAO)
 ❌ Screen-space reflections (SSR)
 ❌ Tessellation and geometry shaders
@@ -562,7 +561,7 @@ Additional steps:
 Mandatory: all lighting must be baked before uploading the Quest build.
 
 Recommended settings for Quest:
-├── Lightmapper:           Progressive CPU (stable) or GPU
+├── Lightmapper:           Progressive GPU (fast; fall back to CPU if GPU memory is insufficient)
 ├── Lightmap Resolution:   5–10 texels/unit (lower = smaller textures)
 ├── Lightmap Size:         1024×1024 max per map
 ├── Directional Mode:      Non-Directional  ← required for Quest
@@ -639,7 +638,7 @@ Verify all items below before uploading a Quest-compatible world build.
     - VRChat/Mobile/Toon Lit (if using VRChat shaders)
 □ No custom HLSL shaders or unsupported ShaderLab features
 □ GPU Instancing enabled on all materials applied to repeated objects
-□ Material count < 25 per scene section
+□ Material count < 25 unique materials per world
 □ No post-processing volumes or components in the scene
 ```
 
@@ -668,7 +667,7 @@ Verify all items below before uploading a Quest-compatible world build.
 ### Platform-Specific Features
 
 ```text
-□ No AVPro video player components — replaced with Unity Video Player
+□ Video players configured for Quest (see audio-video.md)
 □ No post-processing components (Post Process Volume, etc.)
 □ No real-time shadow settings on any light
 □ No screen-space effects in any material or renderer

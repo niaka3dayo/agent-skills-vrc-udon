@@ -27,10 +27,10 @@ metadata:
 | ------------------------------------------ | -------------------------- | ------------------------------- |
 | [Scene Setup](#scene-setup)                | VRC_SceneDescriptor, Spawn | This file                       |
 | [Components](#components)                  | Pickup, Station, Mirror    | `references/components.md`      |
-| [Layers & Collision](#layers-collision)   | Layers, Collision Matrix   | `references/layers.md`          |
+| [Layers & Collision](#layers--collision)  | Layers, Collision Matrix   | `references/layers.md`          |
 | [Performance](#performance)                | Optimization guide         | `references/performance.md`     |
 | [Lighting](#lighting)                      | Lighting settings          | `references/lighting.md`        |
-| [Audio & Video](#audio-video)             | Audio, Video players       | `references/audio-video.md`     |
+| [Audio & Video](#audio--video)            | Audio, Video players       | `references/audio-video.md`     |
 | [World Upload](#world-upload)              | Upload workflow            | `references/upload.md`          |
 | [Troubleshooting](#troubleshooting)        | Problem solving            | `references/troubleshooting.md` |
 | [Cheatsheet](CHEATSHEET.md)               | Quick reference            | `CHEATSHEET.md`                 |
@@ -44,15 +44,15 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | # | NEVER do this | Why it hurts | Use instead |
 |---|---------------|-------------|-------------|
 | 1 | Enable Mirror by default (active on world join) | Renders the entire scene twice — immediate FPS halving, catastrophic on Quest | Default Mirror OFF; add UdonSharp toggle or player-triggered activation |
-| 2 | Use realtime directional lights with real-time shadows | Quest has no hardware shadow acceleration; each shadow caster costs 10-30 FPS | Baked lightmaps + light probes; set lights to Baked or Mixed mode |
+| 2 | Use realtime directional lights with real-time shadows | Quest has no hardware shadow acceleration; shadow casters commonly cost on the order of 10-30 FPS in practice (varies by scene) | Baked lightmaps + light probes; set lights to Baked or Mixed mode |
 | 3 | Set Respawn Height at or above the world floor | Player respawns → falls → respawns again → infinite loop; players cannot recover | Set to an unreachable depth (e.g., floor at Y=0 → Respawn at Y=-100) |
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
-| 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile or guard assets with `#if UNITY_ANDROID` |
+| 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile with post-processing disabled |
 | 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
-| 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use Animator-driven transforms (no constraints) or remove cloth from Quest meshes |
-| 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
+| 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use VRC Constraints (SDK 3.10.0+, world-supported) or Animator-driven transforms, and remove cloth from Quest meshes |
+| 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — commonly on the order of 3-5× draw call overhead in practice, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
-| 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
+| 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit (PC) / 5-10 (Quest) as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
 | 11 | Add VRC_UIShape to a Screen Space or Overlay Canvas | VRC_UIShape requires World Space Canvas; other modes throw a runtime Unity error in VRChat — the UI renders visually but is not interactive, with no visible error to the world builder | Set Canvas > Render Mode to World Space before adding VRC_UIShape |
 
 ## Reference Loading Guide
@@ -120,8 +120,8 @@ Quest required? → Yes
 | 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | ✅             |
 | 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | ✅             |
 | 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | ✅             |
-| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets          | ✅             |
-| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings              | ✅             |
+| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings | ✅ |
+| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) | ✅ |
 | 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | ✅             |
 | 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅             |
@@ -150,7 +150,8 @@ Exactly **one** is required in every VRChat world.
 | Property                        | Type        | Description                     | Default           |
 | ------------------------------- | ----------- | ------------------------------- | ------------------ |
 | **Spawns**                      | Transform[] | Array of spawn points           | Descriptor position |
-| **Spawn Order**                 | enum        | Sequential/Random/Demo (Demo: all players to Spawns[0]) | Sequential |
+| **Spawn Order**                 | enum        | First/Sequential/Random/Demo (First: always the first spawn; Demo: spawn point is the center of room scale) | Sequential |
+| **Spawn Orientation**           | enum        | Default/Align Player With Spawn Point/Align Room With Spawn Point | Default |
 | **Respawn Height**              | float       | Respawn height (Y axis)         | -100               |
 | **Object Behaviour At Respawn** | enum        | Respawn/Destroy                 | Respawn            |
 | **Reference Camera**            | Camera      | Player camera settings reference | None              |
@@ -202,7 +203,7 @@ Exactly **one** is required in every VRChat world.
 ## Components
 
 **MANDATORY READ** [`references/components.md`](references/components.md) (~800 lines) before configuring any VRC component below. Load in full — dependency requirements and Udon event hooks are distributed throughout.
-**Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
+**Do NOT Load**: `references/audio-video.md` (unless the task involves audio/video components), `references/lighting.md`.
 
 | Component                  | Required Elements        | Purpose                        | SDK  |
 | -------------------------- | ------------------------ | ------------------------------ | ---- |
@@ -273,7 +274,7 @@ Exactly **one** is required in every VRChat world.
 | Item                | Recommended           | Reason                        |
 | ------------------- | --------------------- | ----------------------------- |
 | Mirrors             | 1, default OFF        | Renders the entire scene 2x   |
-| Video players       | Max 2                 | Decoding overhead             |
+| Video players       | 1-2 recommended       | Decoding overhead; no documented hard limit |
 | Realtime lights     | 0-1                   | Dynamic shadows are expensive  |
 | Lightmaps           | **Required**          | Performance foundation         |
 
@@ -295,9 +296,7 @@ Exactly **one** is required in every VRChat world.
 | GPU-bound | Draw calls, overdraw, shader complexity | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
 | Memory | VRAM usage, texture size, mesh count | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
 
-**MANDATORY READ**: Load [performance.md](references/performance.md) before optimizing — measure first, then target the largest bottleneck.
-
-**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization.
+**MANDATORY READ**: Load [performance.md](references/performance.md) before optimizing — measure first, then target the largest bottleneck — and [`references/lighting.md`](references/lighting.md) for Quest optimization.
 **Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---
@@ -309,7 +308,7 @@ Exactly **one** is required in every VRChat world.
 ```text
 ✅ Recommended settings:
 ├── Lightmapper: Progressive GPU
-├── Lightmap Resolution: 10-20 texels/unit
+├── Lightmap Resolution: 10-20 texels/unit (PC) / 5-10 (Quest)
 ├── Light Mode: Baked or Mixed
 └── Light Probes: Place along player paths
 
@@ -330,7 +329,7 @@ Exactly **one** is required in every VRChat world.
 
 | Property              | Description           | Default            |
 | --------------------- | --------------------- | ------------------ |
-| Gain                  | Volume (dB)           | 0 (World: +10)    |
+| Gain                  | Volume boost (0-24 dB) | 10 dB (world default) |
 | Near                  | Attenuation start     | 0m                 |
 | Far                   | Attenuation end       | 40m                |
 | Volumetric Radius     | Source spread          | 0m                 |
@@ -346,6 +345,7 @@ Exactly **one** is required in every VRChat world.
 | Quest support      | ✅    | ✅          |
 
 **MANDATORY READ** [`references/audio-video.md`](references/audio-video.md) for VRC_SpatialAudioSource or video player configuration.
+**Optional**: `references/components.md` when wiring audio/video components.
 **Do NOT Load**: `references/lighting.md`, `references/performance.md`.
 
 ---
@@ -402,7 +402,7 @@ Identify the symptom category and jump to the reference section:
 | Player walks through walls / floor | Layer setup not run; geometry not on Environment (11) | [troubleshooting.md §Layer & Collision](references/troubleshooting.md#layer--collision-issues) |
 | Can't grab / Pickup not working | Missing Collider, Rigidbody, or VRC_Pickup component | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
 | Object not syncing / snaps back | Missing VRC_ObjectSync or ownership not transferred | [troubleshooting.md §Networking](references/troubleshooting.md#networking-issues) |
-| Can't sit / clips through Station | Missing Collider; Station Collision Transform needs adjustment | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
+| Can't sit / clips through Station | Missing Collider; Station Enter Player Location needs adjustment | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
 | Mirror not reflecting | Layers mask missing Player/PlayerLocal/MirrorReflection | [troubleshooting.md §Component](references/troubleshooting.md#component-issues) |
 | Build / Upload fails | Missing SceneDescriptor, script errors, layer warnings | [troubleshooting.md §Build](references/troubleshooting.md#build--upload-issues) |
 | Performance issues | Mirror ON, realtime lights, uncooked lightmaps | [performance.md](references/performance.md) |
@@ -431,12 +431,12 @@ Starter templates for common SDK component patterns. Each template compiles with
 ## References
 
 | File                            | Content                                                                                          | Approx. Lines |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- -| ------------- |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
 | `references/components.md`      | All component details, component whitelist, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
-| `references/layers.md`          | Layers & collision                                                                               | 400+          |
-| `references/performance.md`     | Performance optimization                                                                         | 500+          |
+| `references/layers.md`          | Layers & collision                                                                               | 300+          |
+| `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |
-| `references/audio-video.md`     | Audio & video                                                                                    | 400+          |
+| `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
 | `references/upload.md`          | Upload procedure                                                                                 | 300+          |
 | `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
 | `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |

@@ -29,7 +29,7 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
 | Spawns | Transform[] | Array of spawn points | Descriptor position |
-| Spawn Order | SpawnOrder | Sequential/Random/Demo | Sequential |
+| Spawn Order | SpawnOrder | First/Sequential/Random/Demo | Sequential |
 | Respawn Height | float | Respawn Y coordinate | -100 |
 | Object Behaviour At Respawn | enum | Respawn/Destroy | Respawn |
 | Reference Camera | Camera | Camera settings reference | None |
@@ -44,14 +44,18 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 ### Spawn Order Details
 
 ```csharp
+// First: Always use the first spawn
+// Every player appears at Spawns[0]
+
 // Sequential: Spawn in order
 // Join order: Player1→Spawn0, Player2→Spawn1, Player3→Spawn2, Player4→Spawn0...
 
 // Random: Random selection
 // Different spawn point each time
 
-// Demo: All at the same location
-// All players appear at Spawns[0]
+// Demo: Room-scale alignment mode
+// The spawn point represents the center of the player's room scale —
+// standing a meter from your room-scale center spawns you a meter from the spawn
 ```
 
 ### Reference Camera Settings
@@ -119,7 +123,7 @@ Allows players to grab objects.
 | Exact Grip | Transform | Exact grip position | null |
 | Exact Gun | Transform | Exact gun position | null |
 | Proximity | float | Pickup distance | 2.0 |
-| **Auto Hold** | enum | Yes/No/AutoDetect | No |
+| **Auto Hold** | enum | Yes/No (v1.1; AutoDetect is v1.0-only) | No |
 
 ### Auto Hold (SDK 3.9+)
 
@@ -178,6 +182,8 @@ public class PickupHandler : UdonSharpBehaviour
 }
 ```
 
+On desktop, `OnPickupUseDown` and `OnPickupUseUp` require Auto Hold = Yes to fire.
+
 ### Network Sync
 
 ```csharp
@@ -204,8 +210,8 @@ Creates a location where players can sit.
 [Station GameObject]
 ├── Collider (Required - for Interact)
 └── VRC_Station
-    ├── Entry Transform (optional)
-    └── Exit Transform (optional)
+    ├── Station Enter Player Location (optional)
+    └── Station Exit Player Location (optional)
 ```
 
 ### All Properties
@@ -456,7 +462,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 | Property | Type | Description | Default | Range |
 |----------|------|-------------|---------|-------|
-| Gain | float | Additional volume | 0 dB | 0-24 dB |
+| Gain | float | Additional volume | 10 dB (world audio sources) | 0-24 dB |
 | Near | float | Attenuation start distance | 0 m | - |
 | Far | float | Attenuation end distance | 40 m | - |
 | Volumetric Radius | float | Source size | 0 m | < Far |
@@ -487,7 +493,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 
 ```text
 ⚠️ AudioSource on avatars:
-- Gain limit: 10 dB
+- Avatar gain cap: 10 dB
 - Far limit: 40 m
 - Always add VRC_SpatialAudioSource
   (If not added, SDK auto-generates one, causing unexpected behavior)
@@ -657,7 +663,7 @@ public class DollyController : UdonSharpBehaviour
 
 ## VRCCameraSettings API
 
-Retrieves camera information (SDK 3.9+).
+Retrieves camera information (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0).
 
 ### Properties
 
@@ -771,9 +777,11 @@ standard components below are the commonly used whitelisted subset.
 
 ### Disabled on Quest/Android
 
+Entries marked "on Avatar" come from avatar-side limitations and are listed here for completeness; unmarked entries are world-relevant where applicable.
+
 ```text
 ❌ Dynamic Bones
-❌ Cloth (allowed in worlds, not on avatars)
+❌ Cloth — completely disabled on Android/Quest
 ❌ Physics on Avatar (Rigidbody, Collider, Joint)
 ❌ Cameras on Avatar
 ❌ Lights on Avatar

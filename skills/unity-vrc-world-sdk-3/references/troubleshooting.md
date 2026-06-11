@@ -176,9 +176,9 @@ components with `IEditorOnly` — see
 
 ```text
 
-1. Check DisallowTheft on VRC_Pickup
-2. If DisallowTheft is true, the current holder owns it exclusively — a second grab is blocked
-3. Set DisallowTheft to false if shared grabbing is intended
+1. Check Allow Theft on VRC_Pickup
+2. If Allow Theft is disabled, the current holder owns it exclusively — a second grab is blocked
+3. Enable Allow Theft if shared grabbing is intended
 
 ```
 
@@ -219,9 +219,9 @@ components with `IEditorOnly` — see
 
 ```text
 
-1. Adjust the Station Collision Transform field in the VRC_Station Inspector
-2. Move the Station Collision Transform to an unobstructed position
-3. Ensure the Exit Transform is also clear of obstacles
+1. Adjust the Station Enter Player Location transform on the VRC_Station
+2. Move Station Enter Player Location to an unobstructed seated position
+3. Ensure Station Exit Player Location is also clear of obstacles
 
 ```
 
@@ -234,7 +234,7 @@ components with `IEditorOnly` — see
 ```text
 
 1. If Disable Station Exit is true, set it to false
-2. Verify Exit Transform isn't inside an obstacle
+2. Verify Station Exit Player Location isn't inside an obstacle
 3. Implement forced exit in Udon
 
 ```
@@ -335,7 +335,7 @@ components with `IEditorOnly` — see
 1. Set mirror to default OFF
 2. Reduce/remove realtime lights
 3. Bake lights
-4. Check video player count (max 2)
+4. Check video player count (1-2 recommended)
 5. Reduce Draw Calls
 6. Reduce polygon count
 7. Lower texture resolution
