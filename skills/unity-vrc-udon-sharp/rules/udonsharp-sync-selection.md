@@ -19,6 +19,8 @@ Q3: Does the value change continuously? (position/rotation)
   No  -> Manual sync + minimal [UdonSynced]
 ```
 
+Note: `BehaviourSyncMode.None` additionally disables `SendCustomNetworkEvent` — use `NoVariableSync` for event-driven behaviours.
+
 | Use Case | Pattern | Synced Variables | Example |
 |----------|---------|-----------------|---------|
 | Personal effects | No sync | 0 | Gun muzzle flash particles |
@@ -34,7 +36,8 @@ Estimate synced data volume before generating code.
 |------|-------|-------|
 | `bool` | 1 | Flags |
 | `byte` | 1 | Small values 0-255 |
-| `short` | 2 | 0-65535 |
+| `short` | 2 | -32,768 to 32,767 |
+| `ushort` | 2 | 0-65535 |
 | `int` | 4 | General purpose integer |
 | `float` | 4 | Decimal values |
 | `Vector3` | 12 | Position |
@@ -46,7 +49,7 @@ Estimate synced data volume before generating code.
 **Reference values** (typical world gimmicks):
 - Voting system: `int + int + bool` = **9 bytes**
 - Shooting manager: `bool + bool + string + int` = **~38 bytes**
-- Global counter: **0** synced variables (SendCustomNetworkEvent only)
+- Global counter: 1 synced `int` = **4 bytes** (late joiners need the current value; see ../references/sync-examples.md Pattern 3a)
 - Small to medium worlds total: typically **under 100 bytes**
 
 **Bandwidth**: 11KB/sec -> ~0.1 sec latency for a 1KB payload

@@ -585,9 +585,9 @@ public class PointerState : UdonSharpBehaviour
     }
 }
 
-// Typed accessors are defined as static methods in a separate UdonSharpBehaviour.
-// UdonSharp does not support static classes or extension methods (this T syntax),
-// so plain static methods with an explicit first parameter are used instead.
+// Typed accessors are defined as plain static methods with an explicit first parameter
+// on a separate UdonSharpBehaviour, keeping the pseudo-struct pattern free of
+// static-class scaffolding.
 [AddComponentMenu("")]
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PointerStateExt : UdonSharpBehaviour
@@ -741,17 +741,23 @@ public class InputManager : UdonSharpBehaviour
 
 ---
 
-### VRCUrl Array Sync Workaround
+### Synced VRCUrl Lists
 
-`VRCUrl[]` arrays cannot be marked with `[UdonSynced]`. UdonSharp's sync system only supports syncing individual
-`VRCUrl` fields, not arrays of them. This is a known limitation of the Udon serialization layer -- the sync
-system does not handle `VRCUrl` as a syncable array element type.
+`VRCUrl[]` syncs like any other supported array type. VRChat 2021.3.2's release notes state
+"Udon can now sync `String` arrays and `VRCUrl` arrays", and `VRCUrl[]` is present in the SDK's
+syncable-type list (`UdonNetworkTypes.CanSync`, verified against SDK 3.10.3). Use Manual sync
+(Continuous does not support arrays) and always initialize the field -- an uninitialized synced
+array prevents the behaviour from syncing.
 
-**Workaround**: Declare each URL as a separate `[UdonSynced]` field (`SyncedUrl_0` through `SyncedUrl_N`), then
-use `switch` statements to map a runtime index to the correct field for reading and writing. Metadata (sender
-name, timestamp, content type, etc.) can be synced as a single JSON string via `VRCJson` serialization.
+```csharp
+[UdonSynced] private VRCUrl[] _urls = new VRCUrl[0]; // Manual sync behaviour
+```
 
-**Complete Example -- Synced URL List with Metadata:**
+The example below uses individual fixed slots instead of an array -- a bounded-capacity variant
+that makes the maximum list size explicit. The JSON metadata pattern (sender name, timestamp,
+content type via `VRCJson`) applies equally to either layout.
+
+**Complete Example -- Fixed-Slot Synced URL List with Metadata:**
 
 ```csharp
 using UdonSharp;
@@ -764,15 +770,15 @@ public class SyncedUrlList : UdonSharpBehaviour
 {
     private const int MaxUrls = 8;
 
-    // Each VRCUrl must be synced individually -- arrays are not supported.
-    [UdonSynced] private VRCUrl SyncedUrl_0;
-    [UdonSynced] private VRCUrl SyncedUrl_1;
-    [UdonSynced] private VRCUrl SyncedUrl_2;
-    [UdonSynced] private VRCUrl SyncedUrl_3;
-    [UdonSynced] private VRCUrl SyncedUrl_4;
-    [UdonSynced] private VRCUrl SyncedUrl_5;
-    [UdonSynced] private VRCUrl SyncedUrl_6;
-    [UdonSynced] private VRCUrl SyncedUrl_7;
+    // Fixed slots cap the list at MaxUrls; a plain VRCUrl[] field also syncs.
+    [UdonSynced] private VRCUrl SyncedUrl_0 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_1 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_2 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_3 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_4 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_5 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_6 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_7 = VRCUrl.Empty;
 
     // Metadata for all URLs synced as a single JSON string.
     // Format: [[timestamp, typeId, "senderName"], ...]

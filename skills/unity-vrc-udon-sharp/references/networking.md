@@ -102,9 +102,11 @@ public class ManualSyncExample : UdonSharpBehaviour
 - Much larger data capacity
 - Low network overhead for infrequent updates
 
-### None (No Variable Sync)
+### NoVariableSync
 
-Completely disables variable synchronization. Uses network events for communication.
+NoVariableSync disables variable synchronization while keeping network events available.
+
+`BehaviourSyncMode` has both `None` and `NoVariableSync`; `None` also disables `SendCustomNetworkEvent` on the behaviour, while `NoVariableSync` keeps network events working. For event-driven behaviours, use `NoVariableSync`. Source: UdonSharp source XML docs (verified SDK 3.10.3).
 
 **Characteristics:**
 - No synced variables supported (`[UdonSynced]` will error)
@@ -145,7 +147,7 @@ public class NoSyncExample : UdonSharpBehaviour
 |--------|-------------|------|-------------|
 | Continuous | ~200 bytes | High (10Hz) | Position/rotation tracking |
 | Manual | ~280KB (280,496 bytes) | On-demand | Game state, scores, settings |
-| None | N/A | N/A | Event-only communication |
+| NoVariableSync | N/A | N/A | Event-only communication |
 
 ## VRC_ObjectSync Warning
 
