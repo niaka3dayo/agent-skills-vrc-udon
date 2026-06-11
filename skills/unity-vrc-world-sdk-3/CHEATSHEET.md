@@ -36,7 +36,7 @@
 | Property | Description | Default |
 |----------|-------------|---------|
 | Spawns | Array of spawn points | Descriptor position |
-| Spawn Order | Sequential/Random/Demo | Sequential |
+| Spawn Order | First/Sequential/Random/Demo | Sequential |
 | Respawn Height | Respawn Y coordinate | -100 |
 | Reference Camera | Camera settings reference | None |
 | Maximum Capacity | Max player count | - |

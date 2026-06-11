@@ -50,7 +50,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile with post-processing disabled |
 | 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
 | 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use VRC Constraints (SDK 3.10.0+, world-supported) or Animator-driven transforms, and remove cloth from Quest meshes |
-| 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — 3-5× draw call overhead, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
+| 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — commonly on the order of 3-5× draw call overhead in practice, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit (PC) / 5-10 (Quest) as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
 | 11 | Add VRC_UIShape to a Screen Space or Overlay Canvas | VRC_UIShape requires World Space Canvas; other modes throw a runtime Unity error in VRChat — the UI renders visually but is not interactive, with no visible error to the world builder | Set Canvas > Render Mode to World Space before adding VRC_UIShape |
@@ -296,9 +296,7 @@ Exactly **one** is required in every VRChat world.
 | GPU-bound | Draw calls, overdraw, shader complexity | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
 | Memory | VRAM usage, texture size, mesh count | [performance.md](references/performance.md#optimization-workflow) §Optimization-Workflow |
 
-**MANDATORY READ**: Load [performance.md](references/performance.md) before optimizing — measure first, then target the largest bottleneck.
-
-**MANDATORY READ** [`references/performance.md`](references/performance.md) and [`references/lighting.md`](references/lighting.md) for Quest optimization.
+**MANDATORY READ**: Load [performance.md](references/performance.md) before optimizing — measure first, then target the largest bottleneck — and [`references/lighting.md`](references/lighting.md) for Quest optimization.
 **Do NOT Load**: `references/audio-video.md`, `references/upload.md`.
 
 ---

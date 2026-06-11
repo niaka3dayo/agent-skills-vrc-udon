@@ -29,7 +29,7 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 | Property | Type | Description | Default |
 |----------|------|-------------|---------|
 | Spawns | Transform[] | Array of spawn points | Descriptor position |
-| Spawn Order | SpawnOrder | Sequential/Random/Demo | Sequential |
+| Spawn Order | SpawnOrder | First/Sequential/Random/Demo | Sequential |
 | Respawn Height | float | Respawn Y coordinate | -100 |
 | Object Behaviour At Respawn | enum | Respawn/Destroy | Respawn |
 | Reference Camera | Camera | Camera settings reference | None |
