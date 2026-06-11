@@ -231,7 +231,7 @@ public class DamageReceiver : UdonSharpBehaviour
 ### Chat System
 
 ```csharp
-[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class ChatSystem : UdonSharpBehaviour
 {
     public TextMeshProUGUI chatLog;
@@ -507,18 +507,26 @@ public class GrabbableRope : UdonSharpBehaviour
     public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
     {
         Networking.SetOwner(info.player, gameObject);
-        isGrabbed = true;
-        grabberId = info.player.playerId;
-        RequestSerialization();
+        if (info.player.isLocal)
+        {
+            isGrabbed = true;
+            grabberId = info.player.playerId;
+            RequestSerialization();
+        }
 
         grabSound.Play();
     }
 
     public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
     {
-        isGrabbed = false;
-        grabberId = -1;
-        RequestSerialization();
+        // PhysBoneReleaseInfo carries no player field; the grabber owns the
+        // object after the grab, so gate the synced writes on ownership.
+        if (Networking.IsOwner(gameObject))
+        {
+            isGrabbed = false;
+            grabberId = -1;
+            RequestSerialization();
+        }
 
         releaseSound.Play();
     }
@@ -722,15 +730,15 @@ The wiring for capacity-limited or master-approved variants follows the [Master-
 
 ### Solution
 
-Use an integer generation counter. Each new schedule increments the counter and captures the current value. The callback checks whether the counter has advanced; if so, a newer schedule exists and this invocation is a no-op.
+Use a pending callback counter. Each new schedule increments the counter. Each callback decrements it; if callbacks are still pending, a newer input arrived and this invocation is a no-op.
 
 ```csharp
 public class DebouncedSearch : UdonSharpBehaviour
 {
     [SerializeField] private float debounceDelay = 0.5f;
 
-    // Monotonically increasing; each new schedule captures the current value.
-    private int _scheduleGeneration = 0;
+    // Number of delayed callbacks still waiting to run.
+    private int _pendingCount = 0;
 
     /// <summary>
     /// Call this whenever input changes. Only the callback scheduled after the
@@ -738,23 +746,20 @@ public class DebouncedSearch : UdonSharpBehaviour
     /// </summary>
     public void OnInputChanged()
     {
-        _scheduleGeneration++;
-        // Pass the current generation as a serialized field so the callback can read it.
-        // UdonSharp does not support lambda captures, so store in a member variable.
-        _pendingGeneration = _scheduleGeneration;
+        _pendingCount++;
         SendCustomEventDelayedSeconds(nameof(ExecuteSearch), debounceDelay);
     }
 
-    // Captured generation for the most recently scheduled callback.
-    private int _pendingGeneration = 0;
-
     public void ExecuteSearch()
     {
-        // If _scheduleGeneration has moved past _pendingGeneration, a newer
-        // schedule supersedes this one — bail out.
-        if (_scheduleGeneration != _pendingGeneration) return;
+        // Public only because Udon event targets must be — do not call this
+        // directly; stray calls would drive the pending counter negative.
+        _pendingCount--;
+        // If another delayed callback is still pending, a newer input supersedes this one.
+        if (_pendingCount > 0) return;
+        _pendingCount = 0; // Floor against stray external calls
 
-        // Safe to execute: this is the most recent scheduled callback.
+        // Safe to execute: this is the last pending callback.
         PerformSearch();
     }
 
@@ -766,7 +771,7 @@ public class DebouncedSearch : UdonSharpBehaviour
 }
 ```
 
-> **Note:** This pattern ensures only the *last* scheduled event executes. It does not prevent intermediate callbacks from running their guard check — it only makes them return immediately.
+> **Note:** Every scheduled callback still runs its guard and decrements the counter. Only the final callback sees no newer pending work and executes the search.
 
 ---
 
