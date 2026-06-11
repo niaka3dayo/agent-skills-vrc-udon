@@ -268,9 +268,9 @@ public void StartGame()
 
 When a late joiner enters a world, `OnDeserialization` fires for all synced variables. If side effects (audio, animations, particles) are triggered directly in `OnDeserialization`, they will play unintentionally on join.
 
-#### The `_isInitialized` Flag Pattern
+#### The `_hasReceivedState` Flag Pattern
 
-Use an initialization flag to skip side effects on the first `OnDeserialization` call:
+Use a first-sync flag to skip side effects on the first `OnDeserialization` call. (Distinct from the `_isInitialized` guard in events.md, which tracks `Start()` completion — this flag tracks whether the first synced state has been received.)
 
 ```csharp
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -282,7 +282,7 @@ public class SafeSyncedObject : UdonSharpBehaviour
     public AudioSource sfx;
     public Animator animator;
 
-    private bool _isInitialized = false;
+    private bool _hasReceivedState = false;
 
     public int GameState
     {
@@ -297,9 +297,9 @@ public class SafeSyncedObject : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        if (!_isInitialized)
+        if (!_hasReceivedState)
         {
-            _isInitialized = true;
+            _hasReceivedState = true;
             // First deserialization (late joiner): apply state silently
             ApplyStateWithoutSideEffects();
             return;
@@ -314,7 +314,7 @@ public class SafeSyncedObject : UdonSharpBehaviour
         UpdateDisplay();
 
         // Side effects only after initialization
-        if (_isInitialized && previousState != _gameState)
+        if (_hasReceivedState && previousState != _gameState)
         {
             sfx.Play();
             animator.SetTrigger("StateChange");
@@ -332,7 +332,7 @@ public class SafeSyncedObject : UdonSharpBehaviour
 
 #### Using `OnDeserialization(DeserializationResult)` Overload
 
-The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_isInitialized` flag pattern for late-joiner guards:
+The overloaded `OnDeserialization(DeserializationResult)` provides timing context (`sendTime`, `receiveTime`) and storage origin (`isFromStorage`). These fields are useful for latency analysis and storage-restored data detection, but **do not directly identify late-joiner initial sync**. Use the `_hasReceivedState` flag pattern for late-joiner guards:
 
 ##### DeserializationResult Properties
 
@@ -357,10 +357,10 @@ public override void OnDeserialization(DeserializationResult result)
 
     // Guard side effects: skip on initial sync for late joiners
     // Note: DeserializationResult does not provide a late-joiner flag;
-    // use _isInitialized for this purpose
-    if (!_isInitialized)
+    // use _hasReceivedState for this purpose
+    if (!_hasReceivedState)
     {
-        _isInitialized = true;
+        _hasReceivedState = true;
         return;
     }
 
