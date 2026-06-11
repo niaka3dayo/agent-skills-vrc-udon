@@ -585,9 +585,9 @@ public class PointerState : UdonSharpBehaviour
     }
 }
 
-// Typed accessors are defined as static methods in a separate UdonSharpBehaviour.
-// UdonSharp does not support static classes or extension methods (this T syntax),
-// so plain static methods with an explicit first parameter are used instead.
+// Typed accessors are defined as plain static methods with an explicit first parameter
+// on a separate UdonSharpBehaviour, keeping the pseudo-struct pattern free of
+// static-class scaffolding.
 [AddComponentMenu("")]
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PointerStateExt : UdonSharpBehaviour

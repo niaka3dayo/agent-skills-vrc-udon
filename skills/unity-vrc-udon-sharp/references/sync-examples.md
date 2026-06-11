@@ -11,7 +11,7 @@ Refer to the Decision Tree in `../rules/udonsharp-sync-selection.md` for pattern
 
 ```csharp
 // LocalCounter: Local counter (0 synced variables, 0 bytes)
-[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class LocalCounter : UdonSharpBehaviour
 {
     [SerializeField] Text CounterText;
@@ -41,7 +41,7 @@ public class LocalCounter : UdonSharpBehaviour
 ```csharp
 // HitTarget: Target hit (0 synced variables, 0 bytes)
 // Uses SendCustomNetworkEvent(All) to execute a temporary action for everyone
-[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class HitTarget : UdonSharpBehaviour
 {
     public void OnParticleCollision(GameObject other)
@@ -75,7 +75,7 @@ public class HitTarget : UdonSharpBehaviour
 ```csharp
 // VoteYesButton: Non-owner sends event to owner
 // The button side has no synced variables
-[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class VoteYesButton : UdonSharpBehaviour
 {
     [SerializeField] VoteSystemCore voteSystemCore;
@@ -101,7 +101,7 @@ public class VoteYesButton : UdonSharpBehaviour
 ```csharp
 // EventOnlyLock: Owner decides -> broadcasts to all (0 synced variables, 0 bytes)
 // Late joiners will not know the unlock state (suitable for temporary gimmicks)
-[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class EventOnlyLock : UdonSharpBehaviour
 {
     [SerializeField] GameObject KeyObject;
@@ -180,10 +180,9 @@ public class SyncedLock : UdonSharpBehaviour
     [SerializeField] GameObject DoorObject;
     [UdonSynced] bool SyncedIsUnlocked; // Only synced variable
 
-    void Start()
+    public override void OnDeserialization()
     {
-        // Late joiner support: wait briefly then apply synced state
-        SendCustomEventDelayedSeconds("RefreshDoor", 5.0f);
+        RefreshDoor();
     }
 
     public void RefreshDoor()
