@@ -430,13 +430,13 @@ Starter templates for common SDK component patterns. Each template compiles with
 
 ## References
 
-| File                            | Content                   | Approx. Lines |
-| ------------------------------- | ------------------------- | ------------- |
-| `references/components.md`      | All component details     | 800+          |
-| `references/layers.md`          | Layers & collision        | 400+          |
-| `references/performance.md`     | Performance optimization  | 500+          |
-| `references/lighting.md`        | Lighting settings         | 400+          |
-| `references/audio-video.md`     | Audio & video             | 400+          |
-| `references/upload.md`          | Upload procedure          | 300+          |
-| `references/troubleshooting.md` | Troubleshooting guide     | 500+          |
-| `CHEATSHEET.md`                 | Quick reference           | 200+          |
+| File                            | Content                                                                                         | Approx. Lines |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
+| `references/components.md`      | All component details, component whitelist, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
+| `references/layers.md`          | Layers & collision                                                                              | 400+          |
+| `references/performance.md`     | Performance optimization                                                                        | 500+          |
+| `references/lighting.md`        | Lighting settings                                                                               | 400+          |
+| `references/audio-video.md`     | Audio & video                                                                                   | 400+          |
+| `references/upload.md`          | Upload procedure                                                                                | 300+          |
+| `references/troubleshooting.md` | Troubleshooting guide                                                                           | 500+          |
+| `CHEATSHEET.md`                 | Quick reference                                                                                 | 200+          |
