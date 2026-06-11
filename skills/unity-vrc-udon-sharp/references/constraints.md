@@ -765,14 +765,14 @@ public class SyncedUrlList : UdonSharpBehaviour
     private const int MaxUrls = 8;
 
     // Each VRCUrl must be synced individually -- arrays are not supported.
-    [UdonSynced] private VRCUrl SyncedUrl_0;
-    [UdonSynced] private VRCUrl SyncedUrl_1;
-    [UdonSynced] private VRCUrl SyncedUrl_2;
-    [UdonSynced] private VRCUrl SyncedUrl_3;
-    [UdonSynced] private VRCUrl SyncedUrl_4;
-    [UdonSynced] private VRCUrl SyncedUrl_5;
-    [UdonSynced] private VRCUrl SyncedUrl_6;
-    [UdonSynced] private VRCUrl SyncedUrl_7;
+    [UdonSynced] private VRCUrl SyncedUrl_0 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_1 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_2 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_3 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_4 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_5 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_6 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_7 = VRCUrl.Empty;
 
     // Metadata for all URLs synced as a single JSON string.
     // Format: [[timestamp, typeId, "senderName"], ...]
