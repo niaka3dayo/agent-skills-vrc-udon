@@ -143,6 +143,15 @@ string value = player.GetPlayerTag(string tagName);
 player.ClearPlayerTags();
 ```
 
+### Language Methods
+
+```csharp
+string language = VRCPlayerApi.GetCurrentLanguage(); // local user's selected language, RFC 5646: en, ja, zh-CN
+string[] languages = VRCPlayerApi.GetAvailableLanguages(); // selectable languages
+```
+
+These are local-user getters, not per-remote-player reads.
+
 ### PlayerObject Methods
 
 ```csharp
@@ -606,7 +615,7 @@ For details on the Web Loading API, see `references/web-loading.md`.
 - Rate limit: **Once every 5 seconds** (for String/Image each)
 - Max image resolution: **2048 x 2048**
 - Trusted URLs: Domain allowlist restrictions apply
-- Memory management: Must release with `IVRCImageDownload.Dispose()`
+- Memory management: `IVRCImageDownload.Dispose()` releases the download wrapper, not the GPU texture — destroy the assigned `Texture2D` (see `image-loading-vram.md`)
 
 ```csharp
 // String Loading (VRC.SDK3.StringLoading)
@@ -628,6 +637,8 @@ using VRC.Udon.Common.Interfaces;
 
 NetworkEventTarget.All    // Send to all players including self
 NetworkEventTarget.Owner  // Send to object owner only
+NetworkEventTarget.Others // Send to all players except self (SDK 3.8.1+)
+NetworkEventTarget.Self   // Send to local player only (SDK 3.8.1+)
 ```
 
 ### TrackingDataType
@@ -835,7 +846,7 @@ public class PersistentScore : UdonSharpBehaviour
 }
 ```
 
-## VRCCameraSettings API (SDK 3.9.0+)
+## VRCCameraSettings API (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0)
 
 Read-only access to VRChat's built-in camera parameters. Provides two static instances and an event callback when settings change.
 
@@ -1201,6 +1212,7 @@ dollyAnimation.Import();
 ```csharp
 using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
 public class DollyController : UdonSharpBehaviour
 {

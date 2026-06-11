@@ -10,7 +10,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnMasterTransferred`, `OnPlayerSuspendChanged`, `OnAvatarChanged`, `OnAvatarEyeHeightChanged`, `OnLanguageChanged`, `OnVRCPlusMassGift`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnControllerColliderHitPlayer`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnPersistenceUsageUpdated`, `OnPlayerDataStorageExceeded/Warning`, `OnPlayerObjectStorageExceeded/Warning`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnPhysBonePosed`, `OnPhysBoneUnPosed`, `OnDroneTriggerEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `OnInputMethodChanged`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`, `OnSpawn`, `OnVRCQualitySettingsChanged`, `OnVRCCameraSettingsChanged`, `OnScreenUpdate`, `OnAsyncGpuReadbackComplete`, `OnPurchaseConfirmed`, `OnPurchaseConfirmedMultiple`, `OnPurchaseExpired`, `OnPurchasesLoaded`, `OnListAvailableProducts`, `OnListProductOwners`, `OnListPurchases`, `OnProductEvent`
+`PostLateUpdate`, `OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnMasterTransferred`, `OnPlayerSuspendChanged`, `OnAvatarChanged`, `OnAvatarEyeHeightChanged`, `OnLanguageChanged`, `OnVRCPlusMassGift`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnControllerColliderHitPlayer`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnPlayerDataUpdated`, `OnPersistenceUsageUpdated`, `OnPlayerDataStorageExceeded/Warning`, `OnPlayerObjectStorageExceeded/Warning`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnPhysBonePosed`, `OnPhysBoneUnPosed`, `OnDroneTriggerEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `OnInputMethodChanged`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`, `OnSpawn`, `OnVRCQualitySettingsChanged`, `OnVRCCameraSettingsChanged`, `OnScreenUpdate`, `OnAsyncGpuReadbackComplete`, `OnPurchaseConfirmed`, `OnPurchaseConfirmedMultiple`, `OnPurchaseExpired`, `OnPurchasesLoaded`, `OnListAvailableProducts`, `OnListProductOwners`, `OnListPurchases`, `OnProductEvent`
 
 ### override Not Required (Standard Unity Callbacks)
 
@@ -634,9 +634,12 @@ Called on GameObjects spawned from a VRCObjectPool.
 |-------|-------------|
 | `void OnSpawn()` | This object is spawned from a VRCObjectPool |
 
+> **Note**: `OnSpawn` is deprecated per the official docs — use `OnEnable` to react to an object being activated by the pool.
+
 ```csharp
 public override void OnSpawn()
 {
+    // OnSpawn is deprecated; prefer OnEnable for activation from the pool.
     // Initialize state when this pooled object becomes active
     _isActive = true;
     _spawnTime = Time.time;
@@ -649,7 +652,7 @@ public override void OnSpawn()
 
 ## Settings & Rendering Events
 
-Called when VRChat settings or rendering state changes. These events require SDK 3.10.0+.
+Called when VRChat settings or rendering state changes. The camera/quality settings events require SDK 3.8.1+ (additional camera members in 3.9.0).
 
 | Event | When Called |
 |-------|-------------|
@@ -791,10 +794,12 @@ The Unity/VRChat per-frame execution order (steady state, every frame):
 
 ### Initialization Guarantee
 
-`OnEnable` and `Start` are guaranteed to run **before any other event** fires on the behaviour, and they run with **no gap between them** on the initial activation. This means:
+`OnEnable` and `Start` normally run before other event callbacks on the behaviour, and they run with **no gap between them** on the initial activation. This means:
 
-- You can safely access component references set up in `Start()` from any event handler.
-- No VRChat event (player join, deserialization, etc.) will interrupt `OnEnable`/`Start`.
+- You can safely access component references set up in `Start()` from ordinary event handlers.
+- No ordinary VRChat event (player join, deserialization, etc.) will interrupt `OnEnable`/`Start`.
+
+> **Exception**: A `[FieldChangeCallback]` setter can run during initial deserialization before `Start()` returns — see the edge case below.
 
 ---
 
@@ -807,7 +812,7 @@ _onEnable → _start
     ↓
 OnPlayerJoined(self)          ← fires for yourself
     ↓
-OnMasterChanged               ← master transferred from nobody to you
+OnMasterTransferred           ← master transferred from nobody to you
 ```
 
 - You are immediately both Master and Owner of scene objects.
@@ -838,10 +843,10 @@ OnDeserialization             ← receives synced variable state from owner
 If the current owner calls `RequestSerialization()` at or very close to the time a late joiner's `OnPlayerJoined` fires (for example, in their own `OnPlayerJoined` handler), the following race condition can occur on the **late joiner's client**:
 
 1. Synced variable value arrives and changes.
-2. `OnVariableChanged` fires for the changed variable.
+2. The `[FieldChangeCallback]` property setter runs for the changed field.
 3. `OnDeserialization` fires immediately after.
 
-In this specific edge case (most likely when the late joiner is the **first instance** on its client), `OnVariableChanged` can fire **before** `Start()` has returned. Guard against this with an initialization flag (see pattern below).
+In this specific edge case (most likely when the late joiner is the **first instance** on its client), the `[FieldChangeCallback]` setter can run **before** `Start()` has returned. Guard against this with an initialization flag (see pattern below).
 
 ---
 
@@ -887,11 +892,24 @@ public override void OnDeserialization()
 
 #### Initialization Flag Guard
 
-Use a `_isInitialized` flag to ensure setup code runs exactly once after the first `OnDeserialization`, and to guard against `OnVariableChanged` firing before `Start()` completes:
+Use a `_isInitialized` flag to ensure setup code runs exactly once after the first `OnDeserialization`, and to guard against a `[FieldChangeCallback]` setter running before `Start()` completes:
 
 ```csharp
-[UdonSynced] private int _syncedScore;
+[UdonSynced, FieldChangeCallback(nameof(Value))]
+private int _syncedValue;
+
 private bool _isInitialized;
+
+public int Value
+{
+    get => _syncedValue;
+    set
+    {
+        _syncedValue = value;
+        if (!_isInitialized) return;
+        UpdateDisplay();
+    }
+}
 
 void Start()
 {
@@ -905,13 +923,6 @@ public override void OnDeserialization()
         _isInitialized = true;
         InitializeFromSyncedState();
     }
-    UpdateDisplay();
-}
-
-// OnVariableChanged can fire before Start() in edge cases — guard with the flag
-public override void OnVariableChanged()
-{
-    if (!_isInitialized) return;
     UpdateDisplay();
 }
 

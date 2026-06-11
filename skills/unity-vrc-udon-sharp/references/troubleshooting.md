@@ -496,6 +496,8 @@ private void DoAction()
 
 **Solution:**
 
+Read synced state in `OnDeserialization`; it fires after the joining client receives current values. `Start()` may run before the first deserialization, so do not read synced variables there.
+
 ```csharp
 
 public override void OnPlayerJoined(VRCPlayerApi player)
@@ -507,10 +509,8 @@ public override void OnPlayerJoined(VRCPlayerApi player)
     }
 }
 
-// Or use Start() for initial state
-void Start()
+public override void OnDeserialization()
 {
-    // This runs after OnDeserialization for late joiners
     ApplyState();
 }
 
@@ -597,11 +597,11 @@ public void HighFrequencyEvent(float value) { }
 private float lastSendTime;
 private const float SEND_INTERVAL = 0.1f;
 
-public void SendIfReady(int value)
+public void SendIfReady(float value)
 {
     if (Time.time - lastSendTime < SEND_INTERVAL) return;
     lastSendTime = Time.time;
-    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(MyEvent), value);
+    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(HighFrequencyEvent), value);
 }
 
 ```
@@ -1546,21 +1546,23 @@ void Start()
 
 ### GetComponent Returns Proxy Instead of UdonSharpBehaviour
 
-**Problem:**
+**Problem (SDK 3.7 and older):**
 
 ```csharp
 
-// Returns UdonBehaviour, not your type
+// Older SDKs could return a proxy/incorrect type for UdonSharpBehaviour subclasses
 var myScript = other.GetComponent<MyScript>();
 
 ```
 
-**Solution (Runtime):**
+On SDK 3.8+, `GetComponent<MyScript>()` works for direct `UdonSharpBehaviour` subclasses. Fetching `UdonBehaviour` itself returns the first `UdonBehaviour` regardless of program type.
+
+**Solution (Runtime, pre-SDK 3.8):**
 
 ```csharp
 
-// Cast works at runtime in VRChat
-var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
+// Fetch by your script type, then cast through object
+var myScript = (MyScript)(object)other.GetComponent(typeof(MyScript));
 
 ```
 
@@ -1568,10 +1570,10 @@ var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
 
 ```csharp
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
 var myScript = other.GetUdonSharpComponent<MyScript>();
 #else
-var myScript = (MyScript)other.GetComponent(typeof(UdonBehaviour));
+var myScript = (MyScript)(object)other.GetComponent(typeof(MyScript));
 #endif
 
 ```

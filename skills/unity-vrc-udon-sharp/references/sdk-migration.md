@@ -37,7 +37,7 @@ MyScript s = GetComponent<MyScript>();
 public class BaseGimmick : UdonSharpBehaviour { }
 public class DerivedGimmick : BaseGimmick { }
 
-BaseGimmick base = GetComponent<BaseGimmick>();     // finds DerivedGimmick too
+BaseGimmick baseGimmick = GetComponent<BaseGimmick>(); // finds DerivedGimmick too
 DerivedGimmick derived = GetComponent<DerivedGimmick>();
 BaseGimmick[] all = GetComponents<BaseGimmick>();   // plural form also works
 ```
@@ -141,9 +141,9 @@ The `Auto Hold` field on `VRC_Pickup` was simplified. The old three-value enum (
 
 Worlds upgrading from 3.8 should audit all `VRC_Pickup` components and confirm the auto hold setting is intentional, since `AutoDetect` no longer exists as a fallback.
 
-#### VRCCameraSettings API (SDK 3.9.0+)
+#### VRCCameraSettings API (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0)
 
-Read-only access to the player's active camera properties. Namespace: `VRC.SDK3.Rendering`.
+Read-only access to the player's active camera properties. Introduced in SDK 3.8.1; SDK 3.9.0 added `CullingMask` and `VRCCameraSettings.GetCurrentCamera`. Namespace: `VRC.SDK3.Rendering`.
 
 ```csharp
 using VRC.SDK3.Rendering;
