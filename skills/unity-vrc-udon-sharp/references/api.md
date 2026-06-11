@@ -1233,7 +1233,7 @@ public class DollyController : UdonSharpBehaviour
 ### Limitations
 
 - The API applies the animation to the **local player only**. To trigger it for all players, use `SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayDolly))`.
-- No properties of the animation, paths, or points are readable or writable from UdonSharp at runtime.
+- `Import()` is the only scripting entry point on the official page; runtime reads or writes of animation, path, or point parameters from UdonSharp are not documented — treat anything beyond `Import()` as unverified.
 - There is no event callback when the animation completes.
 - No ClientSim preview; Build and Test is required to see the animation.
 

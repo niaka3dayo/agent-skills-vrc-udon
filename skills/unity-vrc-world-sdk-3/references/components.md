@@ -569,97 +569,55 @@ Displays avatars and allows switching.
 
 ## VRC_CameraDolly
 
-Moves the player's camera along a defined spline path (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
+Plays a camera animation along defined paths on the local player's VRChat user camera (SDK 3.9+). Typically used for cinematic intros, tutorials, and guided tours.
 
-### Setup
+### Components
 
 ```text
-[Dolly Track Root]
-├── VRC_CameraDolly
-│   ├── Path (SplineContainer or CinemachinePath reference)
-│   ├── Duration (float, seconds for a full traversal)
-│   └── Loop (bool)
-└── UdonController (UdonSharpBehaviour)
+GameObject (VRC Camera Dolly Animation)
+├── GameObject (VRC Camera Dolly Path)
+│   ├── GameObject (VRC Camera Dolly Point)
+│   └── GameObject (VRC Camera Dolly Point)
+└── GameObject (VRC Camera Dolly Path)
 ```
 
-### VRC_CameraDolly Udon API
+Animation-level parameters (Path Type, Loop Type, Capture Type, Focus Mode, Anchor Mode, ...) and per-point parameters (Zoom, Duration, Speed, Focal Distance, ...) are configured in the Inspector — see the official VRC_CameraDolly page for the full list.
 
-```csharp
-VRCCameraDolly dolly = (VRCCameraDolly)GetComponent(typeof(VRCCameraDolly));
+### Scripting
 
-// Start playback from position 0
-dolly.Play();
-
-// Stop playback and release camera control
-dolly.Stop();
-
-// Pause at the current position
-dolly.Pause();
-
-// Resume from paused position
-dolly.Resume();
-
-// Jump to a normalized position along the path (0.0 = start, 1.0 = end)
-dolly.SetPosition(float normalizedT);
-
-// Get current normalized position
-float t = dolly.GetPosition();
-
-// Set playback speed multiplier (1.0 = normal, 2.0 = double speed, -1.0 = reverse)
-dolly.SetSpeed(float speedMultiplier);
-
-// Check if currently playing
-bool isPlaying = dolly.IsPlaying;
-
-// Check if looping is enabled
-bool loops = dolly.Loop;
-```
-
-### Udon Control Example
+`VRCCameraDollyAnimation.Import()` applies the defined settings and animation to the local player's VRC user camera. It is the only documented scripting entry point; runtime reads or writes of the parameters from Udon are not documented.
 
 ```csharp
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components;
 
-public class DollyController : UdonSharpBehaviour
+public class DollyTrigger : UdonSharpBehaviour
 {
-    [SerializeField] private VRCCameraDolly dolly;
+    [SerializeField] private VRCCameraDollyAnimation dollyAnimation;
 
-    // Call from UI button or trigger
     public override void Interact()
     {
-        if (dolly.IsPlaying)
-        {
-            dolly.Stop();
-        }
-        else
-        {
-            dolly.SetPosition(0f);
-            dolly.Play();
-        }
-    }
-
-    // Jump to midpoint on demand
-    public void JumpToMid()
-    {
-        dolly.SetPosition(0.5f);
+        if (!Utilities.IsValid(dollyAnimation)) return;
+        dollyAnimation.Import();
     }
 }
 ```
 
-### Ownership and Network Notes
+> **Editor step**: before entering Play mode or building, select the `VRC Camera Dolly Animation` object and click **Collect Paths & Points**; repeat whenever child paths or points change.
+
+### Notes
 
 ```text
-- VRC_CameraDolly only affects the local player's camera.
-- Play/Stop calls are local — no network sync is built in.
-- To sync a cinematic across all players, call Play() via
-  SendCustomNetworkEvent(NetworkEventTarget.All, nameof(StartDolly)).
-- Only one dolly can be active per player at a time.
-  Calling Play() on a second dolly automatically stops the first.
+- The animation applies to the local player's camera only.
+- To trigger it for everyone, route the call through
+  SendCustomNetworkEvent(NetworkEventTarget.All, ...).
+- No ClientSim preview — use Build and Test to see the animation.
 ```
 
----
+For the full scripting reference, see the udon-sharp skill's
+[`api.md` Camera Dolly section](../../unity-vrc-udon-sharp/references/api.md).
 
 ## VRCCameraSettings API
 
