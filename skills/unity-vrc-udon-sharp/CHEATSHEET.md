@@ -342,7 +342,7 @@ using VRC.SDK3.Data;           // VRCJson
 VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
 // -> OnStringLoadSuccess(IVRCStringDownload) / OnStringLoadError
 
-// Image download (Dispose required!)
+// Image download (Dispose the wrapper + Destroy the assigned Texture2D — see image-loading-vram.md)
 var dl = new VRCImageDownloader();
 dl.DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo);
 // -> OnImageLoadSuccess(IVRCImageDownload) / OnImageLoadError
@@ -361,7 +361,7 @@ if (VRCJson.TryDeserializeFromJson(result.Result, out DataToken json))
 | Max size | - | 2048x2048 |
 | Redirects | Trusted only | Not allowed |
 | Trusted URL | Separate domain list | Separate domain list |
-| Memory management | Not required | `Dispose()` required |
+| Memory management | Not required | `Dispose()` releases the wrapper; also `Destroy()` the assigned `Texture2D` |
 
 **Dynamic VRCUrl generation: Not possible** -- `new VRCUrl(stringVar)` is blocked by the Udon VM at runtime.
 For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` array (predefined), (3) server-side routing
