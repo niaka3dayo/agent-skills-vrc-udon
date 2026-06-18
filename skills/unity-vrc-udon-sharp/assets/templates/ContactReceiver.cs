@@ -131,7 +131,8 @@ public class ContactReceiver : UdonSharpBehaviour
     public override void OnContactExit(ContactExitInfo info)
     {
         ContactSenderProxy sender = info.contactSender;
-        if (!sender.isValid)
+        ContactReceiverProxy receiver = info.contactReceiver;
+        if (!sender.isValid || !receiver.isValid)
         {
             return;
         }
