@@ -2,7 +2,7 @@
 
 Complete reference of all events available in UdonSharp. Override these methods to respond to events.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3
+**Supported SDK Versions**: 3.7.1 - 3.10.4
 
 ## Important: override vs Non-override
 
@@ -10,7 +10,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ### override Required (VRChat/Udon-Specific Events)
 
-`PostLateUpdate`, `OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnMasterTransferred`, `OnPlayerSuspendChanged`, `OnAvatarChanged`, `OnAvatarEyeHeightChanged`, `OnLanguageChanged`, `OnVRCPlusMassGift`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnControllerColliderHitPlayer`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnPlayerDataUpdated`, `OnPersistenceUsageUpdated`, `OnPlayerDataStorageExceeded/Warning`, `OnPlayerObjectStorageExceeded/Warning`, `OnContactEnter/Stay/Exit`, `OnPhysBoneGrab/Release`, `OnPhysBoneColliderEnter/Stay/Exit`, `OnPhysBonePosed`, `OnPhysBoneUnPosed`, `OnDroneTriggerEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `OnInputMethodChanged`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`, `OnSpawn`, `OnVRCQualitySettingsChanged`, `OnVRCCameraSettingsChanged`, `OnScreenUpdate`, `OnAsyncGpuReadbackComplete`, `OnPurchaseConfirmed`, `OnPurchaseConfirmedMultiple`, `OnPurchaseExpired`, `OnPurchasesLoaded`, `OnListAvailableProducts`, `OnListProductOwners`, `OnListPurchases`, `OnProductEvent`
+`PostLateUpdate`, `OnPlayerJoined`, `OnPlayerLeft`, `OnPlayerRespawn`, `OnMasterTransferred`, `OnPlayerSuspendChanged`, `OnAvatarChanged`, `OnAvatarEyeHeightChanged`, `OnLanguageChanged`, `OnVRCPlusMassGift`, `OnDeserialization`, `OnPreSerialization`, `OnPostSerialization`, `OnOwnershipTransferred`, `OnOwnershipRequest`, `Interact`, `OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`, `OnPlayerTriggerEnter/Stay/Exit`, `OnPlayerCollisionEnter/Stay/Exit`, `OnPlayerParticleCollision`, `OnControllerColliderHitPlayer`, `OnStationEntered/Exited`, `OnPlayerRestored`, `OnPlayerDataUpdated`, `OnPersistenceUsageUpdated`, `OnPlayerDataStorageExceeded/Warning`, `OnPlayerObjectStorageExceeded/Warning`, `OnContactEnter/Exit`, `OnPhysBoneGrabbed/Released`, `OnPhysBonePosed`, `OnPhysBoneUnPosed`, `OnDroneTriggerEnter/Stay/Exit`, `InputJump`, `InputUse`, `InputGrab`, `InputDrop`, `InputMoveHorizontal/Vertical`, `InputLookHorizontal/Vertical`, `OnInputMethodChanged`, `MidiNoteOn/Off`, `MidiControlChange`, `OnVideo*`, `OnStringLoad*`, `OnImageLoad*`, `OnSpawn`, `OnVRCQualitySettingsChanged`, `OnVRCCameraSettingsChanged`, `OnScreenUpdate`, `OnAsyncGpuReadbackComplete`, `OnPurchaseConfirmed`, `OnPurchaseConfirmedMultiple`, `OnPurchaseExpired`, `OnPurchasesLoaded`, `OnListAvailableProducts`, `OnListProductOwners`, `OnListPurchases`, `OnProductEvent`
 
 ### override Not Required (Standard Unity Callbacks)
 
@@ -259,34 +259,31 @@ Called for PhysBones and Contacts in worlds.
 | Event | When Called |
 |-------|-------------|
 | `void OnContactEnter(ContactEnterInfo info)` | Contact sender starts contacting receiver |
-| `void OnContactStay(ContactStayInfo info)` | Contact ongoing |
 | `void OnContactExit(ContactExitInfo info)` | Contact ends |
 
 ```csharp
 public override void OnContactEnter(ContactEnterInfo info)
 {
-    Debug.Log($"Contact from: {info.senderName}");
+    ContactSenderProxy sender = info.contactSender;
+    ContactReceiverProxy receiver = info.contactReceiver;
+    if (!sender.isValid || !receiver.isValid) return;
 
-    // Determine if contact is from avatar or world object
-    if (info.isAvatar)
+    if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
     {
-        // Contact from avatar
-        VRCPlayerApi player = info.player;
-        if (player != null && player.IsValid())
-        {
-            Debug.Log($"Touched by: {player.displayName}");
-        }
+        Debug.Log($"Touched by: {sender.player.displayName}");
     }
-    else
+    else if (sender.usage == DynamicsUsage.World)
     {
-        // Contact from world object
         Debug.Log("Touched by world object");
     }
+
+    Debug.Log($"Contact point: {info.contactPoint}, velocity: {info.enterVelocity}");
 }
 
 public override void OnContactExit(ContactExitInfo info)
 {
-    Debug.Log($"Contact ended: {info.senderName}");
+    if (!info.contactSender.isValid || !info.contactReceiver.isValid) return;
+    Debug.Log($"Contact ended with {info.matchingTags.Length} matching tags");
 }
 ```
 
@@ -294,46 +291,34 @@ public override void OnContactExit(ContactExitInfo info)
 
 | Event | When Called |
 |-------|-------------|
-| `void OnPhysBoneGrab(PhysBoneGrabInfo info)` | PhysBone grabbed |
-| `void OnPhysBoneRelease(PhysBoneReleaseInfo info)` | PhysBone released |
-| `void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
-| `void OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues to intersect the bone chain |
-| `void OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting the bone chain |
+| `void OnPhysBoneGrabbed(PhysBoneGrabbedInfo physBoneInfo)` | PhysBone grabbed |
+| `void OnPhysBoneReleased(PhysBoneReleasedInfo physBoneInfo)` | PhysBone released |
 | `void OnPhysBonePosed(PhysBonePosedInfo physBoneInfo)` | A PhysBone is manually posed by a player |
 | `void OnPhysBoneUnPosed(PhysBoneUnPosedInfo physBoneInfo)` | A PhysBone pose is released |
 
 ```csharp
-public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
+public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo physBoneInfo)
 {
-    Debug.Log($"PhysBone grabbed by {info.player?.displayName}");
+    Debug.Log($"PhysBone grabbed by {physBoneInfo.player?.displayName}");
 }
 
-public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
+public override void OnPhysBoneReleased(PhysBoneReleasedInfo physBoneInfo)
 {
     Debug.Log($"PhysBone released");
 }
 
-public override void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)
+public override void OnPhysBonePosed(PhysBonePosedInfo physBoneInfo)
 {
-    // info.isAvatar — true if the collider belongs to an avatar
-    // info.player   — player reference (valid when isAvatar is true)
-    // info.bone     — the specific bone transform that was hit
-    Debug.Log($"PhysBone collider entered — bone: {info.bone?.name}, " +
-              $"avatar: {info.isAvatar}, player: {info.player?.displayName}");
+    Debug.Log($"PhysBone posed by {physBoneInfo.player?.displayName}");
 }
 
-public override void OnPhysBoneColliderStay(PhysBoneColliderInfo info)
+public override void OnPhysBoneUnPosed(PhysBoneUnPosedInfo physBoneInfo)
 {
-    // Called every frame while the collider intersects. Keep this lightweight.
-}
-
-public override void OnPhysBoneColliderExit(PhysBoneColliderInfo info)
-{
-    Debug.Log($"PhysBone collider exited — bone: {info.bone?.name}");
+    Debug.Log("PhysBone pose released");
 }
 ```
 
-**Note:** Contact/PhysBone events are triggered on all UdonBehaviours attached to the same GameObject as the receiver.
+**Note:** Contact events fire on UdonBehaviours attached to the same GameObject as the Contact Receiver. PhysBone events fire on UdonBehaviours attached to the same GameObject as the VRCPhysBone component. SDK 3.10.4 does not expose separate Contact stay or PhysBone-collider enter/stay/exit callbacks on `UdonSharpBehaviour`.
 
 ## Player Trigger/Collision Events
 

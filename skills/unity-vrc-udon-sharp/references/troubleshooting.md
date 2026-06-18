@@ -2,7 +2,7 @@
 
 Common errors, causes, and solutions for VRChat UdonSharp development.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3
+**Supported SDK Versions**: 3.7.1 - 3.10.4
 
 ## Table of Contents
 
@@ -772,9 +772,9 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 ### Contact/PhysBone Player Is Null
 
-**Symptoms:** `info.player` is null when accessed
+**Symptoms:** a contact proxy `player` is null when accessed
 
-**Cause:** Contact is from a world object, not from an avatar
+**Cause:** Contact can come from a world object or item, not only from an avatar. Contact event data uses `contactSender` / `contactReceiver` proxy objects; check proxy `isValid` and `usage` before reading `player`.
 
 **Solution:**
 
@@ -782,19 +782,19 @@ public override void OnContactEnter(ContactEnterInfo info)
 
 public override void OnContactEnter(ContactEnterInfo info)
 {
-    if (info.isAvatar)
+    ContactSenderProxy sender = info.contactSender;
+    if (!sender.isValid) return;
+
+    if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
     {
-        // From avatar - player is valid
-        if (info.player != null && info.player.IsValid())
-        {
-            Debug.Log($"Contact from: {info.player.displayName}");
-        }
+        Debug.Log($"Contact from: {sender.player.displayName}");
     }
-    else
+    else if (sender.usage == DynamicsUsage.World)
     {
-        // From world object - player is null
         Debug.Log("Contact from world object");
     }
+
+    Debug.Log($"Contact point: {info.contactPoint}, matching tags: {info.matchingTags.Length}");
 }
 
 ```
@@ -1752,7 +1752,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | **NetworkCallable not working** | Add `[NetworkCallable]`, make public |
 | **PlayerData empty** | Wait for `OnPlayerRestored` first |
 | **OnContactEnter not firing** | UdonBehaviour must be on same GameObject |
-| **Contact player is null** | Check `info.isAvatar` before accessing |
+| **Contact player is null** | Check `contactSender.isValid`, then `contactSender.usage` before accessing `contactSender.player` |
 | **Trigger not firing for seated players** | PlayerLocal collider disabled in station — use position check workaround |
 | **.asset missing / script not loaded** | Install auto-generator in `Assets/Editor/`, then reimport the affected `.cs` |
 | **UdonBehaviour silently does nothing** | Check `Program Source` slot — likely empty; assign `.asset` or use `AddUdonSharpComponent` |

@@ -6,16 +6,18 @@ description: >
     setting up layers, optimizing performance, or uploading worlds.
     Covers VRC_SceneDescriptor, spawn points, VRC_Pickup, VRC_Station,
     VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, layer/collision matrix,
-    baked lighting, Quest/Android limits, and upload workflow.
-    SDK 3.7.1 - 3.10.3 coverage.
+    baked lighting, Quest/Android limits, Dynamics for Worlds, and upload workflow.
+    SDK 3.7.1 - 3.10.4 coverage.
     Triggers on: VRChat world, VRC SDK, scene setup, VRC_SceneDescriptor,
     spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
-    optimization, Quest support, light baking, upload, FPS improvement.
+    PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders,
+    VRCPhysBoneCollider, VRCTween, optimization, Quest support, light baking,
+    upload, FPS improvement.
     Related: Use unity-vrc-udon-sharp for UdonSharp C# coding.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.4.0"
+    version: "2.5.0"
     tags: vrchat, world-sdk, scene-setup, optimization, components, upload
 ---
 
@@ -63,6 +65,7 @@ Load only what the task requires.
 |------|---------------|----------|-------------|----------------|
 | Setting up a new scene from scratch | `components.md`, `layers.md` | `upload.md` | `audio-video.md`, `troubleshooting.md` | Collision matrix non-obvious; component deps needed upfront |
 | Making objects grabbable (VRC_Pickup) | `components.md` | `layers.md` | `audio-video.md`, `lighting.md` | Pickup/Rigidbody requirements not in standard Unity docs |
+| Configuring Dynamics for Worlds (PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` access) | `components.md` | `layers.md`, `troubleshooting.md`; use `unity-vrc-udon-sharp` for Udon code | `audio-video.md`, `lighting.md` | Dynamics component availability and Udon access are SDK-version sensitive |
 | Setting up seating (VRC_Station) | `components.md` | `layers.md` | `audio-video.md`, `performance.md` | Station collider + exit requirements are VRChat-specific |
 | Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` | Quest limits differ from PC; bake requirements non-obvious |
 | Adding audio or video player / voice zones (SetVoiceGain, Steam Audio) | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |
@@ -112,7 +115,7 @@ Quest required? → Yes
 
 ## SDK Versions
 
-**Supported versions**: SDK 3.7.1 - 3.10.3
+**Supported versions**: SDK 3.7.1 - 3.10.4
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |
@@ -125,7 +128,8 @@ Quest required? → Yes
 | 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | ✅             |
 | 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅             |
-| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | ✅ Latest stable |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | ✅             |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | ✅ Latest stable |
 
 > **Important**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible with these versions.
 
@@ -433,7 +437,7 @@ Starter templates for common SDK component patterns. Each template compiles with
 
 | File                            | Content                                                                                          | Approx. Lines |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
-| `references/components.md`      | All component details, component whitelist, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
+| `references/components.md`      | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
 | `references/layers.md`          | Layers & collision                                                                               | 300+          |
 | `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |

@@ -5,16 +5,19 @@ description: >
     Use this skill when writing, reviewing, or debugging UdonSharp C# code.
     Covers compile constraints (List<T>/async/await/try/catch/LINQ blocked),
     network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
-    persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts),
-    Web Loading, VRAM management (texture lifecycle, Dispose vs Destroy),
-    and event handling. SDK 3.7.1 - 3.10.3 coverage.
+    persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts,
+    VRCTween, VRCPhysBoneCollider Udon access), Web Loading, DataList/DataDictionary
+    capacity APIs, VRAM management (texture lifecycle, Dispose vs Destroy),
+    and event handling. SDK 3.7.1 - 3.10.4 coverage.
     Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
     NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
-    synced variables, VRChat world scripting, C# to Udon.
+    VRCTween, Box Contacts, Global Avatar PhysBone Colliders, VRCPhysBoneCollider,
+    DataList capacity, DataDictionary EnsureCapacity, synced variables,
+    VRChat world scripting, C# to Udon.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.4.0"
+    version: "2.5.0"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
 ---
 
@@ -56,7 +59,7 @@ These constraints cause either **compile-time failures** or **silent runtime fai
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|
-| 1 | Use `List<T>`, `Dictionary<T,K>`, or any generic collection | Compile error — blocked by Udon compiler | `T[]` arrays, `DataList`, `DataDictionary` |
+| 1 | Use `List<T>`, `Dictionary<T,K>`, or any generic collection | Compile error — blocked by Udon compiler | `T[]` arrays, `DataList`, `DataDictionary` (`DataDictionary.EnsureCapacity` / custom capacities require SDK 3.10.4+) |
 | 2 | Use `async`/`await`, `System.Threading`, or coroutines | Udon is single-threaded; these features do not exist | `SendCustomEventDelayedSeconds()` |
 | 3 | Modify `[UdonSynced]` fields without owning the object | Change appears local but is **silently reverted** on next deserialization | `Networking.SetOwner()` before modify, then `RequestSerialization()` |
 | 4 | Forget `RequestSerialization()` after modifying synced fields (Manual sync) | State changes never leave the local client — no error, no warning | Always call `RequestSerialization()` after modifying `[UdonSynced]` fields |
@@ -69,7 +72,7 @@ These constraints cause either **compile-time failures** or **silent runtime fai
 | 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
 | 12 | Write to `[UdonSynced]` fields without an `IsOwner` guard | Non-owner writes are purely local and silently reverted on the next deserialization from the actual owner | `Networking.SetOwner` first if needed (locally immediate), then write under `IsOwner` and call `RequestSerialization()` |
 | 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Compiles but silently ignored at runtime — the attribute has no effect and methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
-| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrab`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
+| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrabbed`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
 | 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
 | 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
@@ -119,7 +122,9 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Building UI/menus | `patterns-ui.md`, `events.md` | `patterns-core.md`, `api.md` | `networking-bandwidth.md`, `dynamics.md`, `web-loading.md` |
 | Implementing persistence (save/load) | `persistence.md` | `patterns-networking.md`, `events.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Downloading strings/images from web | `web-loading.md` | `web-loading-advanced.md`, `image-loading-vram.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
-| Using PhysBones/Contacts/Constraints | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
+| Using VRCTween, cancelable delayed calls, or tween cleanup | `vrctween.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
+| Using PhysBones/Contacts/Constraints, Box Contacts, Global Avatar PhysBone Colliders, or world `VRCPhysBoneCollider` Udon access | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
+| Tuning DataList/DataDictionary capacity or using `DataDictionary.EnsureCapacity` | `api.md` | `constraints.md`, `patterns-utilities.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
 | Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
@@ -209,6 +214,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | 3.10.1 | Bug fixes and stability improvements |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary custom capacity, `DataDictionary.EnsureCapacity` |
 
 > **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
 
@@ -226,12 +232,12 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 | File | Contents | Search Hints |
 |------|----------|--------------|
-| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; advanced workarounds (object array pseudo-struct); synced VRCUrl lists | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
+| `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; DataList/DataDictionary capacity APIs; advanced workarounds (object array pseudo-struct); synced VRCUrl lists | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList capacity, DataDictionary capacity, EnsureCapacity, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
 | `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network events, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, master leave, ownership cascade |
 | `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
 | `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
 | `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data; storage usage query API (SDK 3.10.0+) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, GetPlayerObjectStorageUsage, GetPlayerObjectStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
-| `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+) | PhysBone, ContactReceiver, ContactSender, VRCConstraint, OnContactEnter |
+| `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+); VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access (SDK 3.10.4+) | PhysBone, ContactReceiver, ContactSender, Box Contact, Global Avatar PhysBone Collider, VRCPhysBoneCollider, VRCTween, VRCConstraint, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard, remote players | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo, remote players, GetRemotePlayers, exclude local player, FindAll alternative |
 | `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, distant-room pseudo-multi-room (state/presentation split, self-owned vs master-approved tiers), delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, distant room, pseudo multi-room, room assignment, roomIndex, LocalRoomPresenter, RoomAssignment, NoVariableSync, TeleportTo per-client, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
 | `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization, frame budget Stopwatch, heavy processing architecture (rebuild, replay, reset/cancel), rate limit resolver, GameObject lookup cost tiers | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rebuild, replay, reset, cancel, operation log, authoritative data, derived state, cursor rebuild, rate limit, URL scheduler, video load queue, GameObject.Find, Find cost, lookup cost tier, SerializeField vs Find, silent failure on rename, SendCustomEvent cost, cross-behaviour call, EventBus hot path, delayed loop spike, public method lookup, event dispatch tier |
