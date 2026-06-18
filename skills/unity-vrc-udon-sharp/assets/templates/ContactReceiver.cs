@@ -1,17 +1,18 @@
 using UdonSharp;
 using UnityEngine;
+using VRC.Dynamics;
 using VRC.SDKBase;
 using VRC.Udon;
 
 /// <summary>
 /// VRCContactReceiver template for VRChat worlds (SDK 3.10.0+).
-/// Demonstrates OnContactEnter/Stay/Exit, avatar vs world object detection,
+/// Demonstrates OnContactEnter/Exit, avatar vs world object detection,
 /// debounce cooldown, and visual/audio feedback.
 ///
 /// Setup:
 /// 1. Add "VRC Contact Receiver" component to this GameObject.
-/// 2. Set Shape Type to Sphere or Capsule. Capsule also requires Height (Y-axis).
-/// 3. Configure Radius, Allow Self, Allow Others, and Content Types on it.
+/// 2. Set Shape Type to Sphere, Capsule, or Box. Capsule uses Height; Box uses Vector3 Size.
+/// 3. Configure Radius/Size, content usage, and collision tags.
 /// 4. Assign the public fields below in the Inspector.
 ///
 /// See references/dynamics.md "Contacts" for full API documentation.
@@ -49,7 +50,7 @@ public class ContactReceiver : UdonSharpBehaviour
     [Tooltip("Minimum seconds between repeated OnContactEnter triggers")]
     public float cooldownTime = 0.5f;
 
-    [Tooltip("If true, only accept contacts from avatars (isAvatar == true)")]
+    [Tooltip("If true, only accept contacts from avatar-owned Contact Senders")]
     public bool avatarOnlyMode = false;
 
     [Tooltip("Enable debug logging")]
@@ -77,7 +78,7 @@ public class ContactReceiver : UdonSharpBehaviour
 
     // -------------------------------------------------------------------------
     // VRCContactReceiver callbacks
-    // All three callbacks must use 'override' when declared on UdonSharpBehaviour.
+    // Contact callbacks must use 'override' when declared on UdonSharpBehaviour.
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -85,8 +86,15 @@ public class ContactReceiver : UdonSharpBehaviour
     /// </summary>
     public override void OnContactEnter(ContactEnterInfo info)
     {
-        // Optionally filter out world-object senders (non-avatar contacts).
-        if (avatarOnlyMode && !info.isAvatar)
+        ContactSenderProxy sender = info.contactSender;
+        ContactReceiverProxy receiver = info.contactReceiver;
+        if (!sender.isValid || !receiver.isValid)
+        {
+            return;
+        }
+
+        // Optionally filter out world/item senders.
+        if (avatarOnlyMode && sender.usage != DynamicsUsage.Avatar)
         {
             return;
         }
@@ -110,31 +118,11 @@ public class ContactReceiver : UdonSharpBehaviour
         // Log source type and player name for debugging.
         if (debugMode)
         {
-            if (info.isAvatar)
-            {
-                // info.player can be null for remote contacts before the
-                // player object is fully initialized; always guard.
-                string playerName = (info.player != null && info.player.IsValid())
-                    ? info.player.displayName
-                    : "unknown";
-                Debug.Log($"[ContactReceiver:{gameObject.name}] Enter (avatar) player={playerName} sender={info.senderName}");
-            }
-            else
-            {
-                Debug.Log($"[ContactReceiver:{gameObject.name}] Enter (world object) sender={info.senderName}");
-            }
+            string playerName = (sender.player != null && sender.player.IsValid())
+                ? sender.player.displayName
+                : "none";
+            Debug.Log($"[ContactReceiver:{gameObject.name}] Enter usage={sender.usage} player={playerName} point={info.contactPoint}");
         }
-    }
-
-    /// <summary>
-    /// Called every frame while at least one Contact Sender overlaps this receiver.
-    /// Use this for continuous effects such as progress bars or held-trigger logic.
-    /// </summary>
-    public override void OnContactStay(ContactStayInfo info)
-    {
-        // Example: per-frame logic while contact is held.
-        // Add continuous effects here (particle rate, shader value, etc.).
-        // Avoid heavy allocation or per-frame logging in production builds.
     }
 
     /// <summary>
@@ -159,7 +147,9 @@ public class ContactReceiver : UdonSharpBehaviour
 
             if (debugMode)
             {
-                Debug.Log($"[ContactReceiver:{gameObject.name}] Exit (all senders gone) sender={info.senderName}");
+                ContactSenderProxy sender = info.contactSender;
+                string usage = sender.isValid ? sender.usage.ToString() : "invalid";
+                Debug.Log($"[ContactReceiver:{gameObject.name}] Exit (all senders gone) usage={usage}");
             }
         }
     }

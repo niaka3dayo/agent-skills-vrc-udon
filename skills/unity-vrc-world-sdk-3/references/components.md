@@ -1,6 +1,6 @@
 # VRChat World Components Complete Reference
 
-Full component reference for SDK 3.7.1 - 3.10.3.
+Full component reference for SDK 3.7.1 - 3.10.4.
 
 ## Table of Contents
 
@@ -15,6 +15,8 @@ Full component reference for SDK 3.7.1 - 3.10.3.
 - [VRC_AvatarPedestal](#vrc_avatarpedestal)
 - [VRC_CameraDolly](#vrc_cameradolly)
 - [VRCCameraSettings API](#vrccamerasettings-api)
+- [Contacts in Worlds](#contacts-in-worlds)
+- [PhysBones and Global Collision in Worlds](#physbones-and-global-collision-in-worlds)
 - [Avatar-driven features that read world colliders](#avatar-driven-features-that-read-world-colliders)
 - [Allowed Unity Components](#allowed-unity-components)
 
@@ -618,6 +620,59 @@ public class DollyTrigger : UdonSharpBehaviour
 
 For the full scripting reference, see the udon-sharp skill's
 [`api.md` Camera Dolly section](../../unity-vrc-udon-sharp/references/api.md#vrc-camera-dolly-api-sdk-390).
+
+---
+
+## Contacts in Worlds
+
+`VRC Contact Sender` and `VRC Contact Receiver` components can be used in worlds for touch volumes, avatar/world interaction triggers, and world-side contact routing. This section is for world authoring setup only; for Udon event signatures, `VRCContactSender` / `VRCContactReceiver` scripting, and `Contact*Info` fields, use the UdonSharp dynamics/API references.
+
+### Contact Sender / Contact Receiver shapes (SDK 3.10.4)
+
+Both Contact Sender and Contact Receiver support these shape types:
+
+| Shape Type | Size fields | World-authoring notes |
+|------------|-------------|-----------------------|
+| Sphere | Radius | Simple radial touch volume |
+| Capsule | Radius + Height | Tall/limb-shaped touch volume along the local Y axis |
+| Box | Size | Box-shaped Contact volumes with independent X/Y/Z Box Size axes |
+
+Box-shaped Contact Sender and Box-shaped Contact Receiver setup uses the same transform, tag, and content-type rules as Sphere/Capsule contacts, but `Box Size` X/Y/Z defines the extents instead of radius/height. Contact dimensions are capped after object scale is applied: Sphere/Capsule radius is limited to 3 m, and Box width/height/depth are limited to **6 m** each. Avoid hiding extra scale in parent transforms when measuring the effective 6 m post-scale limit.
+
+### Receiver proximity behavior
+
+For proximity calculations, Sphere/Capsule proximity is based on closeness to the receiver volume center. For a box-shaped Contact Receiver, enabling `Use Face Proximity` changes the proximity calculation so the reported value measures closeness to the box's local positive-Z face. Use this when a box represents a panel, pad, or surface where approaching the front face should drive the proximity signal.
+
+### World scripting boundary
+
+Keep world component authoring here. Detailed Udon script behavior belongs in the UdonSharp references:
+
+- [dynamics.md Contacts](../../unity-vrc-udon-sharp/references/dynamics.md#contacts)
+- [api.md VRCContactReceiver / VRCContactSender](../../unity-vrc-udon-sharp/references/api.md#vrccontactreceiver)
+
+---
+
+## PhysBones and Global Collision in Worlds
+
+Worlds can include PhysBones and `VRCPhysBoneCollider` components. The world-side authoring concern is which colliders can influence world PhysBones, especially when avatar-origin global colliders are present.
+
+### Global Avatar PhysBone Colliders impact
+
+`Global Collision` on a `VRCPhysBoneCollider` makes that collider available to PhysBones in the selected content types, but each PhysBone's `Allow Collision` setting still decides whether global colliders are considered. For worlds:
+
+- World PhysBones can collide with avatar-origin global PhysBone colliders when their `Allow Collision` rules permit it.
+- Avatars can add up to four additional PhysBone colliders with `Global Collision` enabled.
+- Worlds have no documented global collider count limit, but every active collider can add runtime cost; keep world global colliders intentional.
+- `Global Collision` supports Sphere and Capsule collider shapes only. Plane/other shapes are not global-collision shapes.
+
+### VRCPhysBoneCollider Udon access
+
+In worlds, Udon can access `VRCPhysBoneCollider` for runtime-controlled collider properties. Use Udon scripting instead of animator-driven changes for world objects. After changing collider configuration fields from Udon, call `ApplyConfigurationChanges()` once after batching the edits so the runtime collider applies the new shape/size/offset.
+
+For the detailed Udon API, event callbacks, and examples, use the UdonSharp dynamics/API references rather than duplicating script guidance here:
+
+- [dynamics.md PhysBones](../../unity-vrc-udon-sharp/references/dynamics.md#physbones)
+- [api.md PhysBones and Contacts](../../unity-vrc-udon-sharp/references/api.md#physbones-and-contacts-sdk-3100)
 
 ---
 

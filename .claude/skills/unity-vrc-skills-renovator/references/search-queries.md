@@ -82,7 +82,7 @@ VRChat OnPlayerRestored event
 ```
 VRChat SDK PhysBones Contacts Udon API worlds
 VRChat SDK 3.10 dynamics worlds
-VRChat OnContactEnter OnPhysBoneGrab
+VRChat OnContactEnter OnPhysBoneGrabbed
 ```
 
 ### New System Namespaces

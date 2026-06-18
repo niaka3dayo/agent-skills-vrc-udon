@@ -200,12 +200,12 @@ The largest addition of the 3.10 series: **PhysBones**, **Contacts**, and **VRC 
 ```csharp
 public class GrabbableRope : UdonSharpBehaviour
 {
-    public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
+    public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info)
     {
         Debug.Log($"Grabbed by {info.player?.displayName}");
     }
 
-    public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
+    public override void OnPhysBoneReleased(PhysBoneReleasedInfo info)
     {
         Debug.Log("Released");
     }
@@ -213,9 +213,9 @@ public class GrabbableRope : UdonSharpBehaviour
 
 // PhysBone API
 VRCPhysBone pb = GetComponent<VRCPhysBone>();
-bool grabbed      = pb.IsGrabbed();
-pb.ForceReleaseGrab();  // force-release a grab
-pb.ForceReleasePose();  // reset a bent chain
+bool grabbed = pb.IsGrabbed;
+pb.ReleaseGrabs(); // force-release grabs on the local client
+pb.ReleasePoses(); // release frozen poses on the local client
 ```
 
 **Contacts** — collision detection between `VRC Contact Sender` and `VRC Contact Receiver` components.
@@ -225,10 +225,15 @@ public class ContactButton : UdonSharpBehaviour
 {
     public override void OnContactEnter(ContactEnterInfo info)
     {
-        if (info.isAvatar)
-            Debug.Log($"Pressed by {info.player?.displayName}");
-        else
+        if (!info.contactSender.isValid) return;
+
+        ContactSenderProxy sender = info.contactSender;
+        if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
+            Debug.Log($"Pressed by {sender.player.displayName}");
+        else if (sender.usage == DynamicsUsage.World)
             Debug.Log("Pressed by world object");
+
+        Debug.Log($"Point: {info.contactPoint}, velocity: {info.enterVelocity}");
     }
 
     public override void OnContactExit(ContactExitInfo info) { }
@@ -298,29 +303,37 @@ SendCustomEventDelayedFrames(nameof(UpdateCamera), 1, EventTiming.PostLateUpdate
 
 `FixedUpdate` and `PostLateUpdate` are new in SDK 3.10.2; `Update` and `LateUpdate` existed since SDK 3.7.1.
 
-#### PhysBone Collider Callbacks (SDK 3.10.0+)
+#### PhysBone Udon Callbacks (SDK 3.10.0+)
 
-In addition to grab/release events, PhysBones now fire three collider-interaction callbacks on any UdonBehaviour attached to the same GameObject as the `VRC Phys Bone` component:
+World PhysBones expose grab, release, pose, and unpose callbacks on any UdonBehaviour attached to the same GameObject as the `VRC Phys Bone` component:
 
 | Event | Trigger |
 |-------|---------|
-| `OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
-| `OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues intersecting each frame |
-| `OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting |
+| `OnPhysBoneGrabbed(PhysBoneGrabbedInfo physBoneInfo)` | PhysBone is grabbed |
+| `OnPhysBoneReleased(PhysBoneReleasedInfo physBoneInfo)` | PhysBone is released from a grab |
+| `OnPhysBonePosed(PhysBonePosedInfo physBoneInfo)` | PhysBone is locked to a pose |
+| `OnPhysBoneUnPosed(PhysBoneUnPosedInfo physBoneInfo)` | PhysBone pose is released |
 
-Keep `OnPhysBoneColliderStay` handlers lightweight; it fires every frame and can create significant overhead.
+SDK 3.10.4 does not expose separate PhysBone-collider enter/stay/exit callbacks on `UdonSharpBehaviour`; use Contacts for collider-like touch events.
 
 ### Breaking Changes
 
-#### VRCContactReceiver.UpdateContentTypes() Signature Change (SDK 3.10.1)
+#### VRCContactReceiver.UpdateContentTypes() and Tags
 
-The parameter type of `UpdateContentTypes()` changed from `IEnumerable<string>` to `string[]`. Since `List<T>` is not available in UdonSharp, correct code already used `string[]` directly. If any script was passing a collection via an interface reference, update to a `string[]` literal or array variable.
+For SDK 3.10.4 documentation, `UpdateContentTypes()` takes `DynamicsUsageFlags` for allowed content categories, while `UpdateCollisionTags(string[])` changes the matching tag set.
 
 ```csharp
-// Correct (works in all 3.10.x)
-string[] types = new string[] { "Hand", "Finger" };
-receiver.UpdateContentTypes(types);
+receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar | DynamicsUsageFlags.World);
+receiver.UpdateCollisionTags(new string[] { "Hand", "Finger" });
 ```
+
+#### Contact Shape and Payload Updates (SDK 3.10.4)
+
+Contacts now support Box shapes in addition to Sphere and Capsule. Box contacts use `Vector3 size`, with each axis limited to 6 m after scaling. Box receivers can use `Use Face Proximity` so proximity is measured toward the positive-Z face instead of the receiver center.
+
+Runtime shape/configuration edits on `VRCContactSender` or `VRCContactReceiver` must be batched and followed by `ApplyConfigurationChanges()`. Use `CalculateProximity(sender)` when Udon needs an immediate `0.0-1.0` proximity value between a receiver and sender.
+
+Contact event examples should use the proxy payload fields: `contactSender`, `contactReceiver`, `contactPoint`, `enterVelocity`, and `matchingTags`, with proxy `isValid`, `player`, and `usage` checks.
 
 #### Unity Constraints — Quest Impact
 
@@ -341,7 +354,7 @@ Namespace for all VRC Constraints: `VRC.SDK3.Dynamics.Constraint.Components`.
 
 - [ ] Replace all Unity Constraint components with VRC Constraint equivalents (mandatory for Quest support)
 - [ ] Add `using VRC.SDK3.Dynamics.Constraint.Components;` to any script that references VRC Constraints
-- [ ] Verify `VRCContactReceiver.UpdateContentTypes()` calls pass `string[]` (not a list or interface type)
+- [ ] Verify contact receivers use `UpdateContentTypes(DynamicsUsageFlags)` for content categories and `UpdateCollisionTags(string[])` for matching tags
 - [ ] Implement `OnPersistenceUsageUpdated` if your world writes PlayerData and you want to warn players of storage limits
 - [ ] Audit `SendCustomEventDelayed*` calls: use `EventTiming.FixedUpdate` for physics-coupled callbacks, `EventTiming.PostLateUpdate` for camera/IK callbacks, instead of frame-delay workarounds
 - [ ] For worlds using PhysBones in world space: avoid placing them inside `Instantiate()`-created objects (PhysBones in instantiated objects may not be network-synced; use scene-placed objects or VRChat Object Pool instead)

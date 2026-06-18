@@ -2,7 +2,7 @@
 
 Complete reference of VRChat-specific classes, methods, and types available in UdonSharp.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.3
+**Supported SDK Versions**: 3.7.1 - 3.10.4
 
 ## VRCPlayerApi
 
@@ -89,7 +89,7 @@ float radius  = player.GetVoiceVolumetricRadius();
 bool  lowpass = player.GetVoiceLowpass();
 ```
 
-> **Note**: The voice getters are named in the [SDK 3.6.1 release notes](https://creators.vrchat.com/releases/release-3-6-1/) — added to `VRCPlayerApi` and exposed to Udon — but do not appear on the current [Player Audio](https://creators.vrchat.com/worlds/udon/players/player-audio/), Players, or UdonSharp API reference pages. Each is parameterless and returns the value type of its matching setter (4 `float`, 1 `bool`). This entry records that they exist and their signatures; it does not specify runtime read semantics. What a getter returns before its setter has run, whether it reflects the last value set versus the live effective value, and whether local- and remote-player reads behave identically, are not verified here — confirm against your SDK/client before relying on a getter's return value (for example, before using one in place of your own tracked state). Re-check after the Voice Audio Rework (SDK 3.10.4) lands.
+> **Note**: The voice getters are named in the [SDK 3.6.1 release notes](https://creators.vrchat.com/releases/release-3-6-1/) — added to `VRCPlayerApi` and exposed to Udon — but do not appear on the current [Player Audio](https://creators.vrchat.com/worlds/udon/players/player-audio/), Players, or UdonSharp API reference pages. Each is parameterless and returns the value type of its matching setter (4 `float`, 1 `bool`). This entry records that they exist and their signatures; it does not specify runtime read semantics. What a getter returns before its setter has run, whether it reflects the last value set versus the live effective value, and whether local- and remote-player reads behave identically, are not verified here — confirm against your SDK/client before relying on a getter's return value (for example, before using one in place of your own tracked state). The planned voice-audio rework did not ship in SDK version 3.10.4; re-check these getter semantics when an official release includes that rework.
 
 ### Avatar Methods
 
@@ -719,7 +719,7 @@ Generic-like collections from `VRC.SDK3.Data`:
 using VRC.SDK3.Data;
 
 // DataList (replaces List<T>)
-DataList list = new DataList();
+DataList list = new DataList(); // SDK 3.10.4+: use new DataList(64) when count is known
 list.Add("item1");
 list.Add(42);
 list.Add(3.14f);
@@ -733,7 +733,8 @@ list.RemoveAt(0);
 list.Clear();
 
 // DataDictionary (replaces Dictionary<string, T>)
-DataDictionary dict = new DataDictionary();
+DataDictionary dict = new DataDictionary(); // SDK 3.10.4+: use new DataDictionary(64) when count is known
+dict.EnsureCapacity(128); // SDK 3.10.4+: grow once before bulk inserts
 dict["key1"] = "value1";
 dict["key2"] = 100;
 
@@ -743,6 +744,10 @@ int num = dict["key2"].Int;
 bool hasKey = dict.ContainsKey("key1");
 dict.Remove("key1");
 ```
+
+### Capacity and Allocation (SDK 3.10.4+)
+
+Use `DataList(int capacity)`, `DataDictionary(int capacity)`, and `DataDictionary.EnsureCapacity(int)` when the expected item count is known before a bulk load or parse. Match the initial capacity to the expected entries, then grow once with `EnsureCapacity` before larger inserts if needed. Pre-sizing reduces internal growth reallocations; arrays are still preferable for tight per-frame loops and single-type hot data.
 
 ### DataToken
 
@@ -949,19 +954,29 @@ Receives contact events from Contact Senders.
 // Get contact receiver component
 VRCContactReceiver receiver = GetComponent<VRCContactReceiver>();
 
-// Configure allowed content types
-string[] allowedTypes = new string[] { "Hand", "Finger", "Custom" };
-receiver.UpdateContentTypes(allowedTypes);
+// Configure allowed content usage flags and collision tags
+receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar | DynamicsUsageFlags.World);
+receiver.UpdateCollisionTags(new string[] { "Hand", "Finger", "Custom" });
 
-// Properties
-bool allowSelf = receiver.allowSelf;     // Allow contacts from same avatar
-bool allowOthers = receiver.allowOthers; // Allow contacts from other avatars
-float radius = receiver.radius;          // Collision radius (both shapes; max 3 m)
+// Shape properties
+float radius = receiver.radius;          // Sphere/Capsule radius (max 3 m)
 float height = receiver.height;          // Capsule height along Y, half-spheres included (max 6 m)
-ContactBase.ShapeType shapeType = receiver.shapeType; // Sphere or Capsule
+Vector3 size = receiver.size;            // Box dimensions (max 6 m per axis after scale)
+ContactBase.ShapeType shapeType = receiver.shapeType; // Sphere, Capsule, or Box
 ```
 
-Shape and dimension properties are read/write from Udon. `height` is only meaningful when `shapeType` is `ContactBase.ShapeType.Capsule`.
+Shape and dimension properties are read/write from Udon. `height` is only meaningful for Capsule contacts, and `Vector3 size` is only meaningful for Box contacts. When changing runtime shape fields, batch the changes and call `ApplyConfigurationChanges()` once after the batch.
+
+```csharp
+receiver.shapeType = ContactBase.ShapeType.Box;
+receiver.size = new Vector3(0.5f, 0.1f, 0.5f);
+receiver.position = new Vector3(0f, 1f, 0f);
+receiver.ApplyConfigurationChanges();
+
+float proximity = receiver.CalculateProximity(sender);
+```
+
+`CalculateProximity(sender)` returns a `0.0-1.0` value for how close the sender is to the receiver center. For a Box receiver with `Use Face Proximity` enabled, the value is measured toward the receiver's positive-Z face instead.
 
 ### VRCContactSender
 
@@ -971,13 +986,13 @@ Sends contact events to receivers.
 VRCContactSender sender = GetComponent<VRCContactSender>();
 
 // Properties
-float radius = sender.radius;             // Collision radius (both shapes; max 3 m)
+float radius = sender.radius;             // Sphere/Capsule radius (max 3 m)
 float height = sender.height;             // Capsule height along Y, half-spheres included (max 6 m)
-ContactBase.ShapeType shapeType = sender.shapeType; // Sphere or Capsule
-string contentType = sender.contentType;  // Contact tag string (e.g. "Finger", "Hand", or custom)
+Vector3 size = sender.size;               // Box dimensions (max 6 m per axis after scale)
+ContactBase.ShapeType shapeType = sender.shapeType; // Sphere, Capsule, or Box
 ```
 
-Shape and dimension properties are read/write from Udon. `height` is only meaningful when `shapeType` is `ContactBase.ShapeType.Capsule`.
+Shape and dimension properties are read/write from Udon. `height` is only meaningful for Capsule contacts, and `Vector3 size` is only meaningful for Box contacts. After changing shape fields, call `ApplyConfigurationChanges()` once after batching all edits.
 
 ### VRCPhysBone
 
@@ -986,63 +1001,81 @@ Physics-based bone system in worlds.
 ```csharp
 VRCPhysBone physBone = GetComponent<VRCPhysBone>();
 
-// Properties (read-only in most cases)
-bool isGrabbed = physBone.IsGrabbed();
-VRCPlayerApi grabbingPlayer = physBone.GetGrabbingPlayer();
+// Properties (read-only state)
+bool grabbed = physBone.IsGrabbed;
+bool posed = physBone.IsPosed;
+float angle = physBone.Angle;
+float squish = physBone.Squish;
+float stretch = physBone.Stretch;
 
-// Get affected transforms
-Transform[] affectedBones = physBone.GetAffectedTransforms();
+// Runtime configuration changes require ApplyConfigurationChanges().
+physBone.pull = 0.2f;
+physBone.spring = 0.8f;
+physBone.ApplyConfigurationChanges();
 ```
 
-### Contact Event Info Structs
+### VRCPhysBoneCollider
+
+World PhysBone colliders can be adjusted from Udon.
 
 ```csharp
-// ContactEnterInfo
-public struct ContactEnterInfo
-{
-    public string senderName;       // Contact sender name
-    public bool isAvatar;           // True if from avatar
-    public VRCPlayerApi player;     // Player if isAvatar is true
-    public Vector3 position;        // Contact position
-    public Vector3 normal;          // Contact normal
-}
+VRCPhysBoneCollider collider = GetComponent<VRCPhysBoneCollider>();
 
-// ContactStayInfo
-public struct ContactStayInfo
-{
-    public string senderName;
-    public bool isAvatar;
-    public VRCPlayerApi player;
-    public Vector3 position;
-    public Vector3 normal;
-}
-
-// ContactExitInfo
-public struct ContactExitInfo
-{
-    public string senderName;
-    public bool isAvatar;
-    public VRCPlayerApi player;
-}
+collider.shapeType = VRC.Dynamics.VRCPhysBoneColliderBase.ShapeType.Capsule;
+collider.radius = 0.2f;
+collider.height = 1.0f;
+collider.position = new Vector3(0f, 0.5f, 0f);
+collider.rotation = Quaternion.identity;
+collider.ApplyConfigurationChanges();
 ```
 
-### PhysBone Event Info Structs
+`shapeType`, `radius`, `height`, `position`, and `rotation` are documented as read/write for world `VRCPhysBoneCollider` components. Global Collision is configured on the component: avatar global colliders can affect world PhysBones when Allow Collision rules permit it; avatars may have up to four additional global colliders; worlds have no documented count limit; and Global Collision supports only Sphere and Capsule colliders. Udon access for changing global-collider flags is not documented.
+
+### Contact Event Info Payloads
 
 ```csharp
-// PhysBoneGrabInfo
-public struct PhysBoneGrabInfo
+public override void OnContactEnter(ContactEnterInfo info)
 {
-    public VRCPlayerApi player;     // Grabbing player
-    public Transform bone;          // Grabbed bone
+    ContactSenderProxy sender = info.contactSender;
+    ContactReceiverProxy receiver = info.contactReceiver;
+
+    if (!sender.isValid || !receiver.isValid) return;
+
+    Vector3 point = info.contactPoint;
+    Vector3 velocity = info.enterVelocity;
+    string[] matchingTags = info.matchingTags;
+
+    if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
+    {
+        Debug.Log($"Avatar sender: {sender.player.displayName}");
+    }
+    else if (sender.usage == DynamicsUsage.World)
+    {
+        Debug.Log("World sender");
+    }
 }
 
-// PhysBoneReleaseInfo
-public struct PhysBoneReleaseInfo
+public override void OnContactExit(ContactExitInfo info)
 {
-    public VRCPlayerApi player;
-    public Transform bone;
+    if (!info.contactSender.isValid || !info.contactReceiver.isValid) return;
+    string[] matchingTags = info.matchingTags;
 }
 ```
+
+`ContactEnterInfo` carries `contactSender`, `contactReceiver`, `contactPoint`, `enterVelocity`, and `matchingTags`. `ContactExitInfo` carries `contactSender`, `contactReceiver`, and `matchingTags`. The sender/receiver values are proxy objects; check `isValid`, then use `player` and `usage` to distinguish avatar-owned and world-side contacts.
+
+### PhysBone Event Info Payloads
+
+Use the SDK 3.10.4 UdonSharp event names:
+
+```csharp
+public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo physBoneInfo) { }
+public override void OnPhysBoneReleased(PhysBoneReleasedInfo physBoneInfo) { }
+public override void OnPhysBonePosed(PhysBonePosedInfo physBoneInfo) { }
+public override void OnPhysBoneUnPosed(PhysBoneUnPosedInfo physBoneInfo) { }
+```
+
+Attach the UdonBehaviour to the same GameObject as the `VRCPhysBone` component. Use the event payload's player reference for grab/pose source information, and read `VRCPhysBone.IsGrabbed`, `IsPosed`, `Angle`, `Squish`, and `Stretch` for current state.
 
 ### Usage Example: Interactive Button with Contacts
 
@@ -1057,12 +1090,21 @@ public class ContactButton : UdonSharpBehaviour
     public override void OnContactEnter(ContactEnterInfo info)
     {
         if (isPressed) return;
+        if (!info.contactSender.isValid || !info.contactReceiver.isValid) return;
 
         isPressed = true;
         clickSound.Play();
         buttonAnimator.SetTrigger("Press");
 
-        Debug.Log($"Button pressed by: {(info.isAvatar ? info.player?.displayName : "world object")}");
+        ContactSenderProxy sender = info.contactSender;
+        if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
+        {
+            Debug.Log($"Button pressed by: {sender.player.displayName}");
+        }
+        else
+        {
+            Debug.Log($"Button pressed by: {sender.usage}");
+        }
     }
 
     public override void OnContactExit(ContactExitInfo info)

@@ -508,16 +508,38 @@ public class MyResultHandler : ProcessCallbackBase
 
 `SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The pending-callback-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
 
-### Solution
+### Solution for SDK 3.10.4+
 
-Instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
+Prefer `VRCTween.DelayedCall`, which behaves like `SendCustomEventDelayedSeconds` but returns a `VRCTweenHandle` that can be killed before it fires. See [VRCTween Patterns](vrctween.md#cancelable-delays) for the routeable SDK 3.10.4+ guidance.
 
-**Trade-off:** Allocates a `GameObject` per timer instance. Use the pending-callback-counter pattern for high-frequency debounce; use this pattern only when the callback truly must not fire.
+```csharp
+using VRC.SDK3.Components;
+
+private VRCTweenHandle _retryTimer;
+
+public void ScheduleRetry()
+{
+    _retryTimer.Kill(); // invalid/default handles no-op
+    _retryTimer = VRCTween.DelayedCall(this, nameof(OnRetryFired), 5f);
+}
+
+public void CancelPendingRetry()
+{
+    _retryTimer.Kill();
+}
+```
+
+### Fallback for Older SDKs
+
+For projects pinned below SDK 3.10.4, instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
+
+**Trade-off:** Allocates a `GameObject` per timer instance. Use `VRCTween.DelayedCall` on SDK 3.10.4+; use the pending-callback-counter pattern for high-frequency debounce; use this fallback only when an older SDK project needs a callback that truly must not fire.
 
 **When to use:**
+- SDK < 3.10.4 projects where `VRCTween.DelayedCall` is unavailable
 - Retry timers that must be cancelled when the user changes their action before the retry fires
 - Load timeout timers where a successful load must cleanly suppress the "timed out" callback
-- Any case where the callback has irreversible side effects (network events, audio, state mutation)
+- Any older-SDK case where the callback has irreversible side effects (network events, audio, state mutation)
 
 ```csharp
 using UdonSharp;

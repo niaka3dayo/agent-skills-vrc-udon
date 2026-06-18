@@ -1,6 +1,6 @@
 # UdonSharp Cheatsheet
 
-**SDK 3.7.1 - 3.10.3 Coverage**
+**SDK 3.7.1 - 3.10.4 Coverage**
 
 ## Blocked Features and Alternatives
 
@@ -25,6 +25,7 @@
 | `[NetworkCallable]` | 3.8.1 | Parameterized network events |
 | Persistence | 3.7.4 | PlayerData/PlayerObject |
 | Dynamics for Worlds | 3.10.0 | PhysBones, Contacts |
+| VRCTween | 3.10.4 | Local tweens, cancelable delayed calls |
 
 ---
 
@@ -113,7 +114,7 @@ public void SetValue(int newValue) {
 | `OnOwnershipTransferred(VRCPlayerApi)` | Ownership changed |
 | `OnPlayerRestored(VRCPlayerApi)` | **3.7.4+** Persistence data loaded |
 | `OnContactEnter(ContactEnterInfo)` | **3.10+** Contact started |
-| `OnPhysBoneGrab(PhysBoneGrabInfo)` | **3.10+** PhysBone grabbed |
+| `OnPhysBoneGrabbed(PhysBoneGrabbedInfo)` | **3.10+** PhysBone grabbed |
 
 ---
 
@@ -205,6 +206,42 @@ public void DoLoop() {
 }
 ```
 
+For cancelable timers on SDK 3.10.4+, use `VRCTween.DelayedCall`; keep helper-`GameObject` cancellation workarounds only for older SDK projects.
+
+---
+
+## VRCTween (SDK 3.10.4+)
+
+```csharp
+using VRC.SDK3.Components;
+
+private VRCTweenHandle _scaleTween;
+
+public void Pulse() {
+    _scaleTween.Kill(); // safe no-op when invalid/default
+    _scaleTween = gameObject.TweenScale(Vector3.one * 1.2f, 0.15f, VRCTweenEase.OutQuad)
+        .OnComplete(this, nameof(OnPulseUp));
+}
+
+public void OnPulseUp() {
+    _scaleTween = gameObject.TweenScale(Vector3.one, 0.15f, VRCTweenEase.OutQuad);
+}
+
+void OnDestroy() {
+    gameObject.KillAllTweens();
+}
+```
+
+| Need | Use | Notes |
+|------|-----|-------|
+| Smooth transform/UI/audio changes | `TweenPosition`, `TweenScale`, `TweenFade`, `TweenPitch` | Returns `VRCTweenHandle` |
+| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on SDK 3.10.4+ |
+| Delayed active toggle | `VRCTween.DelayedSetActive(target, active, seconds)` | Use for local visibility/state toggles |
+| Cleanup | `handle.Kill()` / `gameObject.KillAllTweens()` | Kill stored handles and long/infinite tweens |
+| High-frequency retargeting | `ChangeEndValue`, `SetDuration`, `SetEase`, `Restart` | Reuse a handle instead of kill/recreate in hot paths |
+
+VRCTween is **local-only**: it does not automatically sync. For shared animation state, sync the intent/time separately and recreate or seek the local tween per client. Invalid/default `VRCTweenHandle` operations are safe no-ops; check `handle.IsValid` only when branching on creation success.
+
 ---
 
 ## Inter-Script Communication
@@ -271,13 +308,17 @@ PlayerData.SetInt(Networking.LocalPlayer, "score", 100);
 ```csharp
 // Contact events
 public override void OnContactEnter(ContactEnterInfo info) {
-    if (info.isAvatar) {
-        Debug.Log($"Touched by: {info.player?.displayName}");
-    }
+    ContactSenderProxy sender = info.contactSender;
+    if (!sender.isValid) return;
+
+    VRCPlayerApi player = sender.player;
+    Debug.Log(player != null
+        ? $"Touched by: {player.displayName}"
+        : $"Touched by usage: {sender.usage}");
 }
 
 // PhysBone events
-public override void OnPhysBoneGrab(PhysBoneGrabInfo info) {
+public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info) {
     Debug.Log($"Grabbed by: {info.player?.displayName}");
 }
 ```
@@ -391,6 +432,7 @@ For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` arr
 | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, and teleportation patterns | [references/patterns-core.md](references/patterns-core.md) |
 | Cross-class call overhead, partial classes, update handlers, PostLateUpdate, spatial queries, and animator hashes | [references/patterns-performance.md](references/patterns-performance.md) |
 | Array helpers, event bus, GameObject relay communication, pseudo-struct double-cast, and callback patterns | [references/patterns-utilities.md](references/patterns-utilities.md) |
+| VRCTween local animation, cancelable delayed calls, cleanup, and high-frequency reuse | [references/vrctween.md](references/vrctween.md) |
 | VRCImageDownloader GPU memory lifecycle, safe texture cleanup, fades, and staggering | [references/image-loading-vram.md](references/image-loading-vram.md) |
 | Advanced packed resource loading with VRCStringDownloader | [references/web-loading-advanced.md](references/web-loading-advanced.md) |
 | SDK upgrade steps, version-by-version changes, and migration checklists | [references/sdk-migration.md](references/sdk-migration.md) |

@@ -389,6 +389,8 @@ public class UnlockSystem : UdonSharpBehaviour
 
 ## Dynamics Patterns (SDK 3.10.0+)
 
+Contact examples use the SDK 3.10.4 proxy payload: `contactSender`, `contactReceiver`, `contactPoint`, `enterVelocity`, and `matchingTags`. Check proxy `isValid` before reading `player` or `usage`.
+
 ### Interactive Button
 
 ```csharp
@@ -449,10 +451,19 @@ public class ContactButton : UdonSharpBehaviour
 
     private void OnButtonPressed(ContactEnterInfo info)
     {
-        if (info.isAvatar && info.player != null)
+        ContactSenderProxy sender = info.contactSender;
+        if (!sender.isValid) return;
+
+        if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
         {
-            Debug.Log($"Button pressed by: {info.player.displayName}");
+            Debug.Log($"Button pressed by: {sender.player.displayName}");
         }
+        else if (sender.usage == DynamicsUsage.World)
+        {
+            Debug.Log("Button pressed by world contact sender");
+        }
+
+        Debug.Log($"Contact point: {info.contactPoint}, velocity: {info.enterVelocity}");
         // Add your button action here
     }
 }
@@ -504,7 +515,7 @@ public class GrabbableRope : UdonSharpBehaviour
     public AudioSource grabSound;
     public AudioSource releaseSound;
 
-    public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
+    public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info)
     {
         Networking.SetOwner(info.player, gameObject);
         if (info.player.isLocal)
@@ -517,10 +528,10 @@ public class GrabbableRope : UdonSharpBehaviour
         grabSound.Play();
     }
 
-    public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
+    public override void OnPhysBoneReleased(PhysBoneReleasedInfo info)
     {
-        // PhysBoneReleaseInfo carries no player field; the grabber owns the
-        // object after the grab, so gate the synced writes on ownership.
+        // The grabber owns the object after the grab, so gate synced writes
+        // on ownership when the release event arrives.
         if (Networking.IsOwner(gameObject))
         {
             isGrabbed = false;
@@ -531,7 +542,7 @@ public class GrabbableRope : UdonSharpBehaviour
         releaseSound.Play();
     }
 
-    public bool IsGrabbed() => isGrabbed;
+    public bool HasActiveGrab() => isGrabbed;
 
     public VRCPlayerApi GetGrabber()
     {

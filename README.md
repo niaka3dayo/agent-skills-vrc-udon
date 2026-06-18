@@ -1,7 +1,7 @@
 **English** | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.3-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
@@ -203,7 +203,8 @@ Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-u
 | **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | Supported |
 | **3.10.1** | Bug fixes, stability improvements | Supported |
 | **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones fixes, shader time globals | Supported |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Latest Stable |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Supported |
+| **3.10.4** | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary capacity APIs | Latest Stable |
 
 > **Note**: SDK < 3.9.0 was deprecated on December 2, 2025. New world uploads require 3.9.0+.
 
@@ -244,7 +245,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 - Content is provided **"AS IS"** without warranty. See [LICENSE](LICENSE).
 - This is a personal project. **Errors, outdated information, or incomplete content may exist.** Always verify against [official VRChat documentation](https://creators.vrchat.com/).
 - The author assumes no liability for issues caused by this repository (build errors, upload rejections, unexpected world behavior, etc.).
-- SDK coverage (3.7.1 - 3.10.3) reflects the last update. Behavior may change with new VRChat releases.
+- SDK coverage (3.7.1 - 3.10.4) reflects the last update. Behavior may change with new VRChat releases.
 
 ### AI-Assisted Creation
 
