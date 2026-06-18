@@ -1,8 +1,8 @@
 # VRChat Dynamics for Worlds Reference
 
-Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds (SDK 3.10.0 - 3.10.3).
+Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds (SDK 3.10.0 - 3.10.4).
 
-**Supported SDK Versions**: 3.10.0 - 3.10.3
+**Supported SDK Versions**: 3.10.0 - 3.10.4
 
 ## Overview
 
@@ -28,21 +28,26 @@ Contacts provide a collision detection system between **Senders** and **Receiver
 #### Contact Sender
 
 1. Add `VRC Contact Sender` component to a GameObject
-2. Choose `Shape Type`: `Sphere` or `Capsule`
-3. Configure `Radius` (and `Height` for Capsule)
-4. Set `Content Type` (identifies what kind of contact this is)
+2. Choose `Shape Type`: `Sphere`, `Capsule`, or `Box`
+3. Configure `Radius` (and `Height` for Capsule, or `Vector3 size` for Box)
+4. Set collision tags (matching tags are reported as `matchingTags`)
 
 ```text
 VRC Contact Sender (Sphere)
 ├── Shape Type: Sphere
 ├── Radius: 0.02 (finger-sized; max 3 m)
-└── Content Type: "Finger"
+└── Collision Tags: ["Finger"]
 
 VRC Contact Sender (Capsule)
 ├── Shape Type: Capsule
 ├── Radius: 0.05 (max 3 m)
 ├── Height: 0.3 (Y-axis, half-spheres included; max 6 m)
-└── Content Type: "Custom"
+└── Collision Tags: ["Custom"]
+
+VRC Contact Sender (Box)
+├── Shape Type: Box
+├── Size: (0.2, 0.1, 0.05) Vector3 size (max 6 m per axis after scale)
+└── Collision Tags: ["Custom"]
 ```
 
 **Shape comparison:**
@@ -51,30 +56,35 @@ VRC Contact Sender (Capsule)
 |-------|--------|-------------|
 | `Sphere` | `Radius` | Point contacts (fingers, small projectiles) |
 | `Capsule` | `Radius` + `Height` | Elongated contacts (arms, props, area triggers) |
+| `Box` | `Vector3 size` | Flat panels, rectangular trigger volumes, face-proximity surfaces |
 
 #### Contact Receiver
 
 1. Add `VRC Contact Receiver` component to a GameObject
 2. Add UdonBehaviour to the **same** GameObject
 3. Choose `Shape Type` and configure its dimensions
-4. Configure allowed content types
+4. Configure allowed content usage and collision tags
 5. Implement contact events in Udon
 
 ```text
 VRC Contact Receiver (Sphere)
 ├── Shape Type: Sphere
 ├── Radius: 0.05 (max 3 m)
-├── Allow Self: true (contacts from same avatar)
-├── Allow Others: true (contacts from other avatars)
-└── Content Types: ["Finger", "Hand"]
+├── Content Types: Avatar, World
+└── Collision Tags: ["Finger", "Hand"]
 
 VRC Contact Receiver (Capsule)
 ├── Shape Type: Capsule
 ├── Radius: 0.05 (max 3 m)
 ├── Height: 0.5 (Y-axis, half-spheres included; max 6 m)
-├── Allow Self: true
-├── Allow Others: true
-└── Content Types: ["Hand"]
+├── Content Types: Avatar, World
+└── Collision Tags: ["Hand"]
+
+VRC Contact Receiver (Box)
+├── Shape Type: Box
+├── Size: (0.5, 0.1, 0.5) Vector3 size (max 6 m per axis after scale)
+├── Use Face Proximity: true (proximity measures toward the positive-Z face)
+└── Collision Tags: ["Hand"]
 ```
 
 ### Contact Events
@@ -82,6 +92,7 @@ VRC Contact Receiver (Capsule)
 ```csharp
 using UdonSharp;
 using UnityEngine;
+using VRC.Dynamics;
 using VRC.SDKBase;
 
 public class ContactButton : UdonSharpBehaviour
@@ -97,33 +108,39 @@ public class ContactButton : UdonSharpBehaviour
     {
         if (isPressed) return;
 
+        ContactSenderProxy sender = info.contactSender;
+        if (!sender.isValid) return;
+
         isPressed = true;
         buttonRenderer.material = pressedMaterial;
         clickSound.Play();
 
-        // Check if from avatar or world object
-        if (info.isAvatar)
+        if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
         {
-            Debug.Log($"Pressed by: {info.player?.displayName}");
+            Debug.Log($"Pressed by: {sender.player.displayName}");
         }
-        else
+        else if (sender.usage == DynamicsUsage.World)
         {
-            Debug.Log("Pressed by world object");
+            Debug.Log("Pressed by world contact sender");
         }
+
+        Debug.Log($"Contact point: {info.contactPoint}, velocity: {info.enterVelocity}");
 
         // Perform button action
         OnButtonPressed();
-    }
-
-    public override void OnContactStay(ContactStayInfo info)
-    {
-        // Called every frame while contact is maintained
     }
 
     public override void OnContactExit(ContactExitInfo info)
     {
         isPressed = false;
         buttonRenderer.material = normalMaterial;
+    }
+
+    void Update()
+    {
+        if (!isPressed) return;
+
+        // Add lightweight continuous held-contact effects here.
     }
 
     private void OnButtonPressed()
@@ -133,22 +150,44 @@ public class ContactButton : UdonSharpBehaviour
 }
 ```
 
-### ContactEnterInfo Struct
+### Contact Event Payloads (SDK 3.10.4+)
+
+`ContactEnterInfo` and `ContactExitInfo` expose proxy objects for the sender and receiver involved in the collision. Always check proxy `isValid` before reading `player`, `usage`, transform data, or comparing it with a scene `VRCContactSender` / `VRCContactReceiver` reference.
 
 ```csharp
-public struct ContactEnterInfo
+public override void OnContactEnter(ContactEnterInfo info)
 {
-    public string senderName;       // Name of the Contact Sender
-    public bool isAvatar;           // True if from avatar, false if from world
-    public VRCPlayerApi player;     // Player reference (only valid if isAvatar)
-    public Vector3 position;        // World position of contact point
-    public Vector3 normal;          // Contact normal direction
+    ContactSenderProxy sender = info.contactSender;
+    ContactReceiverProxy receiver = info.contactReceiver;
+
+    if (!sender.isValid || !receiver.isValid) return;
+
+    if (sender.usage == DynamicsUsage.Avatar && sender.player != null && sender.player.IsValid())
+    {
+        Debug.Log($"Avatar sender: {sender.player.displayName}");
+    }
+    else if (sender.usage == DynamicsUsage.World)
+    {
+        Debug.Log("World contact sender");
+    }
+
+    Vector3 point = info.contactPoint;
+    Vector3 velocity = info.enterVelocity;
+    string[] tags = info.matchingTags;
+}
+
+public override void OnContactExit(ContactExitInfo info)
+{
+    if (!info.contactSender.isValid || !info.contactReceiver.isValid) return;
+    string[] tags = info.matchingTags;
 }
 ```
 
-### Dynamic Content Types
+`ContactEnterInfo` includes `contactSender`, `contactReceiver`, `enterVelocity`, `contactPoint`, and `matchingTags`. `ContactExitInfo` includes `contactSender`, `contactReceiver`, and `matchingTags`.
 
-> **Breaking Change (SDK 3.10.1)**: The signature of `VRCContactReceiver.UpdateContentTypes()` changed from `IEnumerable<string>` to **`string[]`**. If you were passing `List<string>` directly, you would need `.ToArray()`, but since `List<T>` is not available in UdonSharp, the correct pattern is to pass `string[]` directly as shown below.
+### Dynamic Content Usage and Collision Tags
+
+Use `UpdateContentTypes(DynamicsUsageFlags)` to choose accepted content categories and `UpdateCollisionTags(string[])` to change the matching tag set. A Contact can use up to 16 collision tags; extra tags are ignored.
 
 ```csharp
 public class DynamicReceiver : UdonSharpBehaviour
@@ -160,21 +199,42 @@ public class DynamicReceiver : UdonSharpBehaviour
         receiver = GetComponent<VRCContactReceiver>();
     }
 
-    public void EnableHandsOnly()
+    public void EnableAvatarHandsOnly()
     {
-        // Only respond to hand contacts
-        string[] types = new string[] { "Hand", "Finger" };
-        receiver.UpdateContentTypes(types); // Pass string[] directly
+        receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar);
+        receiver.UpdateCollisionTags(new string[] { "Hand", "Finger" });
     }
 
-    public void EnableAll()
+    public void EnableAvatarsAndWorldSenders()
     {
-        // Respond to any contact
-        string[] types = new string[] { "Hand", "Finger", "Head", "Foot", "Custom" };
-        receiver.UpdateContentTypes(types);
+        receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar | DynamicsUsageFlags.World);
+        receiver.UpdateCollisionTags(new string[] { "Hand", "Finger", "Head", "Foot", "Custom" });
     }
 }
 ```
+
+
+### Runtime Contact Configuration
+
+`VRCContactSender` and `VRCContactReceiver` expose `shapeType`, `radius`, `height`, `size`, `position`, and `rotation` from Udon. `size` is a `Vector3 size` for Box contacts; each box axis is capped at 6 meters after GameObject scale is applied. Batch runtime configuration writes, then call `ApplyConfigurationChanges()` once so the contact volume uses the new values.
+
+```csharp
+public VRCContactReceiver receiver;
+public VRCContactSender sender;
+
+public void ResizeBoxReceiver(Vector3 newSize, Vector3 offset)
+{
+    receiver.shapeType = ContactBase.ShapeType.Box;
+    receiver.size = newSize;
+    receiver.position = offset;
+    receiver.ApplyConfigurationChanges();
+
+    float proximity = receiver.CalculateProximity(sender);
+    Debug.Log($"Current proximity: {proximity}");
+}
+```
+
+Use `CalculateProximity(sender)` when you need an immediate `0.0-1.0` proximity value between a receiver and sender instead of waiting for avatar parameters or event state. For a Box receiver with `Use Face Proximity` enabled, proximity is measured toward the receiver's positive-Z face; otherwise it is measured toward the receiver center.
 
 ### Contact Sender Control from Udon
 
@@ -229,6 +289,7 @@ VRC Phys Bone
 ```csharp
 using UdonSharp;
 using UnityEngine;
+using VRC.Dynamics;
 using VRC.SDKBase;
 
 public class GrabbableRope : UdonSharpBehaviour
@@ -238,7 +299,7 @@ public class GrabbableRope : UdonSharpBehaviour
 
     private VRCPlayerApi currentGrabber;
 
-    public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
+    public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info)
     {
         currentGrabber = info.player;
         grabSound.Play();
@@ -249,7 +310,7 @@ public class GrabbableRope : UdonSharpBehaviour
         }
     }
 
-    public override void OnPhysBoneRelease(PhysBoneReleaseInfo info)
+    public override void OnPhysBoneReleased(PhysBoneReleasedInfo info)
     {
         currentGrabber = null;
         releaseSound.Play();
@@ -257,10 +318,10 @@ public class GrabbableRope : UdonSharpBehaviour
         Debug.Log("Rope released");
     }
 
-    public bool IsGrabbed()
+    public bool HasActiveGrab()
     {
         VRCPhysBone physBone = GetComponent<VRCPhysBone>();
-        return physBone.IsGrabbed();
+        return physBone.IsGrabbed;
     }
 
     public VRCPlayerApi GetGrabber()
@@ -275,100 +336,43 @@ public class GrabbableRope : UdonSharpBehaviour
 ```csharp
 VRCPhysBone physBone = GetComponent<VRCPhysBone>();
 
-// Check if grabbed
-bool grabbed = physBone.IsGrabbed();
+// Check current state
+bool grabbed = physBone.IsGrabbed;
+bool posed = physBone.IsPosed;
 
-// Get grabbing player
-VRCPlayerApi grabber = physBone.GetGrabbingPlayer();
-
-// Get affected transforms
-Transform[] bones = physBone.GetAffectedTransforms();
-
-// Force release (SDK 3.10.0+)
-physBone.ForceReleaseGrab();  // Force release the grab
-physBone.ForceReleasePose();  // Force release the pose (reset bent PhysBone)
+// Force release on the local client (SDK 3.10.0+)
+physBone.ReleaseGrabs(); // Force release active grabs
+physBone.ReleasePoses(); // Release frozen poses
 ```
 
-### PhysBone Udon Callbacks (Collider Events)
+### PhysBone Global Collision and Collider Udon Access
 
-In addition to grab/release, VRC PhysBone fires Udon callbacks when **PhysBone Colliders** interact with the bone chain. These three events are raised on any UdonBehaviour attached to the **same GameObject as the VRC Phys Bone** component.
+`VRCPhysBoneCollider` can be marked as **Global Collision** in the Inspector so PhysBones in the selected content types treat it as part of their collider list. The target PhysBone's Allow Collision rules still decide whether the collision is processed.
 
-| Event | When Called |
-|-------|-------------|
-| `void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)` | A PhysBone collider starts intersecting the bone chain |
-| `void OnPhysBoneColliderStay(PhysBoneColliderInfo info)` | A PhysBone collider continues to intersect the bone chain |
-| `void OnPhysBoneColliderExit(PhysBoneColliderInfo info)` | A PhysBone collider stops intersecting the bone chain |
+- Avatar global colliders can affect PhysBones in worlds when the world PhysBone allows avatar collisions.
+- Avatars can have at most four additional PhysBone colliders with Global Collision enabled.
+- Worlds have no documented count limit for global PhysBone colliders, but each collider still has runtime cost.
+- Global Collision is supported only on Sphere and Capsule PhysBone colliders.
+- Udon scripts can modify world collider shape fields, but the documented Udon-accessible fields do not include enabling/disabling `Global Collision` or changing whether a collider is global.
 
-#### PhysBoneColliderInfo Struct
+For world `VRCPhysBoneCollider` components, Udon can read and write `shapeType`, `radius`, `height`, `position`, and `rotation`. Batch changes and call `ApplyConfigurationChanges()` once after editing fields.
 
 ```csharp
-public struct PhysBoneColliderInfo
+public VRCPhysBoneCollider collider;
+
+public void ConfigureCapsuleCollider(float radius, float height, Vector3 offset)
 {
-    public VRCPhysBoneCollider collider; // The collider that intersected the bone chain
-    public bool isAvatar;               // True if the collider belongs to an avatar
-    public VRCPlayerApi player;         // Player reference (only valid if isAvatar is true)
-    public Transform bone;              // The specific bone transform that was hit
+    collider.shapeType = VRC.Dynamics.VRCPhysBoneColliderBase.ShapeType.Capsule;
+    collider.radius = radius;
+    collider.height = height;
+    collider.position = offset;
+    collider.ApplyConfigurationChanges();
 }
 ```
 
-#### Callback Example
+### PhysBone Collider Udon Boundary
 
-```csharp
-using UdonSharp;
-using UnityEngine;
-using VRC.SDKBase;
-
-public class PhysBoneColliderReactor : UdonSharpBehaviour
-{
-    public AudioSource touchSound;
-    public ParticleSystem touchEffect;
-
-    private int activeColliderCount = 0;
-
-    public override void OnPhysBoneColliderEnter(PhysBoneColliderInfo info)
-    {
-        activeColliderCount++;
-
-        if (info.isAvatar && info.player != null)
-        {
-            Debug.Log($"PhysBone touched by avatar: {info.player.displayName}, bone: {info.bone?.name}");
-        }
-        else
-        {
-            Debug.Log($"PhysBone touched by world collider, bone: {info.bone?.name}");
-        }
-
-        if (activeColliderCount == 1)
-        {
-            // First contact — play feedback
-            touchSound.Play();
-            touchEffect.Play();
-        }
-    }
-
-    public override void OnPhysBoneColliderStay(PhysBoneColliderInfo info)
-    {
-        // Called every frame while the collider continues to intersect.
-        // Avoid heavy per-frame logic here; use OnPhysBoneColliderEnter
-        // and OnPhysBoneColliderExit for state changes instead.
-    }
-
-    public override void OnPhysBoneColliderExit(PhysBoneColliderInfo info)
-    {
-        activeColliderCount--;
-        if (activeColliderCount < 0) activeColliderCount = 0;
-
-        if (activeColliderCount == 0)
-        {
-            touchEffect.Stop();
-        }
-
-        Debug.Log($"PhysBone collider exited, bone: {info.bone?.name}");
-    }
-}
-```
-
-> **Note:** `OnPhysBoneColliderStay` fires every frame while a collider remains in contact and can generate significant callback overhead. Keep stay handlers lightweight or leave the body empty when you only need enter/exit transitions.
+SDK 3.10.4 exposes world `VRCPhysBoneCollider` configuration fields to Udon, but it does not expose separate PhysBone-collider enter/stay/exit callbacks on `UdonSharpBehaviour`. Use `OnPhysBoneGrabbed/Released/Posed/UnPosed` for PhysBone interaction state, and use Contacts when a world needs collider-like touch events.
 
 ### PhysBone Dependency Sorting (SDK 3.8.0+)
 
@@ -831,7 +835,7 @@ public class GrabbableLever : UdonSharpBehaviour
         }
     }
 
-    public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
+    public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info)
     {
         // Take ownership when grabbed
         Networking.SetOwner(info.player, gameObject);
@@ -875,8 +879,8 @@ public class TouchSurface : UdonSharpBehaviour
         touchCount++;
         UpdateVisual();
 
-        // Spawn effect at touch point
-        SpawnTouchEffect(info.position);
+        // Spawn effect at estimated touch point on the receiver surface.
+        SpawnTouchEffect(info.contactPoint);
     }
 
     public override void OnContactExit(ContactExitInfo info)
@@ -905,18 +909,19 @@ public class TouchSurface : UdonSharpBehaviour
 ```csharp
 public override void OnContactEnter(ContactEnterInfo info)
 {
-    if (info.isAvatar)
+    ContactSenderProxy sender = info.contactSender;
+    if (!sender.isValid) return;
+
+    if (sender.usage == DynamicsUsage.Avatar)
     {
-        // Contact from an avatar (player)
-        // - "Allow Self" setting applies
-        // - "Allow Others" setting applies
-        VRCPlayerApi player = info.player;
+        // Contact from an avatar-owned sender.
+        // - Avatar receiver Allow Self / Allow Others settings apply on avatars.
+        VRCPlayerApi player = sender.player;
     }
-    else
+    else if (sender.usage == DynamicsUsage.World)
     {
-        // Contact from a world object (VRC Contact Sender in world)
-        // - "Allow Self" and "Allow Others" are IGNORED
-        // - Always triggers regardless of settings
+        // Contact from a world object (VRC Contact Sender in world).
+        // - Avatar-only Allow Self / Allow Others settings do not describe world senders.
     }
 }
 ```
@@ -937,15 +942,22 @@ public class DynamicsDebug : UdonSharpBehaviour
 {
     public override void OnContactEnter(ContactEnterInfo info)
     {
-        Debug.Log($"[Contact] Enter - Sender: {info.senderName}, " +
-                  $"Avatar: {info.isAvatar}, Player: {info.player?.displayName}, " +
-                  $"Position: {info.position}");
+        ContactSenderProxy sender = info.contactSender;
+        if (!sender.isValid) return;
+
+        string playerName = (sender.player != null && sender.player.IsValid())
+            ? sender.player.displayName
+            : "none";
+        Debug.Log($"[Contact] Enter - Usage: {sender.usage}, Player: {playerName}, " +
+                  $"Point: {info.contactPoint}, Velocity: {info.enterVelocity}");
     }
 
-    public override void OnPhysBoneGrab(PhysBoneGrabInfo info)
+    public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info)
     {
-        Debug.Log($"[PhysBone] Grab - Player: {info.player?.displayName}, " +
-                  $"Bone: {info.bone?.name}");
+        string playerName = (info.player != null && info.player.IsValid())
+            ? info.player.displayName
+            : "none";
+        Debug.Log($"[PhysBone] Grab - Player: {playerName}, Object: {gameObject.name}");
     }
 }
 ```
@@ -953,14 +965,14 @@ public class DynamicsDebug : UdonSharpBehaviour
 ## Best Practices
 
 1. **Test with multiple players** - Contacts behave differently with network latency
-2. **Use appropriate content types** - Be specific to avoid unwanted triggers
-3. **Handle null players** - `info.player` can be null for world objects
+2. **Use precise DynamicsUsageFlags and collision tags** - Be specific to avoid unwanted triggers
+3. **Handle null proxy players** - after `isValid`, read `info.contactSender.player` / `info.contactReceiver.player`; world-side contacts may not have a player
 4. **Sync state, not events** - Use `[UdonSynced]` for persistent state
 5. **Debounce rapid contacts** - Add cooldown to prevent spam
 6. **Clean up on player leave** - Reset state in `OnPlayerLeft`
 
 ## See Also
 
-- [events.md](events.md) - Full reference for `OnContactEnter/Stay/Exit` and `OnPhysBoneGrab/Release` signatures
+- [events.md](events.md) - Full reference for `OnContactEnter/Exit` and `OnPhysBoneGrabbed/Released` signatures
 - [patterns-core.md](patterns-core.md) - Common patterns for interactive objects using Contacts and PhysBones
 - [networking.md](networking.md) - Syncing contact/grab state across players with `[UdonSynced]`

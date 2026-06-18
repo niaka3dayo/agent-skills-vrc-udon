@@ -1,6 +1,6 @@
 # VRC World SDK 3 Cheatsheet
 
-**SDK 3.7.1 - 3.10.3 supported**
+**SDK 3.7.1 - 3.10.4 supported**
 
 ---
 
@@ -9,7 +9,7 @@
 | Section | Content |
 |---------|---------|
 | [Scene Setup](#scene-setup) | VRCWorld, Spawns, Respawn |
-| [Components](#components) | Pickup, Station, ObjectSync |
+| [Components](#components) | Pickup, Station, ObjectSync, Contacts, PhysBones |
 | [Layers](#layers) | Layer numbers and purposes |
 | [Performance](#performance) | Limits and optimization |
 | [Lighting](#lighting) | Bake settings |
@@ -126,6 +126,39 @@ public override void Interact()
 {
     mirrorObject.SetActive(!mirrorObject.activeSelf);
 }
+```
+
+### Contacts (SDK 3.10.4)
+
+```text
+VRC Contact Sender / VRC Contact Receiver shapes:
+- Sphere: Radius
+- Capsule: Radius + Height
+- Box: Box Size X/Y/Z axes
+
+Limits are applied after transform scale:
+- Sphere/Capsule radius ≤ 3 m
+- Box width/height/depth ≤ 6 m
+
+Box-shaped Contact Receiver:
+- Use Face Proximity = proximity to the local positive-Z face
+```
+
+For Contact Sender / Contact Receiver Udon events and APIs, use
+`../../unity-vrc-udon-sharp/references/dynamics.md` instead of this world authoring sheet.
+
+### PhysBones / Global Collision (SDK 3.10.4)
+
+```text
+VRCPhysBoneCollider Global Collision:
+- World PhysBones can collide with avatar-origin globals when Allow Collision permits
+- Avatars can add up to 4 additional global PhysBone colliders
+- Worlds have no documented global collider count limit
+- Global Collision supports Sphere/Capsule only
+- PhysBone Allow Collision rules still apply
+
+World Udon can edit VRCPhysBoneCollider settings; call
+ApplyConfigurationChanges() after batched configuration changes.
 ```
 
 ---
@@ -374,7 +407,8 @@ site:github.com/vrchat-community "issue keyword"
 | 3.7.4 | Persistence API |
 | 3.8.1 | [NetworkCallable] |
 | 3.9.0 | Camera Dolly, Auto Hold |
-| 3.10.0 | Dynamics (PhysBones) |
+| 3.10.0 | Dynamics (PhysBones, Contacts) |
+| 3.10.4 | Box-shaped Contact Sender/Receiver authoring updates |
 
 ---
 
@@ -384,7 +418,7 @@ site:github.com/vrchat-community "issue keyword"
 |-------|------|
 | Performance targets, Quest optimization checklist | [references/performance.md](references/performance.md) |
 | Lightmap settings, Quest bake parameter reference | [references/lighting.md](references/lighting.md) |
-| Full SDK 3.7.1-3.10.3 world component reference | [references/components.md](references/components.md) |
+| Full SDK 3.7.1-3.10.4 world component reference | [references/components.md](references/components.md) |
 | VRChat layer system, collision, and selective rendering reference | [references/layers.md](references/layers.md) |
 | Audio and video configuration, voice settings, Steam Audio, and video players | [references/audio-video.md](references/audio-video.md) |
 | Upload procedure, pre-upload checklist, validation, world settings, and post-upload steps | [references/upload.md](references/upload.md) |
