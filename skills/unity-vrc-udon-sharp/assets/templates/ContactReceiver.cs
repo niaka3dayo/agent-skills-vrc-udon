@@ -130,6 +130,17 @@ public class ContactReceiver : UdonSharpBehaviour
     /// </summary>
     public override void OnContactExit(ContactExitInfo info)
     {
+        ContactSenderProxy sender = info.contactSender;
+        if (!sender.isValid)
+        {
+            return;
+        }
+
+        if (avatarOnlyMode && sender.usage != DynamicsUsage.Avatar)
+        {
+            return;
+        }
+
         _contactCount--;
 
         // Clamp to zero to guard against missed Enter events (e.g. late join).
@@ -147,9 +158,7 @@ public class ContactReceiver : UdonSharpBehaviour
 
             if (debugMode)
             {
-                ContactSenderProxy sender = info.contactSender;
-                string usage = sender.isValid ? sender.usage.ToString() : "invalid";
-                Debug.Log($"[ContactReceiver:{gameObject.name}] Exit (all senders gone) usage={usage}");
+                Debug.Log($"[ContactReceiver:{gameObject.name}] Exit (all senders gone) usage={sender.usage}");
             }
         }
     }

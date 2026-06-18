@@ -973,6 +973,8 @@ receiver.size = new Vector3(0.5f, 0.1f, 0.5f);
 receiver.position = new Vector3(0f, 1f, 0f);
 receiver.ApplyConfigurationChanges();
 
+// Use a referenced VRCContactSender or info.contactSender from a contact callback.
+VRCContactSender sender = GetComponent<VRCContactSender>();
 float proximity = receiver.CalculateProximity(sender);
 ```
 
