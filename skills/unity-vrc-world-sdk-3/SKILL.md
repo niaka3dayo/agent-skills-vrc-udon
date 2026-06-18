@@ -10,7 +10,7 @@ description: >
     SDK 3.7.1 - 3.10.4 coverage.
     Triggers on: VRChat world, VRC SDK, scene setup, VRC_SceneDescriptor,
     spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
-    PhysBones, Contacts, Box Contacts, Global PhysBone Colliders,
+    PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders,
     VRCPhysBoneCollider, VRCTween, optimization, Quest support, light baking,
     upload, FPS improvement.
     Related: Use unity-vrc-udon-sharp for UdonSharp C# coding.
@@ -65,7 +65,7 @@ Load only what the task requires.
 |------|---------------|----------|-------------|----------------|
 | Setting up a new scene from scratch | `components.md`, `layers.md` | `upload.md` | `audio-video.md`, `troubleshooting.md` | Collision matrix non-obvious; component deps needed upfront |
 | Making objects grabbable (VRC_Pickup) | `components.md` | `layers.md` | `audio-video.md`, `lighting.md` | Pickup/Rigidbody requirements not in standard Unity docs |
-| Configuring Dynamics for Worlds (PhysBones, Contacts, Box Contacts, Global PhysBone Colliders, world `VRCPhysBoneCollider` access) | `components.md` | `layers.md`, `troubleshooting.md`; use `unity-vrc-udon-sharp` for Udon code | `audio-video.md`, `lighting.md` | Dynamics component availability and Udon access are SDK-version sensitive |
+| Configuring Dynamics for Worlds (PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` access) | `components.md` | `layers.md`, `troubleshooting.md`; use `unity-vrc-udon-sharp` for Udon code | `audio-video.md`, `lighting.md` | Dynamics component availability and Udon access are SDK-version sensitive |
 | Setting up seating (VRC_Station) | `components.md` | `layers.md` | `audio-video.md`, `performance.md` | Station collider + exit requirements are VRChat-specific |
 | Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` | Quest limits differ from PC; bake requirements non-obvious |
 | Adding audio or video player / voice zones (SetVoiceGain, Steam Audio) | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |

@@ -145,7 +145,7 @@ Box-shaped Contact Receiver:
 ```
 
 For Contact Sender / Contact Receiver Udon events and APIs, use
-`unity-vrc-udon-sharp/references/dynamics.md` instead of this world authoring sheet.
+`../../unity-vrc-udon-sharp/references/dynamics.md` instead of this world authoring sheet.
 
 ### PhysBones / Global Collision (SDK 3.10.4)
 
