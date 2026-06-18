@@ -122,8 +122,9 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Building UI/menus | `patterns-ui.md`, `events.md` | `patterns-core.md`, `api.md` | `networking-bandwidth.md`, `dynamics.md`, `web-loading.md` |
 | Implementing persistence (save/load) | `persistence.md` | `patterns-networking.md`, `events.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Downloading strings/images from web | `web-loading.md` | `web-loading-advanced.md`, `image-loading-vram.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
-| Using PhysBones/Contacts/Constraints, VRCTween, Box Contacts, Global PhysBone Colliders, or world `VRCPhysBoneCollider` Udon access | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
-| Tuning DataList/DataDictionary capacity or using `DataDictionary.EnsureCapacity` | `constraints.md` | `web-loading.md`, `patterns-utilities.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
+| Using VRCTween, cancelable delayed calls, or tween cleanup | `vrctween.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
+| Using PhysBones/Contacts/Constraints, Box Contacts, Global PhysBone Colliders, or world `VRCPhysBoneCollider` Udon access | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
+| Tuning DataList/DataDictionary capacity or using `DataDictionary.EnsureCapacity` | `constraints.md`, `api.md` | `patterns-utilities.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
 | Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
