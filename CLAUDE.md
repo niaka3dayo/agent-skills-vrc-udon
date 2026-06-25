@@ -159,14 +159,17 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    # Always rewrite the auto-generated notes before publishing:
    #   - Remove the "Release vX.Y.Z (#N)" self-reference line
    #   - Replace bare PR titles with user-facing prose
-   #   - Add a reporter acknowledgement section if any bundled PR closed an
-   #     externally-reported Issue. Mirror the reporter's language for the
-   #     release-notes acknowledgement (Japanese reporter → Japanese; English
-   #     reporter → English). Issue/PR titles and bodies remain English-first
-   #     per repo convention; the reporter-language rule applies only to
-   #     user-facing release notes.
+   #   - Use a bilingual structure: English release notes first, then a Japanese
+   #     version of the same user-facing content below it.
+   #   - Add a contributor acknowledgement section when any bundled PR closed an
+   #     externally-reported Issue. Name the Issue number and reporter explicitly.
+   #     Keep the acknowledgement respectful and mirror the reporter's language
+   #     when possible.
    gh release edit vX.Y.Z --notes "$(cat <<'NOTES'
    ## What's New in vX.Y.Z
+   ...
+
+   ## vX.Y.Z の変更点
    ...
    NOTES
    )"

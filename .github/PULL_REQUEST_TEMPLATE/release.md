@@ -47,7 +47,8 @@ themselves should also include a thank-you (in the reporter's language).
 2. Rewrite the draft notes (`gh release edit vX.Y.Z --notes "$(cat <<'NOTES' ... NOTES)"`):
    - Remove the auto-generated "Release vX.Y.Z (#N)" self-reference line.
    - Convert bare PR titles to user-facing prose.
-   - Add reporter thank-you if applicable, in the reporter's language.
+   - Use a bilingual structure: English release notes first, then Japanese release notes below.
+   - Add reporter thank-you if applicable, explicitly naming the Issue number and reporter.
 3. `gh release edit vX.Y.Z --draft=false` to publish — triggers `publish.yml` → `npm publish`.
 
 ## Test plan
