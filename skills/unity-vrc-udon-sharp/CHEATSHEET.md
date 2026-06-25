@@ -142,6 +142,8 @@ public void PlaySound() {
 }
 ```
 
+VRChat world scene setup: pair each `AudioSource` with `VRC_SpatialAudioSource`. For warning-only additions, use Gain 0 dB and preserve existing 2D/3D intent, volume, max distance, and rolloff curves.
+
 | Scenario | Pattern |
 |----------|---------|
 | Always active | `Start()` only is fine |

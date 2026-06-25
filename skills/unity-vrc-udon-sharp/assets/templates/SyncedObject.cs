@@ -16,6 +16,7 @@ public class SyncedObject : UdonSharpBehaviour
     public GameObject[] controlledObjects;
 
     [Header("Audio")]
+    // Scene setup: pair with VRC_SpatialAudioSource; keep 2D/3D intent; Gain 0 dB only for warning fixes.
     public AudioSource audioSource;
     public AudioClip toggleSound;
 

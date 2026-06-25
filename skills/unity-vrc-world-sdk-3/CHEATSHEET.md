@@ -282,12 +282,16 @@ Do NOT place:
 
 ### VRC_SpatialAudioSource
 
-| Property | Default | Range |
-|----------|---------|-------|
-| Gain | 10 dB | 0-24 dB |
-| Near | 0 m | Attenuation start |
-| Far | 40 m | Attenuation end |
-| Volumetric Radius | 0 m | Source spread |
+Pair world `AudioSource` components with `VRC_SpatialAudioSource` to avoid SDK Build Panel warnings. For warning-only additions, use Gain 0 dB and preserve existing `volume`, `spatialBlend`, rolloff, max distance, custom curves, and 2D/3D intent.
+
+| Property | Baseline | Safe-preserve note |
+|----------|----------|--------------------|
+| Gain | 10 dB common default | Use 0 dB when adding only to avoid a warning |
+| Near | 0 m | Keep 0 m unless `minDistance` / Near was authored |
+| Far | Per use case | Match `maxDistance` or intended audible range; avoid wider Auto Fix ranges |
+| Volumetric Radius | 0 m | Set intentionally for wide sources |
+| Enable Spatialization | true for 3D | false for intentional 2D/global audio |
+| Use AudioSource Volume Curve | false common default | true when preserving authored 3D rolloff |
 
 ### Video Player Comparison
 

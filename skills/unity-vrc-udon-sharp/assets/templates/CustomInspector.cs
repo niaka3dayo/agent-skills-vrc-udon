@@ -28,6 +28,7 @@ public class CustomInspectorExample : UdonSharpBehaviour
 
     [Header("References")]
     public Transform targetPoint;
+    // Scene setup: pair with VRC_SpatialAudioSource; keep 2D/3D intent; Gain 0 dB only for warning fixes.
     public AudioSource audioSource;
 
     // Synced variable example

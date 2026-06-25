@@ -36,6 +36,7 @@ public class VRC_Pickup_Rigidbody : UdonSharpBehaviour
 {
     [Header("Audio Feedback")]
     [Tooltip("Audio source used for pickup and drop sounds")]
+    // Scene setup: pair with VRC_SpatialAudioSource; keep 2D/3D intent; Gain 0 dB only for warning fixes.
     public AudioSource audioSource;
 
     [Tooltip("Sound played when the object is picked up")]

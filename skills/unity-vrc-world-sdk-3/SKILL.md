@@ -17,7 +17,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.5.0"
+    version: "2.5.1"
     tags: vrchat, world-sdk, scene-setup, optimization, components, upload
 ---
 
@@ -332,13 +332,17 @@ Exactly **one** is required in every VRChat world.
 
 ### VRC_SpatialAudioSource
 
-| Property              | Description           | Default            |
-| --------------------- | --------------------- | ------------------ |
-| Gain                  | Volume boost (0-24 dB) | 10 dB (world default) |
-| Near                  | Attenuation start     | 0m                 |
-| Far                   | Attenuation end       | 40m                |
-| Volumetric Radius     | Source spread          | 0m                 |
-| Enable Spatialization | 3D positioning        | true               |
+Plan each world `AudioSource` with a `VRC_SpatialAudioSource`: a bare `AudioSource` triggers a VRChat SDK Build Panel warning. Add the companion deliberately, avoid Auto Fix as a blind default, and do not overwrite existing `VRC_SpatialAudioSource` values or tuned `AudioSource` curves unless requested.
+
+| Property              | Description           | Baseline / safe-preserve note |
+| --------------------- | --------------------- | ----------------------------- |
+| Gain                  | Volume boost (0-24 dB) | 10 dB is common/default; use 0 dB for warning-only additions to preserve loudness |
+| Near                  | Attenuation start     | 0m unless the sound needs an intentional near field |
+| Far                   | Attenuation end       | Match existing `maxDistance` or the intended audible range; avoid blind default/Auto Fix ranges |
+| Volumetric Radius     | Source spread          | 0m for point sources; set intentionally for wide sources |
+| Enable Spatialization | 3D positioning        | false for intentional 2D/global audio; true for authored 3D audio |
+
+When preserving an existing `AudioSource`, keep `volume`, `spatialBlend`, `rolloffMode`, `maxDistance`, and custom curves; use Gain 0 dB; enable `Use AudioSource Volume Curve` for tuned 3D rolloff; match Far to the existing `maxDistance` or intended audible range; and keep Near at 0m unless an existing `minDistance`/Near value was intentionally authored.
 
 ### Video Player Selection
 

@@ -458,37 +458,57 @@ Creates a portal to another world.
 
 ## VRC_SpatialAudioSource
 
-Configures 3D spatial audio. Automatically added to AudioSource.
+Configures VRChat spatial audio for an `AudioSource`. Add it deliberately with each world `AudioSource` to avoid SDK Build Panel warnings; Auto Fix may change authored loudness or range.
 
 ### All Properties
 
-| Property | Type | Description | Default | Range |
-|----------|------|-------------|---------|-------|
-| Gain | float | Additional volume | 10 dB (world audio sources) | 0-24 dB |
-| Near | float | Attenuation start distance | 0 m | - |
-| Far | float | Attenuation end distance | 40 m | - |
-| Volumetric Radius | float | Source size | 0 m | < Far |
-| Use AudioSource Volume Curve | bool | Use curve | false | - |
-| Enable Spatialization | bool | 3D positioning | true | - |
+| Property | Type | Description | Default / safe-preserve note | Range |
+|----------|------|-------------|------------------------------|-------|
+| Gain | float | Additional volume | 10 dB common/default; 0 dB for warning-only additions that preserve loudness | 0-24 dB |
+| Near | float | Attenuation start distance | 0 m unless intentionally authored | - |
+| Far | float | Attenuation end distance | Match existing `AudioSource.maxDistance` or the intended audible range | - |
+| Volumetric Radius | float | Source size | 0 m for point sources | < Far |
+| Use AudioSource Volume Curve | bool | Use curve | true when preserving existing custom 3D rolloff | - |
+| Enable Spatialization | bool | 3D positioning | false for 2D/global audio; true for authored 3D audio | - |
 
 ### Settings by Use Case
 
 ```csharp
-// BGM (2D):
+// Rule: do not overwrite existing VRC_SpatialAudioSource values or tuned
+// AudioSource volume, spatialBlend, rolloffMode, maxDistance, or curves
+// unless the user asks for a new sound design.
+
+// BGM / UI / global audio (2D):
 // Enable Spatialization = false
-// Near = 0, Far = 0
+// Gain = 0 dB when adding only to avoid the SDK warning
+// Keep AudioSource.spatialBlend = 0 and tune loudness with AudioSource.volume
 
-// Ambient sound (wide source):
-// Near = 0, Far = 20-40
-// Volumetric Radius = 5-10
+// Existing tuned 3D AudioSource:
+// Enable Spatialization = true
+// Use AudioSource Volume Curve = true
+// Gain = 0 dB
+// Match Far to existing maxDistance or the intended audible range
 
-// Sound effects (point source):
-// Near = 0, Far = 10
+// New 3D sound effects (point source):
+// Enable Spatialization = true
+// Gain = 0 dB to start
+// Near = 0, Far = 10-15 or the explicitly intended audible range
 // Volumetric Radius = 0
 
-// Voice-like:
-// Near = 0, Far = 25
-// Gain = adjust appropriately
+// Ambient sound (wide source):
+// Enable Spatialization = true
+// Gain = 0 dB unless intentionally boosted
+// Far and Volumetric Radius must be authored for the area size
+```
+
+### AudioSource Pairing
+
+```text
+⚠️ AudioSource pairing:
+- Always add a VRC_SpatialAudioSource companion for world AudioSource components.
+- If the AudioSource is intentionally 2D/global, keep Enable Spatialization off and Gain at 0 dB.
+- If the AudioSource is tuned for 3D rolloff, preserve it with Use AudioSource Volume Curve.
+- Match Far to maxDistance / intended audible range; keep Near at 0 m unless minDistance / Near was authored.
 ```
 
 ### Avatar Restrictions
@@ -497,8 +517,7 @@ Configures 3D spatial audio. Automatically added to AudioSource.
 ⚠️ AudioSource on avatars:
 - Avatar gain cap: 10 dB
 - Far limit: 40 m
-- Always add VRC_SpatialAudioSource
-  (If not added, SDK auto-generates one, causing unexpected behavior)
+- Pair with VRC_SpatialAudioSource; do not rely on SDK-generated values
 ```
 
 ---
