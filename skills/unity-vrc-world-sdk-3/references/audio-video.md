@@ -23,7 +23,7 @@ Complete guide for audio and video configuration.
 | Component | Purpose | Use Case |
 |-----------|---------|----------|
 | AudioSource | Unity standard audio | Basic sound playback |
-| VRC_SpatialAudioSource | VRChat spatial audio | Sounds requiring 3D positioning |
+| VRC_SpatialAudioSource | VRChat spatial audio | Companion for AudioSource; avoids SDK Build Panel warnings |
 | VoiceSettings | Voice settings | Configured in VRC_SceneDescriptor |
 
 ### Audio System Architecture
@@ -44,16 +44,34 @@ Complete guide for audio and video configuration.
 
 ### Component Settings
 
-VRC_SpatialAudioSource is added alongside a Unity AudioSource.
+Add `VRC_SpatialAudioSource` alongside Unity `AudioSource` components in world scenes to avoid SDK Build Panel warnings. Choose settings that preserve the sound's intent.
 
-| Property | Type | Description | Default |
-|----------|------|-------------|---------|
-| **Gain** | float (dB) | Volume adjustment (0-24 dB) | 10 dB |
-| **Near** | float (m) | Attenuation start distance | 0 m |
-| **Far** | float (m) | Attenuation end distance (0=infinite) | 40 m |
-| **Volumetric Radius** | float (m) | Source spread | 0 m |
-| **Enable Spatialization** | bool | Enable 3D positioning | true |
-| **Use AudioSource Volume Curve** | bool | Use AudioSource curve | false |
+| Property | Type | Description | Default / safe-preserve note |
+|----------|------|-------------|------------------------------|
+| **Gain** | float (dB) | Volume adjustment (0-24 dB) | 10 dB is common/default; use 0 dB for warning-only additions to preserve loudness |
+| **Near** | float (m) | Attenuation start distance | 0 m unless the sound needs an intentional near field |
+| **Far** | float (m) | Attenuation end distance (0=infinite) | Match existing `AudioSource.maxDistance` or intended audible range; avoid wider Auto Fix/default ranges |
+| **Volumetric Radius** | float (m) | Source spread | 0 m for point sources; set intentionally for wide sources |
+| **Enable Spatialization** | bool | Enable 3D positioning | false for intentional 2D/global audio; true for authored 3D audio |
+| **Use AudioSource Volume Curve** | bool | Use AudioSource curve | true when preserving an existing custom 3D rolloff; otherwise choose deliberately |
+
+### AudioSource Pairing Rule
+
+```text
+For every AudioSource in a VRChat world:
+1. Add or keep VRC_SpatialAudioSource on the same GameObject.
+2. Do not overwrite existing VRC_SpatialAudioSource values.
+3. Preserve `volume`, `spatialBlend`, `rolloffMode`, `maxDistance`, and custom curves.
+4. Use Gain = 0 dB for warning-only additions; raise Gain only for intentional sound design.
+5. Set Far from `maxDistance` or the intended audible range; keep Near at 0 m unless an existing `minDistance`/Near value was intentionally authored.
+```
+
+| Audio intent | Safe VRC_SpatialAudioSource setup | Notes |
+|--------------|-----------------------------------|-------|
+| BGM / UI / global 2D audio | Enable Spatialization = false, Gain = 0 dB | Keeps the original 2D presentation; Near/Far are not the design control. |
+| New 3D point SFX | Enable Spatialization = true, Gain = 0 dB, Far set to the intended audible distance | Tune loudness with `AudioSource.volume` first, then raise Gain only intentionally. |
+| Existing tuned 3D AudioSource | Enable Spatialization = true, Use AudioSource Volume Curve = true, Gain = 0 dB, Far matched to `maxDistance`/design distance | Keeps authored rolloff/custom curves; avoid changing Near/Far unless requested. |
+| Wide area source | Enable Spatialization = true, Gain = 0 dB unless intentionally boosted, set Volumetric Radius/Far explicitly | Use Volumetric Radius for source size; do not make Far large just to make it audible. |
 
 ### Distance Attenuation Model
 
@@ -92,7 +110,7 @@ AudioSource:
 └── Volume: 0.5
 
 VRC_SpatialAudioSource:
-├── Gain: 10 dB (default)
+├── Gain: 0 dB (preserve original loudness)
 ├── Enable Spatialization: false
 └── (Near/Far ignored in 2D mode)
 ```
@@ -106,9 +124,9 @@ AudioSource:
 └── Volume: 1.0
 
 VRC_SpatialAudioSource:
-├── Gain: 10 dB (default)
+├── Gain: 0 dB (start from AudioSource volume)
 ├── Near: 1 m
-├── Far: 15 m
+├── Far: 15 m (intended audible distance)
 ├── Volumetric Radius: 0
 └── Enable Spatialization: true
 ```
@@ -122,9 +140,9 @@ AudioSource:
 └── Volume: 1.0
 
 VRC_SpatialAudioSource:
-├── Gain: 10 dB (default — official guidance keeps Gain at default; Volumetric Radius below provides the area size)
+├── Gain: 0 dB unless the wide source is intentionally boosted
 ├── Near: 5 m
-├── Far: 50 m
+├── Far: 50 m (authored area, not an Auto Fix fallback)
 ├── Volumetric Radius: 10 m
 └── Enable Spatialization: true
 ```
@@ -241,8 +259,11 @@ When Steam Audio becomes the default (no action required before then):
 
 ```text
 VRC_SpatialAudioSource components:
+□ Every AudioSource has a companion VRC_SpatialAudioSource, so the SDK Build Panel has no bare-AudioSource warning
+□ Existing VRC_SpatialAudioSource values were preserved unless the design required a change
+□ Warning-only additions use Gain = 0 dB and keep 2D/3D intent unchanged
 □ Verify Near/Far values still achieve the intended effect
-□ Check Gain values — behavior is preserved but double-check critical audio
+□ Check Gain values — especially sources touched by SDK Auto Fix
 □ Volumetric Radius sources (waterfalls, crowds) should behave identically
 
 Reverb zones:
@@ -560,9 +581,9 @@ Countermeasures:
 |-------|-------|----------|
 | No sound | Volume = 0 | Check Volume |
 | No sound | Spatial Blend misconfigured | Check 2D/3D |
-| No 3D positioning | Enable Spatialization = false | Enable it |
-| Too loud/quiet | Gain setting | Adjust |
-| Can't hear at distance | Far setting too small | Increase Far |
+| No 3D positioning | Enable Spatialization = false | Enable it for authored 3D audio only |
+| Too loud/quiet | Gain or AudioSource volume setting | Start with `AudioSource.volume`; use Gain intentionally |
+| Can't hear at distance | Far setting too small | Increase Far only to the intended audible distance |
 
 ### Video Issues
 
@@ -614,14 +635,22 @@ Debug.Log($"Video playing: {videoPlayer.IsPlaying}");
 
 ## Quick Reference
 
-### VRC_SpatialAudioSource Defaults
+### VRC_SpatialAudioSource Defaults and Safe Additions
 
 ```text
-Gain: 10 dB (world audio source default)
+Common/default starting points:
+Gain: 10 dB
 Near: 0 m
-Far: 40 m
+Far: 40 m common default, but prefer existing AudioSource.maxDistance or intended range
 Volumetric Radius: 0 m
-Enable Spatialization: true
+Enable Spatialization: true for 3D audio
+
+Safe warning-only addition:
+Gain: 0 dB
+Enable Spatialization: keep the AudioSource intent (false for 2D/global, true for 3D)
+Use AudioSource Volume Curve: true when preserving an authored 3D rolloff
+Far: match existing AudioSource.maxDistance or intended range
+Near: keep 0 m unless an existing minDistance/Near value was authored
 ```
 
 ### Video Player Events

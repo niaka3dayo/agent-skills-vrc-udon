@@ -47,6 +47,7 @@ public class VRC_Station_Basic : UdonSharpBehaviour
 
     [Header("Audio Feedback")]
     [Tooltip("Audio source for enter and exit sounds")]
+    // Scene setup: pair with VRC_SpatialAudioSource; keep 2D/3D intent; Gain 0 dB only for warning fixes.
     public AudioSource audioSource;
 
     [Tooltip("Sound played when any player enters this station")]

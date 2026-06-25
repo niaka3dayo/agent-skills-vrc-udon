@@ -38,6 +38,7 @@ public class ContactReceiver : UdonSharpBehaviour
 
     [Header("Audio")]
     [Tooltip("Audio source for contact sounds")]
+    // Scene setup: pair with VRC_SpatialAudioSource; keep 2D/3D intent; Gain 0 dB only for warning fixes.
     public AudioSource audioSource;
 
     [Tooltip("Sound to play when contact begins")]
