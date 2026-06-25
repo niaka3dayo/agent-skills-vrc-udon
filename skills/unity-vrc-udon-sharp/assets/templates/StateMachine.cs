@@ -49,6 +49,7 @@ public class StateMachine : UdonSharpBehaviour
 
     [Header("Audio")]
     [Tooltip("Audio source for state change sounds")]
+    // Scene setup: pair with VRC_SpatialAudioSource; keep 2D/3D intent; Gain 0 dB only for warning fixes.
     public AudioSource audioSource;
 
     [Tooltip("Sound played when entering Active state")]

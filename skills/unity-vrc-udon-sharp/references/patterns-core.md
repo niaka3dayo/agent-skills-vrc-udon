@@ -73,6 +73,8 @@ public class RobustGimmick : UdonSharpBehaviour
 }
 ```
 
+> Scene setup: in VRChat worlds, pair `AudioSource` components with `VRC_SpatialAudioSource` in Unity, not Udon. For warning-only additions, use Gain 0 dB and preserve 2D/global intent plus existing `volume`, `spatialBlend`, `rolloffMode`, `maxDistance`, and custom 3D curves.
+
 ### Full Pattern: Defensive Initialization
 
 ```csharp
@@ -566,11 +568,14 @@ public class RepeatingAction : UdonSharpBehaviour
 
 ## Audio Patterns
 
+Scene setup for all examples in this section: pair each `AudioSource` with `VRC_SpatialAudioSource`. For warning-only additions, use Gain 0 dB, preserve 2D/3D intent, and keep existing distance curves.
+
 ### Simple Audio Player
 
 ```csharp
 public class AudioPlayer : UdonSharpBehaviour
 {
+    // Scene setup: pair with VRC_SpatialAudioSource; preserve 2D/3D intent and Gain 0 dB for warning-only additions.
     public AudioSource audioSource;
     public AudioClip[] clips;
 
@@ -604,6 +609,7 @@ public class AudioPlayer : UdonSharpBehaviour
 ```csharp
 public class SyncedMusicPlayer : UdonSharpBehaviour
 {
+    // Scene setup: pair with VRC_SpatialAudioSource; preserve 2D/3D intent and Gain 0 dB for warning-only additions.
     public AudioSource audioSource;
     public AudioClip[] tracks;
 
