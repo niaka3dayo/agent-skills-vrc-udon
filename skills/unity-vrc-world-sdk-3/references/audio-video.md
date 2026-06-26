@@ -45,6 +45,8 @@ Complete guide for audio and video configuration.
 ### Component Settings
 
 Add `VRC_SpatialAudioSource` alongside Unity `AudioSource` components in world scenes to avoid SDK Build Panel warnings. Choose settings that preserve the sound's intent.
+For the exact SDK warning text and Auto Fix side effects, see
+[build-validation.md](build-validation.md#audiosource-and-vrc_spatialaudiosource).
 
 | Property | Type | Description | Default / safe-preserve note |
 |----------|------|-------------|------------------------------|

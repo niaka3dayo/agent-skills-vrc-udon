@@ -342,6 +342,8 @@ OnVideoReady()
 1. VRChat SDK > Show Control Panel
 2. Builder tab
 3. Check & fix Validations
+   - For red/yellow/white Build Panel alerts and Auto Fix side effects,
+     see references/build-validation.md
 4. Build & Test (local testing)
 5. Build & Upload
 6. World Settings
@@ -385,6 +387,7 @@ OnVideoReady()
 | Low FPS | Turn off mirror, bake lights |
 | Doesn't work on Quest | Use Mobile shaders |
 | Build error | Check Validation |
+| SDK red/yellow/white warning | Match in references/build-validation.md |
 | World not found after upload | Change to Public |
 
 ---
@@ -425,6 +428,7 @@ site:github.com/vrchat-community "issue keyword"
 | Full SDK 3.7.1-3.10.4 world component reference | [references/components.md](references/components.md) |
 | VRChat layer system, collision, and selective rendering reference | [references/layers.md](references/layers.md) |
 | Audio and video configuration, voice settings, Steam Audio, and video players | [references/audio-video.md](references/audio-video.md) |
+| SDK Build Panel validation alert catalog, Auto Fix side effects, red/yellow/white warning responses | [references/build-validation.md](references/build-validation.md) |
 | Upload procedure, pre-upload checklist, validation, world settings, and post-upload steps | [references/upload.md](references/upload.md) |
 | Build/upload, scene setup, component, layer, performance, networking, and Quest troubleshooting | [references/troubleshooting.md](references/troubleshooting.md) |
 | Pickup + Rigidbody template | [assets/templates/VRC_Pickup_Rigidbody.cs](assets/templates/VRC_Pickup_Rigidbody.cs) |

@@ -99,9 +99,9 @@ skills/                                  # 모든 스킬
       validate-udonsharp.sh
       validate-udonsharp.ps1
     assets/templates/                    # 코드 템플릿 (17개 파일)
-    references/                          # 상세 문서 (23개 파일)
+    references/                          # 상세 문서 (24개 파일)
   unity-vrc-world-sdk-3/                # VRC World SDK 스킬
-    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (7개 파일)
+    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (8개 파일)
 templates/                               # AI 도구 설정 템플릿
   CLAUDE.md  AGENTS.md  GEMINI.md        # 인스톨러를 통해 사용자에게 배포
 .claude-plugin/marketplace.json         # Claude Code 플러그인 등록
