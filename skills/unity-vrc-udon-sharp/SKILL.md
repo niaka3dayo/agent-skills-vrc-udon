@@ -45,6 +45,11 @@ It provides a lightweight task-context note for source of truth, transport, sync
 This is optional guidance for complex work, not a step for small mechanical edits.
 Keep private data and raw transcripts out of any note.
 
+For VRChat SDK Build Panel validation alerts, red/yellow/white warnings, or
+Auto Fix side effects that involve world scene setup rather than UdonSharp
+compiler constraints, use `unity-vrc-world-sdk-3` and read
+`references/build-validation.md`.
+
 ## Core Principles
 
 1. **Constraints First** — Assume standard C# features are blocked until verified. Check `udonsharp-constraints.md` before using any API.

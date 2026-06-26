@@ -47,6 +47,10 @@ Common problems encountered during world development and their solutions.
 
 ```
 
+Before using the setup buttons in a mature project, check
+[build-validation.md](build-validation.md#layer-and-collision-setup): layer
+setup can move custom layers and requires layer-mask review.
+
 ### World not found after upload
 
 **Symptom**: Upload succeeded but world doesn't appear
@@ -78,6 +82,10 @@ Common problems encountered during world development and their solutions.
 
 ```
 
+If the cancellation came from SDK Validations, copy the exact red/yellow/white
+message and match it in
+[build-validation.md](build-validation.md#sdk-3104-world-alert-catalog).
+
 ### "Unsupported component" warnings
 
 **Symptom**: SDK validation flags non-whitelisted scripts or components
@@ -85,6 +93,8 @@ Common problems encountered during world development and their solutions.
 **Solution**: Remove them, tag dev-only objects `EditorOnly`, or mark setup-helper
 components with `IEditorOnly` — see
 [components.md](components.md#editor-only-objects-and-components).
+For broader Build Panel alert handling, use
+[build-validation.md](build-validation.md).
 
 ---
 
@@ -492,6 +502,8 @@ VRChat SDK > Show Control Panel
 Builder tab > Validations section
 - Auto-fixable issues have buttons for fixing
 - Follow instructions for manual fixes
+- For exact SDK 3.10.4 red/yellow/white alert meanings and Auto Fix side effects,
+  use references/build-validation.md
 
 ```
 
@@ -585,7 +597,7 @@ Fix: Set Canvas > Render Mode to World Space before adding VRC_UIShape.
 | Error/Issue | Solution |
 |-------------|----------|
 | Missing SceneDescriptor | Add VRCWorld Prefab |
-| Layer Matrix warning | "Setup Layers for VRChat" |
+| Layer Matrix warning | Check `build-validation.md`, then run "Setup Layers for VRChat" and review custom layers |
 | Can't grab Pickup | Add Collider + Rigidbody |
 | Pickup doesn't sync | Add VRC_ObjectSync |
 | Can't sit in Station | Add Collider |
@@ -594,6 +606,7 @@ Fix: Set Canvas > Render Mode to World Space before adding VRC_UIShape.
 | Low FPS | Mirror OFF, bake lights |
 | Doesn't work on Quest | Use Mobile shaders |
 | Late Joiner sync | Apply in OnDeserialization |
+| SDK Build Panel warning | Match exact message in `build-validation.md` |
 
 ---
 

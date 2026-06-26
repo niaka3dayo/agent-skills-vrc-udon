@@ -99,9 +99,9 @@ skills/                                  # すべてのスキル
       validate-udonsharp.sh
       validate-udonsharp.ps1
     assets/templates/                    # コードテンプレート（17ファイル）
-    references/                          # 詳細ドキュメント（23ファイル）
+    references/                          # 詳細ドキュメント（24ファイル）
   unity-vrc-world-sdk-3/                # VRC World SDKスキル
-    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（7ファイル）
+    SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（8ファイル）
 templates/                               # AIツール設定テンプレート
   CLAUDE.md  AGENTS.md  GEMINI.md        # インストーラー経由でユーザーに配布
 .claude-plugin/marketplace.json         # Claude Codeプラグイン登録

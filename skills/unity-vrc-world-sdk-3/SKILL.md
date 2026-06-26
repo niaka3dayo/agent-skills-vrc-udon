@@ -6,19 +6,21 @@ description: >
     setting up layers, optimizing performance, or uploading worlds.
     Covers VRC_SceneDescriptor, spawn points, VRC_Pickup, VRC_Station,
     VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, layer/collision matrix,
-    baked lighting, Quest/Android limits, Dynamics for Worlds, and upload workflow.
+    baked lighting, Quest/Android limits, Dynamics for Worlds, Build Panel
+    validation alerts, and upload workflow.
     SDK 3.7.1 - 3.10.4 coverage.
     Triggers on: VRChat world, VRC SDK, scene setup, VRC_SceneDescriptor,
     spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
     PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders,
     VRCPhysBoneCollider, VRCTween, optimization, Quest support, light baking,
-    upload, FPS improvement.
+    upload, SDK validation, Build Panel warning, Auto Fix, red warning,
+    yellow warning, white warning, FPS improvement.
     Related: Use unity-vrc-udon-sharp for UdonSharp C# coding.
 license: MIT
 metadata:
     author: niaka3dayo
     version: "2.5.1"
-    tags: vrchat, world-sdk, scene-setup, optimization, components, upload
+    tags: vrchat, world-sdk, scene-setup, optimization, components, upload, sdk-validation, build-panel
 ---
 
 # VRChat World SDK 3 Guide
@@ -33,6 +35,7 @@ metadata:
 | [Performance](#performance)                | Optimization guide         | `references/performance.md`     |
 | [Lighting](#lighting)                      | Lighting settings          | `references/lighting.md`        |
 | [Audio & Video](#audio--video)            | Audio, Video players       | `references/audio-video.md`     |
+| [Build Validation](references/build-validation.md) | Red/yellow/white SDK alerts | `references/build-validation.md` |
 | [World Upload](#world-upload)              | Upload workflow            | `references/upload.md`          |
 | [Troubleshooting](#troubleshooting)        | Problem solving            | `references/troubleshooting.md` |
 | [Cheatsheet](CHEATSHEET.md)               | Quick reference            | `CHEATSHEET.md`                 |
@@ -70,7 +73,8 @@ Load only what the task requires.
 | Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` | Quest limits differ from PC; bake requirements non-obvious |
 | Adding audio or video player / voice zones (SetVoiceGain, Steam Audio) | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |
 | Baking lights / lightmap setup | `lighting.md`, `performance.md` | — | `audio-video.md`, `layers.md` | Lightmap resolution and probe placement affect Quest VRAM |
-| World upload and publish | `upload.md` | `troubleshooting.md` | `audio-video.md`, `lighting.md` | Upload steps and validation order are fragile; easy to miss |
+| SDK Build Panel validation alerts, red/yellow/white warnings, or Auto Fix questions | `build-validation.md` | `upload.md`, `troubleshooting.md` | `audio-video.md`, `lighting.md` | Alert severity, build consequence, and Auto Fix side effects must come from SDK-backed catalog |
+| World upload and publish | `upload.md` | `build-validation.md`, `troubleshooting.md` | `audio-video.md`, `lighting.md` | Upload steps and validation order are fragile; easy to miss |
 | Debugging collision or layer issues | `layers.md`, `troubleshooting.md` | `components.md` | `audio-video.md`, `lighting.md` | VRChat collision matrix differs from Unity default |
 | Mirror setup and configuration | `components.md` | `performance.md` | `audio-video.md`, `upload.md` | Mirror layer mask requirements are VRChat-specific |
 
@@ -396,6 +400,7 @@ When preserving an existing `AudioSource`, keep `volume`, `spatialBlend`, `rollo
 ```
 
 **MANDATORY READ** [`references/upload.md`](references/upload.md) before running Build & Upload. Verify all pre-upload checklist items first.
+**MANDATORY READ** [`references/build-validation.md`](references/build-validation.md) when the user asks about SDK Build Panel validation, red/yellow/white warnings, Auto Fix, or a copied validation message.
 **Do NOT Load**: `references/audio-video.md`, `references/lighting.md`.
 
 ---
@@ -446,6 +451,7 @@ Starter templates for common SDK component patterns. Each template compiles with
 | `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |
 | `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
+| `references/build-validation.md` | SDK 3.10.4 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
 | `references/upload.md`          | Upload procedure                                                                                 | 300+          |
 | `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
 | `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |

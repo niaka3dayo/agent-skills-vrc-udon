@@ -458,7 +458,7 @@ Creates a portal to another world.
 
 ## VRC_SpatialAudioSource
 
-Configures VRChat spatial audio for an `AudioSource`. Add it deliberately with each world `AudioSource` to avoid SDK Build Panel warnings; Auto Fix may change authored loudness or range.
+Configures VRChat spatial audio for an `AudioSource`. Add it deliberately with each world `AudioSource` to avoid SDK Build Panel warnings; Auto Fix may change authored loudness or range. For the SDK validation entry and Auto Fix mutations, see [build-validation.md](build-validation.md#audiosource-and-vrc_spatialaudiosource).
 
 ### All Properties
 
@@ -843,6 +843,8 @@ comparison table, and worked setup-helper example, see
 Custom MonoBehaviour scripts are not whitelisted and do not run in the client either way;
 the `EditorOnly` tag and `IEditorOnly` interface are about passing SDK validation cleanly
 and keeping dev-only content out of the upload intentionally.
+For the broader SDK Build Panel validation catalog, see
+[build-validation.md](build-validation.md).
 
 ## See Also
 
