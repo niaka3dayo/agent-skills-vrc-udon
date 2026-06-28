@@ -768,7 +768,7 @@ Note: `ExecuteInEditMode` can cause issues with UdonSharp. Use with caution.
 
 ### The Problem
 
-When AI creates a new `.cs` UdonSharp script file, the corresponding `.asset` (UdonSharpProgramAsset) is **not auto-generated**. Without this asset file, Unity cannot associate the C# script with an UdonBehaviour, resulting in "The associated script cannot be loaded" errors.
+When a `.cs` UdonSharp script file is created directly on the filesystem, the corresponding `.asset` (UdonSharpProgramAsset) is **not auto-generated**. Without this asset file, Unity cannot associate the C# script with an UdonBehaviour, resulting in "The associated script cannot be loaded" errors.
 
 ### The `.cs` to `.asset` Relationship
 
@@ -779,7 +779,9 @@ MyScript.cs          → Source code (UdonSharpBehaviour)
 MyScript.asset       → UdonSharpProgramAsset (links script to Udon compiler)
 ```
 
-When creating scripts through the Unity Editor (Assets > Create > U# Script), both files are generated automatically. However, when AI creates `.cs` files directly on the filesystem, the `.asset` file is missing.
+When creating scripts through the Unity Editor (Assets > Create > U# Script), both files are generated automatically. However, when `.cs` files are created directly on the filesystem, the `.asset` file is missing.
+
+If an editor tool creates or moves UdonSharp scripts under a Unity `.asmdef`, also read [assembly-definitions.md](assembly-definitions.md): those scripts need the corresponding U# Assembly Definition with Source Assembly set to the Unity Assembly Definition asset. Keep editor-only code in an `Editor` folder or editor-only assembly, and do not make editor-only scripts inherit `UdonSharpBehaviour`.
 
 ### Auto-Generation via AssetPostprocessor
 
@@ -950,3 +952,4 @@ public class UdonSharpProgramAssetAutoGenerator : AssetPostprocessor
 - The `Editor` folder placement is required (scripts in `Editor` are not compiled by UdonSharp)
 - Generation only runs after domain reload (`didDomainReload`), not on every asset import
 - **Asset generation does not wire `UdonBehaviour.programSource`** — this generator only creates the `.asset` file. Assigning it to a `UdonBehaviour` on a GameObject is a separate step; use [`AddUdonSharpComponent`](#addudonsharpcomponent) for new components, or see "UdonBehaviour with Empty Program Source" in `troubleshooting.md` for diagnosing existing components
+- **Asset generation does not create U# Assembly Definitions** — if generated scripts live under a Unity `.asmdef`, follow [assembly-definitions.md](assembly-definitions.md) and wire the matching U# Assembly Definition separately

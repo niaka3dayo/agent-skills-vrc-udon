@@ -123,34 +123,48 @@ Notes:
 3. Check Validations section
 4. Resolve errors (red)
 5. Review warnings (yellow)
+6. Review informational alerts (white) when they have actionable fixes
 ```
 
-### Common Validation Errors
+For copied validation text, red/yellow/white warning questions, or **Auto Fix**
+side-effect checks, use the SDK-backed catalog:
+[build-validation.md](build-validation.md).
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| Missing SceneDescriptor | No VRCWorld | Add VRCWorld Prefab |
-| Layer setup required | Layers not configured | Click "Setup Layers" |
-| Build size too large | Build is too big | Reduce assets |
-| Script errors | Compilation errors | Fix scripts |
+### Build Panel Alert Handling
+
+| Build Panel color | SDK source level | Build consequence | Required response |
+|---|---|---|---|
+| Red | `OnGUIError` | Blocks Build & Test / Build & Upload | Resolve before building |
+| Yellow | `OnGUIWarning` | Does not block solely by color, but can indicate runtime or compatibility issues | Explain impact and use the safest targeted fix |
+| White / info | `OnGUIInformation` | Does not block; often quality/readability guidance | Explain and offer guarded fixes when actionable |
+
+### Common Validation Alerts
+
+| Alert | Cause | Safe direction |
+|---|---|---|
+| Missing or multiple `VRC_SceneDescriptor` | No descriptor, or more than one descriptor in the scene | Keep exactly one valid descriptor and configure Spawns |
+| Layer/collision setup required | VRChat project layers or collision matrix are not configured | Use the SDK setup buttons, then review custom layers and layer masks |
 | Unsupported component warnings | Non-whitelisted scripts or components in the scene | Remove them, tag dev-only objects `EditorOnly`, or mark setup-helper components with `IEditorOnly` (see [components.md](components.md#editor-only-objects-and-components)) |
-| Missing references | Reference errors | Fix references |
+| `AudioSource` without `VRC_SpatialAudioSource` | World audio source is missing the VRChat spatial audio companion | Add the companion deliberately; preserve existing loudness, 2D/3D intent, and distance curves |
+| Unity built-in UI shader on uGUI graphics | `Image`, `RawImage`, `Text`, or another uGUI `Graphic` uses `UI/Default` | For affected default-material graphics, assign `Packages/com.vrchat.worlds/Editor/VRCSDK/SDK3/VRCSuperSampledUIMaterial.mat` |
+| Spawn below respawn height or too far from origin | Spawn Transform is invalid for the descriptor settings | Move the spawn or adjust Respawn Height so join/respawn works correctly |
+| Oversized textures or bundles | Imported assets exceed SDK size checks | Reduce/import assets intentionally; do not delete assets blindly |
 
-### Auto-Fix Feature
+### Auto Fix policy
 
-```text
-Some issues can be auto-fixed:
+An **Auto Fix** button means the SDK has a fix callback, not that the mutation
+is always safe for the world. Before pressing it, check
+[build-validation.md](build-validation.md) for the exact fields/assets it
+changes and whether it may overwrite authored intent.
 
-Items with "Auto Fix" button:
-- Layer collision matrix
-- Project settings
-- Quality settings
+Common high-risk examples:
 
-Items that can't be auto-fixed:
-- Script errors
-- Missing references
-- Component misconfiguration
-```
+- `AudioSource` fixes can add `VRC_SpatialAudioSource` with SDK defaults; for
+  warning-only additions, prefer Gain `0 dB` and preserve existing range/rolloff.
+- Super-sampled UI fixes can replace a default material or change a project
+  material shader in place; do not replace intentional custom UI materials.
+- Layer/collision setup changes project-wide layer configuration.
+- Texture fixes reserialize importers and trigger reimport.
 
 ---
 

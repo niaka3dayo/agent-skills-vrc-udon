@@ -8,17 +8,19 @@ description: >
     persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts,
     VRCTween, VRCPhysBoneCollider Udon access), Web Loading, DataList/DataDictionary
     capacity APIs, VRAM management (texture lifecycle, Dispose vs Destroy),
-    and event handling. SDK 3.7.1 - 3.10.4 coverage.
+    asmdef / Assembly Definition / U# Assembly Definition guidance, VPM package
+    workflow boundaries, Auto Referenced tradeoffs, and event handling. SDK 3.7.1 - 3.10.4 coverage.
     Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
     NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
     VRCTween, Box Contacts, Global Avatar PhysBone Colliders, VRCPhysBoneCollider,
-    DataList capacity, DataDictionary EnsureCapacity, synced variables,
+    DataList capacity, DataDictionary EnsureCapacity, synced variables, asmdef,
+    Assembly Definition, U# Assembly Definition, VPM package, Auto Referenced,
     VRChat world scripting, C# to Udon.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.5.1"
-    tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics
+    version: "2.5.2"
+    tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics, asmdef, vpm, assembly-definition
 ---
 
 # UdonSharp Skill
@@ -44,6 +46,11 @@ For complex synced systems, ownership-sensitive refactors, or work resumed after
 It provides a lightweight task-context note for source of truth, transport, sync mode, storage, ownership, late-joiner behavior, and validation rationale.
 This is optional guidance for complex work, not a step for small mechanical edits.
 Keep private data and raw transcripts out of any note.
+
+For VRChat SDK Build Panel validation alerts, red/yellow/white warnings, or
+Auto Fix side effects that involve world scene setup rather than UdonSharp
+compiler constraints, use `unity-vrc-world-sdk-3` and read
+`references/build-validation.md`.
 
 ## Core Principles
 
@@ -74,9 +81,10 @@ These constraints cause either **compile-time failures** or **silent runtime fai
 | 13 | Use `[NetworkCallable]` on SDK < 3.8.1 | Compiles but silently ignored at runtime — the attribute has no effect and methods never receive network calls | Verify SDK >= 3.8.1; on older SDKs use synced variables + `SendCustomNetworkEvent` |
 | 14 | Use PhysBones/Contacts API (`OnPhysBoneGrabbed`, `OnContactEnter`, etc.) on SDK < 3.10.0 | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Verify SDK >= 3.10.0; Dynamics for Worlds was added in 3.10.0 |
 | 15 | Use `PlayerData` persistence API on SDK < 3.7.4 | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Verify SDK >= 3.7.4; persistence was added in 3.7.4 |
-| 16 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
-| 17 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
-| 18 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and simple arrays of these are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
+| 16 | Put a Unity `.asmdef` around UdonSharpBehaviour without matching U# Assembly Definition | Unity compiles the C# assembly, but UdonSharp reports the script does not belong to a U# assembly | For simple world scripts, avoid asmdef; for package/asmdef workflows, create the corresponding U# Assembly Definition and set Source Assembly to the Unity `.asmdef` (see `references/assembly-definitions.md`) |
+| 17 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
+| 18 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
+| 19 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and simple arrays of these are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
 
 ## Sync Mode Quick Decision
 
@@ -133,7 +141,8 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Resuming complex work after compaction / handoff / ownership-sensitive multi-file refactor | Current task's primary references | `context-preservation.md` | Unrelated domain references |
 | Writing new UdonSharp scripts (not sure if sync needed) | `constraints.md` | `networking.md` | `dynamics.md`, `web-loading.md`, `image-loading-vram.md` |
 | Setting up new script files (.cs/.asset wiring, program asset generation) | `editor-scripting.md` | `troubleshooting.md` | `networking.md`, `dynamics.md` |
-| Building editor setup tools / placement UX (custom inspectors, scene wiring helpers, IEditorOnly) | `editor-scripting.md` | `constraints.md` | `networking.md`, `dynamics.md`, `web-loading.md` |
+| VPM/package/asmdef workflows, U# Assembly Definition wiring, Auto Referenced decisions | `assembly-definitions.md` | `editor-scripting.md`, `troubleshooting.md` | `networking.md`, `dynamics.md`, `web-loading.md` |
+| Building editor setup tools / placement UX (custom inspectors, scene wiring helpers, IEditorOnly) | `editor-scripting.md` | `constraints.md`, `assembly-definitions.md` | `networking.md`, `dynamics.md`, `web-loading.md` |
 
 ## Pattern Selection Guide
 
@@ -250,6 +259,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | `api.md` | VRCPlayerApi, Networking, enums reference, VRCObjectPool methods + Interact-driven ownership patterns | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, Drone, VRCDroneApi, VRCObjectPool, TryToSpawn, Return, Shuffle, pool owner, Interact pool, pool forwarded spawn, pool ownership transfer |
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred, OnControllerColliderHitPlayer, CharacterController, OnMasterTransferred, OnAvatarChanged, OnSpawn, VRC Economy, OnPurchaseConfirmed, OnAsyncGpuReadbackComplete |
 | `editor-scripting.md` | Editor scripting, proxy system, custom inspectors, editor-only setup components (IEditorOnly), build pipeline callbacks, and UdonSharpProgramAsset auto-generation | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject, UdonSharpProgramAsset, auto-generate, AssetPostprocessor, .asset missing, IEditorOnly, EditorOnly tag, setup helper, setup component, build exclusion, custom inspector, ContextMenu, IVRCSDKBuildRequestedCallback, OnBuildRequested, build callback, IPreprocessCallbackBehaviour, OnPreprocess |
+| `assembly-definitions.md` | UdonSharp assembly definitions, Unity `.asmdef` vs U# Assembly Definition, VPM package workflows, Runtime/Editor separation, and Auto Referenced tradeoffs | asmdef, Assembly Definition, U# Assembly Definition, Source Assembly, VPM package, Auto Referenced, Runtime, Editor, package layout, prefab-first, code-integration API |
 | `sync-examples.md` | Sync pattern examples (Local/Events/SyncedVars) | Continuous, Manual, NoVariableSync, sync example |
 | `troubleshooting.md` | Common errors and solutions | NullReference, compile error, sync not working, FieldChangeCallback, VRCStation, seated player, trigger zone, OnPlayerTriggerEnter not firing, station collider, position polling, OnStationEntered |
 | `sdk-migration.md` | SDK migration guide (3.7 to 3.10), version-by-version changes and checklists | migration, deprecated, upgrade, 3.7, 3.8, 3.9, 3.10 |
