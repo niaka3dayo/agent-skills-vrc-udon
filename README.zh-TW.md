@@ -99,7 +99,7 @@ skills/                                  # 所有技能
       validate-udonsharp.sh
       validate-udonsharp.ps1
     assets/templates/                    # 程式碼範本（17 個檔案）
-    references/                          # 詳細文件（24 個檔案）
+    references/                          # 詳細文件（25 個檔案）
   unity-vrc-world-sdk-3/                # VRC World SDK 技能
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（8 個檔案）
 templates/                               # AI 工具設定範本
