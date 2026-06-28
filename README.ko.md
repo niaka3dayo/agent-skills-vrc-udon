@@ -99,7 +99,7 @@ skills/                                  # 모든 스킬
       validate-udonsharp.sh
       validate-udonsharp.ps1
     assets/templates/                    # 코드 템플릿 (17개 파일)
-    references/                          # 상세 문서 (24개 파일)
+    references/                          # 상세 문서 (25개 파일)
   unity-vrc-world-sdk-3/                # VRC World SDK 스킬
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (8개 파일)
 templates/                               # AI 도구 설정 템플릿

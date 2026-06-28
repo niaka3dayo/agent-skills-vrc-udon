@@ -57,6 +57,9 @@ jobs:
       - name: Check build validation reference coverage
         run: bash tests/docs/build-validation-reference.test.sh
 
+      - name: Check assembly definitions reference coverage
+        run: bash tests/docs/assembly-definitions-reference.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest

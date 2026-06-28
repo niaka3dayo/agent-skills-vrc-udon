@@ -246,6 +246,12 @@ VRCTween is **local-only**: it does not automatically sync. For shared animation
 
 ---
 
+## Assembly Definitions
+
+For simple world scripts, do not add an asmdef by default. If a package/asmdef workflow puts an `UdonSharpBehaviour` under a Unity `.asmdef`, create the corresponding U# Assembly Definition and set Source Assembly to that Unity Assembly Definition asset. Auto Referenced is a compile reference policy, not build inclusion: ON is friendlier for prefab/simple-world integration; OFF creates an explicit boundary where user scripts need their own asmdef/reference. See [references/assembly-definitions.md](references/assembly-definitions.md).
+
+---
+
 ## Inter-Script Communication
 
 ```csharp
@@ -422,6 +428,7 @@ For dynamic URLs: (1) `VRCUrlInputField` (user manual input), (2) `VRCUrl[]` arr
 | UI / Canvas patterns | [references/patterns-ui.md](references/patterns-ui.md) |
 | Video player patterns | [references/patterns-video.md](references/patterns-video.md) |
 | Custom inspectors, editor-only setup components (IEditorOnly) | [references/editor-scripting.md](references/editor-scripting.md) |
+| Assembly definitions, VPM package workflow, and Auto Referenced tradeoffs | [references/assembly-definitions.md](references/assembly-definitions.md) |
 | UdonSharp C# feature constraints and compiler behavior | [references/constraints.md](references/constraints.md) |
 | UdonSharp event overrides and Unity callback rules | [references/events.md](references/events.md) |
 | Common compile, runtime, networking, persistence, dynamics, editor, and performance issues | [references/troubleshooting.md](references/troubleshooting.md) |
