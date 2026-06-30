@@ -1,25 +1,22 @@
 ---
 name: unity-vrc-udon-sharp
-description: >
-    UdonSharp (C# to Udon Assembly) scripting skill for VRChat world development.
-    Use this skill when writing, reviewing, or debugging UdonSharp C# code.
-    Covers compile constraints (List<T>/async/await/try/catch/LINQ blocked),
-    network sync (UdonSynced, RequestSerialization, FieldChangeCallback, NetworkCallable),
-    persistence (PlayerData/PlayerObject), Dynamics (PhysBones, Contacts,
-    VRCTween, VRCPhysBoneCollider Udon access), Web Loading, DataList/DataDictionary
-    capacity APIs, VRAM management (texture lifecycle, Dispose vs Destroy),
-    asmdef / Assembly Definition / U# Assembly Definition guidance, VPM package
-    workflow boundaries, Auto Referenced tradeoffs, and event handling. SDK 3.7.1 - 3.10.4 coverage.
-    Triggers on: UdonSharp, Udon, VRC SDK, UdonBehaviour, UdonSynced,
-    NetworkCallable, VRCPlayerApi, SendCustomEvent, PlayerData, PhysBones,
-    VRCTween, Box Contacts, Global Avatar PhysBone Colliders, VRCPhysBoneCollider,
-    DataList capacity, DataDictionary EnsureCapacity, synced variables, asmdef,
-    Assembly Definition, U# Assembly Definition, VPM package, Auto Referenced,
-    VRChat world scripting, C# to Udon.
+description: >-
+    UdonSharp scripting skill for VRChat world development. Use when writing,
+    reviewing, debugging, or migrating UdonSharp C# / UdonBehaviour code for SDK
+    3.7.1-3.10.4. Covers Udon compile constraints such as List<T>, async/await,
+    try/catch, and LINQ; networking with UdonSynced, RequestSerialization,
+    FieldChangeCallback, and NetworkCallable; PlayerData / PlayerObject
+    persistence; PhysBones, Contacts, VRCTween, and VRCPhysBoneCollider access;
+    DataList / DataDictionary capacity APIs; Web Loading; VRAM and texture
+    lifecycle; asmdef / U# Assembly Definition guidance; VPM package boundaries;
+    Auto Referenced tradeoffs; and event handling. Triggers on UdonSharp, Udon,
+    VRC SDK, UdonBehaviour, VRCPlayerApi, SendCustomEvent, synced variables,
+    Box Contacts, Global Avatar PhysBone Colliders, DataList capacity,
+    DataDictionary EnsureCapacity, VRChat world scripting, and C# to Udon.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.5.2"
+    version: "2.5.3"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics, asmdef, vpm, assembly-definition
 ---
 
