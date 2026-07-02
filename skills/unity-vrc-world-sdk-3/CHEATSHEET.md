@@ -177,7 +177,7 @@ ApplyConfigurationChanges() after batched configuration changes.
 | 14 | PickupNoEnvironment | Pickups that pass through walls |
 | 17 | Walkthrough | Walk-through objects |
 | 18 | MirrorReflection | Mirror only |
-| **22-31** | **User** | **Available for custom use** |
+| **22-31** | **User** | **Custom use (names become user0-user9 at runtime)** |
 
 ### Layer Masks (Udon)
 
@@ -185,6 +185,8 @@ ApplyConfigurationChanges() after batched configuration changes.
 // Get layer mask
 int playerMask = 1 << 9;
 int envMask = 1 << LayerMask.NameToLayer("Environment");
+// NameToLayer is safe only for VRChat-defined names.
+// User layers 22-31 are user0-user9 at runtime; use numbers.
 
 // Multiple layers
 int combined = (1 << 9) | (1 << 11);
