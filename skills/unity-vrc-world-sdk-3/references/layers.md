@@ -77,16 +77,18 @@ to `user0`-`user9` (layer 22 = `user0`, ... layer 31 = `user9`).
 | 28 | Custom purpose 7 |
 | 29 | Custom purpose 8 |
 | 30 | Custom purpose 9 |
-| 31 | Custom purpose 10 |
+| 31 | Avoid - Unity Editor preview uses it (see note below) |
 
 Naming user layers in the editor is fine for organization, but **scripts must
 reference user layers by number or bitmask** - never by name.
 
 `LayerMask.NameToLayer("YourCustomName")` returns the correct layer in the
 editor and ClientSim, but returns `-1` in the live client because the name was
-overridden. Masks built from that result silently match nothing. This "works
-in ClientSim, breaks in the live client" divergence is the failure mode
-reported in Issue #286.
+overridden. Feeding `-1` into a shift does not fail loudly: C# masks the shift
+count to its low 5 bits, so `1 << -1` evaluates to `1 << 31` and the mask
+silently targets layer 31 instead of your layer. This "works in ClientSim,
+breaks in the live client" divergence is the failure mode reported in
+Issue #286.
 
 ```csharp
 // ✅ Safe: reference user layers by number
@@ -95,6 +97,7 @@ int projectileMask = 1 << LAYER_PROJECTILES;
 
 // ❌ Breaks in the live client: custom layer names are overridden to user0-user9
 int broken = LayerMask.NameToLayer("Projectiles"); // returns -1 at runtime
+int brokenMask = 1 << broken; // == 1 << 31: wrong layer, no error raised
 ```
 
 Layer 31 is named `user9` at runtime, but the official docs recommend avoiding
