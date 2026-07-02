@@ -91,13 +91,20 @@ jobs:
           gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
             --jq '.[].tag_name' > "$all_release_tags"
 
-          gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" \
+          gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" \
             --jq '.[].ref' > "$v_refs"
 
           : > "$orphan_tags"
           while IFS= read -r ref; do
             [ -n "$ref" ] || continue
             tag="${ref#refs/tags/}"
+            case "$tag" in
+              v[0-9]*) ;;
+              *)
+                echo "Skipping non-version tag: $tag"
+                continue
+                ;;
+            esac
             if ! grep -Fxq "$tag" "$all_release_tags"; then
               printf '%s\n' "$tag" >> "$orphan_tags"
             fi
