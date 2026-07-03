@@ -181,7 +181,7 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    - The `published` event triggers `publish.yml`.
    - `publish.yml` reads the tag, runs `npm version "$VERSION" --allow-same-version` (no-op if Step 1 was done correctly), syncs to SKILL.md / marketplace.json again as a safety net, and runs `npm publish --provenance`.
    - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret).
-   - After publishing, `.github/workflows/prune-releases.yml` automatically keeps only the latest 3 published releases and their tags. Run it manually from Actions with `workflow_dispatch` if pruning needs to be retried.
+   - All published releases and their tags are kept permanently. Never delete releases or tags — published versions may be referenced by tag (e.g. `git clone --branch vX.Y.Z`), and deleting tags breaks reproducibility for users pinning a version (see Issue #290).
 
 ### Version resolution (label-driven)
 
