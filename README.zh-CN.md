@@ -81,6 +81,18 @@ claude plugin add niaka3dayo/agent-skills-vrc-udon
 git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 ```
 
+### 安装特定版本
+
+所有已发布的版本都会永久保留在 npm 和 git 标签中，不会被删除。
+
+```bash
+# npm（v1.0.0 及以后的任意已发布版本）
+npm install agent-skills-vrc-udon@2.3.0
+
+# git 标签
+git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
+```
+
 ---
 
 <h2 id="structure">项目结构</h2>
