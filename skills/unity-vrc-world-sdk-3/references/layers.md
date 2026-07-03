@@ -63,21 +63,12 @@ to `user0`-`user9` (layer 22 = `user0`, ... layer 31 = `user9`).
 > preserved. See [Issue #286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286)
 > (includes a layer-dump script and full runtime output) and
 > [this independent report](https://ask.vrchat.com/t/user-defined-unity-layers-raycasts-ignored-by-vrchat/47933).
-> If official docs or client behavior change, re-verify with the layer-dump
+> The error has been reported upstream in
+> [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303);
+> if the official docs or client behavior change, re-verify with the layer-dump
 > script in #286.
 
-| Layer # | Suggested Use |
-|---------|---------------|
-| 22 | Custom purpose 1 |
-| 23 | Custom purpose 2 |
-| 24 | Custom purpose 3 |
-| 25 | Custom purpose 4 |
-| 26 | Custom purpose 5 |
-| 27 | Custom purpose 6 |
-| 28 | Custom purpose 7 |
-| 29 | Custom purpose 8 |
-| 30 | Custom purpose 9 |
-| 31 | Avoid - Unity Editor preview uses it (see note below) |
+Layers 22-30 are freely usable; layer 31 should be avoided (see note below).
 
 Naming user layers in the editor is fine for organization, but **scripts must
 reference user layers by number or bitmask** - never by name.
@@ -118,91 +109,19 @@ numbers or bitmasks.
 
 ---
 
-## Layer Usage Guidelines
+## Layer Behavior Notes
 
-### Default (Layer 0)
-
-```text
-Purpose:
-- General objects
-- Objects that don't need special handling
-
-Notes:
-- Collides with players
-- Detected by Raycast
-```
-
-### Environment (Layer 11)
-
-```text
-Purpose:
-- Walls, floors, ceilings
-- Walkable terrain
-- Obstacles
-
-Characteristics:
-- Reliably collides with players
-- Pickups also collide
-```
-
-### Pickup (Layer 13)
-
-```text
-Purpose:
-- Objects with VRC_Pickup
-
-Characteristics:
-- Collides with players
-- Collides with environment
-- Collision with other Pickups depends on settings
-```
-
-### PickupNoEnvironment (Layer 14)
-
-```text
-Purpose:
-- Pickups that pass through environment
-- Objects that can be handed through walls
-
-Characteristics:
-- Collides with players
-- Does NOT collide with environment
-```
-
-### Walkthrough (Layer 17)
-
-```text
-Purpose:
-- Walk-through objects
-- Visual barriers
-- Effect colliders
-
-Characteristics:
-- Players can walk through
-- Trigger events can still fire
-```
-
-### MirrorReflection (Layer 18)
-
-```text
-Purpose:
-- Objects to display in mirrors
-- Mirror-only layer
-
-Notes:
-- Not visible to regular cameras
-- Displayed only in mirrors
-```
+| Layer | Behavior |
+|-------|----------|
+| Environment (11) | Reliably collides with players; pickups also collide with it. |
+| Pickup (13) | Objects with VRC_Pickup; collides with players and environment; collision with other Pickups depends on settings. |
+| PickupNoEnvironment (14) | Collides with players but does NOT collide with environment; use for objects that can be handed through walls. |
+| Walkthrough (17) | Players can walk through; trigger events can still fire. |
+| MirrorReflection (18) | Displayed only in mirrors; not visible to regular cameras. |
 
 ---
 
 ## Collision Matrix
-
-### Checking the Current Matrix
-
-```text
-Edit > Project Settings > Physics > Layer Collision Matrix
-```
 
 ### VRChat Default Collision Matrix
 
@@ -239,47 +158,18 @@ Physics.IgnoreLayerCollision(22, 11, true); // Disable collision between Layer 2
 **VRChat-defined layer names** that are verified present at runtime. For user
 layers 22-31, always use numeric constants.
 
-### Getting Layer Masks
-
 ```csharp
-// Get mask from layer number
-int playerLayer = LayerMask.NameToLayer("Player");
-int layerMask = 1 << playerLayer;
-
-// Multiple layer mask
-int mask = (1 << LayerMask.NameToLayer("Player")) |
-           (1 << LayerMask.NameToLayer("Environment"));
-```
-
-### Raycast with Layer Masks
-
-```csharp
-// Raycast only specific layers
-int playerMask = 1 << 9; // Player layer
-
-RaycastHit hit;
-if (Physics.Raycast(origin, direction, out hit, maxDistance, playerMask))
-{
-    // Hit a Player
-}
-
-// Exclude specific layers
-int everythingExceptPlayer = ~(1 << 9);
-```
-
-### Commonly Used Layer Masks
-
-```csharp
-// Common masks
-private int _environmentMask;
-private int _playerMask;
-private int _pickupMask;
+private const int LAYER_PROJECTILES = 25;
+private int _interactionMask;
 
 void Start()
 {
-    _environmentMask = 1 << LayerMask.NameToLayer("Environment");
-    _playerMask = 1 << LayerMask.NameToLayer("Player");
-    _pickupMask = 1 << LayerMask.NameToLayer("Pickup");
+    int playerLayer = LayerMask.NameToLayer("Player"); // VRChat-defined name is safe after verification.
+    if (playerLayer < 0) { return; }
+
+    int projectileMask = 1 << LAYER_PROJECTILES; // User layers must be numeric in the live client.
+
+    _interactionMask = (1 << playerLayer) | projectileMask;
 }
 ```
 
@@ -325,22 +215,9 @@ void Start()
 | Raycast not detecting | Layer mask | Use correct mask |
 | Works in ClientSim only | Custom layer name lookup | Use layer numbers |
 
-### Debugging Layer Issues
-
-```csharp
-// Check an object's layer
-Debug.Log($"Layer: {gameObject.layer} ({LayerMask.LayerToName(gameObject.layer)})");
-
-// Check collision matrix
-bool willCollide = !Physics.GetIgnoreLayerCollision(layerA, layerB);
-Debug.Log($"Layers {layerA} and {layerB} collision: {willCollide}");
-```
-
 ---
 
 ## Quick Reference
-
-### Layer Number List
 
 ```text
 0  = Default
@@ -352,20 +229,4 @@ Debug.Log($"Layers {layerA} and {layerB} collision: {willCollide}");
 17 = Walkthrough
 18 = MirrorReflection
 22-31 = User Layers (collision kept; names become user0-user9 — use numbers)
-```
-
-### Common Operations
-
-```csharp
-// Set layer
-gameObject.layer = LayerMask.NameToLayer("Pickup");
-
-// Check layer
-if (gameObject.layer == LayerMask.NameToLayer("Environment")) { }
-
-// Change all children including self
-foreach (Transform child in transform.GetComponentsInChildren<Transform>())
-{
-    child.gameObject.layer = newLayer;
-}
 ```
