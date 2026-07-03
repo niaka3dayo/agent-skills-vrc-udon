@@ -63,7 +63,9 @@ to `user0`-`user9` (layer 22 = `user0`, ... layer 31 = `user9`).
 > preserved. See [Issue #286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286)
 > (includes a layer-dump script and full runtime output) and
 > [this independent report](https://ask.vrchat.com/t/user-defined-unity-layers-raycasts-ignored-by-vrchat/47933).
-> If official docs or client behavior change, re-verify with the layer-dump
+> The error has been reported upstream in
+> [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303);
+> if the official docs or client behavior change, re-verify with the layer-dump
 > script in #286.
 
 Layers 22-30 are freely usable; layer 31 should be avoided (see note below).
