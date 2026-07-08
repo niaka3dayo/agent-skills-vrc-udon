@@ -271,6 +271,8 @@ SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
 
 ## NetworkCallable (SDK 3.8.1+)
 
+Requires `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare `[NetworkCallable]` methods.
+
 ```csharp
 // Method must have [NetworkCallable] attribute
 [NetworkCallable]

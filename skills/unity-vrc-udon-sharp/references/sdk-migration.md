@@ -48,9 +48,10 @@ BaseGimmick[] all = GetComponents<BaseGimmick>();   // plural form also works
 
 Before SDK 3.8.1, network events had no parameter support. Callers had to pre-load synced variables and call `RequestSerialization()` before sending an event, creating race conditions.
 
-`[NetworkCallable]` adds up to 8 typed parameters per network call, eliminating the pre-serialization pattern.
+`[NetworkCallable]` adds up to 8 typed parameters per network call, eliminating the pre-serialization pattern. The attribute lives in `VRC.SDK3.UdonNetworkCalling`.
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]

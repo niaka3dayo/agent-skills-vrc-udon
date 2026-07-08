@@ -728,6 +728,8 @@ public void OnButtonPressed()
 
 The `[NetworkCallable]` attribute added in **SDK 3.8.1** enables sending **up to 8 parameters** with network events.
 
+`NetworkCallableAttribute` is in the `VRC.SDK3.UdonNetworkCalling` namespace. Add `using VRC.SDK3.UdonNetworkCalling;` to full scripts that use `[NetworkCallable]`.
+
 ### [NetworkCallable] Attribute
 
 Methods callable over the network require the `[NetworkCallable]` attribute:
@@ -736,6 +738,7 @@ Methods callable over the network require the `[NetworkCallable]` attribute:
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
