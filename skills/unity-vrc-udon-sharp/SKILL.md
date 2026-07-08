@@ -16,7 +16,7 @@ description: >-
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.5.4"
+    version: "2.5.5"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics, asmdef, vpm, assembly-definition
 ---
 
