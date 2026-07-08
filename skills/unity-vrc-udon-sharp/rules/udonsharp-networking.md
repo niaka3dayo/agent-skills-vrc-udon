@@ -69,9 +69,11 @@ For longer data in Continuous mode, consider splitting across multiple fields or
 
 ## NetworkCallable (SDK 3.8.1+)
 
-Parameterized network events. Supports sending up to 8 parameters.
+Parameterized network events. Supports sending up to 8 parameters. `NetworkCallableAttribute` is in `VRC.SDK3.UdonNetworkCalling`; add `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare `[NetworkCallable]` methods.
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+
 [NetworkCallable]
 public void TakeDamage(int damage, int attackerId)
 {
