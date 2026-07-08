@@ -520,6 +520,8 @@ public override void OnDeserialization()
 
 ## NetworkCallable Issues (SDK 3.8.1+)
 
+`[NetworkCallable]` requires `using VRC.SDK3.UdonNetworkCalling;`. If Unity reports `The type or namespace name 'NetworkCallable' could not be found`, add that using to the script.
+
 ### "Method 'X' is not network callable"
 
 **Symptoms:**
@@ -1749,7 +1751,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 | Heap out of memory | Reuse arrays, avoid string concat in loops |
 | Proxy issues | Reimport script, refresh component |
 | Low FPS | Disable unused Update(), cache components |
-| **NetworkCallable not working** | Add `[NetworkCallable]`, make public |
+| **NetworkCallable not working** | Add `using VRC.SDK3.UdonNetworkCalling;`, add `[NetworkCallable]`, make public |
 | **PlayerData empty** | Wait for `OnPlayerRestored` first |
 | **OnContactEnter not firing** | UdonBehaviour must be on same GameObject |
 | **Contact player is null** | Check `contactSender.isValid`, then `contactSender.usage` before accessing `contactSender.player` |

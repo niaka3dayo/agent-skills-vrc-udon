@@ -343,7 +343,11 @@ For multiplayer games, the recommended design is **"only the owner modifies stat
 
 ### Code Example: Owner-Centric GameManager
 
+This example uses `[NetworkCallable]`, so full scripts need `using VRC.SDK3.UdonNetworkCalling;`.
+
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class GameManager : UdonSharpBehaviour
 {

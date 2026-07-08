@@ -131,12 +131,15 @@ public class ArrayHelpers : UdonSharpBehaviour
 
 ## NetworkCallable Patterns (SDK 3.8.1+)
 
+`[NetworkCallable]` requires `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare network-callable methods.
+
 ### Basic Parameterized RPC
 
 ```csharp
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -167,6 +170,8 @@ public class NetworkCallableBasic : UdonSharpBehaviour
 ### Damage System with NetworkCallable
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class DamageReceiver : UdonSharpBehaviour
 {
@@ -231,6 +236,8 @@ public class DamageReceiver : UdonSharpBehaviour
 ### Chat System
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class ChatSystem : UdonSharpBehaviour
 {

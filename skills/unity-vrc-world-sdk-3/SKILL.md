@@ -19,7 +19,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "2.5.4"
+    version: "2.5.5"
     tags: vrchat, world-sdk, scene-setup, optimization, components, upload, sdk-validation, build-panel
 ---
 
@@ -447,7 +447,7 @@ Starter templates for common SDK component patterns. Each template compiles with
 | File                            | Content                                                                                          | Approx. Lines |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
 | `references/components.md`      | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
-| `references/layers.md`          | Layers & collision                                                                               | 300+          |
+| `references/layers.md`          | Layers & collision                                                                               | 230+          |
 | `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |
 | `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
