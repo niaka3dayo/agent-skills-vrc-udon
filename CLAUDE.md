@@ -45,7 +45,9 @@ feature/* ──PR──> dev ──release PR──> main ──tag──> npm 
 
 Both `dev` and `main` are protected:
 - No direct push (`enforce_admins: true`, applies to admin too)
-- CI must pass: Symlink Integrity, Hook Scripts, npm Pack Test
+- All seven CI checks are required: Symlink Integrity, Hook Scripts, Documentation Smoke Tests,
+  Markdown Links, npm Pack Test, EditorConfig, and Version Sync
+- Required checks use `strict: false` on `dev` and `strict: true` on `main`
 - PR required for all changes
 
 ### Branch Naming
@@ -75,9 +77,11 @@ npm pack --dry-run
 |-------|-----------------|
 | Symlink Integrity | No symlinks in repo (breaks npm pack) |
 | Hook Scripts | validate-udonsharp.sh is executable and valid bash |
-| EditorConfig | File formatting matches .editorconfig rules (indent_size check disabled; see below) |
-| npm Pack Test | Package includes all required files |
+| Documentation Smoke Tests | Required documentation reference coverage is present |
 | Markdown Links | No broken links in documentation |
+| npm Pack Test | Package includes all required files |
+| EditorConfig | File formatting matches .editorconfig rules (indent_size check disabled; see below) |
+| Version Sync | All five package version fields agree |
 
 ### EditorConfig Notes
 
@@ -133,7 +137,7 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
        --body "Pre-release version bump for Step 2 of the release flow."
      ```
 
-   - Wait for **all** CI jobs green — specifically Version Sync, which verifies all 5 fields agree on `vX.Y.Z`. (Branch protection currently enforces only `Symlink Integrity / Hook Scripts / npm Pack Test` as required contexts; do not merge if Version Sync is red even though GitHub allows it.) Merge the bump PR into `dev` (squash is fine here — single-purpose commit). CodeRabbit review is optional on this PR — it's mechanical and Version Sync is the substantive check.
+   - Wait for all seven required CI checks to pass. Version Sync verifies all 5 fields agree on `vX.Y.Z`. Merge the bump PR into `dev` (squash is fine here — single-purpose commit). CodeRabbit review is optional on this PR — it's mechanical and Version Sync is the substantive check.
 
 2. **Create a release PR from `dev` to `main`**
 

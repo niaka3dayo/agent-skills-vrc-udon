@@ -53,7 +53,13 @@ themselves should also include a thank-you (in the reporter's language).
 
 ## Test plan
 
-- [ ] CI green (Symlinks / Hooks / Markdown / npm Pack / Installer Tests / EditorConfig / Version Sync)
+- [ ] Symlink Integrity
+- [ ] Hook Scripts
+- [ ] Documentation Smoke Tests
+- [ ] Markdown Links
+- [ ] npm Pack Test
+- [ ] EditorConfig
+- [ ] Version Sync
 - [ ] Release Drafter draft body reflects the merged PRs
 - [ ] After publish: `npm view agent-skills-vrc-udon version` returns vX.Y.Z
 
