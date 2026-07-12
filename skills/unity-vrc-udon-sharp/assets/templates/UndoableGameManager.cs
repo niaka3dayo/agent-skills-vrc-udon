@@ -36,6 +36,7 @@ public class UndoableGameManager : UdonSharpBehaviour
         stateHistory = new byte[stateSize * (MaxMoves + 1)];
         _InitializeGame();
         _SaveStateToHistory(); // Initial state = history[0]
+        _ApplyDisplayLocally();
     }
 
     // --- Local request entry ---
@@ -66,6 +67,7 @@ public class UndoableGameManager : UdonSharpBehaviour
 
         _ExecuteMove(from, to);
         _SaveStateToHistory(); // Save once after the operation
+        _ApplyDisplayLocally();
         RequestSerialization();
     }
 
@@ -91,6 +93,7 @@ public class UndoableGameManager : UdonSharpBehaviour
         historyCount--;
         int offset = (historyCount - 1) * stateSize;
         System.Array.Copy(stateHistory, offset, currentState, 0, stateSize);
+        _ApplyDisplayLocally();
         RequestSerialization();
     }
 
@@ -107,6 +110,7 @@ public class UndoableGameManager : UdonSharpBehaviour
         // Return to history[0] = initial state (no separate variable for initial state)
         System.Array.Copy(stateHistory, 0, currentState, 0, stateSize);
         historyCount = 1;
+        _ApplyDisplayLocally();
         RequestSerialization();
     }
 
@@ -114,7 +118,7 @@ public class UndoableGameManager : UdonSharpBehaviour
     public override void OnDeserialization()
     {
         // Do NOT add to history in OnDeserialization! (causes double-saving)
-        _UpdateDisplay();
+        _ApplyDisplayLocally();
     }
 
     // Owner-only session policy: the sender must be the current object owner.
@@ -160,7 +164,7 @@ public class UndoableGameManager : UdonSharpBehaviour
         currentState[to] = temp;
     }
 
-    private void _UpdateDisplay()
+    private void _ApplyDisplayLocally()
     {
         // Reflect currentState in UI/visuals
         // Override this method to update your specific game's display

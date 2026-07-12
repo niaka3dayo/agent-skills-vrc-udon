@@ -1266,9 +1266,8 @@ public class DroneCheckpoint : UdonSharpBehaviour
 {
     [SerializeField] private Transform respawnPoint;
 
-    public override void OnDroneTriggerEnter(Collider other)
+    public override void OnDroneTriggerEnter(VRCDroneApi drone)
     {
-        VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
         if (!Utilities.IsValid(drone)) return;
 
         // Teleport the drone back to the respawn point

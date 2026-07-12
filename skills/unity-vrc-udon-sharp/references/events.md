@@ -18,7 +18,7 @@ UdonSharp events include those that **require override** and those that **do not
 
 ```csharp
 // WRONG: CS0115 error
-public override void OnTriggerEnter(Collider other) { }
+// public override void OnTriggerEnter(Collider other) { }
 // CORRECT
 public void OnTriggerEnter(Collider other) { }
 
@@ -406,14 +406,13 @@ Called when a player's drone enters or exits a trigger collider attached to the 
 
 | Event | When Called |
 |-------|-------------|
-| `void OnDroneTriggerEnter(Collider other)` | Drone enters the trigger |
-| `void OnDroneTriggerStay(Collider other)` | Drone stays in the trigger (called each frame) |
-| `void OnDroneTriggerExit(Collider other)` | Drone exits the trigger |
+| `void OnDroneTriggerEnter(VRCDroneApi drone)` | Drone enters the trigger |
+| `void OnDroneTriggerStay(VRCDroneApi drone)` | Drone stays in the trigger (called each frame) |
+| `void OnDroneTriggerExit(VRCDroneApi drone)` | Drone exits the trigger |
 
 ```csharp
-public override void OnDroneTriggerEnter(Collider other)
+public override void OnDroneTriggerEnter(VRCDroneApi drone)
 {
-    VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
     if (!Utilities.IsValid(drone)) return;
 
     VRCPlayerApi pilot = drone.GetPlayer();
@@ -423,7 +422,7 @@ public override void OnDroneTriggerEnter(Collider other)
     }
 }
 
-public override void OnDroneTriggerExit(Collider other)
+public override void OnDroneTriggerExit(VRCDroneApi drone)
 {
     Debug.Log("Drone exited the trigger zone");
 }

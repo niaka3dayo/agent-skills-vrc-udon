@@ -451,7 +451,7 @@ VRChat network events (`OnPlayerJoined`, `OnOwnershipRequest`, etc.) **must** us
 
 ```csharp
 // NG: override on Unity callback causes CS0115
-public override void OnTriggerEnter(Collider other) { }
+// public override void OnTriggerEnter(Collider other) { }
 
 // OK: Unity callbacks without override
 public void OnTriggerEnter(Collider other) { }
@@ -461,7 +461,7 @@ public void OnParticleCollision(GameObject other) { }
 // OK: VRChat events require override
 public override void OnPlayerJoined(VRCPlayerApi player) { }
 public override void OnPlayerLeft(VRCPlayerApi player) { }
-public override void OnOwnershipRequest(VRCPlayerApi requester, VRCPlayerApi newOwner) { }
+public override bool OnOwnershipRequest(VRCPlayerApi requester, VRCPlayerApi newOwner) => true;
 ```
 
 ---

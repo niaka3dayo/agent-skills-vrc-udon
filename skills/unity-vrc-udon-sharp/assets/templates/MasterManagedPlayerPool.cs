@@ -73,6 +73,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
         // Allocate local change-detection snapshot
         _previousAssignments = new int[poolSize];
+        _ApplyAssignmentsLocally();
 
         // Allocate the free-slot ring buffer (master only, but harmless on all clients)
         _freeQueue = new int[poolSize];
@@ -92,6 +93,9 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
     public override void OnPlayerJoined(VRCPlayerApi player)
     {
+        // A player may become valid after assignment deserialization. Retry
+        // unapplied slots without granting this client write authority.
+        _ApplyAssignmentsLocally();
         if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
         if (!Utilities.IsValid(player)) return;
         bool changed = _EnsureAssignmentTable();
@@ -100,20 +104,29 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
         // Duplicate join callbacks must not assign a second slot.
         if (_FindSlotForPlayer(player.playerId) >= 0)
         {
-            if (changed) _SerializeAssignments();
+            if (changed)
+            {
+                _ApplyAssignmentsLocally();
+                _SerializeAssignments();
+            }
             return;
         }
 
         if (_freeCount == 0)
         {
             Debug.LogWarning($"[PlayerPool] No free slot for player {player.playerId} ({player.displayName}). Pool is full.");
-            if (changed) _SerializeAssignments();
+            if (changed)
+            {
+                _ApplyAssignmentsLocally();
+                _SerializeAssignments();
+            }
             return;
         }
 
         int slot = _DequeueFree();
         _assignments[slot] = player.playerId;
 
+        _ApplyAssignmentsLocally();
         _SerializeAssignments();
     }
 
@@ -129,13 +142,18 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
         if (slot < 0)
         {
             // Player had no assigned slot (e.g. pool was full when they joined)
-            if (changed) _SerializeAssignments();
+            if (changed)
+            {
+                _ApplyAssignmentsLocally();
+                _SerializeAssignments();
+            }
             return;
         }
 
         _assignments[slot] = 0;   // mark as free in the synced array
         _EnqueueFree(slot);       // return to the local free queue
 
+        _ApplyAssignmentsLocally();
         _SerializeAssignments();
     }
 
@@ -145,11 +163,23 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        if (_assignments == null || _previousAssignments == null) return;
-        int assignmentCount = Mathf.Min(_assignments.Length, _previousAssignments.Length);
+        _ApplyAssignmentsLocally();
+    }
 
-        // Compare the newly received _assignments against our previous snapshot
-        // and activate / deactivate pool objects accordingly.
+    /// <summary>
+    /// Idempotently apply the synced assignment table to this client's pool
+    /// objects and advance the local snapshot only after each slot is applied.
+    /// </summary>
+    private void _ApplyAssignmentsLocally()
+    {
+        if (_poolObjects == null || _previousAssignments == null) return;
+        int assignmentCount = _assignments == null
+            ? 0
+            : Mathf.Min(
+                _assignments.Length,
+                Mathf.Min(_previousAssignments.Length, _poolObjects.Length)
+            );
+
         for (int i = 0; i < assignmentCount; i++)
         {
             int newId = _assignments[i];
@@ -165,16 +195,22 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
                 {
                     _ActivateSlot(i, player);
                 }
+                else
+                {
+                    // Do not certify an assignment that could not be applied.
+                    // A later reconcile/deserialization can retry this slot.
+                    continue;
+                }
             }
             else
             {
                 // Slot was just freed
                 _DeactivateSlot(i);
             }
+
+            _previousAssignments[i] = newId;
         }
 
-        // Update snapshot
-        System.Array.Copy(_assignments, _previousAssignments, assignmentCount);
         for (int i = assignmentCount; i < _previousAssignments.Length; i++)
         {
             if (_previousAssignments[i] != 0) _DeactivateSlot(i);
@@ -289,6 +325,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
             changed = true;
         }
 
+        _ApplyAssignmentsLocally();
         if (changed)
         {
             _SerializeAssignments();

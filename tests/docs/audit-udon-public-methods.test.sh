@@ -36,7 +36,7 @@ assert_accepted_count() {
 
 assert_accepted_count \
     "$FIXTURES/valid" \
-    "PASS: audited 24 public instance methods (6 runtime callbacks, 2 editor callbacks, 10 NetworkCallable entries, 6 local/custom underscore methods); classified 62 public declarations"
+    "PASS: audited 39 public instance methods (13 runtime callbacks, 2 editor callbacks, 13 NetworkCallable entries, 11 local/custom underscore methods); classified 97 public declarations"
 
 assert_rejected "$FIXTURES/invalid/public-nonvoid.cs" "public int ExposedValue()"
 assert_rejected "$FIXTURES/invalid/multiline.cs" "public void MultilineExposure()"
@@ -80,5 +80,37 @@ assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "unsupported Ne
 assert_rejected "$FIXTURES/invalid/unrelated-namespace-shadow.cs" "NetworkCallable method must return void"
 assert_rejected "$FIXTURES/invalid/unknown-attribute-binding.cs" "cannot safely bind NetworkCallable attribute name"
 assert_rejected "$FIXTURES/invalid/network-callable-nonmethod.cs" "NetworkCallable attribute must target a method"
+assert_rejected "$FIXTURES/invalid/list-quote-container-exposure.md" "public void ReverseNestedRemoteExposure()"
+assert_rejected "$FIXTURES/invalid/list-quote-unclosed.md" "unterminated C# Markdown fence"
+assert_rejected "$FIXTURES/invalid/list-tab-unclosed.md" "unterminated C# Markdown fence"
+assert_rejected "$FIXTURES/invalid/network-callable-builtin.cs" "built-in Udon event cannot be NetworkCallable"
+assert_rejected "$FIXTURES/invalid/network-callable-unity-builtin.cs" "built-in Udon event cannot be NetworkCallable"
+assert_rejected "$FIXTURES/invalid/network-callable-arguments.md" "NetworkCallable rate must be an integer from 1 to 100"
+assert_rejected "$FIXTURES/invalid/network-callable-arguments.md" "NetworkCallable attribute has an unknown named argument"
+assert_rejected "$FIXTURES/invalid/network-callable-arguments.md" "NetworkCallable attribute accepts at most one argument"
+assert_rejected "$FIXTURES/invalid/network-callable-arguments.md" "NetworkCallable attribute cannot be duplicated"
+assert_rejected "$FIXTURES/invalid/network-callable-targets.md" "NetworkCallable attribute must target a method"
+assert_rejected "$FIXTURES/invalid/network-callable-section-target.cs" "NetworkCallable attribute must target a method"
+assert_rejected "$FIXTURES/invalid/network-callable-late-section-target.cs" "attribute target must begin the attribute section"
+assert_rejected "$FIXTURES/invalid/inherited-overload.cs" "NetworkCallable method cannot be overloaded"
+assert_rejected "$FIXTURES/invalid/partial-overload" "NetworkCallable method cannot be overloaded"
+assert_rejected "$FIXTURES/invalid/partial-overload-fences.md" "NetworkCallable method cannot be overloaded"
+assert_rejected "$FIXTURES/invalid/public-overload.cs" "NetworkCallable method cannot be overloaded"
+assert_rejected "$FIXTURES/invalid/platform-type-shadowing.md" "unsupported NetworkCallable parameter type"
+assert_rejected "$FIXTURES/invalid/sdk-callback-contracts.md" "built-in Udon event signature does not match SDK 3.10.4"
+assert_rejected "$FIXTURES/invalid/sdk-callback-return-shadow.cs" "built-in Udon event signature does not match SDK 3.10.4"
+assert_rejected "$FIXTURES/invalid/nested-file-scoped-namespace.cs" "file-scoped namespace must be at compilation-unit scope"
+assert_rejected "$FIXTURES/invalid/late-file-scoped-namespace.cs" "file-scoped namespace must precede all members"
+assert_rejected "$FIXTURES/invalid/top-level-before-file-namespace.cs" "file-scoped namespace must precede all members"
+assert_rejected "$FIXTURES/invalid/empty-statement-before-file-namespace.cs" "file-scoped namespace must precede all members"
+assert_rejected "$FIXTURES/invalid/nested-list-tab-exposure.md" "unterminated C# Markdown fence"
+assert_rejected "$FIXTURES/invalid/nested-list-tab-unclosed.md" "unterminated C# Markdown fence"
+assert_rejected "$FIXTURES/invalid/quote-list-tab-exposure.md" "unterminated C# Markdown fence"
 
-echo "PASS: public method audit regression fixtures (9 valid files, 30 invalid files)"
+VALID_FILE_COUNT="$(find "$FIXTURES/valid" -maxdepth 1 -type f | wc -l)"
+INVALID_INPUT_COUNT="$(find "$FIXTURES/invalid" -mindepth 1 -maxdepth 1 | wc -l)"
+if [ "$VALID_FILE_COUNT" -ne 15 ] || [ "$INVALID_INPUT_COUNT" -ne 52 ]; then
+    echo "ERROR: fixture inventory changed without updating the regression contract" >&2
+    exit 1
+fi
+echo "PASS: public method audit regression fixtures ($VALID_FILE_COUNT valid files, $INVALID_INPUT_COUNT invalid inputs)"

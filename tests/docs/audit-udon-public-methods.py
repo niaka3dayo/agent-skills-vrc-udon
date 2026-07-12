@@ -17,34 +17,156 @@ import unicodedata
 from typing import Iterable
 
 
-UNITY_MESSAGE_ALLOWLIST = {
-    "FixedUpdate",
-    "LateUpdate",
-    "OnDisable",
-    "OnEnable",
-    "Start",
-    "Update",
+UNITY_CALLBACK_SIGNATURES = {
+    "FixedUpdate": ("void", ()),
+    "LateUpdate": ("void", ()),
+    "OnAnimatorIK": ("void", (("System", "Int32"),)),
+    "OnAnimatorMove": ("void", ()),
+    "OnAudioFilterRead": ("void", (("System", "Single", "[]"), ("System", "Int32"))),
+    "OnBecameInvisible": ("void", ()),
+    "OnBecameVisible": ("void", ()),
+    "OnCollisionEnter": ("void", (("UnityEngine", "Collision"),)),
+    "OnCollisionEnter2D": ("void", (("UnityEngine", "Collision2D"),)),
+    "OnCollisionExit": ("void", (("UnityEngine", "Collision"),)),
+    "OnCollisionExit2D": ("void", (("UnityEngine", "Collision2D"),)),
+    "OnCollisionStay": ("void", (("UnityEngine", "Collision"),)),
+    "OnCollisionStay2D": ("void", (("UnityEngine", "Collision2D"),)),
+    "OnControllerColliderHit": ("void", (("UnityEngine", "ControllerColliderHit"),)),
+    "OnDestroy": ("void", ()),
+    "OnDisable": ("void", ()),
+    "OnDrawGizmos": ("void", ()),
+    "OnDrawGizmosSelected": ("void", ()),
+    "OnEnable": ("void", ()),
+    "OnGUI": ("void", ()),
+    "OnJointBreak": ("void", (("System", "Single"),)),
+    "OnJointBreak2D": ("void", (("UnityEngine", "Joint2D"),)),
+    "OnMouseDown": ("void", ()),
+    "OnMouseDrag": ("void", ()),
+    "OnMouseEnter": ("void", ()),
+    "OnMouseExit": ("void", ()),
+    "OnMouseOver": ("void", ()),
+    "OnMouseUp": ("void", ()),
+    "OnMouseUpAsButton": ("void", ()),
+    "OnParticleCollision": ("void", (("UnityEngine", "GameObject"),)),
+    "OnParticleSystemStopped": ("void", ()),
+    "OnParticleTrigger": ("void", ()),
+    "OnParticleUpdateJobScheduled": (
+        "void",
+        (("UnityEngine", "ParticleSystemJobs", "ParticleSystemJobData"),),
+    ),
+    "OnPostRender": ("void", ()),
+    "OnPreCull": ("void", ()),
+    "OnPreRender": ("void", ()),
+    "OnRenderImage": ("void", (
+        ("UnityEngine", "RenderTexture"),
+        ("UnityEngine", "RenderTexture"),
+    )),
+    "OnRenderObject": ("void", ()),
+    "OnTransformChildrenChanged": ("void", ()),
+    "OnTransformParentChanged": ("void", ()),
+    "OnTriggerEnter": ("void", (("UnityEngine", "Collider"),)),
+    "OnTriggerEnter2D": ("void", (("UnityEngine", "Collider2D"),)),
+    "OnTriggerExit": ("void", (("UnityEngine", "Collider"),)),
+    "OnTriggerExit2D": ("void", (("UnityEngine", "Collider2D"),)),
+    "OnTriggerStay": ("void", (("UnityEngine", "Collider"),)),
+    "OnTriggerStay2D": ("void", (("UnityEngine", "Collider2D"),)),
+    "OnValidate": ("void", ()),
+    "OnWillRenderObject": ("void", ()),
+    "Start": ("void", ()),
+    "Update": ("void", ()),
 }
 
-UDON_OVERRIDE_CALLBACK_ALLOWLIST = {
-    "Interact",
-    "OnDeserialization",
-    "OnDrop",
-    "OnPersistenceUsageUpdated",
-    "OnPickup",
-    "OnPickupUseDown",
-    "OnPickupUseUp",
-    "OnPostSerialization",
-    "OnPreSerialization",
-    "OnSpawn",
-    "OnVideoEnd",
-    "OnVideoLoop",
-    "OnVideoPause",
-    "OnVideoPlay",
-    "OnVideoReady",
-    "OnVideoStart",
-    "OnVRCQualitySettingsChanged",
-    "PostLateUpdate",
+# Exact public virtual stubs shipped by UdonSharpBehaviour in Worlds SDK 3.10.4.
+# Each name maps to one or more (return type, parameter types) signatures.
+SDK_CALLBACK_SIGNATURES = {
+    "InputDrop": (("void", (("System", "Boolean"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputGrab": (("void", (("System", "Boolean"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputJump": (("void", (("System", "Boolean"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputLookHorizontal": (("void", (("System", "Single"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputLookVertical": (("void", (("System", "Single"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputMoveHorizontal": (("void", (("System", "Single"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputMoveVertical": (("void", (("System", "Single"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "InputUse": (("void", (("System", "Boolean"), ("VRC", "Udon", "Common", "UdonInputEventArgs"))),),
+    "Interact": (("void", ()),),
+    "MidiControlChange": (("void", (("System", "Int32"), ("System", "Int32"), ("System", "Int32"))),),
+    "MidiNoteOff": (("void", (("System", "Int32"), ("System", "Int32"), ("System", "Int32"))),),
+    "MidiNoteOn": (("void", (("System", "Int32"), ("System", "Int32"), ("System", "Int32"))),),
+    "OnAsyncGpuReadbackComplete": (("void", (("VRC", "SDK3", "Rendering", "VRCAsyncGPUReadbackRequest"),)),),
+    "OnAvatarChanged": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnAvatarEyeHeightChanged": (("void", (("VRC", "SDKBase", "VRCPlayerApi"), ("System", "Single"))),),
+    "OnContactEnter": (("void", (("VRC", "Dynamics", "ContactEnterInfo"),)),),
+    "OnContactExit": (("void", (("VRC", "Dynamics", "ContactExitInfo"),)),),
+    "OnControllerColliderHitPlayer": (("void", (("VRC", "SDK3", "ControllerColliderPlayerHit"),)),),
+    "OnDeserialization": (
+        ("void", ()),
+        ("void", (("VRC", "Udon", "Common", "DeserializationResult"),)),
+    ),
+    "OnDroneTriggerEnter": (("void", (("VRC", "SDKBase", "VRCDroneApi"),)),),
+    "OnDroneTriggerExit": (("void", (("VRC", "SDKBase", "VRCDroneApi"),)),),
+    "OnDroneTriggerStay": (("void", (("VRC", "SDKBase", "VRCDroneApi"),)),),
+    "OnDrop": (("void", ()),),
+    "OnImageLoadError": (("void", (("VRC", "SDK3", "Image", "IVRCImageDownload"),)),),
+    "OnImageLoadSuccess": (("void", (("VRC", "SDK3", "Image", "IVRCImageDownload"),)),),
+    "OnInputMethodChanged": (("void", (("VRC", "SDKBase", "VRCInputMethod"),)),),
+    "OnLanguageChanged": (("void", (("System", "String"),)),),
+    "OnListAvailableProducts": (("void", (("VRC", "Economy", "IProduct", "[]"),)),),
+    "OnListProductOwners": (("void", (("VRC", "Economy", "IProduct"), ("System", "String", "[]"))),),
+    "OnListPurchases": (("void", (("VRC", "Economy", "IProduct", "[]"), ("VRC", "SDKBase", "VRCPlayerApi"))),),
+    "OnMasterTransferred": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnOwnershipRequest": (("bool", (("VRC", "SDKBase", "VRCPlayerApi"), ("VRC", "SDKBase", "VRCPlayerApi"))),),
+    "OnOwnershipTransferred": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPersistenceUsageUpdated": (("void", ()),),
+    "OnPhysBoneGrabbed": (("void", (("VRC", "Dynamics", "PhysBoneGrabbedInfo"),)),),
+    "OnPhysBonePosed": (("void", (("VRC", "Dynamics", "PhysBonePosedInfo"),)),),
+    "OnPhysBoneReleased": (("void", (("VRC", "Dynamics", "PhysBoneReleasedInfo"),)),),
+    "OnPhysBoneUnPosed": (("void", (("VRC", "Dynamics", "PhysBoneUnPosedInfo"),)),),
+    "OnPickup": (("void", ()),),
+    "OnPickupUseDown": (("void", ()),),
+    "OnPickupUseUp": (("void", ()),),
+    "OnPlayerCollisionEnter": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerCollisionExit": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerCollisionStay": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerDataStorageExceeded": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerDataStorageWarning": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerDataUpdated": (("void", (
+        ("VRC", "SDKBase", "VRCPlayerApi"),
+        ("VRC", "SDK3", "Persistence", "PlayerData", "Info", "[]"),
+    )),),
+    "OnPlayerJoined": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerLeft": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerObjectStorageExceeded": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerObjectStorageWarning": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerParticleCollision": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerRespawn": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerRestored": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerSuspendChanged": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerTriggerEnter": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerTriggerExit": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPlayerTriggerStay": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnPostSerialization": (("void", (("VRC", "Udon", "Common", "SerializationResult"),)),),
+    "OnPreSerialization": (("void", ()),),
+    "OnProductEvent": (("void", (("VRC", "Economy", "IProduct"), ("VRC", "SDKBase", "VRCPlayerApi"))),),
+    "OnPurchaseConfirmed": (("void", (("VRC", "Economy", "IProduct"), ("VRC", "SDKBase", "VRCPlayerApi"), ("System", "Boolean"))),),
+    "OnPurchaseConfirmedMultiple": (("void", (("VRC", "Economy", "IProduct"), ("VRC", "SDKBase", "VRCPlayerApi"), ("System", "Boolean"), ("System", "Int32"))),),
+    "OnPurchaseExpired": (("void", (("VRC", "Economy", "IProduct"), ("VRC", "SDKBase", "VRCPlayerApi"))),),
+    "OnPurchasesLoaded": (("void", (("VRC", "Economy", "IProduct", "[]"), ("VRC", "SDKBase", "VRCPlayerApi"))),),
+    "OnScreenUpdate": (("void", (("VRC", "SDK3", "Platform", "ScreenUpdateData"),)),),
+    "OnSpawn": (("void", ()),),
+    "OnStationEntered": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnStationExited": (("void", (("VRC", "SDKBase", "VRCPlayerApi"),)),),
+    "OnStringLoadError": (("void", (("VRC", "SDK3", "StringLoading", "IVRCStringDownload"),)),),
+    "OnStringLoadSuccess": (("void", (("VRC", "SDK3", "StringLoading", "IVRCStringDownload"),)),),
+    "OnVRCCameraSettingsChanged": (("void", (("VRC", "SDK3", "Rendering", "VRCCameraSettings"),)),),
+    "OnVRCPlusMassGift": (("void", (("VRC", "SDKBase", "VRCPlayerApi"), ("System", "Int32"))),),
+    "OnVRCQualitySettingsChanged": (("void", ()),),
+    "OnVideoEnd": (("void", ()),),
+    "OnVideoError": (("void", (("VRC", "SDK3", "Components", "Video", "VideoError"),)),),
+    "OnVideoLoop": (("void", ()),),
+    "OnVideoPause": (("void", ()),),
+    "OnVideoPlay": (("void", ()),),
+    "OnVideoReady": (("void", ()),),
+    "OnVideoStart": (("void", ()),),
+    "PostLateUpdate": (("void", ()),),
 }
 
 METHOD_MODIFIERS = {
@@ -70,6 +192,14 @@ NETWORK_CALLABLE_TYPE = (
     "UdonNetworkCalling",
     "NetworkCallableAttribute",
 )
+UDONSHARP_BEHAVIOUR_TYPE = ("UdonSharp", "UdonSharpBehaviour")
+UNITY_CALLBACK_BASE_TYPES = {
+    ("UnityEngine", "MonoBehaviour"),
+    ("UnityEngine", "ScriptableObject"),
+    ("UnityEditor", "AssetPostprocessor"),
+    ("UnityEditor", "Editor"),
+    ("UnityEditor", "EditorWindow"),
+}
 
 RESERVED_KEYWORDS = {
     "abstract", "as", "base", "bool", "break", "byte", "case", "catch",
@@ -107,8 +237,11 @@ class Token:
 class TypeContext:
     name: str
     bases: frozenset[str]
+    base_names: tuple[tuple[str, ...], ...]
     namespace: tuple[str, ...]
     type_path: tuple[str, ...]
+    imports: frozenset[tuple[str, ...]]
+    aliases: tuple[tuple[str, tuple[str, ...]], ...]
 
 
 @dataclass(frozen=True)
@@ -117,6 +250,7 @@ class Parameter:
     modifiers: frozenset[str]
     has_default: bool
     supported: bool
+    bound_type: tuple[str, ...] | None
 
 
 @dataclass(frozen=True)
@@ -129,7 +263,7 @@ class Method:
     parameters: tuple[Parameter, ...]
     access: str
     generic: bool
-    network_callable: bool
+    network_callable_occurrences: tuple[int, ...]
     line: int
     context: TypeContext | None
 
@@ -142,6 +276,12 @@ class Declaration:
 
 
 @dataclass(frozen=True)
+class NetworkCallableOccurrence:
+    token_index: int
+    line: int
+
+
+@dataclass(frozen=True)
 class SourceSegment:
     text: str
     first_line: int
@@ -149,8 +289,7 @@ class SourceSegment:
 
 @dataclass(frozen=True)
 class MarkdownContainer:
-    quote_depth: int
-    list_indents: tuple[int, ...]
+    parts: tuple[tuple[str, int], ...]
 
 
 @dataclass(frozen=True)
@@ -330,11 +469,15 @@ def lex_csharp(source: str, first_line: int = 1) -> list[Token]:
                 prefix_end += 1
             if prefix_end < len(source) and source[prefix_end] == '"':
                 verbatim = "@" in source[index:prefix_end]
+                literal_line = line
                 index, line = _skip_quoted(source, prefix_end, line, verbatim=verbatim)
+                tokens.append(Token("<literal>", "<literal>", literal_line, "literal"))
                 continue
 
         if char in {'"', "'"}:
+            literal_line = line
             index, line = _skip_quoted(source, index, line, verbatim=False)
+            tokens.append(Token("<literal>", "<literal>", literal_line, "literal"))
             continue
 
         identifier = _read_identifier(source, index, line) if (
@@ -377,70 +520,118 @@ def _strip_blockquotes(line: str) -> tuple[int, str]:
         remaining = remaining[match.end():]
 
 
-def _list_marker(line: str) -> tuple[int, str] | None:
+def _advance_column(text: str, column: int) -> int:
+    for char in text:
+        column = column + 1 if char != "\t" else column + (4 - column % 4)
+    return column
+
+
+def _list_marker(line: str, initial_column: int) -> tuple[int, str, int] | None:
     """Strip one CommonMark list marker and return its content indentation."""
     match = re.match(r"^([ ]{0,3})([-+*]|[0-9]{1,9}[.)])(?:([ \t]+)|$)", line)
     if match is None:
         return None
     whitespace = match.group(3) or ""
-    padding = len(whitespace.expandtabs(4))
+    marker_end = len(match.group(1)) + len(match.group(2))
+    marker_end_column = initial_column + marker_end
+    column = marker_end_column
+    for char in whitespace:
+        column = _advance_column(char, column)
+    padding = column - marker_end_column
     # CommonMark treats one to four following spaces as marker padding. Extra
     # spaces start indented content after the required single-space padding.
-    used_padding = padding if 1 <= padding <= 4 else 1
-    marker_end = len(match.group(1)) + len(match.group(2))
-    indent = marker_end + used_padding
-    content_start = marker_end + used_padding if whitespace else len(line)
-    return indent, line[content_start:]
+    if 1 <= padding <= 4:
+        content_column = column
+        content_start = match.end()
+    else:
+        content_column = marker_end_column + 1
+        content_start = marker_end + 1 if whitespace else len(line)
+    return content_column - initial_column, line[content_start:], content_column
 
 
 def _container_line(
     line: str,
-    active_lists: dict[int, tuple[int, ...]],
+    active: MarkdownContainer,
 ) -> tuple[MarkdownContainer, str]:
-    quote_depth, remaining = _strip_blockquotes(line)
-    list_indents = active_lists.get(quote_depth, ())
-
-    if list_indents:
-        required = sum(list_indents)
-        leading = len(remaining) - len(remaining.lstrip(" "))
-        if remaining.strip() == "":
-            return MarkdownContainer(quote_depth, list_indents), ""
-        if leading >= required:
-            remaining = remaining[required:]
-        else:
-            list_indents = ()
-
-    parsed_indents = list(list_indents)
+    consumed = _consume_container(line, active)
+    parts = list(active.parts) if consumed is not None else []
+    if consumed is None:
+        remaining = line
+        column = 0
+    else:
+        remaining, column = consumed
     while True:
-        marker = _list_marker(remaining)
+        quote = re.match(r"^[ ]{0,3}>[ \t]?", remaining)
+        if quote is not None:
+            parts.append(("quote", 1))
+            column = _advance_column(remaining[:quote.end()], column)
+            remaining = remaining[quote.end():]
+            continue
+        marker = _list_marker(remaining, column)
         if marker is None:
             break
-        indent, remaining = marker
-        parsed_indents.append(indent)
+        indent, remaining, column = marker
+        parts.append(("list", indent))
+    return MarkdownContainer(tuple(parts)), remaining
 
-    active_lists[quote_depth] = tuple(parsed_indents)
-    return MarkdownContainer(quote_depth, tuple(parsed_indents)), remaining
+
+def _consume_container(
+    line: str, container: MarkdownContainer
+) -> tuple[str, int] | None:
+    remaining = line
+    column = 0
+    part_index = 0
+    while part_index < len(container.parts):
+        kind, width = container.parts[part_index]
+        if kind == "quote":
+            match = re.match(r"^[ ]{0,3}>[ \t]?", remaining)
+            if match is None:
+                return None
+            column = _advance_column(remaining[:match.end()], column)
+            remaining = remaining[match.end():]
+            part_index += 1
+            continue
+        if remaining.strip() == "":
+            remaining = ""
+            part_index += 1
+            continue
+        required = width
+        run_end = part_index + 1
+        while (
+            run_end < len(container.parts)
+            and container.parts[run_end][0] == "list"
+        ):
+            required += container.parts[run_end][1]
+            run_end += 1
+        start_column = column
+        cursor = 0
+        while cursor < len(remaining) and remaining[cursor] in {" ", "\t"}:
+            char = remaining[cursor]
+            column = _advance_column(char, column)
+            cursor += 1
+            if column - start_column >= required:
+                break
+        consumed_columns = column - start_column
+        if consumed_columns < required:
+            return None
+        # A tab can cross more than one nested-list indentation boundary.
+        # Preserve any virtual columns beyond the cumulative requirement so
+        # fence indentation is interpreted exactly as CommonMark sees it.
+        remaining = " " * (consumed_columns - required) + remaining[cursor:]
+        column = start_column + required
+        part_index = run_end
+    return remaining, column
 
 
 def _strip_fence_container(line: str, container: MarkdownContainer) -> str | None:
-    quote_depth, remaining = _strip_blockquotes(line)
-    if quote_depth != container.quote_depth:
-        return None
-    required = sum(container.list_indents)
-    if required:
-        if remaining.strip() == "":
-            return ""
-        leading = len(remaining) - len(remaining.lstrip(" "))
-        if leading < required:
-            return None
-        remaining = remaining[required:]
-    return remaining
+    consumed = _consume_container(line, container)
+    return None if consumed is None else consumed[0]
 
 
 def markdown_csharp_segments(text: str) -> list[SourceSegment]:
     """Extract outer C# fences, including valid quote/list containers."""
     segments: list[SourceSegment] = []
-    active_lists: dict[int, tuple[int, ...]] = {}
+    active_container = MarkdownContainer(())
     opener: MarkdownFence | None = None
     content: list[str] = []
 
@@ -448,7 +639,8 @@ def markdown_csharp_segments(text: str) -> list[SourceSegment]:
         newline = "\n" if original.endswith(("\n", "\r")) else ""
         line = original.rstrip("\r\n")
         if opener is None:
-            container, remaining = _container_line(line, active_lists)
+            container, remaining = _container_line(line, active_container)
+            active_container = container
             match = re.match(r"^[ ]{0,3}(`{3,}|~{3,})[ \t]*([^ \t]*)", remaining)
             if match is None:
                 continue
@@ -473,7 +665,8 @@ def markdown_csharp_segments(text: str) -> list[SourceSegment]:
             # behind an unterminated non-C# block from the former container.
             opener = None
             content = []
-            container, remaining = _container_line(line, active_lists)
+            container, remaining = _container_line(line, active_container)
+            active_container = container
             match = re.match(r"^[ ]{0,3}(`{3,}|~{3,})[ \t]*([^ \t]*)", remaining)
             if match is None:
                 continue
@@ -689,13 +882,144 @@ def _is_network_callable_name(
     declared_name = expanded
     if expanded[-1:] == ("NetworkCallable",):
         expanded = expanded[:-1] + ("NetworkCallableAttribute",)
-    if expanded == NETWORK_CALLABLE_TYPE:
-        return True
     if expanded in local_types or declared_name in local_types:
         return False
+    if expanded == NETWORK_CALLABLE_TYPE:
+        return True
     if expanded[-1:] == ("NetworkCallableAttribute",):
         raise SourceError(line, "cannot safely bind NetworkCallable attribute name")
     return False
+
+
+def _network_callable_occurrence(
+    entry: list[Token],
+    token_index: int,
+    section_target: str | None,
+    aliases: dict[str, tuple[str, ...]],
+    imports: frozenset[tuple[str, ...]],
+    context: TypeContext | None,
+    local_types: frozenset[tuple[str, ...]],
+) -> NetworkCallableOccurrence | None:
+    if not entry:
+        return None
+    name = _attribute_entry_name(entry)
+    if not _is_network_callable_name(
+        name, aliases, imports, context, local_types, entry[0].line
+    ):
+        return None
+
+    start = 0
+    target = section_target
+    if len(entry) >= 2 and entry[1].value == ":":
+        target = entry[0].value
+        start = 2
+    if target is not None and target != "method":
+        raise SourceError(entry[0].line, "NetworkCallable attribute must target a method")
+    paren = next((index for index in range(start, len(entry)) if entry[index].value == "("), None)
+    if paren is not None:
+        close = _matching_right(entry, paren, "(", ")")
+        if close is None or close != len(entry) - 1:
+            raise SourceError(entry[0].line, "malformed NetworkCallable attribute arguments")
+        arguments = _split_parameter_tokens(entry[paren + 1:close])
+        if len(arguments) > 1:
+            raise SourceError(entry[0].line, "NetworkCallable attribute accepts at most one argument")
+        if arguments:
+            argument = arguments[0]
+            if any(token.value == ":" for token in argument):
+                if not (
+                    len(argument) == 3
+                    and argument[0].value == "maxEventsPerSecond"
+                    and argument[1].value == ":"
+                ):
+                    raise SourceError(
+                        entry[0].line,
+                        "NetworkCallable attribute has an unknown named argument",
+                    )
+                argument = argument[2:]
+            if len(argument) != 1 or re.fullmatch(r"[0-9]+", argument[0].raw) is None:
+                raise SourceError(
+                    entry[0].line,
+                    "NetworkCallable rate must be an integer from 1 to 100",
+                )
+            rate = int(argument[0].raw)
+            if rate < 1 or rate > 100:
+                raise SourceError(
+                    entry[0].line,
+                    "NetworkCallable rate must be an integer from 1 to 100",
+                )
+    return NetworkCallableOccurrence(token_index, entry[0].line)
+
+
+def _network_occurrences_in_section(
+    tokens: list[Token],
+    left: int,
+    right: int,
+    aliases: dict[str, tuple[str, ...]],
+    imports: frozenset[tuple[str, ...]],
+    context: TypeContext | None,
+    local_types: frozenset[tuple[str, ...]],
+) -> tuple[NetworkCallableOccurrence, ...]:
+    found: list[NetworkCallableOccurrence] = []
+    section_target = (
+        tokens[left + 1].value
+        if left + 2 < right and tokens[left + 2].value == ":"
+        else None
+    )
+    entry_start = left + 1
+    paren_depth = bracket_depth = brace_depth = 0
+    for index in range(left + 1, right + 1):
+        value = tokens[index].value
+        if value == "(":
+            paren_depth += 1
+        elif value == ")":
+            paren_depth -= 1
+        elif value == "[":
+            bracket_depth += 1
+        elif value == "]" and bracket_depth:
+            bracket_depth -= 1
+        elif value == "{":
+            brace_depth += 1
+        elif value == "}" and brace_depth:
+            brace_depth -= 1
+        elif value == "," and paren_depth == bracket_depth == brace_depth == 0:
+            entry = tokens[entry_start:index]
+            if (
+                entry_start != left + 1
+                and len(entry) >= 2
+                and entry[1].value == ":"
+            ):
+                raise SourceError(
+                    entry[0].line,
+                    "attribute target must begin the attribute section",
+                )
+            occurrence = _network_callable_occurrence(
+                entry, entry_start, section_target, aliases, imports,
+                context, local_types,
+            )
+            if occurrence is not None:
+                found.append(occurrence)
+            entry_start = index + 1
+        if paren_depth < 0 or bracket_depth < 0 or brace_depth < 0:
+            raise SourceError(tokens[index].line, "malformed attribute section")
+    if paren_depth or bracket_depth or brace_depth:
+        raise SourceError(tokens[left].line, "malformed attribute section")
+    final_entry = tokens[entry_start:right]
+    if (
+        entry_start != left + 1
+        and len(final_entry) >= 2
+        and final_entry[1].value == ":"
+    ):
+        raise SourceError(
+            final_entry[0].line,
+            "attribute target must begin the attribute section",
+        )
+    occurrence = _network_callable_occurrence(
+        final_entry, entry_start, section_target, aliases, imports,
+        context, local_types
+    )
+    if occurrence is not None:
+        found.append(occurrence)
+    return tuple(found)
 
 
 def _attribute_names_before(
@@ -705,53 +1029,20 @@ def _attribute_names_before(
     imports: frozenset[tuple[str, ...]],
     context: TypeContext | None,
     local_types: frozenset[tuple[str, ...]],
-) -> bool:
+) -> tuple[int, ...]:
     cursor = declaration_index - 1
-    found = False
+    found: list[NetworkCallableOccurrence] = []
     while cursor >= 0 and tokens[cursor].value == "]":
         left = _matching_left(tokens, cursor, "[", "]")
         if left is None:
             raise SourceError(tokens[cursor].line, "unmatched ']'")
-        entry_start = left + 1
-        paren_depth = bracket_depth = brace_depth = 0
-        for index in range(left + 1, cursor + 1):
-            value = tokens[index].value
-            if value == "(":
-                paren_depth += 1
-            elif value == ")":
-                paren_depth -= 1
-            elif value == "[":
-                bracket_depth += 1
-            elif value == "]" and bracket_depth:
-                bracket_depth -= 1
-            elif value == "{":
-                brace_depth += 1
-            elif value == "}" and brace_depth:
-                brace_depth -= 1
-            elif value == "," and paren_depth == bracket_depth == brace_depth == 0:
-                found = found or _is_network_callable_name(
-                    _attribute_entry_name(tokens[entry_start:index]),
-                    aliases,
-                    imports,
-                    context,
-                    local_types,
-                    tokens[entry_start].line,
-                )
-                entry_start = index + 1
-            if paren_depth < 0 or bracket_depth < 0 or brace_depth < 0:
-                raise SourceError(tokens[index].line, "malformed attribute section")
-        if paren_depth or bracket_depth or brace_depth:
-            raise SourceError(tokens[left].line, "malformed attribute section")
-        found = found or _is_network_callable_name(
-            _attribute_entry_name(tokens[entry_start:cursor]),
-            aliases,
-            imports,
-            context,
-            local_types,
-            tokens[entry_start].line,
-        )
+        found.extend(_network_occurrences_in_section(
+            tokens, left, cursor, aliases, imports, context, local_types
+        ))
         cursor = left - 1
-    return found
+    if len(found) > 1:
+        raise SourceError(found[1].line, "NetworkCallable attribute cannot be duplicated")
+    return tuple(occurrence.token_index for occurrence in found)
 
 
 def _method_name_before_paren(tokens: list[Token], paren_index: int) -> tuple[Token, int] | None:
@@ -800,7 +1091,7 @@ def _find_type_after(tokens: list[Token], keyword_index: int) -> tuple[Token, in
     return tokens[cursor], cursor
 
 
-def _direct_base_names(tokens: list[Token]) -> frozenset[str]:
+def _direct_base_names(tokens: list[Token]) -> tuple[tuple[str, ...], ...]:
     angle_depth = 0
     colon_index: int | None = None
     end = len(tokens)
@@ -815,9 +1106,9 @@ def _direct_base_names(tokens: list[Token]) -> frozenset[str]:
         elif angle_depth == 0 and token.value == ":" and colon_index is None:
             colon_index = index
     if colon_index is None:
-        return frozenset()
+        return ()
 
-    bases: set[str] = set()
+    bases: list[tuple[str, ...]] = []
     segment: list[Token] = []
     angle_depth = 0
     sentinel = Token(",", ",", 0, "punctuation")
@@ -827,25 +1118,18 @@ def _direct_base_names(tokens: list[Token]) -> frozenset[str]:
         elif token.value == ">" and angle_depth:
             angle_depth -= 1
         if token.value == "," and angle_depth == 0:
-            identifiers: list[str] = []
-            segment_angle_depth = 0
-            for item in segment:
-                if item.value == "<":
-                    segment_angle_depth += 1
-                elif item.value == ">" and segment_angle_depth:
-                    segment_angle_depth -= 1
-                elif segment_angle_depth == 0 and item.kind == "identifier":
-                    identifiers.append(item.value)
-            if identifiers:
-                bases.add(identifiers[-1])
+            generic = next((i for i, item in enumerate(segment) if item.value == "<"), len(segment))
+            name = _qualified_name(segment, 0, generic)
+            if name is not None:
+                bases.append(name)
             segment = []
         else:
             segment.append(token)
-    return frozenset(bases)
+    return tuple(bases)
 
 
-def _raw_type_openings(tokens: list[Token]) -> dict[int, tuple[str, frozenset[str]]]:
-    openings: dict[int, tuple[str, frozenset[str]]] = {}
+def _raw_type_openings(tokens: list[Token]) -> dict[int, tuple[str, tuple[tuple[str, ...], ...]]]:
+    openings: dict[int, tuple[str, tuple[tuple[str, ...], ...]]] = {}
     for index, token in enumerate(tokens):
         if token.value not in TYPE_KEYWORDS or token.raw != token.value:
             continue
@@ -864,49 +1148,162 @@ def _raw_type_openings(tokens: list[Token]) -> dict[int, tuple[str, frozenset[st
     return openings
 
 
-def _namespace_openings(tokens: list[Token]) -> dict[int, tuple[str, ...]]:
+def _after_compilation_prefix(tokens: list[Token]) -> list[Token]:
+    cursor = 0
+    while cursor < len(tokens):
+        if tokens[cursor].value == "#":
+            directive_line = tokens[cursor].line
+            cursor += 1
+            while cursor < len(tokens) and tokens[cursor].line == directive_line:
+                cursor += 1
+            continue
+        if tokens[cursor].value == "[":
+            close = _matching_right(tokens, cursor, "[", "]")
+            if (
+                close is not None
+                and cursor + 2 < close
+                and tokens[cursor + 1].value in {"assembly", "module"}
+                and tokens[cursor + 2].value == ":"
+            ):
+                cursor = close + 1
+                continue
+        break
+    return tokens[cursor:]
+
+
+def _is_compilation_directive(tokens: list[Token]) -> bool:
+    tokens = _after_compilation_prefix(tokens)
+    if not tokens:
+        return True
+    values = [token.value for token in tokens]
+    if values[:2] == ["extern", "alias"]:
+        return len(tokens) == 3 and tokens[2].kind == "identifier"
+    cursor = 0
+    if values[:2] == ["global", "using"]:
+        cursor = 2
+    elif values[:1] == ["using"]:
+        cursor = 1
+    else:
+        return False
+    if cursor < len(tokens) and tokens[cursor].value in {"static", "unsafe"}:
+        cursor += 1
+    body = tokens[cursor:]
+    equals = [index for index, token in enumerate(body) if token.value == "="]
+    if equals:
+        if len(equals) != 1 or equals[0] != 1 or body[0].kind != "identifier":
+            return False
+        body = body[2:]
+    return bool(body) and _qualified_name(body, 0, len(body)) is not None
+
+
+def _namespace_openings(
+    tokens: list[Token],
+) -> tuple[dict[int, tuple[str, ...]], tuple[str, ...]]:
     openings: dict[int, tuple[str, ...]] = {}
+    file_scoped: tuple[str, ...] = ()
+    brace_depth = 0
+    seen_compilation_member = False
+    top_level_segment_start = 0
     for index, token in enumerate(tokens):
+        if brace_depth == 0 and (
+            token.raw in ALL_TYPE_KEYWORDS or _spelled(token, "delegate")
+        ):
+            seen_compilation_member = True
+        if token.value == "{":
+            brace_depth += 1
+        elif token.value == "}":
+            brace_depth = max(0, brace_depth - 1)
+        elif token.value == ";" and brace_depth == 0:
+            segment = tokens[top_level_segment_start:index]
+            namespace_declaration = any(
+                _spelled(item, "namespace") for item in segment
+            )
+            if not segment or (
+                not namespace_declaration and not _is_compilation_directive(segment)
+            ):
+                seen_compilation_member = True
+            top_level_segment_start = index + 1
         if not _spelled(token, "namespace"):
             continue
+        if _after_compilation_prefix(tokens[top_level_segment_start:index]):
+            seen_compilation_member = True
         cursor = index + 1
         while cursor < len(tokens) and tokens[cursor].value not in {"{", ";"}:
             cursor += 1
         if cursor >= len(tokens):
             raise SourceError(token.line, "unterminated namespace declaration")
-        if tokens[cursor].value == ";":
-            raise SourceError(token.line, "file-scoped namespace is not safely classified")
         name = _qualified_name(tokens, index + 1, cursor)
         if name is None:
             raise SourceError(token.line, "malformed namespace declaration")
-        openings[cursor] = name
-    return openings
+        if tokens[cursor].value == ";":
+            if brace_depth != 0:
+                raise SourceError(
+                    token.line,
+                    "file-scoped namespace must be at compilation-unit scope",
+                )
+            if seen_compilation_member:
+                raise SourceError(
+                    token.line,
+                    "file-scoped namespace must precede all members",
+                )
+            if file_scoped or openings:
+                raise SourceError(token.line, "ambiguous file-scoped namespace declaration")
+            file_scoped = name
+        else:
+            if file_scoped:
+                raise SourceError(token.line, "file-scoped namespace cannot be mixed with block namespaces")
+            openings[cursor] = name
+    return openings, file_scoped
 
 
 def _type_openings(tokens: list[Token]) -> dict[int, TypeContext]:
     raw_types = _raw_type_openings(tokens)
-    namespaces = _namespace_openings(tokens)
+    namespaces, file_scoped = _namespace_openings(tokens)
     openings: dict[int, TypeContext] = {}
-    namespace: tuple[str, ...] = ()
+    namespace = file_scoped
     type_path: tuple[str, ...] = ()
     frames: list[tuple[str, tuple[str, ...], tuple[str, ...]]] = []
+    alias_scopes: list[dict[str, tuple[str, ...]]] = [{}]
+    import_scopes: list[set[tuple[str, ...]]] = [set()]
 
     for index, token in enumerate(tokens):
+        visible_aliases = _visible_aliases(alias_scopes)
+        alias = _using_alias_at(tokens, index, visible_aliases)
+        if alias is not None:
+            alias_scopes[-1][alias[0]] = alias[1]
+        imported = _using_namespace_at(tokens, index)
+        if imported is not None:
+            import_scopes[-1].add(imported[0])
+
         if token.value == "{":
             previous = (namespace, type_path)
             if index in namespaces:
                 frames.append(("namespace", *previous))
                 namespace = namespace + namespaces[index]
             elif index in raw_types:
-                name, bases = raw_types[index]
-                context = TypeContext(name, bases, namespace, type_path + (name,))
+                name, raw_bases = raw_types[index]
+                aliases = _visible_aliases(alias_scopes)
+                base_names = tuple(_expand_alias(base, aliases) for base in raw_bases)
+                context = TypeContext(
+                    name,
+                    frozenset(base[-1] for base in base_names),
+                    base_names,
+                    namespace,
+                    type_path + (name,),
+                    _visible_imports(import_scopes),
+                    tuple(sorted(aliases.items())),
+                )
                 openings[index] = context
                 frames.append(("type", *previous))
                 type_path = context.type_path
             else:
                 frames.append(("other", *previous))
+            alias_scopes.append({})
+            import_scopes.append(set())
         elif token.value == "}" and frames:
             _, namespace, type_path = frames.pop()
+            alias_scopes.pop()
+            import_scopes.pop()
     return openings
 
 
@@ -914,7 +1311,6 @@ def _local_type_names(openings: dict[int, TypeContext]) -> frozenset[tuple[str, 
     return frozenset(
         context.namespace + context.type_path
         for context in openings.values()
-        if context.name in {"NetworkCallable", "NetworkCallableAttribute"}
     )
 
 
@@ -943,6 +1339,18 @@ SYNC_STRUCTS = {
     ("UnityEngine", "Vector4"),
     ("VRC", "SDKBase", "VRCUrl"),
 }
+KEYWORD_SYSTEM_TYPES = {
+    keyword: ("System", system_name)
+    for system_name, keyword in SYSTEM_TYPE_ALIASES.items()
+}
+KNOWN_PLATFORM_TYPES = set(SYNC_STRUCTS)
+for signatures in SDK_CALLBACK_SIGNATURES.values():
+    for _, parameters in signatures:
+        for parameter in parameters:
+            KNOWN_PLATFORM_TYPES.add(parameter[:-1] if parameter[-1:] == ("[]",) else parameter)
+for _, parameters in UNITY_CALLBACK_SIGNATURES.values():
+    for parameter in parameters:
+        KNOWN_PLATFORM_TYPES.add(parameter)
 
 
 def _split_parameter_tokens(tokens: list[Token]) -> list[list[Token]]:
@@ -969,36 +1377,102 @@ def _split_parameter_tokens(tokens: list[Token]) -> list[list[Token]]:
 def _supported_parameter_type(
     type_tokens: list[Token],
     aliases: dict[str, tuple[str, ...]],
-) -> tuple[str, bool]:
+    imports: frozenset[tuple[str, ...]],
+    context: TypeContext | None,
+    local_types: frozenset[tuple[str, ...]],
+) -> tuple[str, bool, tuple[str, ...] | None]:
     array = False
     if len(type_tokens) >= 2 and [item.value for item in type_tokens[-2:]] == ["[", "]"]:
         array = True
         type_tokens = type_tokens[:-2]
     if any(item.value in {"[", "]", "<", ">", "?", "*"} for item in type_tokens):
-        return "".join(item.raw for item in type_tokens), False
+        return "".join(item.raw for item in type_tokens), False, None
     name = _qualified_name(type_tokens, 0, len(type_tokens))
     if name is None:
-        return "".join(item.raw for item in type_tokens), False
+        return "".join(item.raw for item in type_tokens), False, None
     name = _expand_alias(name, aliases)
-    if len(name) == 1 and name[0] in SYNC_PRIMITIVES:
-        supported = True
+    bound: tuple[str, ...] | None = None
+    local_binding = False
+    if len(name) == 1 and name[0] in KEYWORD_SYSTEM_TYPES:
+        bound = KEYWORD_SYSTEM_TYPES[name[0]]
     elif len(name) == 1 and name[0] in SYSTEM_TYPE_ALIASES:
-        supported = True
-    elif len(name) == 2 and name[0] == "System" and name[1] in SYSTEM_TYPE_ALIASES:
-        supported = True
-    elif name in SYNC_STRUCTS:
-        supported = True
-    elif len(name) == 1 and any(candidate[-1] == name[0] for candidate in SYNC_STRUCTS):
-        supported = True
+        local = _visible_local_types(name[0], context, imports, local_types)
+        if local:
+            bound = _single_type_binding(local, type_tokens[0].line)
+            local_binding = True
+        elif ("System",) in imports:
+            bound = ("System", name[0])
+    elif len(name) == 1:
+        local = _visible_local_types(name[0], context, imports, local_types)
+        platform = {
+            candidate for candidate in KNOWN_PLATFORM_TYPES
+            if candidate[-1] == name[0] and candidate[:-1] in imports
+        }
+        candidates = local if local else platform
+        if candidates:
+            bound = _single_type_binding(candidates, type_tokens[0].line)
+            local_binding = bool(local)
     else:
-        supported = False
+        possible = {name, *(imported + name for imported in imports)}
+        local = {candidate for candidate in possible if candidate in local_types}
+        platform = {
+            candidate for candidate in possible if candidate in KNOWN_PLATFORM_TYPES
+        }
+        if local:
+            bound = _single_type_binding(local, type_tokens[0].line)
+            local_binding = True
+        elif platform:
+            bound = _single_type_binding(platform, type_tokens[0].line)
+        elif len(name) == 2 and name[0] == "System" and name[1] in SYSTEM_TYPE_ALIASES:
+            bound = name
+    if bound is not None and array:
+        bound = bound + ("[]",)
+    supported_base = bound[:-1] if bound is not None and bound[-1:] == ("[]",) else bound
+    supported = not local_binding and (
+        supported_base in SYNC_STRUCTS or (
+            supported_base is not None
+            and len(supported_base) == 2
+            and supported_base[0] == "System"
+            and supported_base[1] in SYSTEM_TYPE_ALIASES
+        )
+    )
     display = ".".join(name) + ("[]" if array else "")
-    return display, supported
+    return display, supported, bound
+
+
+def _visible_local_types(
+    short_name: str,
+    context: TypeContext | None,
+    imports: frozenset[tuple[str, ...]],
+    local_types: frozenset[tuple[str, ...]],
+) -> set[tuple[str, ...]]:
+    candidates: set[tuple[str, ...]] = set()
+    if context is not None:
+        for depth in range(len(context.type_path), -1, -1):
+            candidate = context.namespace + context.type_path[:depth] + (short_name,)
+            if candidate in local_types:
+                candidates.add(candidate)
+    for imported in imports:
+        candidate = imported + (short_name,)
+        if candidate in local_types:
+            candidates.add(candidate)
+    return candidates
+
+
+def _single_type_binding(
+    candidates: set[tuple[str, ...]], line: int
+) -> tuple[str, ...]:
+    if len(candidates) != 1:
+        raise SourceError(line, "ambiguous type binding")
+    return next(iter(candidates))
 
 
 def _parse_parameters(
     tokens: list[Token],
     aliases: dict[str, tuple[str, ...]],
+    imports: frozenset[tuple[str, ...]],
+    context: TypeContext | None,
+    local_types: frozenset[tuple[str, ...]],
 ) -> tuple[Parameter, ...]:
     parameters: list[Parameter] = []
     for part in _split_parameter_tokens(tokens):
@@ -1010,11 +1484,46 @@ def _parse_parameters(
             declaration = declaration[1:]
         if len(declaration) < 2 or declaration[-1].kind != "identifier":
             raise SourceError(part[0].line, "cannot safely classify NetworkCallable parameter")
-        type_name, supported = _supported_parameter_type(declaration[:-1], aliases)
+        type_name, supported, bound_type = _supported_parameter_type(
+            declaration[:-1], aliases, imports, context, local_types
+        )
         parameters.append(
-            Parameter(type_name, frozenset(modifiers), equals is not None, supported)
+            Parameter(
+                type_name,
+                frozenset(modifiers),
+                equals is not None,
+                supported,
+                bound_type,
+            )
         )
     return tuple(parameters)
+
+
+def _return_type_name(
+    tokens: list[Token],
+    aliases: dict[str, tuple[str, ...]],
+    imports: frozenset[tuple[str, ...]],
+    context: TypeContext | None,
+    local_types: frozenset[tuple[str, ...]],
+) -> str:
+    name = _qualified_name(tokens, 0, len(tokens))
+    if name is not None:
+        expanded = _expand_alias(name, aliases)
+        if (
+            expanded == ("Boolean",)
+            and ("System",) in imports
+            and not _visible_local_types("Boolean", context, imports, local_types)
+        ):
+            expanded = ("System", "Boolean")
+        if (
+            len(expanded) == 2
+            and expanded[0] == "System"
+            and expanded not in local_types
+        ):
+            keyword = SYSTEM_TYPE_ALIASES.get(expanded[1])
+            if keyword is not None:
+                return keyword
+    return "".join(item.raw for item in tokens)
 
 
 def parse_declaration(
@@ -1091,17 +1600,22 @@ def parse_declaration(
         parameters = _parse_parameters(
             tokens[paren_index + 1:close_paren],
             aliases,
+            imports,
+            context,
+            local_types,
         )
         method = Method(
             name=name_token.value,
             display_name=name_token.raw,
-            return_type="".join(item.raw for item in header),
+            return_type=_return_type_name(
+                header, aliases, imports, context, local_types
+            ),
             modifiers=frozenset(modifiers),
             parameterless=not parameters,
             parameters=parameters,
             access=tokens[public_index].value,
             generic=tokens[paren_index - 1].value == ">",
-            network_callable=network_callable,
+            network_callable_occurrences=network_callable,
             line=tokens[public_index].line,
             context=context,
         )
@@ -1130,9 +1644,11 @@ def parse_declaration(
     raise SourceError(tokens[public_index].line, "unclassified public declaration")
 
 
-def declarations_in_tokens(tokens: list[Token]) -> Iterable[Declaration]:
+def declarations_in_tokens(
+    tokens: list[Token],
+    local_types: frozenset[tuple[str, ...]],
+) -> Iterable[Declaration]:
     openings = _type_openings(tokens)
-    local_types = _local_type_names(openings)
     type_stack: list[TypeContext | None] = []
     alias_scopes: list[dict[str, tuple[str, ...]]] = [{}]
     import_scopes: list[set[tuple[str, ...]]] = [set()]
@@ -1176,10 +1692,10 @@ def declarations_in_tokens(tokens: list[Token]) -> Iterable[Declaration]:
 
 def implicit_methods_in_tokens(
     tokens: list[Token],
+    local_types: frozenset[tuple[str, ...]],
 ) -> list[Method]:
     """Collect class members whose private accessibility is implicit."""
     openings = _type_openings(tokens)
-    local_types = _local_type_names(openings)
     frames: list[TypeContext | None] = []
     alias_scopes: list[dict[str, tuple[str, ...]]] = [{}]
     import_scopes: list[set[tuple[str, ...]]] = [set()]
@@ -1232,7 +1748,13 @@ def implicit_methods_in_tokens(
                     if close_paren is None:
                         raise SourceError(token.line, "unmatched '('")
                     aliases = _visible_aliases(alias_scopes)
-                    parameters = _parse_parameters(tokens[index + 1:close_paren], aliases)
+                    parameters = _parse_parameters(
+                        tokens[index + 1:close_paren],
+                        aliases,
+                        _visible_imports(import_scopes),
+                        frames[-1],
+                        local_types,
+                    )
                     found.append(
                         Method(
                             name=name_token.value,
@@ -1243,7 +1765,7 @@ def implicit_methods_in_tokens(
                             parameters=parameters,
                             access="private",
                             generic=tokens[index - 1].value == ">",
-                            network_callable=_attribute_names_before(
+                            network_callable_occurrences=_attribute_names_before(
                                 tokens,
                                 modifier_index,
                                 aliases,
@@ -1267,15 +1789,97 @@ def implicit_methods_in_tokens(
     return found
 
 
+def network_callable_occurrences_in_tokens(
+    tokens: list[Token],
+    local_types: frozenset[tuple[str, ...]],
+) -> tuple[NetworkCallableOccurrence, ...]:
+    openings = _type_openings(tokens)
+    frames: list[TypeContext | None] = []
+    alias_scopes: list[dict[str, tuple[str, ...]]] = [{}]
+    import_scopes: list[set[tuple[str, ...]]] = [set()]
+    found: list[NetworkCallableOccurrence] = []
+
+    for index, token in enumerate(tokens):
+        aliases = _visible_aliases(alias_scopes)
+        alias = _using_alias_at(tokens, index, aliases)
+        if alias is not None:
+            alias_scopes[-1][alias[0]] = alias[1]
+            aliases = _visible_aliases(alias_scopes)
+        imported = _using_namespace_at(tokens, index)
+        if imported is not None:
+            import_scopes[-1].add(imported[0])
+
+        if token.value == "[":
+            right = _matching_right(tokens, index, "[", "]")
+            if right is None:
+                raise SourceError(token.line, "unmatched '['")
+            context = next((item for item in reversed(frames) if item is not None), None)
+            found.extend(_network_occurrences_in_section(
+                tokens,
+                index,
+                right,
+                aliases,
+                _visible_imports(import_scopes),
+                context,
+                local_types,
+            ))
+
+        if token.value == "{":
+            frames.append(openings.get(index))
+            alias_scopes.append({})
+            import_scopes.append(set())
+        elif token.value == "}" and frames:
+            frames.pop()
+            alias_scopes.pop()
+            import_scopes.pop()
+    return tuple(found)
+
+
+def _parameter_matches(parameter: Parameter, expected: tuple[str, ...]) -> bool:
+    if parameter.modifiers or parameter.has_default:
+        return False
+    if parameter.bound_type is not None:
+        return parameter.bound_type == expected
+    expected_display = expected[-2] + "[]" if expected[-1:] == ("[]",) else expected[-1]
+    return parameter.type_name == expected_display
+
+
+def _method_matches_signature(
+    method: Method,
+    signature: tuple[str, tuple[tuple[str, ...], ...]],
+) -> bool:
+    return_type, parameters = signature
+    return (
+        not method.generic
+        and
+        method.return_type == return_type
+        and len(method.parameters) == len(parameters)
+        and all(
+            _parameter_matches(parameter, expected)
+            for parameter, expected in zip(method.parameters, parameters)
+        )
+    )
+
+
+def callback_contract_error(method: Method) -> str | None:
+    if method.name in SDK_CALLBACK_SIGNATURES:
+        if method.modifiers != frozenset({"override"}) or not any(
+            _method_matches_signature(method, signature)
+            for signature in SDK_CALLBACK_SIGNATURES[method.name]
+        ):
+            return "built-in Udon event signature does not match SDK 3.10.4"
+        return None
+    if method.name in UNITY_CALLBACK_SIGNATURES:
+        if method.modifiers or not _method_matches_signature(
+            method, UNITY_CALLBACK_SIGNATURES[method.name]
+        ):
+            return "built-in Unity event signature does not match SDK 3.10.4"
+    return None
+
+
 def callback_category(method: Method) -> str | None:
-    if method.return_type == "void" and method.name in UNITY_MESSAGE_ALLOWLIST:
-        return "callback"
-    if (
-        method.return_type == "void"
-        and method.name in UDON_OVERRIDE_CALLBACK_ALLOWLIST
-        and "override" in method.modifiers
-    ):
-        return "callback"
+    if method.name in SDK_CALLBACK_SIGNATURES or method.name in UNITY_CALLBACK_SIGNATURES:
+        return "callback" if callback_contract_error(method) is None else None
     context = method.context
     if context is None:
         return None
@@ -1304,6 +1908,79 @@ def display_path(path: Path, root: Path) -> str:
         return str(path)
 
 
+def _type_key(context: TypeContext | None) -> tuple[str, ...]:
+    return context.namespace + context.type_path if context is not None else ()
+
+
+def _resolve_local_base(
+    context: TypeContext,
+    base_name: tuple[str, ...],
+    local_types: frozenset[tuple[str, ...]],
+) -> tuple[str, ...] | None:
+    candidates: set[tuple[str, ...]] = set()
+    if len(base_name) == 1:
+        for depth in range(len(context.type_path) - 1, -1, -1):
+            candidate = context.namespace + context.type_path[:depth] + base_name
+            if candidate in local_types:
+                candidates.add(candidate)
+        for imported in context.imports:
+            candidate = imported + base_name
+            if candidate in local_types:
+                candidates.add(candidate)
+    else:
+        if base_name in local_types:
+            candidates.add(base_name)
+        candidate = context.namespace + base_name
+        if candidate in local_types:
+            candidates.add(candidate)
+    if len(candidates) > 1:
+        raise SourceError(1, "ambiguous local inheritance binding")
+    return next(iter(candidates)) if candidates else None
+
+
+def _base_binds_to_platform(
+    context: TypeContext,
+    base_name: tuple[str, ...],
+    platform_type: tuple[str, ...],
+    local_types: frozenset[tuple[str, ...]],
+) -> bool:
+    """Bind a base name without letting a package-local type spoof a platform base."""
+    if len(base_name) == 1:
+        local = _visible_local_types(
+            base_name[0], context, context.imports, local_types
+        )
+        if local:
+            _single_type_binding(local, 1)
+            return False
+        # Documentation fragments commonly omit their using preamble. A unique
+        # platform short name remains bindable only when the whole input has no
+        # visible package-local declaration that would shadow it.
+        return base_name[0] == platform_type[-1]
+
+    possible = {base_name, context.namespace + base_name}
+    possible.update(imported + base_name for imported in context.imports)
+    if any(candidate in local_types for candidate in possible):
+        return False
+    return platform_type in possible
+
+
+def _ancestor_types(
+    type_name: tuple[str, ...],
+    graph: dict[tuple[str, ...], set[tuple[str, ...]]],
+) -> set[tuple[str, ...]]:
+    ancestors: set[tuple[str, ...]] = set()
+    pending = list(graph.get(type_name, ()))
+    while pending:
+        candidate = pending.pop()
+        if candidate == type_name:
+            raise SourceError(1, "cyclic local inheritance graph")
+        if candidate in ancestors:
+            continue
+        ancestors.add(candidate)
+        pending.extend(graph.get(candidate, ()))
+    return ancestors
+
+
 def audit_path(root: Path) -> tuple[list[str], dict[str, int]]:
     if root.is_file():
         paths = [root] if root.suffix in {".cs", ".md"} else []
@@ -1319,6 +1996,8 @@ def audit_path(root: Path) -> tuple[list[str], dict[str, int]]:
         "declaration": 0,
     }
 
+    units: list[tuple[str, list[Token], dict[int, TypeContext]]] = []
+    all_local_types: set[tuple[str, ...]] = set()
     for path in paths:
         shown_path = display_path(path, root)
         try:
@@ -1332,31 +2011,167 @@ def audit_path(root: Path) -> tuple[list[str], dict[str, int]]:
         for segment in segments:
             try:
                 tokens = lex_csharp(segment.text, segment.first_line)
-                declarations = list(declarations_in_tokens(tokens))
-                implicit_methods = implicit_methods_in_tokens(tokens)
+                _validate_delimiters(tokens)
+                openings = _type_openings(tokens)
             except SourceError as error:
                 violations.append(f"{shown_path}:{error.line}: {error.message}")
                 continue
+            units.append((shown_path, tokens, openings))
+            all_local_types.update(_local_type_names(openings))
 
+    local_types = frozenset(all_local_types)
+    parsed_units: list[tuple[str, list[Declaration], list[Method]]] = []
+    located_methods: list[tuple[str, Method]] = []
+    type_contexts: dict[tuple[str, ...], list[TypeContext]] = {}
+    for shown_path, tokens, openings in units:
+        for context in openings.values():
+            type_contexts.setdefault(_type_key(context), []).append(context)
+        try:
+            declarations = list(declarations_in_tokens(tokens, local_types))
+            implicit_methods = implicit_methods_in_tokens(tokens, local_types)
+            occurrences = network_callable_occurrences_in_tokens(tokens, local_types)
+        except SourceError as error:
+            violations.append(f"{shown_path}:{error.line}: {error.message}")
+            continue
+
+        methods = [
+            declaration.method for declaration in declarations
+            if declaration.method is not None
+        ] + implicit_methods
+        attached_occurrences = {
+            occurrence
+            for method in methods
+            for occurrence in method.network_callable_occurrences
+        }
+        for occurrence in occurrences:
+            if occurrence.token_index not in attached_occurrences:
+                violations.append(
+                    f"{shown_path}:{occurrence.line}: NetworkCallable attribute must target a method"
+                )
+        parsed_units.append((shown_path, declarations, methods))
+        located_methods.extend((shown_path, method) for method in methods)
+
+    inheritance: dict[tuple[str, ...], set[tuple[str, ...]]] = {}
+    for type_name, contexts in type_contexts.items():
+        bases = inheritance.setdefault(type_name, set())
+        for context in contexts:
+            for base_name in context.base_names:
+                try:
+                    resolved = _resolve_local_base(context, base_name, local_types)
+                except SourceError as error:
+                    violations.append(f"{'.'.join(type_name)}:{error.message}")
+                    continue
+                if resolved is not None:
+                    bases.add(resolved)
+
+    methods_by_type: dict[tuple[str, ...], list[Method]] = {}
+    for _, method in located_methods:
+        methods_by_type.setdefault(_type_key(method.context), []).append(method)
+    overloaded_network_methods: set[tuple[tuple[str, ...], str, int]] = set()
+    try:
+        ancestors_by_type = {
+            type_name: _ancestor_types(type_name, inheritance)
+            for type_name in type_contexts
+        }
+    except SourceError as error:
+        violations.append(error.message)
+        ancestors_by_type = {type_name: set() for type_name in type_contexts}
+    descendants_by_type = {type_name: set() for type_name in type_contexts}
+    for type_name, ancestors in ancestors_by_type.items():
+        for ancestor in ancestors:
+            descendants_by_type.setdefault(ancestor, set()).add(type_name)
+    for _, method in located_methods:
+        if not method.network_callable_occurrences:
+            continue
+        type_name = _type_key(method.context)
+        if not type_name:
+            continue
+        related_types = (
+            {type_name}
+            | ancestors_by_type.get(type_name, set())
+            | descendants_by_type.get(type_name, set())
+        )
+        matching = sum(
+            candidate.name == method.name
+            for related in related_types
+            for candidate in methods_by_type.get(related, ())
+        )
+        if matching > 1:
+            overloaded_network_methods.add((type_name, method.name, method.line))
+
+    udon_types: set[tuple[str, ...]] = set()
+    unity_callback_types: set[tuple[str, ...]] = set()
+    for type_name, contexts in type_contexts.items():
+        try:
+            if any(
+                _base_binds_to_platform(
+                    context, base_name, UDONSHARP_BEHAVIOUR_TYPE, local_types
+                )
+                for context in contexts
+                for base_name in context.base_names
+            ):
+                udon_types.add(type_name)
+            if any(
+                _base_binds_to_platform(context, base_name, platform, local_types)
+                for context in contexts
+                for base_name in context.base_names
+                for platform in UNITY_CALLBACK_BASE_TYPES
+            ):
+                unity_callback_types.add(type_name)
+        except SourceError as error:
+            violations.append(f"{'.'.join(type_name)}:{error.message}")
+    changed = True
+    while changed:
+        changed = False
+        for type_name, bases in inheritance.items():
+            if type_name not in udon_types and bases & udon_types:
+                udon_types.add(type_name)
+                changed = True
+            if (
+                type_name not in unity_callback_types
+                and bases & unity_callback_types
+            ):
+                unity_callback_types.add(type_name)
+                changed = True
+
+    unity_callback_types.update(udon_types)
+
+    def callback_relevant(method: Method) -> bool:
+        context = method.context
+        if context is None:
+            return (
+                method.name in SDK_CALLBACK_SIGNATURES
+                or method.name in UNITY_CALLBACK_SIGNATURES
+            )
+        type_name = _type_key(context)
+        if method.name in SDK_CALLBACK_SIGNATURES:
+            return type_name in udon_types
+        if method.name in UNITY_CALLBACK_SIGNATURES:
+            return type_name in unity_callback_types
+        return type_name in udon_types
+
+    invalid_callbacks: set[tuple[str, int, str]] = set()
+    for shown_path, method in located_methods:
+        if not callback_relevant(method):
+            continue
+        callback_error = callback_contract_error(method)
+        if method.name in SDK_CALLBACK_SIGNATURES and method.access != "public":
+            callback_error = "built-in Udon event modifier does not match SDK 3.10.4"
+        if callback_error is not None:
+            signature = f"{method.access} {method.return_type} {method.display_name}()"
+            violations.append(
+                f"{shown_path}:{method.line}: {callback_error}: {signature}"
+            )
+            invalid_callbacks.add((shown_path, method.line, method.name))
+
+    for shown_path, declarations, methods in parsed_units:
             public_declarations = [
                 declaration for declaration in declarations
                 if declaration.kind != "nonpublic_method"
             ]
             counts["declaration"] += len(public_declarations)
-            methods = [
-                declaration.method for declaration in declarations
-                if declaration.method is not None
-            ] + implicit_methods
-            method_names: dict[tuple[tuple[str, ...], str], int] = {}
             for method in methods:
-                context_key = (
-                    method.context.namespace + method.context.type_path
-                    if method.context is not None else ()
-                )
-                key = (context_key, method.name)
-                method_names[key] = method_names.get(key, 0) + 1
-            for method in methods:
-                if not method.network_callable:
+                if not method.network_callable_occurrences:
                     continue
                 counts["network_callable"] += 1
                 location = f"{shown_path}:{method.line}"
@@ -1364,6 +2179,10 @@ def audit_path(root: Path) -> tuple[list[str], dict[str, int]]:
                     f"{method.access} {method.return_type} "
                     f"{method.display_name}()"
                 )
+                if method.name in SDK_CALLBACK_SIGNATURES or method.name in UNITY_CALLBACK_SIGNATURES:
+                    violations.append(
+                        f"{location}: built-in Udon event cannot be NetworkCallable: {signature}"
+                    )
                 if method.access != "public":
                     violations.append(
                         f"{location}: NetworkCallable method must be public: {signature}"
@@ -1410,11 +2229,8 @@ def audit_path(root: Path) -> tuple[list[str], dict[str, int]]:
                         violations.append(
                             f"{location}: unsupported NetworkCallable parameter type '{parameter.type_name}': {signature}"
                         )
-                context_key = (
-                    method.context.namespace + method.context.type_path
-                    if method.context is not None else ()
-                )
-                if method_names.get((context_key, method.name), 0) > 1:
+                overload_key = (_type_key(method.context), method.name, method.line)
+                if overload_key in overloaded_network_methods:
                     violations.append(
                         f"{location}: NetworkCallable method cannot be overloaded: {signature}"
                     )
@@ -1426,19 +2242,29 @@ def audit_path(root: Path) -> tuple[list[str], dict[str, int]]:
                 location = f"{shown_path}:{method.line}"
                 signature = f"public {method.return_type} {method.display_name}()"
 
-                if method.network_callable:
+                if method.network_callable_occurrences:
                     continue
 
-                if not method.parameterless or "static" in method.modifiers:
+                if (shown_path, method.line, method.name) in invalid_callbacks:
+                    continue
+
+                if "static" in method.modifiers:
+                    continue
+                category = (
+                    callback_category(method)
+                    if callback_relevant(method)
+                    or method.name in {"OnInspectorGUI", "OnPreprocess"}
+                    else None
+                )
+                if category is not None:
+                    counts[category] += 1
+                    continue
+                if not method.parameterless:
                     continue
                 if method.name.startswith("_"):
                     counts["local"] += 1
                     continue
-                category = callback_category(method)
-                if category is not None:
-                    counts[category] += 1
-                else:
-                    violations.append(f"{location}: legacy network exposure: {signature}")
+                violations.append(f"{location}: legacy network exposure: {signature}")
 
     return violations, counts
 

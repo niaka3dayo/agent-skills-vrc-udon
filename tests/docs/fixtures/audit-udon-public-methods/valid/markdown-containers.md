@@ -6,7 +6,8 @@
 > ```
 
 - ```cs
-  public class ListedSafeExample
+  using UnityEngine;
+  public class ListedSafeExample : MonoBehaviour
   {
       public void Update() { }
   }
@@ -29,3 +30,10 @@
 >   public void ApparentInnerExposure() { }
 >   ```
 >   ~~~~
+
+- > ```csharp
+  > public class ReverseNestedSafeExample
+  > {
+  >     public void _LocalOnly() { }
+  > }
+  > ```

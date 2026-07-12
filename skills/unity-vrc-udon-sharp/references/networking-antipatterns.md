@@ -268,7 +268,7 @@ public class GameFlag : UdonSharpBehaviour
 {
     [UdonSynced] public bool isCaptured;
 
-    public override void OnTriggerEnter(Collider other)
+    public void OnTriggerEnter(Collider other)
     {
         // Any player can run this, but only the owner's write will persist
         isCaptured = true;
@@ -285,7 +285,7 @@ public class GameFlag : UdonSharpBehaviour
 {
     [UdonSynced] public bool isCaptured;
 
-    public override void OnTriggerEnter(Collider other)
+    public void OnTriggerEnter(Collider other)
     {
         if (!Networking.IsOwner(gameObject))
         {

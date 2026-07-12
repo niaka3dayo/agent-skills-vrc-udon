@@ -16,6 +16,8 @@ DYNAMICS_REF="$UDON_DIR/references/dynamics.md"
 CHEATSHEET="$UDON_DIR/CHEATSHEET.md"
 UNDO_TEMPLATE="$UDON_DIR/assets/templates/UndoableGameManager.cs"
 POOL_TEMPLATE="$UDON_DIR/assets/templates/MasterManagedPlayerPool.cs"
+BATCH_TEMPLATE="$UDON_DIR/assets/templates/BatchedSync.cs"
+EVENTS_REF="$UDON_DIR/references/events.md"
 PUBLIC_METHOD_AUDIT="$ROOT_DIR/tests/docs/audit-udon-public-methods.py"
 PUBLIC_METHOD_AUDIT_TEST="$ROOT_DIR/tests/docs/audit-udon-public-methods.test.sh"
 CONTRIBUTING="$ROOT_DIR/CONTRIBUTING.md"
@@ -288,6 +290,28 @@ if [ "$ASSIGNMENT_WRITE_COUNT" -ne 6 ]; then
     echo "ERROR: assignment mutation inventory changed; review every write guard" >&2
     exit 1
 fi
+require_text "$POOL_TEMPLATE" 'private void _ApplyAssignmentsLocally()'
+require_count "$POOL_TEMPLATE" '_ApplyAssignmentsLocally();' 9
+require_order "$POOL_TEMPLATE" '_previousAssignments = new int[poolSize];' '_ApplyAssignmentsLocally();'
+POOL_APPLY_BODY="$(awk '
+    /private void _ApplyAssignmentsLocally\(\)/ { in_method = 1 }
+    /private void _ActivateSlot\(/ { exit }
+    in_method { print }
+' "$POOL_TEMPLATE")"
+require_text <(printf '%s\n' "$POOL_APPLY_BODY") '_previousAssignments[i] = newId;'
+require_text <(printf '%s\n' "$POOL_APPLY_BODY") '_ActivateSlot(i, player);'
+require_text <(printf '%s\n' "$POOL_APPLY_BODY") '_DeactivateSlot(i);'
+POOL_DESERIALIZATION_BODY="$(awk '
+    /public override void OnDeserialization\(\)/ { in_method = 1 }
+    /public override void OnMasterTransferred\(/ { exit }
+    in_method { print }
+' "$POOL_TEMPLATE")"
+require_text <(printf '%s\n' "$POOL_DESERIALIZATION_BODY") '_ApplyAssignmentsLocally();'
+POOL_SERIALIZE_BODY="$(awk '
+    /private void _SerializeAssignments\(\)/ { in_method = 1 }
+    in_method { print }
+' "$POOL_TEMPLATE")"
+forbid_text <(printf '%s\n' "$POOL_SERIALIZE_BODY") '_ApplyAssignmentsLocally();'
 forbid_text "$PATTERNS_REF" 'The instance master owns all assignment logic'
 require_text "$PATTERNS_REF" 'manager GameObject ownership is the write authority'
 require_text "$API_REF" '[UdonSynced] private int[] assignedPlayerIds;'
@@ -301,6 +325,44 @@ require_text "$API_REF" 'assignedPlayerIds[poolIndex] = 0;'
 require_order "$API_REF" 'assignedPlayerIds[poolIndex] = player.playerId;' 'Networking.SetOwner(player, spawned);'
 require_order "$API_REF" 'assignedPlayerIds[poolIndex] = 0;' 'objectPool.Return(pooledObject);'
 forbid_text "$API_REF" 'pooledBehaviour.Owner == player'
+
+# Authoritative local changes update the owner's display before serialization,
+# while deserialization reuses the same idempotent display path.
+require_text "$UNDO_TEMPLATE" 'private void _ApplyDisplayLocally()'
+require_count "$UNDO_TEMPLATE" '_ApplyDisplayLocally();' 5
+require_order "$UNDO_TEMPLATE" '_SaveStateToHistory(); // Initial state = history[0]' '_ApplyDisplayLocally();'
+MOVE_BODY="$(awk '
+    /public void _OwnerProcessMove\(/ { in_method = 1 }
+    /private void _SaveStateToHistory\(/ { exit }
+    in_method { print }
+' "$UNDO_TEMPLATE")"
+UNDO_BODY="$(awk '
+    /public void _OwnerUndo\(\)/ { in_method = 1 }
+    /public void _OnResetClicked\(\)/ { exit }
+    in_method { print }
+' "$UNDO_TEMPLATE")"
+RESET_BODY="$(awk '
+    /public void _OwnerReset\(\)/ { in_method = 1 }
+    /public override void OnDeserialization\(\)/ { exit }
+    in_method { print }
+' "$UNDO_TEMPLATE")"
+require_string_order "$MOVE_BODY" '_SaveStateToHistory(); // Save once after the operation' '_ApplyDisplayLocally();'
+require_string_order "$UNDO_BODY" 'System.Array.Copy(stateHistory, offset, currentState, 0, stateSize);' '_ApplyDisplayLocally();'
+require_string_order "$RESET_BODY" 'historyCount = 1;' '_ApplyDisplayLocally();'
+
+# Complete examples use exact SDK 3.10.4 callback names and parameter types.
+require_text "$BATCH_TEMPLATE" 'public void _OnPlayerSlotJoined(int slotIndex)'
+forbid_text "$BATCH_TEMPLATE" 'public void OnPlayerJoined(int slotIndex)'
+require_text "$BATCH_TEMPLATE" 'public void _OnPlayerReady(int slotIndex)'
+forbid_text "$BATCH_TEMPLATE" 'public void OnPlayerReady(int slotIndex)'
+require_text "$API_REF" 'public override void OnDroneTriggerEnter(VRCDroneApi drone)'
+forbid_text "$API_REF" 'OnDroneTriggerEnter(Collider other)'
+require_text "$EVENTS_REF" '`void OnDroneTriggerEnter(VRCDroneApi drone)`'
+require_text "$EVENTS_REF" '`void OnDroneTriggerStay(VRCDroneApi drone)`'
+require_text "$EVENTS_REF" '`void OnDroneTriggerExit(VRCDroneApi drone)`'
+require_text "$EVENTS_REF" 'public override void OnDroneTriggerEnter(VRCDroneApi drone)'
+require_text "$EVENTS_REF" 'public override void OnDroneTriggerExit(VRCDroneApi drone)'
+forbid_regex "$EVENTS_REF" 'OnDroneTrigger(Enter|Stay|Exit)\(Collider'
 
 # Targeted receiver validates call context, caller, payload, and routing in order.
 require_text "$NETWORKING_REF" '[NetworkCallable(2)]'

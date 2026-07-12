@@ -123,7 +123,7 @@ private int Factorial(int n) { ... }
 
 ```csharp
 // NG: override -> CS0115 error
-public override void OnTriggerEnter(Collider other) { }
+// public override void OnTriggerEnter(Collider other) { }
 // OK: No override
 public void OnTriggerEnter(Collider other) { }
 // OK: VRChat events require override
