@@ -83,6 +83,8 @@ public class UndoableGameManager : UdonSharpBehaviour
 
     public void _OnUndoClicked()
     {
+        if (!Networking.IsOwner(gameObject)) return;
+
         SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerUndo));
     }
 
@@ -101,6 +103,8 @@ public class UndoableGameManager : UdonSharpBehaviour
 
     public void _OnResetClicked()
     {
+        if (!Networking.IsOwner(gameObject)) return;
+
         SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerReset));
     }
 

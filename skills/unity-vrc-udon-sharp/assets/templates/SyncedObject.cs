@@ -179,7 +179,8 @@ public class SyncedObject : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Public method to get current state.
+    /// Local-only public method to get current state.
+    /// The leading underscore prevents legacy network calls.
     /// </summary>
     public bool _GetState()
     {
@@ -187,7 +188,8 @@ public class SyncedObject : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Get the player who last interacted with this object.
+    /// Local-only public method to get the player who last interacted with this object.
+    /// The leading underscore prevents legacy network calls.
     /// </summary>
     public VRCPlayerApi _GetLastInteractor()
     {

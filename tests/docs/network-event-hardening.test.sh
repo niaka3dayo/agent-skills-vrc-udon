@@ -440,4 +440,533 @@ DOCS_JOB="$(awk '
 require_text <(printf '%s\n' "$DOCS_JOB") '    name: Documentation Smoke Tests'
 require_text <(printf '%s\n' "$DOCS_JOB") $'      - name: Check network event hardening and SDK coverage\n        run: bash tests/docs/network-event-hardening.test.sh'
 
+# The two local input handlers must reject non-owner callers before dispatch,
+# while the getter comments must keep the local-only/legacy-call boundary clear.
+# Reuse the public-method audit lexer so comments and literal contents cannot
+# satisfy these checks, then isolate each method by its own brace-balanced body.
+python3 - "$UNDO_TEMPLATE" "$UDON_DIR/assets/templates/SyncedObject.cs" "$PUBLIC_METHOD_AUDIT" <<'PY'
+import importlib.util
+from pathlib import Path
+import sys
+
+
+class RegressionError(Exception):
+    pass
+
+
+def load_audit_module(path: Path):
+    spec = importlib.util.spec_from_file_location("udon_public_method_audit", path)
+    if spec is None or spec.loader is None:
+        raise RegressionError(f"could not import audit module: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def sequence_positions(values: list[str], needle: tuple[str, ...]) -> list[int]:
+    width = len(needle)
+    return [
+        index
+        for index in range(len(values) - width + 1)
+        if tuple(values[index:index + width]) == needle
+    ]
+
+
+def method_body(audit, source: str, name: str, return_type: str):
+    tokens = audit.lex_csharp(source)
+    values = [token.value for token in tokens]
+    declaration = ("public", return_type, name, "(", ")")
+    candidates = []
+    for index in range(len(values) - len(declaration)):
+        if tuple(values[index:index + len(declaration)]) != declaration:
+            continue
+        opening = index + len(declaration)
+        if opening < len(values) and values[opening] == "{":
+            candidates.append((index, opening))
+
+    if len(candidates) != 1:
+        raise RegressionError(
+            f"expected one complete declaration for {name}, found {len(candidates)}"
+        )
+
+    declaration_index, opening = candidates[0]
+    depth = 0
+    for index in range(opening, len(tokens)):
+        value = tokens[index].value
+        if value == "{":
+            depth += 1
+        elif value == "}":
+            depth -= 1
+            if depth == 0:
+                return tokens[opening + 1:index], tokens[declaration_index].line
+    raise RegressionError(f"unterminated body for {name}")
+
+
+OWNER_GUARD = (
+    "if", "(", "!", "Networking", ".", "IsOwner", "(",
+    "gameObject", ")", ")", "return", ";",
+)
+AUTHORIZATION_GUARD = (
+    "if", "(", "!", "_IsAuthorizedNetworkCaller", "(", ")", ")", "return", ";",
+)
+RECEIVER_SECURITY_PREFIX = AUTHORIZATION_GUARD + OWNER_GUARD
+SEND_NETWORK_EVENT = ("SendCustomNetworkEvent", "(")
+SET_OWNER_CALL = ("SetOwner", "(")
+HANDLER_DISPATCH = {
+    "_OnUndoClicked": (
+        "SendCustomNetworkEvent", "(", "NetworkEventTarget", ".", "Owner", ",",
+        "nameof", "(", "_OwnerUndo", ")", ")", ";",
+    ),
+    "_OnResetClicked": (
+        "SendCustomNetworkEvent", "(", "NetworkEventTarget", ".", "Owner", ",",
+        "nameof", "(", "_OwnerReset", ")", ")", ";",
+    ),
+}
+
+
+def set_owner_call_positions(tokens) -> list[int]:
+    values = [token.value for token in tokens]
+    positions = sequence_positions(values, SET_OWNER_CALL)
+    calls = []
+    for position in positions:
+        depth = 0
+        closing = None
+        for index in range(position + 1, len(values)):
+            if values[index] == "(":
+                depth += 1
+            elif values[index] == ")":
+                depth -= 1
+                if depth == 0:
+                    closing = index
+                    break
+        if closing is None:
+            calls.append(position)
+            continue
+        previous = values[position - 1] if position > 0 else ""
+        following = values[closing + 1] if closing + 1 < len(values) else ""
+        is_declaration = previous not in {".", "?.", "::"} and following in {"{", "=>"}
+        if not is_declaration:
+            calls.append(position)
+    return calls
+
+
+def check_handler(audit, source: str, name: str):
+    body, line = method_body(audit, source, name, "void")
+    values = [token.value for token in body]
+    guards = sequence_positions(values, OWNER_GUARD)
+    sends = sequence_positions(values, SEND_NETWORK_EVENT)
+    owners = set_owner_call_positions(body)
+
+    if not guards:
+        raise RegressionError(f"{name}:{line}: owner guard token sequence is missing")
+    if not sends:
+        raise RegressionError(f"{name}:{line}: SendCustomNetworkEvent token sequence is missing")
+    if guards[0] >= sends[0]:
+        raise RegressionError(f"{name}:{line}: owner guard must precede network dispatch")
+    if tuple(values[:len(OWNER_GUARD)]) != OWNER_GUARD:
+        raise RegressionError(f"{name}:{line}: owner guard is not the first execution statement")
+    if owners:
+        raise RegressionError(f"{name}:{line}: target method contains a SetOwner call")
+    expected_body = OWNER_GUARD + HANDLER_DISPATCH[name]
+    if tuple(values) != expected_body:
+        raise RegressionError(
+            f"{name}:{line}: handler must contain only the owner guard and owner dispatch"
+        )
+    return line
+
+
+def check_receiver_security_prefix(audit, source: str, name: str):
+    body, line = method_body(audit, source, name, "void")
+    values = tuple(token.value for token in body)
+    if values[:len(RECEIVER_SECURITY_PREFIX)] != RECEIVER_SECURITY_PREFIX:
+        raise RegressionError(
+            f"{name}:{line}: authorization and ownership guards must be the first tokens"
+        )
+    return line
+
+
+def check_no_owner_transfer(audit, source: str) -> None:
+    if set_owner_call_positions(audit.lex_csharp(source)):
+        raise RegressionError("UndoableGameManager contains a SetOwner call")
+
+
+def summary_immediately_before(source: str, method_line: int, name: str) -> str:
+    lines = source.splitlines()
+    cursor = method_line - 2
+    if cursor < 0 or lines[cursor].strip() != "/// </summary>":
+        raise RegressionError(f"{name}:{method_line}: summary is not immediately before method")
+    end = cursor
+    while cursor >= 0:
+        stripped = lines[cursor].strip()
+        if stripped == "/// <summary>":
+            return "\n".join(lines[cursor:end + 1])
+        if not stripped.startswith("///"):
+            break
+        cursor -= 1
+    raise RegressionError(f"{name}:{method_line}: malformed immediately preceding summary")
+
+
+GETTER_EXPECTATIONS = {
+    "_GetState": (
+        "bool",
+        ("return", "_isActive", ";"),
+        "/// Local-only public method to get current state.",
+        "/// The leading underscore prevents legacy network calls.",
+    ),
+    "_GetLastInteractor": (
+        "VRCPlayerApi",
+        (
+            "return",
+            "VRCPlayerApi",
+            ".",
+            "GetPlayerById",
+            "(",
+            "lastInteractorId",
+            ")",
+            ";",
+        ),
+        "/// Local-only public method to get the player who last interacted with this object.",
+        "/// The leading underscore prevents legacy network calls.",
+    ),
+}
+
+
+def check_getter_summaries(audit, source: str) -> None:
+    for name, (return_type, expected_body, *expected) in GETTER_EXPECTATIONS.items():
+        body, line = method_body(audit, source, name, return_type)
+        actual_body = tuple(token.value for token in body)
+        if actual_body != expected_body:
+            raise RegressionError(f"{name}:{line}: getter body does not match the exact contract")
+        summary_lines = tuple(
+            summary_line.strip()
+            for summary_line in summary_immediately_before(source, line, name).splitlines()
+        )
+        expected_summary = ("/// <summary>", *expected, "/// </summary>")
+        if summary_lines != expected_summary:
+            raise RegressionError(f"{name}:{line}: summary does not match the exact contract")
+
+
+def expect_rejected(
+    audit, source: str, name: str, label: str, expected_detail: str
+) -> None:
+    try:
+        check_handler(audit, source, name)
+    except RegressionError as error:
+        if expected_detail not in str(error):
+            raise RegressionError(
+                f"mutation {label} rejected for unexpected reason: "
+                f"expected {expected_detail!r}, got {error}"
+            ) from error
+        print(f"PASS: mutation {label} rejected ({error})")
+        return
+    raise RegressionError(f"mutation {label} was accepted")
+
+
+def expect_getter_rejected(
+    audit, source: str, label: str, expected_detail: str
+) -> None:
+    try:
+        check_getter_summaries(audit, source)
+    except RegressionError as error:
+        if expected_detail not in str(error):
+            raise RegressionError(
+                f"mutation {label} rejected for unexpected reason: "
+                f"expected {expected_detail!r}, got {error}"
+            ) from error
+        print(f"PASS: mutation {label} rejected ({error})")
+        return
+    raise RegressionError(f"mutation {label} was accepted")
+
+
+def expect_receiver_rejected(
+    audit, source: str, name: str, label: str, expected_detail: str
+) -> None:
+    try:
+        check_receiver_security_prefix(audit, source, name)
+    except RegressionError as error:
+        if expected_detail not in str(error):
+            raise RegressionError(
+                f"mutation {label} rejected for unexpected reason: "
+                f"expected {expected_detail!r}, got {error}"
+            ) from error
+        print(f"PASS: mutation {label} rejected ({error})")
+        return
+    raise RegressionError(f"mutation {label} was accepted")
+
+
+def replace_method_text(
+    audit,
+    source: str,
+    name: str,
+    return_type: str,
+    method_marker: str,
+    next_marker: str,
+    old: str,
+    new: str,
+) -> str:
+    method_body(audit, source, name, return_type)
+    if method_marker not in source:
+        raise RegressionError(f"could not locate {name} declaration")
+    prefix, remainder = source.split(method_marker, 1)
+    if next_marker not in remainder:
+        raise RegressionError(f"could not locate end of {name} mutation scope")
+    method_source, suffix = remainder.split(next_marker, 1)
+    if method_source.count(old) != 1:
+        raise RegressionError(f"expected one mutation target in {name} method scope")
+    return prefix + method_marker + method_source.replace(old, new, 1) + next_marker + suffix
+
+
+undo_path = Path(sys.argv[1])
+synced_path = Path(sys.argv[2])
+audit = load_audit_module(Path(sys.argv[3]))
+undo_source = undo_path.read_text(encoding="utf-8")
+synced_source = synced_path.read_text(encoding="utf-8")
+
+for handler in ("_OnUndoClicked", "_OnResetClicked"):
+    check_handler(audit, undo_source, handler)
+for receiver in ("_OwnerUndo", "_OwnerReset"):
+    check_receiver_security_prefix(audit, undo_source, receiver)
+check_no_owner_transfer(audit, undo_source)
+print("PASS: token-level owner guards, receiver security prefixes, dispatch order, and file-wide no-transfer policy")
+
+check_getter_summaries(audit, synced_source)
+print("PASS: getter XML summaries are attached to their target methods")
+
+handler_marker = "    public void _OnUndoClicked()\n"
+guard_line = "        if (!Networking.IsOwner(gameObject)) return;"
+undo_guard_marker = handler_marker + "    {\n" + guard_line
+
+
+def add_after_undo_guard(source: str, statement: str) -> str:
+    if undo_guard_marker not in source:
+        raise RegressionError("could not locate _OnUndoClicked owner guard")
+    return source.replace(undo_guard_marker, undo_guard_marker + "\n" + statement, 1)
+
+
+prefix, handler_source = undo_source.split(handler_marker, 1)
+if guard_line not in handler_source:
+    raise RegressionError("could not build comment-out guard mutation fixture")
+commented_guard = prefix + handler_marker + handler_source.replace(
+    guard_line, "        // " + guard_line.strip(), 1
+)
+expect_rejected(
+    audit,
+    commented_guard,
+    "_OnUndoClicked",
+    "comment-out guard",
+    "owner guard token sequence is missing",
+)
+
+helper_marker = "    [NetworkCallable]\n    public void _OwnerUndo()"
+adjacent_helper = (
+    "    private void _AdjacentOwnerTransferHelper()\n"
+    "    {\n"
+    "        Networking.SetOwner(Networking.LocalPlayer, gameObject);\n"
+    "    }\n\n"
+)
+if helper_marker not in undo_source:
+    raise RegressionError("could not build adjacent-helper mutation fixture")
+helper_fixture = undo_source.replace(helper_marker, adjacent_helper + helper_marker, 1)
+check_handler(audit, helper_fixture, "_OnUndoClicked")
+try:
+    check_no_owner_transfer(audit, helper_fixture)
+except RegressionError as error:
+    print(f"PASS: mutation adjacent helper SetOwner rejected file-wide ({error})")
+else:
+    raise RegressionError("mutation adjacent helper SetOwner was accepted file-wide")
+
+called_helper_fixture = add_after_undo_guard(
+    helper_fixture, "        _AdjacentOwnerTransferHelper();"
+)
+expect_rejected(
+    audit,
+    called_helper_fixture,
+    "_OnUndoClicked",
+    "called ownership-transfer helper",
+    "handler must contain only the owner guard and owner dispatch",
+)
+
+external_relay_fixture = add_after_undo_guard(
+    undo_source, "        ownerRelay._ForceIdle();"
+)
+expect_rejected(
+    audit,
+    external_relay_fixture,
+    "_OnUndoClicked",
+    "external ownership-transfer relay",
+    "handler must contain only the owner guard and owner dispatch",
+)
+
+alias_fixture = (
+    "using VRCNet = VRC.SDKBase.Networking;\n"
+    + add_after_undo_guard(
+        undo_source, "        VRCNet.SetOwner(Networking.LocalPlayer, gameObject);"
+    )
+)
+try:
+    check_no_owner_transfer(audit, alias_fixture)
+except RegressionError as error:
+    print(f"PASS: mutation alias SetOwner rejected ({error})")
+else:
+    raise RegressionError("mutation alias SetOwner was accepted")
+
+static_fixture = (
+    "using static VRC.SDKBase.Networking;\n"
+    + add_after_undo_guard(
+        undo_source, "        SetOwner(Networking.LocalPlayer, gameObject);"
+    )
+)
+try:
+    check_no_owner_transfer(audit, static_fixture)
+except RegressionError as error:
+    print(f"PASS: mutation using-static SetOwner rejected ({error})")
+else:
+    raise RegressionError("mutation using-static SetOwner was accepted")
+
+negated_doc_fixture = synced_source.replace(
+    "/// Local-only public method to get current state.",
+    "/// Not Local-only public method to get current state.",
+    1,
+)
+expect_getter_rejected(
+    audit,
+    negated_doc_fixture,
+    "negated getter summary",
+    "summary does not match the exact contract",
+)
+
+contradictory_doc_fixture = synced_source.replace(
+    "/// The leading underscore prevents legacy network calls.\n    /// </summary>\n"
+    "    public bool _GetState()",
+    "/// The leading underscore prevents legacy network calls.\n"
+    "    /// This method is not local-only and the underscore does not prevent legacy calls.\n"
+    "    /// </summary>\n    public bool _GetState()",
+    1,
+)
+expect_getter_rejected(
+    audit,
+    contradictory_doc_fixture,
+    "contradictory getter summary",
+    "summary does not match the exact contract",
+)
+
+getter_body_mutations = (
+    (
+        "_GetState",
+        "bool",
+        "    public bool _GetState()\n",
+        "    public VRCPlayerApi _GetLastInteractor()",
+        "        return _isActive;",
+        "        return !_isActive;",
+        "negated _GetState body",
+    ),
+    (
+        "_GetLastInteractor",
+        "VRCPlayerApi",
+        "    public VRCPlayerApi _GetLastInteractor()\n",
+        "    private void LogDebug",
+        "        return VRCPlayerApi.GetPlayerById(lastInteractorId);",
+        "        return null;",
+        "null _GetLastInteractor body",
+    ),
+)
+for name, return_type, method_marker, next_marker, old, new, label in getter_body_mutations:
+    getter_fixture = replace_method_text(
+        audit,
+        synced_source,
+        name,
+        return_type,
+        method_marker,
+        next_marker,
+        old,
+        new,
+    )
+    expect_getter_rejected(
+        audit,
+        getter_fixture,
+        label,
+        "getter body does not match the exact contract",
+    )
+
+AUTHORIZATION_GUARD_LINE = "        if (!_IsAuthorizedNetworkCaller()) return;"
+RECEIVER_OWNER_GUARD_LINE = "        if (!Networking.IsOwner(gameObject)) return;"
+receiver_method_mutations = (
+    (
+        "_OwnerUndo",
+        "    public void _OwnerUndo()\n",
+        "    public void _OnResetClicked()",
+        AUTHORIZATION_GUARD_LINE + "\n",
+        "",
+        "removed _OwnerUndo caller authorization guard",
+    ),
+    (
+        "_OwnerUndo",
+        "    public void _OwnerUndo()\n",
+        "    public void _OnResetClicked()",
+        RECEIVER_OWNER_GUARD_LINE + "\n",
+        "",
+        "removed _OwnerUndo receiver ownership guard",
+    ),
+    (
+        "_OwnerUndo",
+        "    public void _OwnerUndo()\n",
+        "    public void _OnResetClicked()",
+        AUTHORIZATION_GUARD_LINE + "\n" + RECEIVER_OWNER_GUARD_LINE,
+        RECEIVER_OWNER_GUARD_LINE + "\n" + AUTHORIZATION_GUARD_LINE,
+        "reversed _OwnerUndo security guards",
+    ),
+    (
+        "_OwnerReset",
+        "    public void _OwnerReset()\n",
+        "    // --- All clients: update display ---",
+        AUTHORIZATION_GUARD_LINE + "\n",
+        "",
+        "removed _OwnerReset caller authorization guard",
+    ),
+    (
+        "_OwnerReset",
+        "    public void _OwnerReset()\n",
+        "    // --- All clients: update display ---",
+        RECEIVER_OWNER_GUARD_LINE + "\n",
+        "",
+        "removed _OwnerReset receiver ownership guard",
+    ),
+    (
+        "_OwnerReset",
+        "    public void _OwnerReset()\n",
+        "    // --- All clients: update display ---",
+        AUTHORIZATION_GUARD_LINE + "\n" + RECEIVER_OWNER_GUARD_LINE,
+        RECEIVER_OWNER_GUARD_LINE + "\n" + AUTHORIZATION_GUARD_LINE,
+        "reversed _OwnerReset security guards",
+    ),
+)
+for name, method_marker, next_marker, old, new, label in receiver_method_mutations:
+    receiver_fixture = replace_method_text(
+        audit,
+        undo_source,
+        name,
+        "void",
+        method_marker,
+        next_marker,
+        old,
+        new,
+    )
+    expect_receiver_rejected(
+        audit,
+        receiver_fixture,
+        name,
+        label,
+        "authorization and ownership guards must be the first tokens",
+    )
+
+unrelated_declaration_fixture = undo_source.replace(
+    helper_marker,
+    "    private void SetOwner() { }\n\n" + helper_marker,
+    1,
+)
+check_no_owner_transfer(audit, unrelated_declaration_fixture)
+print("PASS: unrelated SetOwner declaration is not treated as an ownership call")
+PY
+
 echo "PASS: network-event hardening and SDK coverage smoke test"
