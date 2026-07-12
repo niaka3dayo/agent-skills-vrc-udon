@@ -164,7 +164,7 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 | `udonsharp-networking` | 所有權模型、同步模式、反模式、NetworkCallable 限制 |
 | `udonsharp-sync-selection` | 同步決策樹、資料量預算目標、6 項最小化原則 |
 
-**網路規則：** 名稱不以 `_` 開頭的無參數 `public` 方法會暴露給舊式網路呼叫。僅限本機或自訂的 `public` 方法應加上 `_`，只透過 `[NetworkCallable]` 明確公開必要入口。使用 `NetworkCalling.CallingPlayer` 判斷呼叫者權限，並與接收端所有權分開檢查。不要將執行個體 Master 當成安全或存取控制邊界。
+**網路規則：** 名稱不以 `_` 開頭的無參數 `public` 方法會暴露給舊式網路呼叫。僅限本機或自訂的 `public` 方法應加上 `_`，只透過 `[NetworkCallable]` 明確公開必要入口。判斷呼叫者權限時，應先確認 `NetworkCalling.InNetworkCall`，再讀取 `NetworkCalling.CallingPlayer`，並與接收端所有權分開檢查。不要將執行個體 Master 當成安全或存取控制邊界。
 
 ### 同步決策樹
 

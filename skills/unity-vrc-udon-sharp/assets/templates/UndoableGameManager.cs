@@ -30,7 +30,7 @@ public class UndoableGameManager : UdonSharpBehaviour
 
     void Start()
     {
-        stateSize = 40; // Example: 40 elements. Adjust to your game's state size.
+        stateSize = 40; // Larger states increase sync payload size and may reduce sync frequency or add latency.
         currentState = new byte[stateSize];
         // One initial entry plus MaxMoves subsequent move entries.
         stateHistory = new byte[stateSize * (MaxMoves + 1)];
@@ -39,11 +39,13 @@ public class UndoableGameManager : UdonSharpBehaviour
         _ApplyDisplayLocally();
     }
 
-    // --- Local request entry ---
-    // The underscore prevents legacy SendCustomNetworkEvent calls. This method
-    // is intentionally not [NetworkCallable].
+    // --- Owner-only input ---
+    // Non-owners do nothing; input does not transfer ownership. This preserves
+    // centralized authority and avoids conflicting state writes.
     public void _RequestMove(int from, int to)
     {
+        if (!Networking.IsOwner(gameObject)) return;
+
         SendCustomNetworkEvent(
             NetworkEventTarget.Owner,
             nameof(_OwnerProcessMove),

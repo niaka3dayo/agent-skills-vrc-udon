@@ -86,7 +86,7 @@ public class BasicInteraction : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Public method to get current toggle state.
+    /// Local-only public method to get the current toggle state.
     /// </summary>
     public bool _GetState()
     {

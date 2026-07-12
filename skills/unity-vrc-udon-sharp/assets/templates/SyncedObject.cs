@@ -162,9 +162,10 @@ public class SyncedObject : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Public method to set state (for external scripts).
+    /// Local-only public method to set state for external scripts.
+    /// The leading underscore prevents legacy network calls.
     /// </summary>
-    public void SetState(bool newState)
+    public void _SetState(bool newState)
     {
         _isInitialized = true;
 
