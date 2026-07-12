@@ -114,19 +114,25 @@ NoVariableSync disables variable synchronization while keeping network events av
 - Best for: Local-only logic, event-driven communication, reducing network overhead
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class NoSyncExample : UdonSharpBehaviour
 {
+    private const float ReceiverCooldown = 1f;
+    private float lastAcceptedEventTime = float.MinValue;
+
     // Cannot use [UdonSynced] with NoVariableSync mode!
     // [UdonSynced] private int score; // ERROR!
 
     public void _TriggerGlobalEvent()
     {
         SendCustomNetworkEvent(
-            VRC.Udon.Common.Interfaces.NetworkEventTarget.All,
+            NetworkEventTarget.All,
             nameof(_OnGlobalEvent)
         );
     }
@@ -139,7 +145,10 @@ public class NoSyncExample : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Open diagnostic policy: any valid caller may produce this bounded log.
+        // Open diagnostic policy: any valid caller may request a log entry.
+        // The receiver cooldown bounds aggregate execution across all callers.
+        if (Time.time - lastAcceptedEventTime < ReceiverCooldown) return;
+        lastAcceptedEventTime = Time.time;
         Debug.Log("Event received!");
     }
 }
@@ -906,7 +915,7 @@ public class OwnerControlledDamage : UdonSharpBehaviour
 
 ### Rate Limiting
 
-`[NetworkCallable]` accepts an optional integer parameter that controls the maximum call rate (in calls per second) allowed for that event per behaviour instance. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
+`[NetworkCallable]` accepts an optional integer parameter that controls remote send pacing for that event on a behaviour. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
 
 ```csharp
 // Default: 5 calls/sec per event per behaviour (no argument)
@@ -922,7 +931,9 @@ public void _HighFrequencyEvent(float value) { }
 public void _RareBroadcast(string message) { }
 ```
 
-**Note**: Events exceeding the rate limit are queued on the local client until the limit allows them to be sent. The server silently drops events only in one documented case: players in the same instance running different world versions whose rate limits disagree. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Local and `NetworkEventTarget.Self` execution bypass the rate limit, while `NetworkEventTarget.All` can fan one send out to many receiver executions. The limit also does not bound the work performed by one accepted call. Sender-side queue queries describe the current sender's queue, not aggregate work at receivers. Use receiver-local cooldowns, idempotence, fixed-capacity storage, deduplication, and per-call input validation wherever aggregate resource use matters.
+
+The default rate is **5 calls/sec** and the configurable maximum is **100 calls/sec**. The server silently drops events only in one documented case: players in the same instance running different world versions whose rate limits disagree.
 
 ### Types Usable as Parameters
 
@@ -1063,27 +1074,60 @@ private void ProcessData()
 
 ### Workaround: Targeting Specific Players
 
-Since direct player targeting is not available, include the target player's ID as a `[NetworkCallable]` parameter and let each receiver filter locally:
+Since direct player targeting is not available, include the target player's ID as a `[NetworkCallable]` parameter and let each receiver filter locally. This complete example uses an open caller policy and attributes the displayed sender only from the validated call context:
 
 ```csharp
-private const int MaxMessageLength = 256;
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
-public void _SendMessageToPlayer(VRCPlayerApi player, string msg)
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class TargetedMessageExample : UdonSharpBehaviour
 {
-    SendCustomNetworkEvent(
-        NetworkEventTarget.All,
-        nameof(_CheckMessage),
-        player.playerId,
-        msg
-    );
-}
+    private const int MaxMessageLength = 256;
+    private const float ReceiverCooldown = 0.5f;
+    private float lastAcceptedMessageTime = float.MinValue;
 
-[NetworkCallable]
-public void _CheckMessage(int targetPlayerId, string message)
-{
-    if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
-    if (Networking.LocalPlayer.playerId != targetPlayerId) return;
-    _ProcessMessage(message);
+    public void _SendMessageToPlayer(VRCPlayerApi player, string message)
+    {
+        if (player == null || !player.IsValid()) return;
+        if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
+
+        SendCustomNetworkEvent(
+            NetworkEventTarget.All,
+            nameof(_CheckMessage),
+            player.playerId,
+            message
+        );
+    }
+
+    [NetworkCallable(2)]
+    public void _CheckMessage(int targetPlayerId, string message)
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Open caller policy: any valid caller may send a bounded message.
+        if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
+
+        VRCPlayerApi localPlayer = Networking.LocalPlayer;
+        if (localPlayer == null || !localPlayer.IsValid()) return;
+        if (localPlayer.playerId != targetPlayerId) return;
+
+        // This local cooldown bounds aggregate display work from all callers.
+        if (Time.time - lastAcceptedMessageTime < ReceiverCooldown) return;
+        lastAcceptedMessageTime = Time.time;
+        _ProcessMessage(message, caller);
+    }
+
+    private void _ProcessMessage(string message, VRCPlayerApi caller)
+    {
+        Debug.Log($"{caller.displayName}: {message}");
+    }
 }
 ```
 
@@ -1190,18 +1234,39 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 
 ## Common Patterns
 
-### Master-Only Actions
+### Master-Coordinated Session Work
 
-> **Warning**: `Networking.IsMaster` is not deprecated, but it is fragile in practice. The instance master is the first player to join. If that player leaves, the master role transfers to another player, creating a brief window where no action runs, or two clients race to act simultaneously. Prefer owner-centric patterns for any logic that must run reliably. See [Owner-Centric Architecture Migration](#owner-centric-architecture-migration) below.
+Master status selects a session coordinator; it never authorizes a request. Use it only for non-security, idempotent work such as reconciling session slots. Any network-originated request still requires `InNetworkCall`, a valid `CallingPlayer`, and an explicit caller policy. Use platform moderation or an owner-controlled session role for privileged actions.
 
 ```csharp
-public void _DoMasterAction()
+using UdonSharp;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+public class MasterSessionCoordinator : UdonSharpBehaviour
 {
-    if (Networking.IsMaster)
+    private int lastReconciledPlayerCount = -1;
+
+    public override void OnPlayerJoined(VRCPlayerApi player)
     {
-        // Only instance master executes this
-        PerformAction();
-        SendCustomNetworkEvent(NetworkEventTarget.All, "OnActionPerformed");
+        _ReconcilePlayerSlots();
+    }
+
+    public override void OnPlayerLeft(VRCPlayerApi player)
+    {
+        _ReconcilePlayerSlots();
+    }
+
+    private void _ReconcilePlayerSlots()
+    {
+        if (!Networking.IsMaster) return;
+
+        int playerCount = VRCPlayerApi.GetPlayerCount();
+        if (lastReconciledPlayerCount == playerCount) return;
+
+        lastReconciledPlayerCount = playerCount;
+        // Rebuild derived, non-security slot presentation from the live count.
+        // Repeating this after a handoff produces the same result.
     }
 }
 ```

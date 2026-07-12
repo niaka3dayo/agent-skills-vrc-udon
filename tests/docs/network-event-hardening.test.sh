@@ -10,10 +10,12 @@ API_REF="$UDON_DIR/references/api.md"
 PATTERNS_REF="$UDON_DIR/references/patterns-networking.md"
 BANDWIDTH_REF="$UDON_DIR/references/networking-bandwidth.md"
 MIGRATION_REF="$UDON_DIR/references/sdk-migration.md"
+TROUBLESHOOTING_REF="$UDON_DIR/references/troubleshooting.md"
 SYNC_EXAMPLES="$UDON_DIR/references/sync-examples.md"
 DYNAMICS_REF="$UDON_DIR/references/dynamics.md"
 CHEATSHEET="$UDON_DIR/CHEATSHEET.md"
 UNDO_TEMPLATE="$UDON_DIR/assets/templates/UndoableGameManager.cs"
+POOL_TEMPLATE="$UDON_DIR/assets/templates/MasterManagedPlayerPool.cs"
 PUBLIC_METHOD_AUDIT="$ROOT_DIR/tests/docs/audit-udon-public-methods.py"
 PUBLIC_METHOD_AUDIT_TEST="$ROOT_DIR/tests/docs/audit-udon-public-methods.test.sh"
 CONTRIBUTING="$ROOT_DIR/CONTRIBUTING.md"
@@ -185,8 +187,8 @@ for path in "$SYNC_EXAMPLES" "$API_REF" "$DYNAMICS_REF"; do
     require_text "$path" 'NetworkCalling.InNetworkCall'
 done
 require_text "$API_REF" 'Any valid caller may request one available pooled object; this is an open interaction policy.'
-require_text "$API_REF" 'Any valid caller may start this local-only cosmetic effect; the rate limit bounds repeated calls.'
-require_text "$DYNAMICS_REF" 'Any valid caller may trigger this diagnostic effect; it does not change authoritative state.'
+require_text "$API_REF" 'Any valid caller may start this local-only cosmetic effect. The'
+require_text "$DYNAMICS_REF" 'Any valid caller may trigger this diagnostic effect. The local'
 
 # Master coordination is limited to non-security session arbitration.
 forbid_regex "$UDON_DIR" 'banlist-style|Master-approved|master-backed'
@@ -195,7 +197,7 @@ require_text "$PATTERNS_REF" 'Use an explicit owner-controlled session role poli
 
 # Old unprefixed method names must not return in prose or code.
 for stale_name in OwnerProcessMove OwnerUndo OwnerReset VerifyAssignments; do
-    if rg -n "(^|[^A-Za-z0-9_])${stale_name}" "$UDON_DIR"; then
+    if grep -R -En "(^|[^A-Za-z0-9_])${stale_name}" "$UDON_DIR"; then
         echo "ERROR: stale method name remains: $stale_name" >&2
         exit 1
     fi
@@ -216,7 +218,7 @@ require_text "$PATTERNS_REF" $'if (string.IsNullOrEmpty(message) || message.Leng
 require_text "$PATTERNS_REF" $'if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;\n\n        messages[messageIndex] = $"[{caller.displayName}] {message}";'
 require_text "$NETWORKING_REF" 'if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;'
 require_text "$NETWORKING_REF" "The 256-character maximum is this receiver example's policy, not a VRChat platform limit."
-require_text "$NETWORKING_REF" $'if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;\n    if (Networking.LocalPlayer.playerId != targetPlayerId) return;\n    _ProcessMessage(message);'
+require_text "$NETWORKING_REF" $'if (localPlayer.playerId != targetPlayerId) return;\n\n        _ProcessMessage(message, caller);'
 forbid_regex "$PATTERNS_REF" 'hitPosition'
 
 require_text "$MIGRATION_REF" 'if (damage <= 0 || damage > 25) return;'
@@ -238,6 +240,67 @@ require_text "$BANDWIDTH_REF" 'if (caller.playerId != currentTurnPlayerId) retur
 require_text "$BANDWIDTH_REF" 'currentTurnPlayerId = currentTurn == 1 ? playerOneId : playerTwoId;'
 require_order "$BANDWIDTH_REF" 'if (boardState == null || boardState.Length != BoardSize) return;' 'if (cellIndex < 0 || cellIndex >= BoardSize) return;'
 require_order "$BANDWIDTH_REF" 'if (cellIndex < 0 || cellIndex >= BoardSize) return;' 'boardState[cellIndex] = currentTurn;'
+
+# SDK 3.10.4 master-transfer callback and manager-owned pool identity.
+forbid_text "$UDON_DIR" 'OnMasterClientSwitched'
+require_text "$POOL_TEMPLATE" 'public override void OnMasterTransferred(VRCPlayerApi newMaster)'
+require_text "$PATTERNS_REF" '`OnMasterTransferred(VRCPlayerApi)` rebuilds the free queue'
+require_text "$API_REF" '[UdonSynced] private int[] assignedPlayerIds;'
+require_text "$API_REF" 'assignedPlayerIds = new int[objectPool.Pool.Length];'
+require_text "$API_REF" 'int poolIndex = _FindPoolIndex(spawned);'
+require_text "$API_REF" 'assignedPlayerIds[poolIndex] = player.playerId;'
+require_text "$API_REF" 'int poolIndex = _FindAssignedPoolIndex(player.playerId);'
+require_text "$API_REF" 'GameObject pooledObject = objectPool.Pool[poolIndex];'
+require_text "$API_REF" 'Networking.SetOwner(Networking.LocalPlayer, pooledObject);'
+require_text "$API_REF" 'assignedPlayerIds[poolIndex] = 0;'
+require_order "$API_REF" 'assignedPlayerIds[poolIndex] = player.playerId;' 'Networking.SetOwner(player, spawned);'
+require_order "$API_REF" 'assignedPlayerIds[poolIndex] = 0;' 'objectPool.Return(pooledObject);'
+forbid_text "$API_REF" 'pooledBehaviour.Owner == player'
+
+# Targeted receiver validates call context, caller, payload, and routing in order.
+require_text "$NETWORKING_REF" '[NetworkCallable(2)]'
+require_text "$NETWORKING_REF" 'if (!NetworkCalling.InNetworkCall) return;'
+require_text "$NETWORKING_REF" 'VRCPlayerApi caller = NetworkCalling.CallingPlayer;'
+require_text "$NETWORKING_REF" 'Open caller policy: any valid caller may send a bounded message.'
+require_text "$NETWORKING_REF" '_ProcessMessage(message, caller);'
+require_order "$NETWORKING_REF" 'if (!NetworkCalling.InNetworkCall) return;' 'VRCPlayerApi caller = NetworkCalling.CallingPlayer;'
+require_order "$NETWORKING_REF" 'if (caller == null || !caller.IsValid()) return;' 'if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;'
+require_order "$NETWORKING_REF" 'if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;' 'if (localPlayer == null || !localPlayer.IsValid()) return;'
+require_order "$NETWORKING_REF" 'if (localPlayer.playerId != targetPlayerId) return;' '_ProcessMessage(message, caller);'
+require_text "$NETWORKING_REF" 'if (Time.time - lastAcceptedMessageTime < ReceiverCooldown) return;'
+require_order "$NETWORKING_REF" 'if (localPlayer.playerId != targetPlayerId) return;' 'if (Time.time - lastAcceptedMessageTime < ReceiverCooldown) return;'
+
+# Master selects an idempotent coordinator, never an authorization boundary.
+forbid_text "$NETWORKING_REF" '### Master-Only Actions'
+require_text "$NETWORKING_REF" '### Master-Coordinated Session Work'
+require_text "$NETWORKING_REF" 'Master status selects a session coordinator; it never authorizes a request.'
+require_text "$NETWORKING_REF" 'if (lastReconciledPlayerCount == playerCount) return;'
+
+# Changed full-class examples remain copyable and self-contained.
+for path in "$SYNC_EXAMPLES" "$DYNAMICS_REF" "$API_REF"; do
+    require_text "$path" 'using UdonSharp;'
+    require_text "$path" 'using UnityEngine;'
+done
+require_text "$SYNC_EXAMPLES" 'using UnityEngine.UI;'
+require_text "$SYNC_EXAMPLES" 'using VRC.Udon.Common.Interfaces;'
+require_text "$SYNC_EXAMPLES" 'private void RefreshCount()'
+forbid_text "$SYNC_EXAMPLES" 'GetComponent<ShootGun>()'
+require_text "$DYNAMICS_REF" 'using VRC.Dynamics;'
+require_text "$DYNAMICS_REF" 'using VRC.Udon.Common.Interfaces;'
+require_text "$API_REF" 'public class PooledObject : UdonSharpBehaviour'
+
+# NetworkCallable rates pace a sender/event queue; receiver resource bounds are separate.
+RATE_SCOPE='`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender.'
+RATE_NOT_BOUND='It is not an aggregate receiver or resource bound across callers.'
+for path in "$NETWORKING_REF" "$API_REF" "$SYNC_EXAMPLES" "$DYNAMICS_REF" "$RULE" "$MIGRATION_REF" "$TROUBLESHOOTING_REF"; do
+    require_text "$path" "$RATE_SCOPE"
+    require_text "$path" "$RATE_NOT_BOUND"
+done
+require_text "$NETWORKING_REF" 'Local and `NetworkEventTarget.Self` execution bypass the rate limit, while `NetworkEventTarget.All` can fan one send out to many receiver executions.'
+require_text "$API_REF" 'private float lastAcceptedEventTime = float.MinValue;'
+require_text "$API_REF" 'if (Time.time - lastAcceptedEventTime < ReceiverCooldown) return;'
+require_text "$DYNAMICS_REF" 'if (Time.time - lastAcceptedActionTime < ReceiverCooldown) return;'
+forbid_text "$TROUBLESHOOTING_REF" '**Symptoms:** Events are dropped and do not reach all clients'
 
 # Concise rule summaries remain synchronized across user and agent entrypoints.
 require_text "$README_EN" 'Never use instance master as a security or access-control boundary.'

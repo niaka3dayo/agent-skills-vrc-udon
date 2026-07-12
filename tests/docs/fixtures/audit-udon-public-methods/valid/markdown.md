@@ -1,8 +1,12 @@
 This prose is not C# and must not create an exposure: public void ProseDecoy().
 
-```text
+`````text
 public void NonCSharpFenceDecoy() { }
-```
+
+````csharp
+public void NestedCSharpFenceDecoy() { }
+````
+`````
 
 ```csharp
 using UnityEditor;
@@ -17,3 +21,17 @@ public class BuildHook : MonoBehaviour, IEditorOnly, IPreprocessCallbackBehaviou
     public bool OnPreprocess() => true;
 }
 ```
+
+````cs
+public class MixedFenceLengths
+{
+    public int _Safe() => 1;
+    private string marker = "```";
+}
+````
+
+~~~markdown
+```csharp
+public void NestedInTildeFenceDecoy() { }
+```
+~~~

@@ -599,13 +599,16 @@ public void _SetTarget(int playerId)
 
 ### NetworkCallable Rate Limit Exceeded
 
-**Symptoms:** Events are dropped and do not reach all clients
+**Symptoms:** Excess remote sends remain queued on the sender and arrive later than expected. Local/self execution is not paced. A documented version-mismatch case can drop events when clients in one instance use different declared rates.
 
 **Solution:**
 
 ```csharp
 
-// Use the lowest rate the effect needs and bound its input.
+private const float ReceiverCooldown = 0.1f;
+private float lastAcceptedEventTime = float.MinValue;
+
+// Use the lowest sender rate the effect needs and bound receiver work separately.
 [NetworkCallable(10)]
 public void _HighFrequencyEvent(float value)
 {
@@ -616,6 +619,8 @@ public void _HighFrequencyEvent(float value)
 
     // Open diagnostic policy: any valid caller may submit a normalized value.
     if (value < 0f || value > 1f) return;
+    if (Time.time - lastAcceptedEventTime < ReceiverCooldown) return;
+    lastAcceptedEventTime = Time.time;
     Debug.Log($"Diagnostic value: {value}");
 }
 
@@ -631,6 +636,8 @@ public void SendIfReady(float value)
 }
 
 ```
+
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Inspecting the local outgoing queue helps diagnose sender delay, while the receiver-local cooldown above caps aggregate diagnostic execution on each client.
 
 ---
 

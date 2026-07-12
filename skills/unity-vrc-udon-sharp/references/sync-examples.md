@@ -10,6 +10,10 @@ Refer to the Decision Tree in `../rules/udonsharp-sync-selection.md` for pattern
 **Criteria**: Operations that do not affect other players. No `[UdonSynced]` required.
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+
 // LocalCounter: Local counter (0 synced variables, 0 bytes)
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class LocalCounter : UdonSharpBehaviour
@@ -39,18 +43,23 @@ public class LocalCounter : UdonSharpBehaviour
 ### 2a. Play Effects for All Players
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 // HitTarget: Target hit (0 synced variables, 0 bytes)
 // Uses SendCustomNetworkEvent(All) to execute a temporary action for everyone
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class HitTarget : UdonSharpBehaviour
 {
+    [SerializeField] private GameObject trustedProjectile;
+
     public void OnParticleCollision(GameObject other)
     {
         if (!Utilities.IsValid(other)) return;
-        if (!other.GetComponent<ShootGun>()) return;
+        if (other != trustedProjectile) return;
         if (Networking.LocalPlayer != Networking.GetOwner(other)) return;
 
         SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_Hit));
@@ -78,24 +87,29 @@ public class HitTarget : UdonSharpBehaviour
 ```
 
 **Policy**: Any valid caller may trigger this temporary cosmetic effect. The
-two-call-per-second limit, active-state guard, and fixed five-second duration
-bound its cost. Late joiners do not receive the event.
+active-state guard and fixed five-second duration bound receiver work; the
+two-call-per-second attribute only paces each sender. Late joiners do not
+receive the event.
 
 ### 2b. Owner Delegation Pattern
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.Udon.Common.Interfaces;
+
 // VoteYesButton: Non-owner sends event to owner
 // The button side has no synced variables
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class VoteYesButton : UdonSharpBehaviour
 {
-    [SerializeField] VoteSystemCore voteSystemCore;
+    [SerializeField] UdonSharpBehaviour voteSystemCore;
     [SerializeField] AudioSource audioSource;
 
     public override void Interact()
     {
         voteSystemCore.SendCustomNetworkEvent(
-            NetworkEventTarget.Owner, nameof(VoteSystemCore._VoteToYes));
+            NetworkEventTarget.Owner, "_VoteToYes");
         audioSource.PlayOneShot(audioSource.clip);
     }
 }
@@ -108,8 +122,11 @@ the vote policy.
 ### 2c. Owner-Only State Management + Broadcast to All
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 // EventOnlyLock: Owner decides -> broadcasts to all (0 synced variables, 0 bytes)
 // Late joiners will not know the unlock state (suitable for temporary gimmicks)
@@ -162,8 +179,12 @@ public class EventOnlyLock : UdonSharpBehaviour
 ### 3a. Minimal State (1-2 Variables)
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 // SyncedCounter: 1 synced int (4 bytes)
 // Non-owner sends event to owner -> owner updates synced variable
@@ -209,6 +230,9 @@ public class SyncedCounter : UdonSharpBehaviour
 ```
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+
 // SyncedLock: 1 synced bool (1 byte)
 // Same lock gimmick as EventOnlyLock, but with late joiner support
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -249,6 +273,8 @@ public class SyncedLock : UdonSharpBehaviour
 ### 3b. Game State Machine
 
 ```csharp
+using UdonSharp;
+
 // ShootingGameCore: Manages entire game with 4 synced variables
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class ShootingGameCore : UdonSharpBehaviour
@@ -277,6 +303,9 @@ public class ShootingGameCore : UdonSharpBehaviour
 ### 3c. Aggregation/Voting Pattern
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 
@@ -290,6 +319,9 @@ public class VoteSystemCore : UdonSharpBehaviour
     [UdonSynced] bool SyncedOpenResult; // 1B
     [UdonSynced] int[] SyncedVoterPlayerIds = new int[80];
     [UdonSynced] int SyncedVoterCount;
+
+    [SerializeField] private Text yesCountText;
+    [SerializeField] private Text noCountText;
 
     [NetworkCallable(1)]
     public void _VoteToYes()
@@ -321,20 +353,32 @@ public class VoteSystemCore : UdonSharpBehaviour
     {
         RefreshCount(); // All clients: reflect received state in display
     }
+
+    private void RefreshCount()
+    {
+        if (yesCountText != null) yesCountText.text = SyncedYesCount.ToString();
+        if (noCountText != null) noCountText.text = SyncedNoCount.ToString();
+    }
 }
 ```
 
 The owner stores accepted caller IDs with the synced vote state, so direct
 network calls cannot bypass deduplication and an owner handoff retains the
-record. The fixed array caps memory and accepted votes; `[NetworkCallable(1)]`
-bounds request traffic. Configure a smaller array when the world capacity is
-lower.
+record. The fixed array caps memory and accepted votes, and caller-ID
+deduplication permits at most one accepted vote per player. Configure a smaller
+array when the world capacity is lower.
+
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Here, the fixed array, input checks, and authoritative deduplication provide the receiver resource bound; the attribute only paces each sender's requests.
 
 ---
 
 ## Pattern 4: Managing Multiple Values with FieldChangeCallback
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+
 // DualCounterSync: Detect individual changes with FieldChangeCallback (8 bytes)
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class DualCounterSync : UdonSharpBehaviour
@@ -358,6 +402,16 @@ public class DualCounterSync : UdonSharpBehaviour
     {
         get => _triggerEnterCount;
         set { _triggerEnterCount = value; ShowTriggerEnterCount(); }
+    }
+
+    private void ShowInteractCount()
+    {
+        if (InteractCountText != null) InteractCountText.text = _interactCount.ToString();
+    }
+
+    private void ShowTriggerEnterCount()
+    {
+        if (TriggerEnterCountText != null) TriggerEnterCountText.text = _triggerEnterCount.ToString();
     }
 }
 ```

@@ -151,6 +151,8 @@ Caller authorization and receiver ownership are separate checks: authorize `Netw
 | Rate limit | Default 5 calls/sec/event (configurable up to 100 calls/sec) |
 | Parameter count | Maximum 8 |
 
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Local/self execution bypasses this pacing, and one accepted call may still perform expensive work or fan out to many receivers. Add receiver-local cooldowns, idempotence, fixed capacity, deduplication, and input bounds according to the resource being protected.
+
 ## FieldChangeCallback Pattern
 
 Pattern for detecting synced variable changes via property setter:
@@ -270,7 +272,7 @@ public override void OnDeserialization()
 - [ ] Synced strings in Continuous sync are kept short (respect the ~200-byte shared budget; 2 bytes/char)
 - [ ] VRCPlayerApi validity checked
 - [ ] Works correctly for late joiners
-- [ ] NetworkCallable rate limits considered
+- [ ] NetworkCallable sender/event pacing and separate receiver resource bounds considered
 - [ ] Local-only public event targets start with `_` and omit `[NetworkCallable]`
 - [ ] Authorization derives the sender from `NetworkCalling.CallingPlayer`, never a network parameter
 - [ ] Caller authorization and receiver ownership are checked separately for privileged synced mutations

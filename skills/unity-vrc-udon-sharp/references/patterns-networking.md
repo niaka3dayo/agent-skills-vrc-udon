@@ -66,7 +66,7 @@ Instance master may coordinate capacity or a fair lottery, but master status can
 
 **Template:** [assets/templates/MasterManagedPlayerPool.cs](../assets/templates/MasterManagedPlayerPool.cs)
 
-The implementation uses `Manual` sync mode. On `Start`, it allocates `_assignments[]` (synced) and the local `_freeQueue` ring buffer. Only the master initialises the free queue. `OnPlayerJoined`/`OnPlayerLeft` (master only) dequeue/enqueue slots and call `RequestSerialization`. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterClientSwitched` rebuilds the free queue and schedules a deferred `_VerifyAssignments` call to close the race-condition window.
+The implementation uses `Manual` sync mode. On `Start`, it allocates `_assignments[]` (synced) and the local `_freeQueue` ring buffer. Only the master initialises the free queue. `OnPlayerJoined`/`OnPlayerLeft` (master only) dequeue/enqueue slots and call `RequestSerialization`. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterTransferred(VRCPlayerApi)` rebuilds the free queue and schedules a deferred `_VerifyAssignments` call to close the race-condition window.
 
 
 ### Key Design Decisions

@@ -742,11 +742,17 @@ constraint.RemoveSource(count - 1);
 ### Interactive Button with Feedback
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.Dynamics;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 public class PhysicalButton : UdonSharpBehaviour
 {
+    private const float ReceiverCooldown = 0.5f;
+
     [Header("References")]
     public Transform buttonTop;
     public AudioSource pressSound;
@@ -759,6 +765,7 @@ public class PhysicalButton : UdonSharpBehaviour
     [UdonSynced] private bool isPressed = false;
     private Vector3 originalPosition;
     private Vector3 pressedPosition;
+    private float lastAcceptedActionTime = float.MinValue;
 
     void Start()
     {
@@ -816,15 +823,17 @@ public class PhysicalButton : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Any valid caller may trigger this diagnostic effect; it does not change authoritative state.
+        // Any valid caller may trigger this diagnostic effect. The local
+        // cooldown bounds aggregate execution across all callers.
+        if (Time.time - lastAcceptedActionTime < ReceiverCooldown) return;
+        lastAcceptedActionTime = Time.time;
         Debug.Log("Button action executed!");
     }
 }
 ```
 
 The receiver accepts any valid caller because the action is diagnostic only.
-`[NetworkCallable(2)]` bounds repeated calls; use a stricter session role policy
-before replacing the log with privileged or state-changing work.
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. The receiver-local cooldown bounds execution on each client; use a stricter session role policy before replacing the log with privileged or state-changing work.
 
 ### Grabbable Lever
 

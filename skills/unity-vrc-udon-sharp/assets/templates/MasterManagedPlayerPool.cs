@@ -171,7 +171,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     // Master Handoff
     // =========================================================================
 
-    public override void OnMasterClientSwitched(VRCPlayerApi newMaster)
+    public override void OnMasterTransferred(VRCPlayerApi newMaster)
     {
         // Only the incoming master needs to rebuild the local free queue
         if (!Networking.IsMaster) return;

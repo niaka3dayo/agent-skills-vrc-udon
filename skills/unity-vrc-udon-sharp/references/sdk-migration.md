@@ -110,6 +110,8 @@ Constraints on `[NetworkCallable]` methods:
 - Parameter types must be syncable types (same set as `[UdonSynced]`)
 - Default rate limit: 5 calls/sec/event; configurable up to 100/sec via `[NetworkCallable(n)]`
 
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Local/self calls bypass the pacing, so migrated receivers still need their own idempotence, cooldown, capacity, deduplication, and input checks where aggregate work matters.
+
 #### New NetworkEventTarget Values (SDK 3.8.1+)
 
 Two new targets were added to `NetworkEventTarget`:
