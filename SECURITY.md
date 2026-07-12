@@ -18,4 +18,5 @@ Published packages include [npm provenance attestation](https://docs.npmjs.com/g
 
 | Version | Supported |
 |---------|-----------|
-| 1.x     | Yes       |
+| 2.x     | Yes       |
+| 1.x and older | No  |
