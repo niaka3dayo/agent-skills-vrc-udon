@@ -11,9 +11,12 @@ $Failed = 0
 
 New-Item -ItemType Directory -Path $TempRoot | Out-Null
 
-function Invoke-Hook([string]$Source) {
-    $FilePath = Join-Path $TempRoot (([guid]::NewGuid().ToString()) + ".cs")
-    Set-Content -Path $FilePath -Value $Source
+function Invoke-Hook([string]$Source, [string]$LeafName = $null) {
+    if (-not $LeafName) {
+        $LeafName = ([guid]::NewGuid().ToString()) + ".cs"
+    }
+    $FilePath = Join-Path $TempRoot $LeafName
+    Set-Content -LiteralPath $FilePath -Value $Source
     $Payload = @{ tool_input = @{ file_path = $FilePath } } | ConvertTo-Json -Compress
     return $Payload | & $Hook 2>&1 | Out-String
 }
@@ -48,12 +51,18 @@ try {
         @{ Label = 'CRLF preceding-line declaration'; Declaration = "[UdonSynced]`r`n    private float[] values;"; NewLine = "`r`n" },
         @{ Label = 'multiline initializer'; Declaration = "[UdonSynced] private int[] values =`n        new int[]`n        {`n            1,`n            2`n        };"; NewLine = "`n" },
         @{ Label = 'attribute with trailing line comment'; Declaration = "[UdonSynced] // Applies to the immediately following physical line.`n    private float[] values;"; NewLine = "`n" },
-        @{ Label = 'multiple declarators'; Declaration = '[UdonSynced] private int[] values, previousValues;'; NewLine = "`n" }
+        @{ Label = 'multiple declarators'; Declaration = '[UdonSynced] private int[] values, previousValues;'; NewLine = "`n" },
+        @{ Label = 'combined attributes on same line'; Declaration = '[UdonSynced, FieldChangeCallback(nameof(Values))] private int[] values;'; NewLine = "`n" },
+        @{ Label = 'combined attributes on preceding line'; Declaration = "[UdonSynced, FieldChangeCallback(nameof(Values))]`n    private float[] values;"; NewLine = "`n" },
+        @{ Label = 'chained attributes on same line'; Declaration = '[UdonSynced][FieldChangeCallback(nameof(Values))] private float[] values;'; NewLine = "`n" },
+        @{ Label = 'chained attributes on preceding line'; Declaration = "[UdonSynced][FieldChangeCallback(nameof(Values))]`n    private int[] values;"; NewLine = "`n" },
+        @{ Label = 'array type inside combined attribute group'; Declaration = '[UdonSynced, Example(typeof(int[]))] private float[] values;'; NewLine = "`n" },
+        @{ Label = 'literal bracket path'; Declaration = '[UdonSynced] private int[] values;'; NewLine = "`n"; LeafName = 'Bracket[1].cs' }
     )
 
     foreach ($Case in $Cases) {
         $Source = "using UdonSharp;$($Case.NewLine)public class Sample : UdonSharpBehaviour$($Case.NewLine){$($Case.NewLine)    $($Case.Declaration)$($Case.NewLine)}"
-        Assert-Contains $Case.Label (Invoke-Hook $Source) $SyncBloatWarning
+        Assert-Contains $Case.Label (Invoke-Hook $Source $Case.LeafName) $SyncBloatWarning
     }
 
     $UnsyncedSource = @'
@@ -66,6 +75,16 @@ public class Sample : UdonSharpBehaviour
 }
 '@
     Assert-NotContains 'unsynced int[]/float[]' (Invoke-Hook $UnsyncedSource) $SyncBloatWarning
+
+    $UnrelatedAttributeSource = @'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [FieldChangeCallback(nameof(Values))]
+    private int[] values;
+}
+'@
+    Assert-NotContains 'FieldChangeCallback-only field' (Invoke-Hook $UnrelatedAttributeSource) $SyncBloatWarning
 
     $CommentedSameLineSource = @'
 using UdonSharp;

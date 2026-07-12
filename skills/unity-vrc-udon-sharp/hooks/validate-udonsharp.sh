@@ -166,6 +166,46 @@ if awk '
         return line ~ /^[ \t]*((public|private|protected|internal|static|readonly)[ \t]+)*(int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)/
     }
 
+    function find_attribute_group_end(text,    character, position) {
+        position = 2
+        while (position <= length(text)) {
+            if (substr(text, position, 2) == "[]") {
+                position += 2
+                continue
+            }
+
+            character = substr(text, position, 1)
+            if (character == "]") return position
+            position++
+        }
+
+        return 0
+    }
+
+    function parse_leading_attribute_groups(line,    closing_bracket, content, rest) {
+        attribute_group_count = 0
+        attribute_has_udon_synced = 0
+        rest = line
+        sub(/^[ \t]*/, "", rest)
+
+        while (substr(rest, 1, 1) == "[") {
+            closing_bracket = find_attribute_group_end(rest)
+            if (closing_bracket == 0) break
+
+            content = substr(rest, 2, closing_bracket - 2)
+            if (content ~ /(^|,)[ \t]*UdonSynced(Attribute)?[ \t]*($|,|[(])/) {
+                attribute_has_udon_synced = 1
+            }
+
+            attribute_group_count++
+            rest = substr(rest, closing_bracket + 1)
+            sub(/^[ \t]*/, "", rest)
+        }
+
+        attribute_remainder = rest
+        return attribute_group_count
+    }
+
     {
         line = $0
         sub(/\r$/, "", line)
@@ -177,14 +217,12 @@ if awk '
         }
 
         previous_line_has_attribute = 0
-        if (line ~ /^[ \t]*\[UdonSynced\]/) {
-            declaration = line
-            sub(/^[ \t]*\[UdonSynced\][ \t]*/, "", declaration)
-            if (is_synced_array_field_prefix(declaration)) {
+        if (parse_leading_attribute_groups(line) && attribute_has_udon_synced) {
+            if (is_synced_array_field_prefix(attribute_remainder)) {
                 found = 1
                 exit
             }
-            if (line ~ /^[ \t]*\[UdonSynced\][ \t]*(\/\/.*)?$/) {
+            if (attribute_remainder ~ /^(\/\/.*)?$/) {
                 previous_line_has_attribute = 1
             }
         }

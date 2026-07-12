@@ -6,6 +6,7 @@
 #   Case C: jq present, valid .cs with List<T> → existing WARNING on stderr (happy path)
 #   Cases D-H: synced array detection regressions from Issue #307
 #   Cases I-P: field forms, CRLF, and block-comment review regressions
+#   Cases Q-V: combined/chained attribute-group regressions
 
 set -uo pipefail
 
@@ -296,6 +297,60 @@ CSEOF
 run_hook "$CASE_P_FILE" "$TMPROOT/case_P.err"
 P_STDERR=$(cat "$TMPROOT/case_P.err")
 assert_not_contains "P: attribute does not skip a physical line" "$P_STDERR" "$SYNC_BLOAT_WARNING"
+
+# ------------------------------------------------------------
+# Cases Q-V: UdonSynced may share or precede other attribute groups, but an
+# unrelated attribute group must not mark the field as synced.
+# ------------------------------------------------------------
+for case_spec in \
+    "Q:combined attributes on same line:[UdonSynced, FieldChangeCallback(nameof(Values))] private int[] values;" \
+    "R:combined attributes on preceding line:[UdonSynced, FieldChangeCallback(nameof(Values))]|    private float[] values;" \
+    "S:chained attributes on same line:[UdonSynced][FieldChangeCallback(nameof(Values))] private float[] values;" \
+    "T:chained attributes on preceding line:[UdonSynced][FieldChangeCallback(nameof(Values))]|    private int[] values;"
+do
+    case_id=${case_spec%%:*}
+    remainder=${case_spec#*:}
+    case_label=${remainder%%:*}
+    declaration=${remainder#*:}
+    case_file="$TMPROOT/case_${case_id}.cs"
+
+    {
+        echo 'using UdonSharp;'
+        echo 'public class Sample : UdonSharpBehaviour'
+        echo '{'
+        printf '    %s\n' "$declaration" | tr '|' '\n'
+        echo '}'
+    } > "$case_file"
+
+    run_hook "$case_file" "$TMPROOT/case_${case_id}.err"
+    case_stderr=$(cat "$TMPROOT/case_${case_id}.err")
+    assert_contains "$case_id: $case_label warns" "$case_stderr" "$SYNC_BLOAT_WARNING"
+done
+
+CASE_U_FILE="$TMPROOT/case_U.cs"
+cat > "$CASE_U_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [FieldChangeCallback(nameof(Values))]
+    private int[] values;
+}
+CSEOF
+run_hook "$CASE_U_FILE" "$TMPROOT/case_U.err"
+U_STDERR=$(cat "$TMPROOT/case_U.err")
+assert_not_contains "U: FieldChangeCallback-only field does not warn" "$U_STDERR" "$SYNC_BLOAT_WARNING"
+
+CASE_V_FILE="$TMPROOT/case_V.cs"
+cat > "$CASE_V_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced, Example(typeof(int[]))] private float[] values;
+}
+CSEOF
+run_hook "$CASE_V_FILE" "$TMPROOT/case_V.err"
+V_STDERR=$(cat "$TMPROOT/case_V.err")
+assert_contains "V: array type inside combined attribute group warns" "$V_STDERR" "$SYNC_BLOAT_WARNING"
 
 echo ""
 echo "Summary: $PASS passed, $FAIL failed"

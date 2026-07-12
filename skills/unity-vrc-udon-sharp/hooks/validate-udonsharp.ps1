@@ -36,12 +36,12 @@ if ($FilePath -notmatch '\.cs$') {
 }
 
 # Check if file exists
-if (-not (Test-Path $FilePath)) {
+if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
     Write-Output $Input
     exit 0
 }
 
-$FileContent = Get-Content -Path $FilePath -Raw
+$FileContent = Get-Content -LiteralPath $FilePath -Raw
 
 # Check if this is an UdonSharp file
 if ($FileContent -notmatch 'using UdonSharp|UdonSharpBehaviour') {
@@ -134,6 +134,12 @@ if ($SyncedCount -gt 5) {
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
 function Get-BlockCommentMaskedLine([string]$Line, [ref]$InBlockComment) {
+    if (-not $InBlockComment.Value -and
+        $Line.IndexOf('//', [System.StringComparison]::Ordinal) -lt 0 -and
+        $Line.IndexOf('/*', [System.StringComparison]::Ordinal) -lt 0) {
+        return $Line
+    }
+
     $Masked = [System.Text.StringBuilder]::new($Line.Length)
     $Index = 0
 
@@ -165,8 +171,9 @@ function Get-BlockCommentMaskedLine([string]$Line, [ref]$InBlockComment) {
 }
 
 $SyncedArrayFieldPrefixPattern = '^[ \t]*(?:(?:public|private|protected|internal|static|readonly)[ \t]+)*(?:int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(?:=|,|;)'
-$UdonSyncedAttributePrefixPattern = '^[ \t]*\[UdonSynced\][ \t]*'
-$StandaloneUdonSyncedAttributePattern = '^[ \t]*\[UdonSynced\][ \t]*(?://.*)?$'
+$LeadingAttributeGroupsPattern = '^[ \t]*(?<AttributeGroups>(?:\[(?:[^\[\]\r\n]|\[\])*\][ \t]*)+)(?<Remainder>.*)$'
+$AttributeGroupPattern = '\[((?:[^\[\]\r\n]|\[\])*)\]'
+$UdonSyncedInAttributeGroupPattern = '(?:^|,)[ \t]*UdonSynced(?:Attribute)?[ \t]*(?:$|,|\()'
 $PreviousLineHasAttribute = $false
 $InBlockComment = $false
 $FoundSyncedArrayField = $false
@@ -174,6 +181,13 @@ $Reader = [System.IO.StringReader]::new($FileContent)
 
 try {
     while ($null -ne ($Line = $Reader.ReadLine())) {
+        if (-not $InBlockComment -and
+            -not $PreviousLineHasAttribute -and
+            $Line.IndexOf('/*', [System.StringComparison]::Ordinal) -lt 0 -and
+            $Line -notmatch '^[ \t]*\[') {
+            continue
+        }
+
         $MaskedLine = Get-BlockCommentMaskedLine $Line ([ref]$InBlockComment)
 
         if ($PreviousLineHasAttribute -and $MaskedLine -match $SyncedArrayFieldPrefixPattern) {
@@ -182,13 +196,22 @@ try {
         }
 
         $PreviousLineHasAttribute = $false
-        if ($MaskedLine -match $UdonSyncedAttributePrefixPattern) {
-            $Declaration = $MaskedLine -replace $UdonSyncedAttributePrefixPattern, ''
-            if ($Declaration -match $SyncedArrayFieldPrefixPattern) {
+        $AttributeLineMatch = [regex]::Match($MaskedLine, $LeadingAttributeGroupsPattern)
+        if ($AttributeLineMatch.Success) {
+            $HasUdonSyncedAttribute = $false
+            foreach ($AttributeGroupMatch in [regex]::Matches($AttributeLineMatch.Groups['AttributeGroups'].Value, $AttributeGroupPattern)) {
+                if ($AttributeGroupMatch.Groups[1].Value -match $UdonSyncedInAttributeGroupPattern) {
+                    $HasUdonSyncedAttribute = $true
+                    break
+                }
+            }
+
+            $Declaration = $AttributeLineMatch.Groups['Remainder'].Value
+            if ($HasUdonSyncedAttribute -and $Declaration -match $SyncedArrayFieldPrefixPattern) {
                 $FoundSyncedArrayField = $true
                 break
             }
-            if ($MaskedLine -match $StandaloneUdonSyncedAttributePattern) {
+            if ($HasUdonSyncedAttribute -and $Declaration -match '^(?://.*)?$') {
                 $PreviousLineHasAttribute = $true
             }
         }
