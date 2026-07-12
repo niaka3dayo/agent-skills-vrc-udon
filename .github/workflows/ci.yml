@@ -47,6 +47,9 @@ jobs:
       - name: Smoke test validate-udonsharp.sh
         run: bash tests/hooks/validate-udonsharp.test.sh
 
+      - name: Smoke test validate-udonsharp.ps1
+        shell: pwsh
+        run: ./tests/hooks/validate-udonsharp.test.ps1
 
   docs:
     name: Documentation Smoke Tests
