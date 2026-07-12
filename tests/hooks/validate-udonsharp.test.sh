@@ -4,6 +4,7 @@
 #   Case A: jq absent  → must exit 0 with stdout = input passthrough
 #   Case B: jq present, file_path missing → must exit 0 cleanly (no abort)
 #   Case C: jq present, valid .cs with List<T> → existing WARNING on stderr (happy path)
+#   Cases D-H: synced array detection regressions from Issue #307
 
 set -uo pipefail
 
@@ -36,6 +37,25 @@ assert_contains() {
         echo "  haystack (truncated): $(printf '%s' "$haystack" | head -c 200)"
         FAIL=$((FAIL + 1))
     fi
+}
+
+assert_not_contains() {
+    local label="$1" haystack="$2" needle="$3"
+    if printf '%s' "$haystack" | grep -qF -- "$needle"; then
+        echo "FAIL [$label] unexpected: $needle"
+        echo "  haystack (truncated): $(printf '%s' "$haystack" | head -c 200)"
+        FAIL=$((FAIL + 1))
+    else
+        echo "PASS [$label] does not contain: $needle"
+        PASS=$((PASS + 1))
+    fi
+}
+
+run_hook() {
+    local file_path="$1" stderr_path="$2"
+    local hook_input
+    hook_input="{\"tool_input\":{\"file_path\":\"$file_path\"}}"
+    printf '%s' "$hook_input" | "$HOOK" 2>"$stderr_path" >/dev/null
 }
 
 # ------------------------------------------------------------
@@ -110,6 +130,53 @@ C_STDERR=$(cat "$TMPROOT/case_c.err")
 
 assert_exit "C: happy path → exit 0" 0 "$C_RC"
 assert_contains "C: List<T> WARNING fires" "$C_STDERR" 'Generic collections (List<T>'
+
+# ------------------------------------------------------------
+# Cases D-G: synced int[]/float[] on the same or immediately preceding line
+# ------------------------------------------------------------
+SYNC_BLOAT_WARNING='Synced int[]/float[] detected'
+
+for case_spec in \
+    "D:same-line int[]:[UdonSynced] private int[] values;" \
+    "E:preceding-line int[]:[UdonSynced]|    private int[] values;" \
+    "F:same-line float[]:[UdonSynced] private float[] values;" \
+    "G:preceding-line float[]:[UdonSynced]|    private float[] values;"
+do
+    case_id=${case_spec%%:*}
+    remainder=${case_spec#*:}
+    case_label=${remainder%%:*}
+    declaration=${remainder#*:}
+    case_file="$TMPROOT/case_${case_id}.cs"
+
+    {
+        echo 'using UdonSharp;'
+        echo 'public class Sample : UdonSharpBehaviour'
+        echo '{'
+        printf '    %s\n' "$declaration" | tr '|' '\n'
+        echo '}'
+    } > "$case_file"
+
+    run_hook "$case_file" "$TMPROOT/case_${case_id}.err"
+    case_stderr=$(cat "$TMPROOT/case_${case_id}.err")
+    assert_contains "$case_id: $case_label warns" "$case_stderr" "$SYNC_BLOAT_WARNING"
+done
+
+# ------------------------------------------------------------
+# Case H: ordinary unsynced arrays must not emit the sync-bloat warning
+# ------------------------------------------------------------
+CASE_H_FILE="$TMPROOT/case_H.cs"
+cat > "$CASE_H_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced] private byte[] compactValues;
+    private int[] integerValues;
+    private float[] floatValues;
+}
+CSEOF
+run_hook "$CASE_H_FILE" "$TMPROOT/case_H.err"
+H_STDERR=$(cat "$TMPROOT/case_H.err")
+assert_not_contains "H: unsynced int[]/float[] do not warn" "$H_STDERR" "$SYNC_BLOAT_WARNING"
 
 echo ""
 echo "Summary: $PASS passed, $FAIL failed"

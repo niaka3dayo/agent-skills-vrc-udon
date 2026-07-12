@@ -133,12 +133,26 @@ if [[ "$synced_count" -gt 5 ]]; then
 fi
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
-if grep -qE '\[UdonSynced\]' "$file_path" && \
-    grep -qE '(int|float)\[\]' "$file_path"; then
-    # Check if the array declaration is near [UdonSynced]
-    if grep -B1 '(int|float)\[\]' "$file_path" | grep -qE '\[UdonSynced\]'; then
-        warnings+=("[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows.")
-    fi
+if awk '
+    function is_synced_array_field(line) {
+        return line ~ /^[ \t]*((public|private|protected|internal|static|readonly)[ \t]+)*(int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*([ \t]*=[^;]*)?[ \t]*;[ \t]*(\/\/.*)?$/
+    }
+
+    previous_line_has_attribute && is_synced_array_field($0) { found = 1; exit }
+
+    {
+        previous_line_has_attribute = 0
+        if ($0 ~ /^[ \t]*\[UdonSynced\]/) {
+            declaration = $0
+            sub(/^[ \t]*\[UdonSynced\][ \t]*/, "", declaration)
+            if (is_synced_array_field(declaration)) { found = 1; exit }
+            if (declaration ~ /^[ \t]*$/) previous_line_has_attribute = 1
+        }
+    }
+
+    END { exit found ? 0 : 1 }
+' "$file_path"; then
+    warnings+=("[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows.")
 fi
 
 # NoVariableSync + [UdonSynced] conflict

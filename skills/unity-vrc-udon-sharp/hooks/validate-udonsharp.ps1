@@ -133,11 +133,9 @@ if ($SyncedCount -gt 5) {
 }
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
-if ($FileContent -match '\[UdonSynced\]') {
-    # Check for synced int[]/float[] patterns (UdonSynced on preceding line or same line)
-    if ($FileContent -match '\[UdonSynced\][^\r\n]*\b(int|float)\[\]') {
-        $Warnings += "[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows."
-    }
+$SyncedArrayFieldPattern = '(?m)^[ \t]*\[UdonSynced\][ \t]*(?:\r?\n[ \t]*)?(?:(?:public|private|protected|internal|static|readonly)[ \t]+)*(?:int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*(?:[ \t]*=[^;\r\n]*)?[ \t]*;[ \t]*(?://[^\r\n]*)?\r?$'
+if ($FileContent -match $SyncedArrayFieldPattern) {
+    $Warnings += "[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows."
 }
 
 # NoVariableSync + [UdonSynced] conflict
