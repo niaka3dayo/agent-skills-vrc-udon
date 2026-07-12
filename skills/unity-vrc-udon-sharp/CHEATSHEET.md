@@ -277,6 +277,8 @@ public void _ApplyLocalPreview() { }
 
 Requires `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare `[NetworkCallable]` methods.
 
+A `[NetworkCallable]` method must return `void`.
+
 ```csharp
 using UdonSharp;
 using UnityEngine;
@@ -290,7 +292,7 @@ public class HardenedDamage : UdonSharpBehaviour
     [UdonSynced] private int health = 100;
 
     // [NetworkCallable] intentionally exposes this underscore-prefixed method.
-    [NetworkCallable]
+    [NetworkCallable(1)]
     public void _TakeDamage(int damage)
     {
         if (!NetworkCalling.InNetworkCall) return;
@@ -323,7 +325,7 @@ public class HardenedDamage : UdonSharpBehaviour
 }
 ```
 
-**Constraints:** `public`, no `static`/`virtual`/`override`, max 8 params, syncable types only
+**Constraints:** `public`, `void` return, no `static`/`virtual`/`override`, max 8 params, syncable types only
 
 **Hardening:** Never authorize from a `playerId`, name, or role passed as a network parameter. During the active or nested network-call lifetime, require `NetworkCalling.InNetworkCall`, derive the sender from `NetworkCalling.CallingPlayer`, validate it, and apply an explicit world-specific policy. Outside a network call, `CallingPlayer` is null or invalid. Prefix local-only public event targets with `_` and omit `[NetworkCallable]`.
 

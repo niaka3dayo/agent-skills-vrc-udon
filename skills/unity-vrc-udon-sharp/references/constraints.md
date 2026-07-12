@@ -957,7 +957,7 @@ public class SyncedUrlList : UdonSharpBehaviour
     /// <summary>
     /// Returns the current number of stored URLs.
     /// </summary>
-    public int GetCount()
+    public int _GetCount()
     {
         if (!ParseMetadata()) return 0;
         return _metadataList.Count;

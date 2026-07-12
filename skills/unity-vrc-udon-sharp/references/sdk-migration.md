@@ -48,6 +48,8 @@ BaseGimmick[] all = GetComponents<BaseGimmick>();   // plural form also works
 
 Before SDK 3.8.1, network events had no parameter support. Callers had to pre-load synced variables and call `RequestSerialization()` before sending an event, creating race conditions.
 
+SDKs before 3.8.1 do not define the `NetworkCallable` attribute or parameterized network-event API, so code that uses them normally fails to compile.
+
 `[NetworkCallable]` adds up to 8 typed parameters per network call, eliminating the pre-serialization pattern. The attribute lives in `VRC.SDK3.UdonNetworkCalling`.
 
 ```csharp
@@ -65,7 +67,7 @@ public class DamageSystem : UdonSharpBehaviour
     // Before (SDK 3.7): set synced var, RequestSerialization, then fire event
     // After (SDK 3.8.1): pass parameters directly
 
-    [NetworkCallable]
+    [NetworkCallable(1)]
     public void _TakeDamage(int damage)
     {
         if (!NetworkCalling.InNetworkCall) return;
@@ -101,6 +103,7 @@ Network parameters carry the action data, not trusted sender identity. This migr
 
 Constraints on `[NetworkCallable]` methods:
 - Method must be `public`
+- A `[NetworkCallable]` method must return `void`.
 - Cannot be `static`, `virtual`, or `override`
 - No method overloading
 - Maximum 8 parameters

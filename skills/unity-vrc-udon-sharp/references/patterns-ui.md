@@ -1069,7 +1069,7 @@ public class FingerPointer : UdonSharpBehaviour
     /// <summary>
     /// Returns true if this pointer is configured for the left hand.
     /// </summary>
-    public bool GetIsLeftHand()
+    public bool _GetIsLeftHand()
     {
         return isLeftHand;
     }
@@ -1077,7 +1077,7 @@ public class FingerPointer : UdonSharpBehaviour
     /// <summary>
     /// Returns true if the local player is in VR.
     /// </summary>
-    public bool GetIsVR()
+    public bool _GetIsVR()
     {
         return _isVR;
     }
@@ -1901,7 +1901,7 @@ public class AppManager : UdonSharpBehaviour
     /// <summary>
     /// Returns the number of discovered apps.
     /// </summary>
-    public int GetAppCount()
+    public int _GetAppCount()
     {
         return _appCount;
     }
@@ -1909,7 +1909,7 @@ public class AppManager : UdonSharpBehaviour
     /// <summary>
     /// Returns the currently active app index (-1 if none).
     /// </summary>
-    public int GetCurrentAppIndex()
+    public int _GetCurrentAppIndex()
     {
         return _currentAppIndex;
     }

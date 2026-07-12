@@ -39,6 +39,9 @@ public class LocalCounter : UdonSharpBehaviour
 ### 2a. Play Effects for All Players
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
 // HitTarget: Target hit (0 synced variables, 0 bytes)
 // Uses SendCustomNetworkEvent(All) to execute a temporary action for everyone
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
@@ -50,16 +53,21 @@ public class HitTarget : UdonSharpBehaviour
         if (!other.GetComponent<ShootGun>()) return;
         if (Networking.LocalPlayer != Networking.GetOwner(other)) return;
 
-        // Notify all players of the hit
-        SendCustomNetworkEvent(NetworkEventTarget.All, "Hit");
+        SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_Hit));
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void Hit()
+    [NetworkCallable(2)]
+    public void _Hit()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Open cosmetic policy: any valid caller may hide the target once.
         if (!gameObject.activeSelf) return;
         gameObject.SetActive(false);
-        SendCustomEventDelayedSeconds("_Respawn", 5.0f);
+        SendCustomEventDelayedSeconds(nameof(_Respawn), 5.0f);
     }
 
     public void _Respawn()
@@ -69,7 +77,9 @@ public class HitTarget : UdonSharpBehaviour
 }
 ```
 
-**Note**: Late joiners will not know whether the target has been hit. Use only for temporary effects.
+**Policy**: Any valid caller may trigger this temporary cosmetic effect. The
+two-call-per-second limit, active-state guard, and fixed five-second duration
+bound its cost. Late joiners do not receive the event.
 
 ### 2b. Owner Delegation Pattern
 
@@ -84,22 +94,23 @@ public class VoteYesButton : UdonSharpBehaviour
 
     public override void Interact()
     {
-        if (voteSystemCore.voted) return;
-
-        // Delegate vote to owner (only owner modifies synced variables)
         voteSystemCore.SendCustomNetworkEvent(
-            NetworkEventTarget.Owner, "VoteToYes");
-        voteSystemCore.voted = true;
+            NetworkEventTarget.Owner, nameof(VoteSystemCore._VoteToYes));
         audioSource.PlayOneShot(audioSource.clip);
     }
 }
 ```
 
-**Key point**: `voted` is a local flag (prevents double voting). Synced data is consolidated in VoteSystemCore.
+The button only routes the request. `VoteSystemCore` validates and deduplicates
+the active caller on the authoritative owner; local button state cannot enforce
+the vote policy.
 
 ### 2c. Owner-Only State Management + Broadcast to All
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
 // EventOnlyLock: Owner decides -> broadcasts to all (0 synced variables, 0 bytes)
 // Late joiners will not know the unlock state (suitable for temporary gimmicks)
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
@@ -112,12 +123,23 @@ public class EventOnlyLock : UdonSharpBehaviour
         if (Networking.LocalPlayer != Networking.GetOwner(gameObject)) return;
         if (other.gameObject != KeyObject) return;
 
-        SendCustomNetworkEvent(NetworkEventTarget.All, "Unlock");
+        SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_Unlock));
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void Unlock()
+    [NetworkCallable(1)]
+    public void _Unlock()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
+
+        // The owner-only caller policy protects this one-way local effect.
+        if (!gameObject.activeSelf) return;
         gameObject.SetActive(false);
     }
 }
@@ -140,11 +162,16 @@ public class EventOnlyLock : UdonSharpBehaviour
 ### 3a. Minimal State (1-2 Variables)
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
 // SyncedCounter: 1 synced int (4 bytes)
 // Non-owner sends event to owner -> owner updates synced variable
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class SyncedCounter : UdonSharpBehaviour
 {
+    private const int MaxCount = 1000000;
+
     [SerializeField] Text CounterText;
     [UdonSynced] int SyncedButtonCount; // Only synced variable
 
@@ -152,13 +179,21 @@ public class SyncedCounter : UdonSharpBehaviour
 
     public override void Interact()
     {
-        // Non-owner delegates to owner
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, "AddCount");
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_AddCount));
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void AddCount() // Only executed by owner
+    [NetworkCallable(2)]
+    public void _AddCount()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Open counter policy: any valid caller may request an increment.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (SyncedButtonCount >= MaxCount) return;
+
         ++SyncedButtonCount;
         RequestSerialization();
         ShowCount();
@@ -190,7 +225,7 @@ public class SyncedLock : UdonSharpBehaviour
 
     public void _RefreshDoor()
     {
-        if (SyncedIsUnlocked) Unlock();
+        if (SyncedIsUnlocked) _UnlockDoor();
     }
 
     public void OnTriggerEnter(Collider other)
@@ -199,13 +234,12 @@ public class SyncedLock : UdonSharpBehaviour
         if (Networking.LocalPlayer != Networking.GetOwner(gameObject)) return;
         if (other.gameObject != KeyObject) return;
 
-        SendCustomNetworkEvent(NetworkEventTarget.All, "Unlock");
         SyncedIsUnlocked = true;
         RequestSerialization();
+        _UnlockDoor();
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void Unlock()
+    public void _UnlockDoor()
     {
         DoorObject.SetActive(false);
     }
@@ -243,21 +277,41 @@ public class ShootingGameCore : UdonSharpBehaviour
 ### 3c. Aggregation/Voting Pattern
 
 ```csharp
-// VoteSystemCore: Vote aggregation (9 bytes)
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
+// VoteSystemCore: bounded vote aggregation (~333 bytes with 80 voter IDs)
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class VoteSystemCore : UdonSharpBehaviour
 {
-    // --- Synced variables (total 9 bytes) ---
+    // --- Synced vote state and owner-controlled deduplication data ---
     [UdonSynced] int SyncedYesCount;    // 4B
     [UdonSynced] int SyncedNoCount;     // 4B
     [UdonSynced] bool SyncedOpenResult; // 1B
+    [UdonSynced] int[] SyncedVoterPlayerIds = new int[80];
+    [UdonSynced] int SyncedVoterCount;
 
-    // --- Local variables ---
-    public bool voted; // Double-vote prevention (local, no sync needed)
-
-    // NETWORK-EXPOSURE: LEGACY
-    public void VoteToYes() // Only executed by owner
+    [NetworkCallable(1)]
+    public void _VoteToYes()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Ownership routing chooses the receiver; it does not authorize the caller.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (SyncedVoterPlayerIds == null || SyncedVoterPlayerIds.Length != 80) return;
+        if (SyncedVoterCount < 0 || SyncedVoterCount > SyncedVoterPlayerIds.Length) return;
+
+        for (int i = 0; i < SyncedVoterCount; i++)
+        {
+            if (SyncedVoterPlayerIds[i] == caller.playerId) return;
+        }
+        if (SyncedVoterCount >= SyncedVoterPlayerIds.Length) return;
+
+        SyncedVoterPlayerIds[SyncedVoterCount] = caller.playerId;
+        SyncedVoterCount++;
         ++SyncedYesCount;
         RequestSerialization();
         RefreshCount();
@@ -269,6 +323,12 @@ public class VoteSystemCore : UdonSharpBehaviour
     }
 }
 ```
+
+The owner stores accepted caller IDs with the synced vote state, so direct
+network calls cannot bypass deduplication and an owner handoff retains the
+record. The fixed array caps memory and accepted votes; `[NetworkCallable(1)]`
+bounds request traffic. Configure a smaller array when the world capacity is
+lower.
 
 ---
 
@@ -321,7 +381,7 @@ public class DualCounterSync : UdonSharpBehaviour
 | 2. Events only | 0 | 0 | State unknown | Temporary actions, effects |
 | 3a. Minimal state | 1-2 | 1-4 | Supported | Counters, toggles |
 | 3b. Game state | 3-5 | ~38 | Supported | Game progression management |
-| 3c. Aggregation | 2-3 | ~9 | Supported | Voting, score aggregation |
+| 3c. Aggregation | 5 | ~333 | Supported | Voting with owner-side caller deduplication |
 | 4. FieldChange | 2+ | 8+ | Supported | Individual detection of multiple values |
 
 ---
@@ -338,7 +398,7 @@ The following is a summary of synced data amounts for the patterns above. Use fo
 | Minimal state (Pattern 3a) | Counter | 1 | int | 4 |
 | Minimal state (Pattern 3a) | Lock (late joiner support) | 1 | bool | 1 |
 | FieldChange (Pattern 4) | Multiple value management | 2 | int x2 | 8 |
-| Aggregation (Pattern 3c) | Voting system | 3 | int x2 + bool | 9 |
+| Aggregation (Pattern 3c) | Voting system | 5 | int x2 + bool + int[80] + int | ~333 |
 | Game state (Pattern 3b) | Shooting management | 4 | bool x2 + string + int | ~38 |
 
 > **Guideline**: For small to medium worlds, the total across all behaviours typically stays **under 100 bytes**.

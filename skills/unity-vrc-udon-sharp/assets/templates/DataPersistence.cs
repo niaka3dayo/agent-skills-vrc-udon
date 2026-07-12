@@ -319,13 +319,13 @@ public class DataPersistence : UdonSharpBehaviour
     // -------------------------------------------------------------------------
 
     /// <summary>Returns the in-memory high score. Valid after OnPlayerRestored.</summary>
-    public int GetHighScore()
+    public int _GetHighScore()
     {
         return _highScore;
     }
 
     /// <summary>Returns true once OnPlayerRestored has fired for the local player.</summary>
-    public bool IsDataReady()
+    public bool _IsDataReady()
     {
         return _dataRestored;
     }

@@ -180,7 +180,7 @@ public class SyncedObject : UdonSharpBehaviour
     /// <summary>
     /// Public method to get current state.
     /// </summary>
-    public bool GetState()
+    public bool _GetState()
     {
         return _isActive;
     }
@@ -188,7 +188,7 @@ public class SyncedObject : UdonSharpBehaviour
     /// <summary>
     /// Get the player who last interacted with this object.
     /// </summary>
-    public VRCPlayerApi GetLastInteractor()
+    public VRCPlayerApi _GetLastInteractor()
     {
         return VRCPlayerApi.GetPlayerById(lastInteractorId);
     }

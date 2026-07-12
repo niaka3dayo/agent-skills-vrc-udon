@@ -385,7 +385,7 @@ public class ProximityDetector : UdonSharpBehaviour
 {
     public float detectionRange = 5.0f;
 
-    public VRCPlayerApi[] GetPlayersInRange()
+    public VRCPlayerApi[] _GetPlayersInRange()
     {
         VRCPlayerApi[] allPlayers = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(allPlayers);
@@ -424,12 +424,12 @@ public class ProximityDetector : UdonSharpBehaviour
 ### Get Remote Players
 <!-- alias: Array.FindAll alternative — local-player exclusion -->
 
-Same temp-array pattern as `GetPlayersInRange`, but excluding the local player. Useful when broadcasting to "everyone except me" or computing remote-only stats.
+Same temp-array pattern as `_GetPlayersInRange`, but excluding the local player. Useful when broadcasting to "everyone except me" or computing remote-only stats.
 
 ```csharp
 public class RemotePlayerCollector : UdonSharpBehaviour
 {
-    public VRCPlayerApi[] GetRemotePlayers()
+    public VRCPlayerApi[] _GetRemotePlayers()
     {
         VRCPlayerApi[] allPlayers = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(allPlayers);

@@ -8,6 +8,10 @@ using VRC.Udon;
 ///
 /// The instance master maintains the canonical assignment table (_assignments)
 /// and syncs it to all clients. Non-master clients react in OnDeserialization.
+/// Use this only for non-security session arbitration such as fixed capacity or
+/// a fair slot lottery. Master status can change and grants no access-control
+/// authority. Use explicit owner-controlled session roles or platform
+/// moderation primitives for exclusions and privileged actions.
 ///
 /// Pool objects must be pre-placed in the scene and assigned in the Inspector.
 /// They should expose an AssignToPlayer(VRCPlayerApi) and Unassign() API.

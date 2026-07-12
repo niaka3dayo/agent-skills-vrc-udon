@@ -318,13 +318,13 @@ public class GrabbableRope : UdonSharpBehaviour
         Debug.Log("Rope released");
     }
 
-    public bool HasActiveGrab()
+    public bool _HasActiveGrab()
     {
         VRCPhysBone physBone = GetComponent<VRCPhysBone>();
         return physBone.IsGrabbed;
     }
 
-    public VRCPlayerApi GetGrabber()
+    public VRCPlayerApi _GetGrabber()
     {
         return currentGrabber;
     }
@@ -742,6 +742,9 @@ constraint.RemoveSource(count - 1);
 ### Interactive Button with Feedback
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
 public class PhysicalButton : UdonSharpBehaviour
 {
     [Header("References")]
@@ -801,17 +804,27 @@ public class PhysicalButton : UdonSharpBehaviour
         // Your button action
         SendCustomNetworkEvent(
             VRC.Udon.Common.Interfaces.NetworkEventTarget.All,
-            nameof(DoButtonAction)
+            nameof(_DoButtonAction)
         );
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void DoButtonAction()
+    [NetworkCallable(2)]
+    public void _DoButtonAction()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may trigger this diagnostic effect; it does not change authoritative state.
         Debug.Log("Button action executed!");
     }
 }
 ```
+
+The receiver accepts any valid caller because the action is diagnostic only.
+`[NetworkCallable(2)]` bounds repeated calls; use a stricter session role policy
+before replacing the log with privileged or state-changing work.
 
 ### Grabbable Lever
 

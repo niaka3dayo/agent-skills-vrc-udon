@@ -93,7 +93,7 @@ public class OwnerControlledScore : UdonSharpBehaviour
     }
 
     // The attribute explicitly exposes this underscore-prefixed method.
-    [NetworkCallable]
+    [NetworkCallable(1)]
     public void _OwnerResetScore()
     {
         if (!NetworkCalling.InNetworkCall) return;
@@ -121,6 +121,8 @@ public class OwnerControlledScore : UdonSharpBehaviour
 
 A parameterless public UdonSharp method whose name does not start with `_` remains exposed to legacy `SendCustomNetworkEvent` calls even without `[NetworkCallable]`.
 
+A legacy parameterless public method may return a value, but remote dispatch discards that value; the method remains network attack surface and the audit includes it.
+
 A leading underscore blocks legacy network calls to a public method.
 
 `[NetworkCallable]` explicitly exposes an underscore-prefixed public method to network calls.
@@ -143,6 +145,7 @@ Caller authorization and receiver ownership are separate checks: authorize `Netw
 |------------|-------------|
 | Access modifier | `public` required |
 | Attribute | `[NetworkCallable]` required |
+| Return type | A `[NetworkCallable]` method must return `void`. |
 | `static` / `virtual` / `override` | Not allowed |
 | Overloading | Not allowed (UdonSharp-wide constraint) |
 | Rate limit | Default 5 calls/sec/event (configurable up to 100 calls/sec) |

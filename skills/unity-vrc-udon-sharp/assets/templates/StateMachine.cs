@@ -126,7 +126,7 @@ public class StateMachine : UdonSharpBehaviour
     /// <summary>
     /// Returns the current state constant (STATE_IDLE, STATE_ACTIVE, STATE_COOLDOWN).
     /// </summary>
-    public int GetCurrentState()
+    public int _GetCurrentState()
     {
         return _currentState;
     }

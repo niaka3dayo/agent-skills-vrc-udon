@@ -114,6 +114,9 @@ NoVariableSync disables variable synchronization while keeping network events av
 - Best for: Local-only logic, event-driven communication, reducing network overhead
 
 ```csharp
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class NoSyncExample : UdonSharpBehaviour
 {
@@ -124,14 +127,19 @@ public class NoSyncExample : UdonSharpBehaviour
     {
         SendCustomNetworkEvent(
             VRC.Udon.Common.Interfaces.NetworkEventTarget.All,
-            nameof(OnGlobalEvent)
+            nameof(_OnGlobalEvent)
         );
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void OnGlobalEvent()
+    [NetworkCallable(1)]
+    public void _OnGlobalEvent()
     {
-        // All players execute this
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Open diagnostic policy: any valid caller may produce this bounded log.
         Debug.Log("Event received!");
     }
 }
@@ -221,13 +229,23 @@ Network events are **not re-sent** to late joiners:
 // PROBLEM: Late joiners miss this event
 public void _StartGame()
 {
-    SendCustomNetworkEvent(NetworkEventTarget.All, "OnGameStarted");
+    if (!Networking.IsOwner(gameObject)) return;
+    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_OnGameStarted));
 }
 
-// NETWORK-EXPOSURE: LEGACY
-public void OnGameStarted()
+[NetworkCallable(1)]
+public void _OnGameStarted()
 {
-    // Late joiners never receive this!
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    VRCPlayerApi owner = Networking.GetOwner(gameObject);
+    if (owner == null || !owner.IsValid()) return;
+    if (caller.playerId != owner.playerId) return;
+
+    // Even an authorized event is not replayed to late joiners.
     ShowGameUI();
 }
 ```
@@ -691,25 +709,30 @@ private void OnHealthChanged()
 
 ### SendCustomNetworkEvent (Legacy Compatibility)
 
-Legacy network events send parameterless calls to all players or the owner:
+Legacy dispatch resolves a parameterless public method by name. Historical
+worlds used unprefixed entries such as `OnButtonPressed`; that shape has no
+attribute rate limit and should remain compatibility-only, not a new example.
+
+For SDK 3.8.1+, expose the receiver deliberately and validate the active caller:
 
 ```csharp
-// Send to ALL players (including self)
-SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "OnButtonPressed");
+SendCustomNetworkEvent(
+    VRC.Udon.Common.Interfaces.NetworkEventTarget.All,
+    nameof(_OnButtonPressed)
+);
 
-// Send to OWNER only
-SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "ProcessOwnerAction");
-
-// Legacy receiving method: public, parameterless, and no leading underscore.
-// It remains network-callable without [NetworkCallable].
-// NETWORK-EXPOSURE: LEGACY
-public void OnButtonPressed()
+[NetworkCallable(2)]
+public void _OnButtonPressed()
 {
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    // Open cosmetic policy: any valid caller may play this bounded effect.
     Debug.Log("Button pressed!");
 }
 
-// Local-only public event target. The leading underscore blocks legacy
-// SendCustomNetworkEvent calls; do not add [NetworkCallable].
 public void _ApplyLocalPreview()
 {
     Debug.Log("Local preview only");
@@ -728,6 +751,8 @@ public void _ApplyLocalPreview()
 > **SDK 3.8.1+ new targets**: `NetworkEventTarget.Others` sends to "everyone except the sender", preventing duplicate effect/sound playback. `NetworkEventTarget.Self` can be used for local-only processing.
 
 A parameterless public UdonSharp method whose name does not start with `_` remains exposed to legacy `SendCustomNetworkEvent` calls even without `[NetworkCallable]`.
+
+A legacy parameterless public method may return a value, but remote dispatch discards that value; the method remains network attack surface and the audit includes it.
 
 A leading underscore blocks legacy network calls to a public method.
 
@@ -817,6 +842,8 @@ Official behavior reference: [VRChat Network Events](https://creators.vrchat.com
 
 The `[NetworkCallable]` attribute added in **SDK 3.8.1** enables sending **up to 8 parameters** with network events.
 
+SDKs before 3.8.1 do not define the `NetworkCallable` attribute or parameterized network-event API, so code that uses them normally fails to compile.
+
 `NetworkCallableAttribute` is in the `VRC.SDK3.UdonNetworkCalling` namespace. Add `using VRC.SDK3.UdonNetworkCalling;` to full scripts that use `[NetworkCallable]`.
 
 ### [NetworkCallable] Attribute
@@ -870,6 +897,7 @@ public class OwnerControlledDamage : UdonSharpBehaviour
 |------|------|
 | `public` required | Method must be public |
 | `[NetworkCallable]` required | Without the attribute, parameters cannot be received |
+| `void` return required | A `[NetworkCallable]` method must return `void`. |
 | `static` not allowed | Static methods cannot be used |
 | `virtual`/`override` not allowed | Virtual methods cannot be used |
 | No overloading | Multiple methods with the same name not allowed |
@@ -883,15 +911,15 @@ public class OwnerControlledDamage : UdonSharpBehaviour
 ```csharp
 // Default: 5 calls/sec per event per behaviour (no argument)
 [NetworkCallable]
-public void NormalEvent(int value) { }
+public void _NormalEvent(int value) { }
 
 // Custom rate: 100 calls/sec (maximum allowed)
 [NetworkCallable(100)]
-public void HighFrequencyEvent(float value) { }
+public void _HighFrequencyEvent(float value) { }
 
 // Low rate: 1 call/sec (minimal network cost)
 [NetworkCallable(1)]
-public void RareBroadcast(string message) { }
+public void _RareBroadcast(string message) { }
 ```
 
 **Note**: Events exceeding the rate limit are queued on the local client until the limit allows them to be sent. The server silently drops events only in one documented case: players in the same instance running different world versions whose rate limits disagree. Rate limiting is applied **per event per behaviour**. Default is **5 calls/sec**, configurable up to **100 calls/sec** per event per behaviour.
@@ -932,30 +960,15 @@ For a full `[NetworkCallable]`-based damage request that validates sender contex
 
 ### Migration Guide
 
-**Before (Legacy):**
-
-```csharp
-[UdonSynced] private int pendingDamage;
-public void _SendLegacyAttack(int damage)
-{
-    Networking.SetOwner(Networking.LocalPlayer, gameObject);
-    pendingDamage = damage;
-    RequestSerialization();
-    SendCustomNetworkEvent(NetworkEventTarget.All, "OnAttack");
-}
-
-// NETWORK-EXPOSURE: LEGACY
-public void OnAttack()
-{
-    // pendingDamage may still be the old value (race condition)
-    _ProcessDamage(pendingDamage);
-}
-```
+**Before (historical compatibility, do not copy):** Older worlds wrote damage
+to a synced field, requested serialization, then invoked an unprefixed public
+entry by name. The event could arrive before the field update, and the legacy
+entry had no attribute rate limit or reliable caller policy.
 
 **After (NetworkCallable):**
 
 ```csharp
-[NetworkCallable]
+[NetworkCallable(1)]
 public void _Attack(int damage)
 {
     if (!NetworkCalling.InNetworkCall) return;
@@ -963,14 +976,20 @@ public void _Attack(int damage)
     VRCPlayerApi caller = NetworkCalling.CallingPlayer;
     if (caller == null || !caller.IsValid()) return;
 
-    // Apply the world's authorization policy to caller before privileged work.
+    if (damage <= 0 || damage > 25) return;
+
+    VRCPlayerApi owner = Networking.GetOwner(gameObject);
+    if (owner == null || !owner.IsValid()) return;
+    if (caller.playerId != owner.playerId) return;
+    if (!Networking.IsOwner(gameObject)) return;
+
     _ProcessDamage(damage, caller);
 }
 
 public void _TriggerAttack(int damage)
 {
     SendCustomNetworkEvent(
-        NetworkEventTarget.All,
+        NetworkEventTarget.Owner,
         nameof(_Attack),
         damage
     );
@@ -992,12 +1011,21 @@ public void _SendDataWithEvent()
 {
     syncedData = "important data";
     RequestSerialization();
-    SendCustomNetworkEvent(NetworkEventTarget.All, "ProcessData");
+    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_ProcessDataEvent));
 }
 
-// NETWORK-EXPOSURE: LEGACY
-public void ProcessData()
+[NetworkCallable(1)]
+public void _ProcessDataEvent()
 {
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    VRCPlayerApi owner = Networking.GetOwner(gameObject);
+    if (owner == null || !owner.IsValid()) return;
+    if (caller.playerId != owner.playerId) return;
+
     // syncedData might still be the OLD value here!
     Debug.Log(syncedData); // Might print old data!
 }

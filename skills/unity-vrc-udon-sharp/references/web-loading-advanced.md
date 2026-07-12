@@ -269,7 +269,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
     [SerializeField] private VRCUrl[] _packUrlsAndroid;
 
     /** Returns the URL array for the current build platform */
-    public VRCUrl[] GetPlatformUrls()
+    public VRCUrl[] _GetPlatformUrls()
     {
 #if UNITY_ANDROID
         return _packUrlsAndroid;
@@ -279,7 +279,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
     }
 
     /** Returns the opaque texture format for the current build platform */
-    public TextureFormat GetOpaqueFormat()
+    public TextureFormat _GetOpaqueFormat()
     {
 #if UNITY_ANDROID
         return TextureFormat.ETC2_RGB;
@@ -289,7 +289,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
     }
 
     /** Returns the alpha-capable texture format for the current build platform */
-    public TextureFormat GetAlphaFormat()
+    public TextureFormat _GetAlphaFormat()
     {
 #if UNITY_ANDROID
         return TextureFormat.ETC2_RGBA8;

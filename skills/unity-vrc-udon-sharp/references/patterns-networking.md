@@ -27,7 +27,7 @@ public class SimplePool : UdonSharpBehaviour
         }
     }
 
-    public GameObject Get()
+    public GameObject _Get()
     {
         GameObject obj = pool[nextIndex];
         obj.SetActive(true);
@@ -47,10 +47,12 @@ public class SimplePool : UdonSharpBehaviour
 A networked pattern that assigns a unique pool object to each player present in the world.
 The instance master owns all assignment logic; other clients react to synced state via `OnDeserialization`.
 
+Instance master may coordinate capacity or a fair lottery, but master status can change and does not grant access-control authority. Use an explicit owner-controlled session role policy or platform moderation primitives for exclusions and privileged actions.
+
 **When to use this pattern:**
 - Each player needs a dedicated, persistent object (nameplate, avatar attachment, scoreboard slot, etc.)
 - Pool size is fixed and known at design time (set `_poolObjects` in the Inspector)
-- Assignment authority must be centralised to avoid conflicts
+- Slot coordination must be centralised to avoid conflicts
 
 ### Architecture
 
@@ -64,7 +66,7 @@ The instance master owns all assignment logic; other clients react to synced sta
 
 **Template:** [assets/templates/MasterManagedPlayerPool.cs](../assets/templates/MasterManagedPlayerPool.cs)
 
-The implementation uses `Manual` sync mode. On `Start`, it allocates `_assignments[]` (synced) and the local `_freeQueue` ring buffer. Only the master initialises the free queue. `OnPlayerJoined`/`OnPlayerLeft` (master only) dequeue/enqueue slots and call `RequestSerialization`. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterClientSwitched` rebuilds the free queue and schedules a deferred `VerifyAssignments` call to close the race-condition window.
+The implementation uses `Manual` sync mode. On `Start`, it allocates `_assignments[]` (synced) and the local `_freeQueue` ring buffer. Only the master initialises the free queue. `OnPlayerJoined`/`OnPlayerLeft` (master only) dequeue/enqueue slots and call `RequestSerialization`. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterClientSwitched` rebuilds the free queue and schedules a deferred `_VerifyAssignments` call to close the race-condition window.
 
 
 ### Key Design Decisions
@@ -82,7 +84,7 @@ Centralising writes to the master eliminates the need for distributed conflict r
 When a late joiner receives their first `OnDeserialization`, `_previousAssignments` is all-zeros, so every occupied slot in `_assignments` is detected as a new assignment and the corresponding pool objects are activated automatically.
 
 **Master handoff race condition**
-There is a brief window between the old master leaving and the new master being elected where join/leave events may be dropped. The 2-second deferred `VerifyAssignments` call reconciles the assignment table against the live player list to close this gap.
+There is a brief window between the old master leaving and the new master being elected where join/leave events may be dropped. The 2-second deferred `_VerifyAssignments` call reconciles the assignment table against the live player list to close this gap.
 
 ### Usage Notes
 
@@ -563,9 +565,9 @@ public class GrabbableRope : UdonSharpBehaviour
         releaseSound.Play();
     }
 
-    public bool HasActiveGrab() => isGrabbed;
+    public bool _HasActiveGrab() => isGrabbed;
 
-    public VRCPlayerApi GetGrabber()
+    public VRCPlayerApi _GetGrabber()
     {
         if (grabberId < 0) return null;
         return VRCPlayerApi.GetPlayerById(grabberId);
@@ -638,9 +640,9 @@ Each client computes "where is **my** room?" from the local player's `RoomAssign
 | Choice | When to use | Implementation |
 |---|---|---|
 | **Self-owned** (recommended starting point) | No capacity limits, lottery is acceptable, players simply choose or randomise their own room | Each player writes only their own `RoomAssignment.roomIndex` under an `IsOwner` guard, then calls `RequestSerialization`. Interact buttons or a local random pick drive the write. |
-| **Master-approved** | Capacity caps, fair lottery across all players, reservation systems, banlist-style exclusion | Player sends a request via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)` to a Master-owned manager. The manager validates against the synced occupancy table, then writes the assignment (or rejects). See [Master-Managed Player Object Pool](#master-managed-player-object-pool) for the master-handoff race-condition mitigation. |
+| **Master-coordinated session arbitration** | Capacity caps or a fair lottery across all players | Player sends a request via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)` to a master-coordinated manager. The manager validates capacity or lottery state, then writes the assignment or rejects it. See [Master-Managed Player Object Pool](#master-managed-player-object-pool) for master-handoff reconciliation. Do not use this tier for access control. |
 
-The self-owned tier avoids the master-handoff race entirely. Escalate to master-approved only when cross-player validation is actually required.
+The self-owned tier avoids the master-handoff race. Use master coordination only when non-security session rules require cross-player arbitration. Apply exclusions or privileged permissions through an explicit owner-controlled session role policy or platform moderation primitives.
 
 ### Key Design Decisions
 
@@ -746,11 +748,11 @@ public class LocalRoomPresenter : UdonSharpBehaviour
 }
 ```
 
-The wiring for capacity-limited or master-approved variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above — keep its `_assignments[]` synced array of player IDs and add a parallel `[UdonSynced] int[] _roomIndexBySlot` indexed by the same slot id, then route writes through a master-owned manager via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`.
+The wiring for capacity-limited, master-coordinated variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above. Keep its `_assignments[]` synced array of player IDs, add a parallel `[UdonSynced] int[] _roomIndexBySlot` indexed by the same slot ID, then route writes through the manager owner via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`. This only arbitrates session capacity or lottery state.
 
 ### See Also
 
-- [Master-Managed Player Object Pool](#master-managed-player-object-pool) — slot allocation pattern, reusable for master-approved room assignment
+- [Master-Managed Player Object Pool](#master-managed-player-object-pool) — slot allocation for non-security room capacity or lottery arbitration
 - [persistence.md PlayerObject section](persistence.md#playerobject) — PlayerObject lifecycle, auto-ownership, `OnPlayerRestored`
 - [api.md VRCPlayerApi Movement Methods](api.md#movement-methods) — `TeleportTo` overloads and per-client local teleport semantics
 
@@ -941,7 +943,7 @@ public class SyncedPlaylist : UdonSharpBehaviour
         }
     }
 
-    public string[] GetTitles() => _titles;
+    public string[] _GetTitles() => _titles;
 }
 ```
 

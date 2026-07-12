@@ -307,13 +307,22 @@ public class NetworkMonitor : UdonSharpBehaviour
         }
     }
 
-    [NetworkCallable]
+    [NetworkCallable(1)]
     public void _OnNetworkEvent()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may produce this bounded diagnostic log entry.
         Debug.Log("Network event received!");
     }
 }
 ```
+
+This diagnostic entry is open to any valid caller. Its one-call-per-second rate
+limit and sender-side queue cap prevent it from becoming an unbounded log path.
 
 ## VRC_Pickup
 
@@ -423,14 +432,13 @@ public class PooledObject : UdonSharpBehaviour
     // Set by the pool manager after TryToSpawn(); null when unassigned
     public VRCPlayerApi Owner;
 
-    // Called on all clients when the object is assigned to a new owner.
-    // NETWORK-EXPOSURE: LEGACY
-    public void OnOwnerSet()
+    // Ownership transfer is already synchronized; no custom network entry is needed.
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
     {
-        // React to ownership assignment here
-        if (Utilities.IsValid(Owner))
+        if (player != null && player.IsValid())
         {
-            Debug.Log($"Object assigned to: {Owner.displayName}");
+            Owner = player;
+            Debug.Log($"Object assigned to: {player.displayName}");
         }
     }
 
@@ -479,12 +487,7 @@ public class PoolManager : UdonSharpBehaviour
         // Transfer ownership of the spawned object to the joining player
         Networking.SetOwner(player, spawned);
 
-        PooledObject pooledBehaviour = (PooledObject)spawned.GetComponent(typeof(PooledObject));
-        if (Utilities.IsValid(pooledBehaviour))
-        {
-            pooledBehaviour.Owner = player;
-            pooledBehaviour.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PooledObject.OnOwnerSet));
-        }
+        // PooledObject.OnOwnershipTransferred updates the assigned player on all clients.
     }
 
     public override void OnPlayerLeft(VRCPlayerApi player)
@@ -524,6 +527,7 @@ The Master-Managed pattern above protects its pool calls with an `IsOwner` guard
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
@@ -537,25 +541,31 @@ public class PoolInteractForwarded : UdonSharpBehaviour
         // NetworkEventTarget.Owner targets the owner of THIS UdonBehaviour's
         // GameObject. Since this script is co-located with objectPool, the
         // event is delivered to the pool owner — no ownership change needed.
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerSpawn));
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerSpawn));
     }
 
-    // NETWORK-EXPOSURE: LEGACY
-    public void OwnerSpawn()
+    [NetworkCallable(1)]
+    public void _OwnerSpawn()
     {
-        // Defensive: if ownership transferred between the event send and arrival,
-        // the new owner will still see this fire on the old owner's client; the
-        // guard makes the call a safe no-op rather than silently spawning on
-        // a stale owner.
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may request one available pooled object; this is an open interaction policy.
+        if (!Utilities.IsValid(objectPool)) return;
+        if (!Networking.IsOwner(gameObject)) return;
         if (!Networking.IsOwner(objectPool.gameObject)) return;
+
         objectPool.Shuffle();
         GameObject spawned = objectPool.TryToSpawn();
+        if (spawned == null) return;
         // ... assign ownership of `spawned` if needed
     }
 }
 ```
 
-`OwnerSpawn` runs on the client that owns this script's GameObject (which, per the co-location precondition above, is the pool owner). The `IsOwner` guard is defensive against a race where ownership transfers between the `SendCustomNetworkEvent` call and the handler arriving on the previous owner's client.
+`_OwnerSpawn` runs on the client that owns this script's GameObject, which is also the pool owner under the co-location precondition. `[NetworkCallable(1)]` bounds the request rate, the caller check enforces the open interaction policy, and each accepted call can spawn at most one available object. Ownership routing chooses the receiver; it does not authorize the caller.
 
 #### Tier 2 — Take ownership first (acceptable)
 
@@ -1282,16 +1292,28 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.Udon.Common.Interfaces;
 
 public class DollyController : UdonSharpBehaviour
 {
     // Drag the GameObject that holds VRC Camera Dolly Animation into this field
     [SerializeField] private VRCCameraDollyAnimation dollyAnimation;
 
-    // Call this to start the camera dolly animation for the local player
-    // NETWORK-EXPOSURE: LEGACY
-    public void PlayDolly()
+    public void _RequestDollyForAll()
     {
+        SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_PlayDolly));
+    }
+
+    [NetworkCallable(1)]
+    public void _PlayDolly()
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may start this local-only cosmetic effect; the rate limit bounds repeated calls.
         if (!Utilities.IsValid(dollyAnimation)) return;
         dollyAnimation.Import();
     }
@@ -1302,7 +1324,7 @@ public class DollyController : UdonSharpBehaviour
 
 ### Limitations
 
-- The API applies the animation to the **local player only**. To trigger it for all players, use `SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayDolly))`.
+- The API applies the animation to the **local player only**. `_RequestDollyForAll` asks each client to run `_PlayDolly`; the receiver validates the active caller before starting the effect.
 - `Import()` is the only scripting entry point on the official page; runtime reads or writes of animation, path, or point parameters from UdonSharp are not documented — treat anything beyond `Import()` as unverified.
 - There is no event callback when the animation completes.
 - No ClientSim preview; Build and Test is required to see the animation.

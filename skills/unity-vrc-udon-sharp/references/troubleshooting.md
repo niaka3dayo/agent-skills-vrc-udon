@@ -141,7 +141,7 @@ UdonSharp: Field 'X' is not serializable
 // Correct - Sync player ID instead
 [UdonSynced] private int targetPlayerId;
 
-public VRCPlayerApi GetTargetPlayer()
+public VRCPlayerApi _GetTargetPlayer()
 {
     return VRCPlayerApi.GetPlayerById(targetPlayerId);
 }
@@ -573,11 +573,25 @@ public void _MyMethod(int value) { }
 
 // WRONG - VRCPlayerApi is not syncable
 [NetworkCallable]
-public void SetTarget(VRCPlayerApi player) { }
+public void _SetTarget(VRCPlayerApi player) { }
 
-// CORRECT - Use player ID instead
-[NetworkCallable]
-public void SetTarget(int playerId) { }
+// CORRECT - Use a bounded ID parameter and derive authorization from the caller context
+[NetworkCallable(1)]
+public void _SetTarget(int playerId)
+{
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    VRCPlayerApi owner = Networking.GetOwner(gameObject);
+    if (owner == null || !owner.IsValid()) return;
+    if (caller.playerId != owner.playerId) return;
+
+    VRCPlayerApi target = VRCPlayerApi.GetPlayerById(playerId);
+    if (target == null || !target.IsValid()) return;
+    _ApplyTarget(target);
+}
 
 ```
 
@@ -591,9 +605,19 @@ public void SetTarget(int playerId) { }
 
 ```csharp
 
-// Increase rate limit (max 100/sec)
-[NetworkCallable(100)]
-public void HighFrequencyEvent(float value) { }
+// Use the lowest rate the effect needs and bound its input.
+[NetworkCallable(10)]
+public void _HighFrequencyEvent(float value)
+{
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    // Open diagnostic policy: any valid caller may submit a normalized value.
+    if (value < 0f || value > 1f) return;
+    Debug.Log($"Diagnostic value: {value}");
+}
 
 // Or throttle on sender side
 private float lastSendTime;
@@ -603,7 +627,7 @@ public void SendIfReady(float value)
 {
     if (Time.time - lastSendTime < SEND_INTERVAL) return;
     lastSendTime = Time.time;
-    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(HighFrequencyEvent), value);
+    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_HighFrequencyEvent), value);
 }
 
 ```
@@ -1655,7 +1679,7 @@ public void SetTarget(VRCPlayerApi player)
     _targetPlayerId = player.playerId;
 }
 
-public VRCPlayerApi GetTarget()
+public VRCPlayerApi _GetTarget()
 {
     if (_targetPlayerId < 0) return null;
 

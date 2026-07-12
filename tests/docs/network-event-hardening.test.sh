@@ -10,9 +10,12 @@ API_REF="$UDON_DIR/references/api.md"
 PATTERNS_REF="$UDON_DIR/references/patterns-networking.md"
 BANDWIDTH_REF="$UDON_DIR/references/networking-bandwidth.md"
 MIGRATION_REF="$UDON_DIR/references/sdk-migration.md"
+SYNC_EXAMPLES="$UDON_DIR/references/sync-examples.md"
+DYNAMICS_REF="$UDON_DIR/references/dynamics.md"
 CHEATSHEET="$UDON_DIR/CHEATSHEET.md"
 UNDO_TEMPLATE="$UDON_DIR/assets/templates/UndoableGameManager.cs"
 PUBLIC_METHOD_AUDIT="$ROOT_DIR/tests/docs/audit-udon-public-methods.py"
+PUBLIC_METHOD_AUDIT_TEST="$ROOT_DIR/tests/docs/audit-udon-public-methods.test.sh"
 CONTRIBUTING="$ROOT_DIR/CONTRIBUTING.md"
 CI="$ROOT_DIR/.github/workflows/ci.yml"
 README_EN="$ROOT_DIR/README.md"
@@ -36,9 +39,13 @@ require_text() {
 forbid_regex() {
     local path="$1"
     local pattern="$2"
-    if grep -Eiq "$pattern" "$path"; then
+    local recursive=()
+    if [ -d "$path" ]; then
+        recursive=(-R)
+    fi
+    if grep "${recursive[@]}" -Eiq "$pattern" "$path"; then
         echo "ERROR: $path contains forbidden pattern: $pattern" >&2
-        grep -Ein "$pattern" "$path" >&2
+        grep "${recursive[@]}" -Ein "$pattern" "$path" >&2
         exit 1
     fi
 }
@@ -46,7 +53,11 @@ forbid_regex() {
 forbid_text() {
     local path="$1"
     local needle="$2"
-    if grep -Fq "$needle" "$path"; then
+    local recursive=()
+    if [ -d "$path" ]; then
+        recursive=(-R)
+    fi
+    if grep "${recursive[@]}" -Fq "$needle" "$path"; then
         echo "ERROR: $path contains forbidden text: $needle" >&2
         exit 1
     fi
@@ -94,6 +105,21 @@ for path in "$RULE" "$NETWORKING_REF"; do
     forbid_text "$path" 'Caller authorization and receiver ownership are the same check.'
 done
 
+# Legacy dispatch and NetworkCallable signatures are described precisely.
+LEGACY_RETURN_SENTENCE='A legacy parameterless public method may return a value, but remote dispatch discards that value; the method remains network attack surface and the audit includes it.'
+NETWORK_CALLABLE_VOID_SENTENCE='A `[NetworkCallable]` method must return `void`.'
+PRE_381_SENTENCE='SDKs before 3.8.1 do not define the `NetworkCallable` attribute or parameterized network-event API, so code that uses them normally fails to compile.'
+for path in "$RULE" "$NETWORKING_REF"; do
+    require_text "$path" "$LEGACY_RETURN_SENTENCE"
+done
+for path in "$UDON_DIR/SKILL.md" "$RULE" "$NETWORKING_REF" "$MIGRATION_REF" "$CHEATSHEET"; do
+    require_text "$path" "$NETWORK_CALLABLE_VOID_SENTENCE"
+done
+for path in "$UDON_DIR/SKILL.md" "$NETWORKING_REF" "$MIGRATION_REF"; do
+    require_text "$path" "$PRE_381_SENTENCE"
+done
+forbid_regex "$UDON_DIR" 'NetworkCallable.*compiles but.*ignored|compiles but.*NetworkCallable.*ignored'
+
 # Prove the exact-sentence gate rejects an inverted contract.
 INVERTED_FIXTURE="$(mktemp)"
 trap 'rm -f "$INVERTED_FIXTURE"' EXIT
@@ -135,10 +161,48 @@ forbid_regex "$UNDO_TEMPLATE" 'OwnerProcessMove\([^)]*playerId'
 forbid_regex "$UNDO_TEMPLATE" 'caller\.isMaster'
 
 # Package-wide public method exposure classifications are structurally audited.
+bash "$PUBLIC_METHOD_AUDIT_TEST"
 python3 "$PUBLIC_METHOD_AUDIT" "$UDON_DIR"
+forbid_text "$UDON_DIR" '// NETWORK-EXPOSURE: LEGACY'
+
+# Security-sensitive examples use attributed underscore entries and explicit policies.
+require_text "$SYNC_EXAMPLES" '[NetworkCallable(1)]'
+require_text "$SYNC_EXAMPLES" 'public void _VoteToYes()'
+require_text "$SYNC_EXAMPLES" 'if (!NetworkCalling.InNetworkCall) return;'
+require_text "$SYNC_EXAMPLES" 'VRCPlayerApi caller = NetworkCalling.CallingPlayer;'
+require_text "$SYNC_EXAMPLES" 'if (!Networking.IsOwner(gameObject)) return;'
+require_text "$SYNC_EXAMPLES" 'SyncedVoterPlayerIds'
+require_text "$SYNC_EXAMPLES" 'if (SyncedVoterPlayerIds[i] == caller.playerId) return;'
+require_text "$SYNC_EXAMPLES" 'Ownership routing chooses the receiver; it does not authorize the caller.'
+for entry in _Hit _Unlock _AddCount; do
+    require_text "$SYNC_EXAMPLES" "public void ${entry}()"
+done
+require_text "$API_REF" 'public void _OwnerSpawn()'
+require_text "$API_REF" 'public void _PlayDolly()'
+require_text "$DYNAMICS_REF" 'public void _DoButtonAction()'
+for path in "$SYNC_EXAMPLES" "$API_REF" "$DYNAMICS_REF"; do
+    require_text "$path" 'NetworkCalling.CallingPlayer'
+    require_text "$path" 'NetworkCalling.InNetworkCall'
+done
+require_text "$API_REF" 'Any valid caller may request one available pooled object; this is an open interaction policy.'
+require_text "$API_REF" 'Any valid caller may start this local-only cosmetic effect; the rate limit bounds repeated calls.'
+require_text "$DYNAMICS_REF" 'Any valid caller may trigger this diagnostic effect; it does not change authoritative state.'
+
+# Master coordination is limited to non-security session arbitration.
+forbid_regex "$UDON_DIR" 'banlist-style|Master-approved|master-backed'
+require_text "$PATTERNS_REF" 'Instance master may coordinate capacity or a fair lottery, but master status can change and does not grant access-control authority.'
+require_text "$PATTERNS_REF" 'Use an explicit owner-controlled session role policy or platform moderation primitives for exclusions and privileged actions.'
+
+# Old unprefixed method names must not return in prose or code.
+for stale_name in OwnerProcessMove OwnerUndo OwnerReset VerifyAssignments; do
+    if rg -n "(^|[^A-Za-z0-9_])${stale_name}" "$UDON_DIR"; then
+        echo "ERROR: stale method name remains: $stale_name" >&2
+        exit 1
+    fi
+done
 UNSAFE_AUDIT_FIXTURE="$(mktemp -d)"
 trap 'rm -f "$INVERTED_FIXTURE"; rm -rf "$UNSAFE_AUDIT_FIXTURE"' EXIT
-printf '%s\n' 'public class UnsafeExample { public void PrivilegedHelper() { } }' > "$UNSAFE_AUDIT_FIXTURE/unsafe.md"
+printf '%s\n' 'public class UnsafeExample { public void PrivilegedHelper() { } }' > "$UNSAFE_AUDIT_FIXTURE/unsafe.cs"
 if python3 "$PUBLIC_METHOD_AUDIT" "$UNSAFE_AUDIT_FIXTURE" >/dev/null 2>&1; then
     echo "ERROR: public method audit accepted an unsafe legacy exposure" >&2
     exit 1
