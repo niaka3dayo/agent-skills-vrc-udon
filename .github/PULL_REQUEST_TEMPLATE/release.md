@@ -3,8 +3,10 @@
 > Open a release PR with this template by appending `?template=release.md` to the new-PR URL,
 > or by editing the body after creation. See `CLAUDE.md` "Release Guide" for the full flow.
 
-## Pre-flight checklist (Step 1 must be done BEFORE this PR is opened)
+## Pre-flight checklist (Steps 1 and 2 must be done BEFORE this PR is opened)
 
+- [ ] **`dev` contains the current `main` history.** Verify immediately before opening this PR:
+  `git fetch origin && git merge-base --is-ancestor origin/main origin/dev`
 - [ ] **Version bumped on `dev`** via a separate `chore(version): bump to vX.Y.Z` PR, already merged.
   Verify with `node -p "require('./package.json').version"` on `dev` — it must equal the target version.
 - [ ] All 5 version fields are in sync (Version Sync CI checks this; verify locally too):

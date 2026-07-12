@@ -97,14 +97,43 @@ npm pack --dry-run
 ### Overview
 
 ```
+main ──sync PR──> dev (when the ancestry check fails)
 dev ──version-bump PR──> dev ──release PR──> main ──Release Drafter draft──> publish ──> npm
 ```
 
-Changelogs are automated by Release Drafter. **Version numbers must be bumped manually on `dev` before opening the release PR** (see Step 1 below). `publish.yml` does run `npm version "$VERSION" --no-git-tag-version` in the CI runner as a safety net, but those edits are not committed back, so the git tree's source-of-truth must be kept current by hand.
+Changelogs are automated by Release Drafter. **Version numbers must be bumped manually on `dev` before opening the release PR** (see Step 2 below). `publish.yml` does run `npm version "$VERSION" --no-git-tag-version` in the CI runner as a safety net, but those edits are not committed back, so the git tree's source-of-truth must be kept current by hand.
 
 ### Step-by-step
 
-1. **Bump version fields on `dev`**
+1. **Synchronize `main` into `dev` when needed**
+   - Fetch both remote branches and verify that `dev` contains the current `main` history:
+
+     ```bash
+     set -e
+     git fetch origin
+
+     if ! git merge-base --is-ancestor origin/main origin/dev; then
+       SYNC_BRANCH="chore/sync-main-into-dev-$(date +%Y%m%d%H%M%S)"
+       git switch --create "$SYNC_BRANCH" origin/dev
+       git merge --no-ff origin/main -m "chore: sync main into dev before release"
+       git push -u origin "$SYNC_BRANCH"
+
+       SYNC_PR=$(gh pr create --base dev --head "$SYNC_BRANCH" \
+         --title "chore: sync main into dev before release" \
+         --body "Merge the current main history into dev before the next release.")
+       gh pr checks "$SYNC_PR" --required --watch
+       gh pr merge "$SYNC_PR" --merge --delete-branch
+
+       git fetch origin
+       git merge-base --is-ancestor origin/main origin/dev
+     fi
+     ```
+
+   - The sync PR must pass all seven required checks: Symlink Integrity, Hook Scripts,
+     Documentation Smoke Tests, Markdown Links, npm Pack Test, EditorConfig, and Version Sync.
+     Do not continue until the final ancestry check succeeds.
+
+2. **Bump version fields on `dev`**
    - Decide the target version vX.Y.Z (consult labels on merged PRs since the last release — see "Version resolution" below).
    - Branch off `dev`, run the bump, open a PR back to `dev`:
 
@@ -134,12 +163,12 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
      git push -u origin chore/release-vX.Y.Z
      gh pr create --base dev --label "release: maintenance" \
        --title "chore(version): bump to vX.Y.Z" \
-       --body "Pre-release version bump for Step 2 of the release flow."
+       --body "Pre-release version bump for Step 3 of the release flow."
      ```
 
    - Wait for all seven required CI checks to pass. Version Sync verifies all 5 fields agree on `vX.Y.Z`. Merge the bump PR into `dev` (squash is fine here — single-purpose commit). CodeRabbit review is optional on this PR — it's mechanical and Version Sync is the substantive check.
 
-2. **Create a release PR from `dev` to `main`**
+3. **Create a release PR from `dev` to `main`**
 
    ```bash
    gh pr create --base main --head dev \
@@ -147,14 +176,14 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
      --body "Merge dev into main for release"
    ```
 
-   - Title must include the version that matches `package.json#version` on `dev` after Step 1.
+   - Title must include the version that matches `package.json#version` on `dev` after Step 2.
    - Wait for CI to pass. CodeRabbit approval is **not required for release PRs** (per repo convention — release PRs are mechanical merges of already-reviewed commits).
 
-3. **Merge the release PR**
+4. **Merge the release PR**
    - Merge (do NOT squash — preserve commit history so Release Drafter sees each underlying PR commit).
    - This triggers Release Drafter to update the draft release on `main`.
 
-4. **Publish the GitHub Release draft**
+5. **Publish the GitHub Release draft**
 
    ```bash
    # List draft releases
@@ -183,13 +212,13 @@ Changelogs are automated by Release Drafter. **Version numbers must be bumped ma
    ```
 
    - The `published` event triggers `publish.yml`.
-   - `publish.yml` reads the tag, runs `npm version "$VERSION" --allow-same-version` (no-op if Step 1 was done correctly), syncs to SKILL.md / marketplace.json again as a safety net, and runs `npm publish --provenance`.
+   - `publish.yml` reads the tag, runs `npm version "$VERSION" --allow-same-version` (no-op if Step 2 was done correctly), syncs to SKILL.md / marketplace.json again as a safety net, and runs `npm publish --provenance`.
    - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret).
    - All published releases and their tags are kept permanently. Never delete releases or tags — published versions may be referenced by tag (e.g. `git clone --branch vX.Y.Z`), and deleting tags breaks reproducibility for users pinning a version (see Issue #290).
 
 ### Version resolution (label-driven)
 
-When deciding the target version in Step 1, count the labels on PRs merged into `dev` since the last release:
+When deciding the target version in Step 2, count the labels on PRs merged into `dev` since the last release:
 
 | Label | Bump |
 |-------|------|
@@ -199,13 +228,13 @@ When deciding the target version in Step 1, count the labels on PRs merged into 
 | `release: docs` | patch |
 | `release: maintenance` | patch |
 
-The highest bump wins. If no label matches, default to **patch**. Release Drafter independently resolves the same labels for the draft body, so as long as the manual bump in Step 1 matches Release Drafter's resolution, the draft and `package.json` will agree.
+The highest bump wins. If no label matches, default to **patch**. Release Drafter independently resolves the same labels for the draft body, so as long as the manual bump in Step 2 matches Release Drafter's resolution, the draft and `package.json` will agree.
 
 ### What NOT to do
 
-- Do NOT skip Step 1 (the manual version bump). `publish.yml`'s runner-side mutation does **not** commit back, so a missed bump leaves the git tree frozen. The Version Sync CI check trivially passes when all 5 fields agree on the wrong value — this drifted for 5 release cycles before being caught (PR #169).
+- Do NOT skip Step 2 (the manual version bump). `publish.yml`'s runner-side mutation does **not** commit back, so a missed bump leaves the git tree frozen. The Version Sync CI check trivially passes when all 5 fields agree on the wrong value — this drifted for 5 release cycles before being caught (PR #169).
 - Do NOT create tags manually (Release Drafter creates them when the release is published).
-- Do NOT push directly to `main` (branch protection blocks it; use the release PR flow).
+- Do NOT push directly to `dev` or `main` (branch protection blocks it; use the PR flows above).
 - Do NOT merge feature branches directly to `main` (always go through `dev`).
 
 ## SDK Verification
