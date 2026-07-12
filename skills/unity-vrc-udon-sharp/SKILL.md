@@ -5,13 +5,15 @@ description: >-
     reviewing, debugging, or migrating UdonSharp C# / UdonBehaviour code for SDK
     3.7.1-3.10.4. Covers Udon compile constraints such as List<T>, async/await,
     try/catch, and LINQ; networking with UdonSynced, RequestSerialization,
-    FieldChangeCallback, and NetworkCallable; PlayerData / PlayerObject
+    FieldChangeCallback, NetworkCallable, and NetworkCalling sender validation;
+    PlayerData / PlayerObject
     persistence; PhysBones, Contacts, VRCTween, and VRCPhysBoneCollider access;
     DataList / DataDictionary capacity APIs; Web Loading; VRAM and texture
     lifecycle; asmdef / U# Assembly Definition guidance; VPM package boundaries;
     Auto Referenced tradeoffs; and event handling. Triggers on UdonSharp, Udon,
     VRC SDK, UdonBehaviour, VRCPlayerApi, SendCustomEvent, synced variables,
-    Box Contacts, Global Avatar PhysBone Colliders, DataList capacity,
+    NetworkCalling, CallingPlayer, network event authorization, Box Contacts,
+    Global Avatar PhysBone Colliders, DataList capacity,
     DataDictionary EnsureCapacity, VRChat world scripting, and C# to Udon.
 license: MIT
 metadata:
@@ -201,7 +203,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | Rule File | Contents |
 |-----------|----------|
 | `rules/udonsharp-constraints.md` | Blocked features, code generation rules, attributes, syncable types |
-| `rules/udonsharp-networking.md` | Ownership, sync modes, RequestSerialization, NetworkCallable |
+| `rules/udonsharp-networking.md` | Ownership, sync modes, RequestSerialization, NetworkCallable, network-event sender authorization |
 | `rules/udonsharp-sync-selection.md` | Sync pattern selection, data budget, minimization principles |
 
 > After installation, place these in the agent's rules directory for automatic loading.
@@ -214,7 +216,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | 3.7.4 | Added **Persistence API** (PlayerData/PlayerObject) |
 | 3.7.6 | Multi-platform Build & Publish (PC + Android simultaneously) |
 | 3.8.0 | PhysBone dependency sorting, Drone API (VRCDroneInteractable) |
-| 3.8.1 | **`[NetworkCallable]`** attribute, parameterized network events, `NetworkEventTarget.Others`/`.Self` |
+| 3.8.1 | **`[NetworkCallable]`** attribute, parameterized network events, `NetworkCalling.CallingPlayer`/`.InNetworkCall`, `NetworkEventTarget.Others`/`.Self` |
 | 3.9.0 | Camera Dolly API, Auto Hold pickup simplification |
 | 3.10.0 | **VRChat Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
 | 3.10.1 | Bug fixes and stability improvements |
@@ -239,13 +241,13 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | File | Contents | Search Hints |
 |------|----------|--------------|
 | `constraints.md` | C# feature availability in UdonSharp; blocked features; syncable types; attributes; DataList vs array decision guidance; DataList/DataDictionary capacity APIs; advanced workarounds (object array pseudo-struct); synced VRCUrl lists | List, async, try/catch, LINQ, generics, DataList, DataDictionary, DataList capacity, DataDictionary capacity, EnsureCapacity, DataList vs array, when to use DataList, VRCUrl array, VRCUrl sync, pseudo-struct, object array cast, multi-field state container |
-| `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network events, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, master leave, ownership cascade |
+| `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network-event sender authorization, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, NetworkCalling, CallingPlayer, InNetworkCall, legacy event, underscore, authorization, master leave, ownership cascade |
 | `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
 | `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
 | `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (SDK 3.7.4+); per-player save data; storage usage query API (SDK 3.10.0+) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, GetPlayerObjectStorageUsage, GetPlayerObjectStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
 | `dynamics.md` | PhysBones, Contacts, VRC Constraints (SDK 3.10.0+); VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access (SDK 3.10.4+) | PhysBone, ContactReceiver, ContactSender, Box Contact, Global Avatar PhysBone Collider, VRCPhysBoneCollider, VRCTween, VRCConstraint, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard, remote players | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo, remote players, GetRemotePlayers, exclude local player, FindAll alternative |
-| `patterns-networking.md` | Object pooling, NetworkCallable patterns, persistence integration, dynamics integration, synced game state, distant-room pseudo-multi-room (state/presentation split, self-owned vs master-approved tiers), delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, DamageReceiver, game state, distant room, pseudo multi-room, room assignment, roomIndex, LocalRoomPresenter, RoomAssignment, NoVariableSync, TeleportTo per-client, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
+| `patterns-networking.md` | Object pooling, NetworkCallable sender-validation patterns, persistence integration, dynamics integration, synced game state, distant-room pseudo-multi-room (state/presentation split, self-owned vs master-approved tiers), delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, CallingPlayer, InNetworkCall, sender authorization, DamageReceiver, game state, distant room, pseudo multi-room, room assignment, roomIndex, LocalRoomPresenter, RoomAssignment, NoVariableSync, TeleportTo per-client, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
 | `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization, frame budget Stopwatch, heavy processing architecture (rebuild, replay, reset/cancel), rate limit resolver, GameObject lookup cost tiers | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rebuild, replay, reset, cancel, operation log, authoritative data, derived state, cursor rebuild, rate limit, URL scheduler, video load queue, GameObject.Find, Find cost, lookup cost tier, SerializeField vs Find, silent failure on rename, SendCustomEvent cost, cross-behaviour call, EventBus hot path, delayed loop spike, public method lookup, event dispatch tier |
 | `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, abstract class callback, cancellable delayed event, re-entrance guard, UdonEvent pseudo-delegate | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray, object array, pseudo struct, double cast, abstract class, callback, interface alternative, cancellable timer, re-entrance, emitting guard, UdonEvent, pseudo delegate |
 | `patterns-ui.md` | UI/Canvas patterns: immobilize guard, avatar-scale-aware UI, FOV-responsive positioning, platform-adaptive layout, dynamic player list, scroll input abstraction, lookup-table localization, toggle-animator bridge, settings persistence via PlayerObject, listener-based menu events, finger touch interaction, modular app architecture | Canvas, UI, menu, Immobilize, avatar scale, FOV, platform, Quest, VR, desktop, player list, scroll, localization, language, Toggle, Animator, PlayerObject, settings, persistence, listener, broadcast, finger touch, fingertip, haptic, FingerPointer, FingerTouchCanvas, touch canvas, app architecture, AppModule, AppManager, plugin lifecycle, CanvasGroup transition |
@@ -253,7 +255,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | `web-loading.md` | String/Image downloading, VRCJson, Trusted URLs | VRCStringDownloader, VRCImageDownloader, VRCJson, DataDictionary, VRCUrl |
 | `image-loading-vram.md` | Advanced VRAM management for image loading: Destroy vs Dispose, double-buffer fade, stock mode, mipmap bias | VRAM, texture memory, memory leak, Destroy, Dispose, double buffer, fade, mipmap, TextureInfo |
 | `web-loading-advanced.md` | Advanced data loading: Base64 texture embedding via StringDownloader, cross-platform compression, URL double-key indexing, LRU decode cache | Base64, LoadRawTextureData, StringDownloader texture, DXT1, ETC_RGB4, UNITY_ANDROID, LRU cache, packed resources, binary format |
-| `api.md` | VRCPlayerApi, Networking, enums reference, VRCObjectPool methods + Interact-driven ownership patterns | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, Drone, VRCDroneApi, VRCObjectPool, TryToSpawn, Return, Shuffle, pool owner, Interact pool, pool forwarded spawn, pool ownership transfer |
+| `api.md` | VRCPlayerApi, Networking, NetworkCalling sender context, enums reference, VRCObjectPool methods + Interact-driven ownership patterns | GetPlayers, playerId, isMaster, isLocal, GetPosition, SetVelocity, NetworkCalling, CallingPlayer, InNetworkCall, Drone, VRCDroneApi, VRCObjectPool, TryToSpawn, Return, Shuffle, pool owner, Interact pool, pool forwarded spawn, pool ownership transfer |
 | `events.md` | All Udon events (including OnPlayerRestored, OnContactEnter) | OnPlayerJoined, OnPlayerLeft, OnPlayerTriggerEnter, OnOwnershipTransferred, OnControllerColliderHitPlayer, CharacterController, OnMasterTransferred, OnAvatarChanged, OnSpawn, VRC Economy, OnPurchaseConfirmed, OnAsyncGpuReadbackComplete |
 | `editor-scripting.md` | Editor scripting, proxy system, custom inspectors, editor-only setup components (IEditorOnly), build pipeline callbacks, and UdonSharpProgramAsset auto-generation | UdonSharpEditor, UdonSharpBehaviourProxy, SerializedObject, UdonSharpProgramAsset, auto-generate, AssetPostprocessor, .asset missing, IEditorOnly, EditorOnly tag, setup helper, setup component, build exclusion, custom inspector, ContextMenu, IVRCSDKBuildRequestedCallback, OnBuildRequested, build callback, IPreprocessCallbackBehaviour, OnPreprocess |
 | `assembly-definitions.md` | UdonSharp assembly definitions, Unity `.asmdef` vs U# Assembly Definition, VPM package workflows, Runtime/Editor separation, and Auto Referenced tradeoffs | asmdef, Assembly Definition, U# Assembly Definition, Source Assembly, VPM package, Auto Referenced, Runtime, Editor, package layout, prefab-first, code-integration API |

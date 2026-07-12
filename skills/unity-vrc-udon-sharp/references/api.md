@@ -231,10 +231,21 @@ VRCPlayerApi player = VRCPlayerApi.GetPlayerById(int playerId);
 
 ## NetworkCalling Class (SDK 3.8.1+)
 
-Monitoring and management of the network event queue.
+Sender context plus monitoring and management of the network event queue.
 
 ```csharp
 using VRC.SDK3.UdonNetworkCalling;
+
+// True throughout the active network-call lifetime, including nested calls.
+bool inNetworkCall = NetworkCalling.InNetworkCall;
+
+// The player who initiated the active network call. This is null or invalid
+// when execution is not inside a network call.
+VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+if (NetworkCalling.InNetworkCall && caller != null && caller.IsValid())
+{
+    Debug.Log($"Network call from {caller.displayName}");
+}
 
 // Get queued events for a specific method on this behaviour
 int queuedCount = NetworkCalling.GetQueuedEvents(
@@ -248,6 +259,17 @@ int totalQueued = NetworkCalling.GetAllQueuedEvents();
 // Check if network is congested (also available via Networking.IsClogged)
 bool isClogged = Networking.IsClogged;
 ```
+
+### Sender Context Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `NetworkCalling.CallingPlayer` | `VRCPlayerApi` | Player who initiated the active network call; null or invalid outside a network call |
+| `NetworkCalling.InNetworkCall` | `bool` | True until the network entry point returns, including execution in nested methods or secondary behaviours |
+
+These properties apply to `[NetworkCallable]` and legacy network events. Do not use a `playerId`, display name, or identity value received as a network parameter for authorization. Read `CallingPlayer`, validate it, then apply the world's explicit authorization policy. `Networking.IsOwner(gameObject)` is still required before the receiver mutates synced state, but that ownership check controls mutation location and does not authorize the caller.
+
+Official behavior reference: [VRChat Network Events](https://creators.vrchat.com/worlds/udon/networking/events/).
 
 ### Usage Example: Rate Limit Monitoring
 

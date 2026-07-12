@@ -687,9 +687,9 @@ private void OnHealthChanged()
 
 ## Network Events
 
-### SendCustomNetworkEvent (Legacy)
+### SendCustomNetworkEvent (Legacy Compatibility)
 
-Send events to all players or owner only (no parameters):
+Legacy network events send parameterless calls to all players or the owner:
 
 ```csharp
 // Send to ALL players (including self)
@@ -698,10 +698,18 @@ SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "OnBut
 // Send to OWNER only
 SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "ProcessOwnerAction");
 
-// The receiving method (must be public)
+// Legacy receiving method: public, parameterless, and no leading underscore.
+// It remains network-callable without [NetworkCallable].
 public void OnButtonPressed()
 {
     Debug.Log("Button pressed!");
+}
+
+// Local-only public event target. The leading underscore blocks legacy
+// SendCustomNetworkEvent calls; do not add [NetworkCallable].
+public void _ApplyLocalPreview()
+{
+    Debug.Log("Local preview only");
 }
 ```
 
@@ -716,11 +724,78 @@ public void OnButtonPressed()
 
 > **SDK 3.8.1+ new targets**: `NetworkEventTarget.Others` sends to "everyone except the sender", preventing duplicate effect/sound playback. `NetworkEventTarget.Self` can be used for local-only processing.
 
+For backward compatibility, every parameterless `public` UdonSharp method whose name does not start with an underscore remains callable through `SendCustomNetworkEvent`, even when it has no `[NetworkCallable]` attribute. Prefix a local-only public event target with `_` and leave off `[NetworkCallable]`. Conversely, adding `[NetworkCallable]` explicitly makes an underscore-prefixed method network-callable.
+
 **Limitations (Legacy)**:
 - Cannot send parameters with network events
 - Cannot directly target specific players (Others/Self added in SDK 3.8.1+)
 - Events may arrive before synced variable updates (race condition!)
-- Events are not queued and arrival order is not guaranteed
+- Calls from different senders can interleave; do not use event order as authorization or persistent state
+
+---
+
+## Network Event Hardening and Sender Authorization
+
+Treat the name and parameters of every network event as caller-controlled input. In particular, a `playerId`, display name, role flag, or claimed identity passed as a parameter must never authorize a privileged action. Read the sender from the active network-call context, then apply an explicit policy owned by the world.
+
+`NetworkCalling.CallingPlayer` and `NetworkCalling.InNetworkCall` are available in SDK 3.8.1+ for both attributed and legacy network events:
+
+- `CallingPlayer` is the `VRCPlayerApi` for the player who initiated the active network call. It is null or invalid outside that context.
+- `InNetworkCall` indicates whether execution is still inside the network call. The context remains active through nested methods and cross-behaviour calls until the network entry point returns.
+- A direct local method call is not a network call. Require `InNetworkCall` when a method must only accept network-originated requests.
+
+The following complete example uses `caller.isMaster` as a concrete session policy. This is an example, not a universal rule: the master role can transfer when a player leaves, and many worlds should use a different policy. The important pattern is to derive the sender from `CallingPlayer` and evaluate a deliberate policy against that sender.
+
+```csharp
+using UdonSharp;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class NetworkHardenedReset : UdonSharpBehaviour
+{
+    [UdonSynced] private int roundNumber;
+
+    // Local-only event target: callable by local UI or code, but not by a
+    // legacy SendCustomNetworkEvent. Do not add [NetworkCallable].
+    public void _RequestRoundReset()
+    {
+        SendCustomNetworkEvent(
+            NetworkEventTarget.Owner,
+            nameof(_OwnerResetRound)
+        );
+    }
+
+    // [NetworkCallable] explicitly exposes the underscore-prefixed entry point.
+    [NetworkCallable]
+    public void _OwnerResetRound()
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Example world policy: only the current instance master may reset.
+        if (!caller.isMaster) return;
+
+        // Keep this receiver-side guard for synced state. It authorizes where
+        // mutation happens; it does not authenticate or authorize the caller.
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _ResetRoundState();
+        RequestSerialization();
+    }
+
+    // Local-only helper: underscore-prefixed and not [NetworkCallable].
+    private void _ResetRoundState()
+    {
+        roundNumber = 0;
+    }
+}
+```
+
+Official behavior reference: [VRChat Network Events](https://creators.vrchat.com/worlds/udon/networking/events/).
 
 ---
 
@@ -742,22 +817,33 @@ using VRC.SDK3.UdonNetworkCalling;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-public class NetworkCallableExample : UdonSharpBehaviour
+public class MasterControlledDamage : UdonSharpBehaviour
 {
+    [UdonSynced] private int health = 100;
+
     [NetworkCallable]
-    public void TakeDamage(int damage, int attackerId)
+    public void _TakeDamage(int damage)
     {
-        Debug.Log($"Received {damage} damage from player {attackerId}");
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Example world policy only. Replace with the policy for your game.
+        if (!caller.isMaster) return;
+        if (!Networking.IsOwner(gameObject)) return;
+        if (damage <= 0 || damage > 25) return;
+
+        health = Mathf.Max(0, health - damage);
+        RequestSerialization();
     }
 
-    public void Attack(VRCPlayerApi target, int damage)
+    public void _SendDamage(int damage)
     {
-        // Send network event with parameters
         SendCustomNetworkEvent(
-            NetworkEventTarget.All,
-            nameof(TakeDamage),
-            damage,
-            Networking.LocalPlayer.playerId
+            NetworkEventTarget.Owner,
+            nameof(_TakeDamage),
+            damage
         );
     }
 }
@@ -818,14 +904,14 @@ Only types syncable with `[UdonSynced]` can be used as parameters:
 
 ### Practical Pattern: Damage System
 
-For a full `[NetworkCallable]`-based damage system with ownership forwarding, hit effects, and death handling, see the `DamageReceiver` example in [patterns-networking.md](patterns-networking.md#networkcallable-patterns-sdk-381).
+For a full `[NetworkCallable]`-based damage request that validates sender context, applies an example session policy, and keeps the receiver ownership guard, see `DamageReceiver` in [patterns-networking.md](patterns-networking.md#networkcallable-patterns-sdk-381).
 
 ### Legacy vs NetworkCallable Comparison
 
 | Feature | Legacy | NetworkCallable (3.8.1+) |
 |------|--------|--------------------------|
 | Sending parameters | Not possible | Up to 8 |
-| Attribute | Not required | `[NetworkCallable]` required |
+| Attribute | Not required for parameterless public methods without `_` | `[NetworkCallable]` required; explicitly exposes methods even when their name starts with `_` |
 | Rate limiting | None | Configurable (1-100/sec) |
 | Backward compatibility | All versions | SDK 3.8.1+ only |
 
@@ -835,13 +921,10 @@ For a full `[NetworkCallable]`-based damage system with ownership forwarding, hi
 
 ```csharp
 [UdonSynced] private int pendingDamage;
-[UdonSynced] private int pendingAttackerId;
-
-public void Attack(int damage, int attackerId)
+public void _SendLegacyAttack(int damage)
 {
     Networking.SetOwner(Networking.LocalPlayer, gameObject);
     pendingDamage = damage;
-    pendingAttackerId = attackerId;
     RequestSerialization();
     SendCustomNetworkEvent(NetworkEventTarget.All, "OnAttack");
 }
@@ -849,7 +932,7 @@ public void Attack(int damage, int attackerId)
 public void OnAttack()
 {
     // pendingDamage may still be the old value (race condition)
-    ProcessDamage(pendingDamage, pendingAttackerId);
+    _ProcessDamage(pendingDamage);
 }
 ```
 
@@ -857,20 +940,29 @@ public void OnAttack()
 
 ```csharp
 [NetworkCallable]
-public void Attack(int damage, int attackerId)
+public void _Attack(int damage)
 {
-    // Parameters are reliably delivered (no race condition)
-    ProcessDamage(damage, attackerId);
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    // Apply the world's authorization policy to caller before privileged work.
+    _ProcessDamage(damage, caller);
 }
 
-public void TriggerAttack(int damage)
+public void _TriggerAttack(int damage)
 {
     SendCustomNetworkEvent(
         NetworkEventTarget.All,
-        nameof(Attack),
-        damage,
-        Networking.LocalPlayer.playerId
+        nameof(_Attack),
+        damage
     );
+}
+
+private void _ProcessDamage(int damage, VRCPlayerApi caller)
+{
+    // Validate damage and caller according to this world's rules.
 }
 ```
 
@@ -948,6 +1040,8 @@ public void CheckMessage(int targetPlayerId, string message)
 ```
 
 Passing both the target and payload as event parameters avoids the synced-variable/event ordering race described above. For pre-3.8.1 SDKs, use synced variables and react in `OnDeserialization`/`FieldChangeCallback`, not in a paired network event.
+
+This `targetPlayerId` is routing data only. It identifies which receiver should act; it does not identify or authorize the sender. Any privileged handling must separately use `NetworkCalling.CallingPlayer` and a world-specific authorization policy.
 
 ## Data Limits
 

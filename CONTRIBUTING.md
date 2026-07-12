@@ -130,7 +130,7 @@ See [LICENSE](LICENSE) for details.
 
 ## VRChat SDK Versions
 
-When reporting issues, please specify the SDK version. This project covers SDK 3.7.1 - 3.10.3.
+When reporting issues, please specify the SDK version. This project covers SDK 3.7.1 - 3.10.4.
 
 ## Language
 

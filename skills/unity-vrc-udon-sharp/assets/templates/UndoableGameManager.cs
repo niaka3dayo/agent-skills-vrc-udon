@@ -31,38 +31,56 @@ public class UndoableGameManager : UdonSharpBehaviour
         stateSize = 40; // Example: 40 elements. Adjust to your game's state size.
         currentState = new byte[stateSize];
         stateHistory = new byte[stateSize * 100]; // Max 100 moves
-        InitializeGame();
-        SaveStateToHistory(); // Initial state = history[0]
+        _InitializeGame();
+        _SaveStateToHistory(); // Initial state = history[0]
+    }
+
+    // --- Local request entry ---
+    // The underscore prevents legacy SendCustomNetworkEvent calls. This method
+    // is intentionally not [NetworkCallable].
+    public void _RequestMove(int from, int to)
+    {
+        SendCustomNetworkEvent(
+            NetworkEventTarget.Owner,
+            nameof(_OwnerProcessMove),
+            from,
+            to
+        );
     }
 
     // --- Owner only: process operations ---
     [NetworkCallable]
-    public void OwnerProcessMove(int from, int to, int playerId)
+    public void _OwnerProcessMove(int from, int to)
     {
-        // Validation: check ownership, game phase, turn, etc.
-        if (!Networking.IsOwner(gameObject)) return;
+        if (!_IsAuthorizedNetworkCaller()) return;
 
-        ExecuteMove(from, to);
-        SaveStateToHistory(); // Save once after the operation
+        // Ownership authorizes where synced mutation happens. Caller
+        // authorization is handled separately above.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (!_IsValidMove(from, to)) return;
+
+        _ExecuteMove(from, to);
+        _SaveStateToHistory(); // Save once after the operation
         RequestSerialization();
     }
 
     // --- History management ---
-    private void SaveStateToHistory()
+    private void _SaveStateToHistory()
     {
         int offset = historyCount * stateSize;
         System.Array.Copy(currentState, 0, stateHistory, offset, stateSize);
         historyCount++;
     }
 
-    public void OnUndoClicked()
+    public void _OnUndoClicked()
     {
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerUndo));
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerUndo));
     }
 
     [NetworkCallable]
-    public void OwnerUndo()
+    public void _OwnerUndo()
     {
+        if (!_IsAuthorizedNetworkCaller()) return;
         if (!Networking.IsOwner(gameObject)) return;
         if (historyCount <= 1) return; // Cannot go before initial state
         historyCount--;
@@ -71,14 +89,15 @@ public class UndoableGameManager : UdonSharpBehaviour
         RequestSerialization();
     }
 
-    public void OnResetClicked()
+    public void _OnResetClicked()
     {
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerReset));
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerReset));
     }
 
     [NetworkCallable]
-    public void OwnerReset()
+    public void _OwnerReset()
     {
+        if (!_IsAuthorizedNetworkCaller()) return;
         if (!Networking.IsOwner(gameObject)) return;
         // Return to history[0] = initial state (no separate variable for initial state)
         System.Array.Copy(stateHistory, 0, currentState, 0, stateSize);
@@ -90,14 +109,26 @@ public class UndoableGameManager : UdonSharpBehaviour
     public override void OnDeserialization()
     {
         // Do NOT add to history in OnDeserialization! (causes double-saving)
-        UpdateDisplay();
+        _UpdateDisplay();
+    }
+
+    // Example session policy: only the current instance master may mutate the
+    // shared history. Replace this with the policy appropriate to your game.
+    private bool _IsAuthorizedNetworkCaller()
+    {
+        if (!NetworkCalling.InNetworkCall) return false;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return false;
+
+        return caller.isMaster;
     }
 
     // =========================================================================
     // Override these methods for your specific game logic
     // =========================================================================
 
-    private void InitializeGame()
+    private void _InitializeGame()
     {
         // Initialize currentState to the starting game state
         // Example: fill with zeros or a specific starting arrangement
@@ -107,20 +138,22 @@ public class UndoableGameManager : UdonSharpBehaviour
         }
     }
 
-    private void ExecuteMove(int from, int to)
+    private bool _IsValidMove(int from, int to)
+    {
+        return from >= 0 && from < currentState.Length &&
+               to >= 0 && to < currentState.Length;
+    }
+
+    private void _ExecuteMove(int from, int to)
     {
         // Apply the move to currentState
         // Example: move an element from index 'from' to index 'to'
-        if (from >= 0 && from < currentState.Length &&
-            to >= 0 && to < currentState.Length)
-        {
-            byte temp = currentState[from];
-            currentState[from] = currentState[to];
-            currentState[to] = temp;
-        }
+        byte temp = currentState[from];
+        currentState[from] = currentState[to];
+        currentState[to] = temp;
     }
 
-    private void UpdateDisplay()
+    private void _UpdateDisplay()
     {
         // Reflect currentState in UI/visuals
         // Override this method to update your specific game's display

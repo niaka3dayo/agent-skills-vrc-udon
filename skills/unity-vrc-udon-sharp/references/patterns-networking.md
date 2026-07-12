@@ -136,6 +136,7 @@ public class ArrayHelpers : UdonSharpBehaviour
 ### Basic Parameterized RPC
 
 ```csharp
+using TMPro;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -148,29 +149,38 @@ public class NetworkCallableBasic : UdonSharpBehaviour
     public TextMeshProUGUI messageText;
 
     [NetworkCallable]
-    public void ShowMessage(string message, int senderId)
+    public void _ShowMessage(string message)
     {
-        VRCPlayerApi sender = VRCPlayerApi.GetPlayerById(senderId);
-        string senderName = sender != null ? sender.displayName : "Unknown";
-        messageText.text = $"{senderName}: {message}";
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        messageText.text = $"{caller.displayName}: {message}";
     }
 
-    public void BroadcastMessage(string message)
+    public void _BroadcastMessage(string message)
     {
         SendCustomNetworkEvent(
             NetworkEventTarget.All,
-            nameof(ShowMessage),
-            message,
-            Networking.LocalPlayer.playerId
+            nameof(_ShowMessage),
+            message
         );
     }
 }
 ```
 
+The message remains caller-controlled content, but its displayed sender identity comes from `NetworkCalling.CallingPlayer`, not a claimed network parameter. `_BroadcastMessage` is a local-only public method, so it starts with an underscore and omits `[NetworkCallable]`; `_ShowMessage` is intentionally exposed by the attribute despite its leading underscore.
+
 ### Damage System with NetworkCallable
 
 ```csharp
+using TMPro;
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class DamageReceiver : UdonSharpBehaviour
@@ -178,65 +188,63 @@ public class DamageReceiver : UdonSharpBehaviour
     [UdonSynced] private int health = 100;
     public TextMeshProUGUI healthText;
 
-    [NetworkCallable]
-    public void TakeDamage(int damage, Vector3 hitPosition, int attackerId)
+    // Local-only entry used by the attacker's gameplay code.
+    public void _SendDamageRequest(int damage, Vector3 hitPosition)
     {
-        // Only owner processes damage
-        if (!Networking.IsOwner(gameObject))
-        {
-            // Forward to owner
-            SendCustomNetworkEvent(
-                NetworkEventTarget.Owner,
-                nameof(TakeDamage),
-                damage, hitPosition, attackerId
-            );
-            return;
-        }
-
-        health -= damage;
-        RequestSerialization();
-
-        // Notify all players of hit effect
         SendCustomNetworkEvent(
-            NetworkEventTarget.All,
-            nameof(ShowHitEffect),
+            NetworkEventTarget.Owner,
+            nameof(_RequestDamage),
+            damage,
             hitPosition
         );
-
-        if (health <= 0)
-        {
-            SendCustomNetworkEvent(
-                NetworkEventTarget.All,
-                nameof(OnDeath)
-            );
-        }
     }
 
     [NetworkCallable]
-    public void ShowHitEffect(Vector3 position)
+    public void _RequestDamage(int damage, Vector3 hitPosition)
     {
-        // Spawn particle at hit position
-        SpawnHitParticle(position);
-    }
+        if (!NetworkCalling.InNetworkCall) return;
 
-    [NetworkCallable]
-    public void OnDeath()
-    {
-        // Play death animation/sound
-        Debug.Log("Target destroyed!");
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Example session policy only: this sample lets the current instance
+        // master submit damage. Replace this with the policy for your game.
+        if (!caller.isMaster) return;
+
+        // This receiver-side check authorizes synced mutation location. It
+        // does not authenticate or authorize the caller above.
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (damage <= 0 || damage > 25) return;
+
+        health = Mathf.Max(0, health - damage);
+        _ShowLocalHitEffect(hitPosition);
+        RequestSerialization();
     }
 
     public override void OnDeserialization()
     {
         healthText.text = $"HP: {health}";
     }
+
+    private void _ShowLocalHitEffect(Vector3 position)
+    {
+        Debug.Log($"Accepted hit at {position}");
+    }
 }
 ```
+
+Sending directly to `NetworkEventTarget.Owner` preserves the original requester's `CallingPlayer`. Do not receive on one client and forward the same claimed identity as a parameter: the forwarded call would have a new caller context. The `caller.isMaster` check is only an example policy, not a universal damage rule.
 
 ### Chat System
 
 ```csharp
+using TMPro;
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class ChatSystem : UdonSharpBehaviour
@@ -248,14 +256,19 @@ public class ChatSystem : UdonSharpBehaviour
     private int messageIndex = 0;
 
     [NetworkCallable(10)] // Allow 10 messages/sec
-    public void ReceiveMessage(string message, string senderName)
+    public void _ReceiveMessage(string message)
     {
-        messages[messageIndex] = $"[{senderName}] {message}";
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        messages[messageIndex] = $"[{caller.displayName}] {message}";
         messageIndex = (messageIndex + 1) % messages.Length;
-        UpdateChatDisplay();
+        _UpdateChatDisplay();
     }
 
-    public void SendMessage()
+    public void _SendMessage()
     {
         string msg = inputField.text;
         if (string.IsNullOrEmpty(msg)) return;
@@ -264,13 +277,12 @@ public class ChatSystem : UdonSharpBehaviour
 
         SendCustomNetworkEvent(
             NetworkEventTarget.All,
-            nameof(ReceiveMessage),
-            msg,
-            Networking.LocalPlayer.displayName
+            nameof(_ReceiveMessage),
+            msg
         );
     }
 
-    private void UpdateChatDisplay()
+    private void _UpdateChatDisplay()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         for (int i = 0; i < messages.Length; i++)
@@ -573,7 +585,7 @@ The initial state is saved as history entry 0, and resetting returns to history 
 
 **Template:** [assets/templates/UndoableGameManager.cs](../assets/templates/UndoableGameManager.cs)
 
-Syncs `currentState` (byte[]), `stateHistory` (flat byte[] of N×stateSize), and `historyCount` as `[UdonSynced]` variables. `OwnerProcessMove` (owner-only `[NetworkCallable]`) applies the move then calls `SaveStateToHistory`. `OwnerUndo` decrements `historyCount` and restores the previous snapshot. `OwnerReset` resets to `stateHistory[0]`. `OnDeserialization` only calls `UpdateDisplay` — never saves to history.
+Syncs `currentState` (byte[]), `stateHistory` (flat byte[] of N×stateSize), and `historyCount` as `[UdonSynced]` variables. `_OwnerProcessMove` (owner-targeted `[NetworkCallable]`) derives the sender from `NetworkCalling.CallingPlayer`, applies the example session policy, then calls `_SaveStateToHistory`. `_OwnerUndo` and `_OwnerReset` apply the same sender policy. `OnDeserialization` only calls `_UpdateDisplay` — never saves to history. The owner check authorizes synced mutation on the receiver; it is separate from caller authorization.
 
 **Common mistakes:**
 

@@ -343,10 +343,13 @@ For multiplayer games, the recommended design is **"only the owner modifies stat
 
 ### Code Example: Owner-Centric GameManager
 
-This example uses `[NetworkCallable]`, so full scripts need `using VRC.SDK3.UdonNetworkCalling;`.
+This example uses `[NetworkCallable]` and sender context from `VRC.SDK3.UdonNetworkCalling`.
 
 ```csharp
+using UdonSharp;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class GameManager : UdonSharpBehaviour
@@ -356,24 +359,36 @@ public class GameManager : UdonSharpBehaviour
     [UdonSynced] private int gamePhase; // 0=Lobby, 1=Playing, 2=Result
 
     // --- Input from UI (fires on all clients) ---
-    public void OnCellClicked(int cellIndex)
+    public void _OnCellClicked(int cellIndex)
     {
         // Delegate to owner (works even if self is owner)
         SendCustomNetworkEvent(
             NetworkEventTarget.Owner,
-            nameof(OwnerProcessMove),
-            cellIndex,
-            Networking.LocalPlayer.playerId
+            nameof(_OwnerProcessMove),
+            cellIndex
         );
     }
 
     // --- Owner only ---
     [NetworkCallable]
-    public void OwnerProcessMove(int cellIndex, int playerId)
+    public void _OwnerProcessMove(int cellIndex)
     {
-        if (gamePhase != 1) return;           // Ignore if not in game
-        if (playerId != GetCurrentPlayerId()) return; // Ignore if not their turn
-        if (boardState[cellIndex] != 0) return;       // Already occupied
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Example session policy only: this sample lets the current instance
+        // master submit moves. Replace with your world's turn/role policy.
+        if (!caller.isMaster) return;
+
+        // Ownership controls where synced mutation occurs; it does not
+        // authenticate or authorize caller.
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (gamePhase != 1) return;                    // Ignore if not in game
+        if (cellIndex < 0 || cellIndex >= boardState.Length) return;
+        if (boardState[cellIndex] != 0) return;        // Already occupied
 
         boardState[cellIndex] = currentTurn;
         currentTurn = (currentTurn % 2) + 1;
@@ -383,20 +398,21 @@ public class GameManager : UdonSharpBehaviour
     // --- All clients: update display ---
     public override void OnDeserialization()
     {
-        UpdateBoardDisplay();
-        UpdateTurnIndicator();
+        _UpdateBoardDisplay();
+        _UpdateTurnIndicator();
     }
 
-    private int GetCurrentPlayerId() { /* ... */ return 0; }
-    private void UpdateBoardDisplay() { /* Reflect boardState in UI */ }
-    private void UpdateTurnIndicator() { /* Display currentTurn */ }
+    private void _UpdateBoardDisplay() { /* Reflect boardState in UI */ }
+    private void _UpdateTurnIndicator() { /* Display currentTurn */ }
 }
 ```
 
 **Key points:**
 - UI callback -> `SendCustomNetworkEvent(Owner)` -> Owner validates and modifies -> `RequestSerialization()` -> Everyone receives via `OnDeserialization()`
 - Non-owners can still press buttons (delegated to owner)
-- Invalid operations can be rejected by the owner (design similar to server authority)
+- The event carries move data only; sender identity comes from `NetworkCalling.CallingPlayer`, never a claimed `playerId`
+- `caller.isMaster` is an example policy for this standalone sample, not a universal game rule; replace it with a deliberate world-specific policy
+- The receiver keeps its local ownership guard for synced mutation, separately from caller authorization
 
 
 ## See Also

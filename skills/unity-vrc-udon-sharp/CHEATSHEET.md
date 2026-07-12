@@ -262,9 +262,13 @@ otherScript.SendCustomEvent("MethodName");
 otherScript.SetProgramVariable("fieldName", value);
 otherScript.SendCustomEvent("ProcessData");
 
-// Network event (legacy - no params)
+// Legacy network event: a parameterless public method without a leading _
+// remains network-callable even without [NetworkCallable].
 SendCustomNetworkEvent(NetworkEventTarget.All, "MethodName");
 SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
+
+// Local-only public event target: leading _ and no [NetworkCallable].
+public void _ApplyLocalPreview() { }
 ```
 
 ---
@@ -274,21 +278,52 @@ SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
 Requires `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare `[NetworkCallable]` methods.
 
 ```csharp
-// Method must have [NetworkCallable] attribute
-[NetworkCallable]
-public void TakeDamage(int damage, int attackerId) {
-    health -= damage;
-}
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
-// Call with up to 8 parameters
-SendCustomNetworkEvent(
-    NetworkEventTarget.All,
-    nameof(TakeDamage),
-    damage, attackerId
-);
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class HardenedDamage : UdonSharpBehaviour
+{
+    [UdonSynced] private int health = 100;
+
+    // [NetworkCallable] intentionally exposes this underscore-prefixed method.
+    [NetworkCallable]
+    public void _TakeDamage(int damage)
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Example session policy only; choose the policy for your world.
+        if (!caller.isMaster) return;
+
+        // Ownership controls the mutation location, not caller authorization.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (damage <= 0 || damage > 25) return;
+
+        health = Mathf.Max(0, health - damage);
+        RequestSerialization();
+    }
+
+    // Local-only request method: underscore-prefixed, no [NetworkCallable].
+    public void _SendDamage(int damage)
+    {
+        SendCustomNetworkEvent(
+            NetworkEventTarget.Owner,
+            nameof(_TakeDamage),
+            damage
+        );
+    }
+}
 ```
 
 **Constraints:** `public`, no `static`/`virtual`/`override`, max 8 params, syncable types only
+
+**Hardening:** Never authorize from a `playerId`, name, or role passed as a network parameter. During the active or nested network-call lifetime, require `NetworkCalling.InNetworkCall`, derive the sender from `NetworkCalling.CallingPlayer`, validate it, and apply an explicit world-specific policy. Outside a network call, `CallingPlayer` is null or invalid. Prefix local-only public event targets with `_` and omit `[NetworkCallable]`.
 
 ---
 

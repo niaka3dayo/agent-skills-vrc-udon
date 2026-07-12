@@ -2,7 +2,7 @@
 
 Core networking rules and constraints. See `../references/networking.md` for detailed patterns.
 
-**SDK Coverage**: 3.7.1 - 3.10.3
+**SDK Coverage**: 3.7.1 - 3.10.4
 
 ## Ownership Model
 
@@ -72,18 +72,58 @@ For longer data in Continuous mode, consider splitting across multiple fields or
 Parameterized network events. Supports sending up to 8 parameters. `NetworkCallableAttribute` is in `VRC.SDK3.UdonNetworkCalling`; add `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare `[NetworkCallable]` methods.
 
 ```csharp
+using UdonSharp;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
-[NetworkCallable]
-public void TakeDamage(int damage, int attackerId)
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class MasterControlledScore : UdonSharpBehaviour
 {
-    health -= damage;
-    Debug.Log($"Player {attackerId} dealt {damage} damage");
-}
+    [UdonSynced] private int score;
 
-// Invocation
-SendCustomNetworkEvent(NetworkEventTarget.All, nameof(TakeDamage), damage, attackerId);
+    // Local-only event target: the underscore blocks legacy network calls.
+    // Do not add [NetworkCallable].
+    public void _RequestScoreReset()
+    {
+        SendCustomNetworkEvent(
+            NetworkEventTarget.Owner,
+            nameof(_OwnerResetScore)
+        );
+    }
+
+    // The attribute explicitly exposes this underscore-prefixed method.
+    [NetworkCallable]
+    public void _OwnerResetScore()
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Example session policy only: this world lets the current instance
+        // master reset the score. Choose a policy that fits your world.
+        if (!caller.isMaster) return;
+
+        // This authorizes where synced state may be mutated; it does not
+        // authenticate or authorize the caller.
+        if (!Networking.IsOwner(gameObject)) return;
+
+        score = 0;
+        RequestSerialization();
+    }
+}
 ```
+
+### Network Event Hardening
+
+- Legacy compatibility remains active: every parameterless `public` method whose name does not start with an underscore is callable through `SendCustomNetworkEvent`, even without `[NetworkCallable]`.
+- Prefix local-only public event targets and helpers with an underscore and do not add `[NetworkCallable]`. An underscore prevents legacy network calls; `[NetworkCallable]` explicitly makes an underscore-prefixed method network-callable.
+- Treat every network parameter, including a claimed `playerId` or display name, as caller-controlled data. Never use it for authorization.
+- In a network entry point, require `NetworkCalling.InNetworkCall`, read `NetworkCalling.CallingPlayer`, validate it, and apply an explicit world-specific authorization policy. `CallingPlayer` is null or invalid outside an active network call; the call context remains active through nested method or cross-behaviour calls until the network entry point returns.
+- Keep the receiver-side `Networking.IsOwner(gameObject)` guard before mutating synced state. Ownership authorizes the mutation location; it does not authenticate or authorize the caller.
+
+The `caller.isMaster` check above is one understandable session policy, not a universal rule. The master role can transfer when a player leaves; use the identity derived from `CallingPlayer` with the policy appropriate to your world.
 
 ### NetworkCallable Constraints
 
@@ -137,32 +177,42 @@ uGUI OnClick fires **locally on all clients**. Blocking with an owner check make
 
 ```csharp
 // NG: Buttons do nothing for non-owners
-public void OnButtonClicked()
+public void _OnButtonClicked()
 {
     if (!Networking.IsOwner(gameObject)) return; // Nothing happens for non-owners!
     score += 10;
     RequestSerialization();
 }
 
-// OK Pattern A: Delegate to owner (for infrequent operations)
-public void OnButtonClicked()
+// OK Pattern A: Delegate to owner (for infrequent operations).
+// Example policy: any valid player may request one increment.
+public void _OnButtonClicked()
 {
-    SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerAddScore));
+    SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerAddScore));
 }
-public void OwnerAddScore()
+
+[NetworkCallable(1)]
+public void _OwnerAddScore()
 {
+    if (!NetworkCalling.InNetworkCall) return;
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+    if (!Networking.IsOwner(gameObject)) return;
+
     score += 10;
     RequestSerialization();
 }
 
 // OK Pattern B: Acquire ownership then execute (for immediate response)
-public void OnButtonClicked()
+public void _OnButtonClicked()
 {
     Networking.SetOwner(Networking.LocalPlayer, gameObject);
     score += 10;
     RequestSerialization();
 }
 ```
+
+Pattern A deliberately authorizes every valid player to request one rate-limited increment. That is suitable only when the action is open to everyone. For a privileged action, replace that policy with a world-specific check against `caller`; the ownership guard alone is not authorization.
 
 ### Anti-Pattern 2: All Clients Running Game Logic in Update() -> Owner Conflict
 
@@ -206,4 +256,7 @@ public override void OnDeserialization()
 - [ ] VRCPlayerApi validity checked
 - [ ] Works correctly for late joiners
 - [ ] NetworkCallable rate limits considered
+- [ ] Local-only public event targets start with `_` and omit `[NetworkCallable]`
+- [ ] Authorization derives the sender from `NetworkCalling.CallingPlayer`, never a network parameter
+- [ ] Caller authorization and receiver ownership are checked separately for privileged synced mutations
 - [ ] OnDeserialization side effects guarded with `_hasReceivedState` flag for late-joiner safety
