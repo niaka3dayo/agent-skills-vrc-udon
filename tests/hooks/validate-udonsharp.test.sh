@@ -5,6 +5,7 @@
 #   Case B: jq present, file_path missing → must exit 0 cleanly (no abort)
 #   Case C: jq present, valid .cs with List<T> → existing WARNING on stderr (happy path)
 #   Cases D-H: synced array detection regressions from Issue #307
+#   Cases I-P: field forms, CRLF, and block-comment review regressions
 
 set -uo pipefail
 
@@ -177,6 +178,124 @@ CSEOF
 run_hook "$CASE_H_FILE" "$TMPROOT/case_H.err"
 H_STDERR=$(cat "$TMPROOT/case_H.err")
 assert_not_contains "H: unsynced int[]/float[] do not warn" "$H_STDERR" "$SYNC_BLOAT_WARNING"
+
+# ------------------------------------------------------------
+# Cases I-J: CRLF input must match same-line and preceding-line declarations
+# ------------------------------------------------------------
+CASE_I_FILE="$TMPROOT/case_I.cs"
+printf '%s\r\n' \
+    'using UdonSharp;' \
+    'public class Sample : UdonSharpBehaviour' \
+    '{' \
+    '    [UdonSynced] private int[] values;' \
+    '}' > "$CASE_I_FILE"
+run_hook "$CASE_I_FILE" "$TMPROOT/case_I.err"
+I_STDERR=$(cat "$TMPROOT/case_I.err")
+assert_contains "I: CRLF same-line declaration warns" "$I_STDERR" "$SYNC_BLOAT_WARNING"
+
+CASE_J_FILE="$TMPROOT/case_J.cs"
+printf '%s\r\n' \
+    'using UdonSharp;' \
+    'public class Sample : UdonSharpBehaviour' \
+    '{' \
+    '    [UdonSynced]' \
+    '    private float[] values;' \
+    '}' > "$CASE_J_FILE"
+run_hook "$CASE_J_FILE" "$TMPROOT/case_J.err"
+J_STDERR=$(cat "$TMPROOT/case_J.err")
+assert_contains "J: CRLF preceding-line declaration warns" "$J_STDERR" "$SYNC_BLOAT_WARNING"
+
+# ------------------------------------------------------------
+# Cases K-M: valid declaration prefixes need not end on the first line
+# ------------------------------------------------------------
+CASE_K_FILE="$TMPROOT/case_K.cs"
+cat > "$CASE_K_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced] private int[] values =
+        new int[]
+        {
+            1,
+            2
+        };
+}
+CSEOF
+run_hook "$CASE_K_FILE" "$TMPROOT/case_K.err"
+K_STDERR=$(cat "$TMPROOT/case_K.err")
+assert_contains "K: multiline initializer warns" "$K_STDERR" "$SYNC_BLOAT_WARNING"
+
+CASE_L_FILE="$TMPROOT/case_L.cs"
+cat > "$CASE_L_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced] // Applies to the immediately following physical line.
+    private float[] values;
+}
+CSEOF
+run_hook "$CASE_L_FILE" "$TMPROOT/case_L.err"
+L_STDERR=$(cat "$TMPROOT/case_L.err")
+assert_contains "L: attribute with trailing line comment warns" "$L_STDERR" "$SYNC_BLOAT_WARNING"
+
+CASE_M_FILE="$TMPROOT/case_M.cs"
+cat > "$CASE_M_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced] private int[] values, previousValues;
+}
+CSEOF
+run_hook "$CASE_M_FILE" "$TMPROOT/case_M.err"
+M_STDERR=$(cat "$TMPROOT/case_M.err")
+assert_contains "M: multiple declarators warn" "$M_STDERR" "$SYNC_BLOAT_WARNING"
+
+# ------------------------------------------------------------
+# Cases N-P: block comments do not contain declarations for this rule, and
+# an attribute applies to exactly the immediately following physical line.
+# ------------------------------------------------------------
+CASE_N_FILE="$TMPROOT/case_N.cs"
+cat > "$CASE_N_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    /*
+    [UdonSynced] private int[] values;
+    */
+}
+CSEOF
+run_hook "$CASE_N_FILE" "$TMPROOT/case_N.err"
+N_STDERR=$(cat "$TMPROOT/case_N.err")
+assert_not_contains "N: same-line declaration in block comment does not warn" "$N_STDERR" "$SYNC_BLOAT_WARNING"
+
+CASE_O_FILE="$TMPROOT/case_O.cs"
+cat > "$CASE_O_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    /*
+    [UdonSynced]
+    private float[] values;
+    */
+}
+CSEOF
+run_hook "$CASE_O_FILE" "$TMPROOT/case_O.err"
+O_STDERR=$(cat "$TMPROOT/case_O.err")
+assert_not_contains "O: preceding-line declaration in block comment does not warn" "$O_STDERR" "$SYNC_BLOAT_WARNING"
+
+CASE_P_FILE="$TMPROOT/case_P.cs"
+cat > "$CASE_P_FILE" <<'CSEOF'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced] // The blank line consumes the attribute association.
+
+    private int[] values;
+}
+CSEOF
+run_hook "$CASE_P_FILE" "$TMPROOT/case_P.err"
+P_STDERR=$(cat "$TMPROOT/case_P.err")
+assert_not_contains "P: attribute does not skip a physical line" "$P_STDERR" "$SYNC_BLOAT_WARNING"
 
 echo ""
 echo "Summary: $PASS passed, $FAIL failed"

@@ -40,14 +40,19 @@ function Assert-NotContains([string]$Label, [string]$Actual, [string]$Unexpected
 
 try {
     $Cases = @(
-        @{ Label = 'same-line int[]'; Declaration = '[UdonSynced] private int[] values;' },
-        @{ Label = 'preceding-line int[]'; Declaration = "[UdonSynced]`n    private int[] values;" },
-        @{ Label = 'same-line float[]'; Declaration = '[UdonSynced] private float[] values;' },
-        @{ Label = 'preceding-line float[]'; Declaration = "[UdonSynced]`n    private float[] values;" }
+        @{ Label = 'same-line int[]'; Declaration = '[UdonSynced] private int[] values;'; NewLine = "`n" },
+        @{ Label = 'preceding-line int[]'; Declaration = "[UdonSynced]`n    private int[] values;"; NewLine = "`n" },
+        @{ Label = 'same-line float[]'; Declaration = '[UdonSynced] private float[] values;'; NewLine = "`n" },
+        @{ Label = 'preceding-line float[]'; Declaration = "[UdonSynced]`n    private float[] values;"; NewLine = "`n" },
+        @{ Label = 'CRLF same-line declaration'; Declaration = '[UdonSynced] private int[] values;'; NewLine = "`r`n" },
+        @{ Label = 'CRLF preceding-line declaration'; Declaration = "[UdonSynced]`r`n    private float[] values;"; NewLine = "`r`n" },
+        @{ Label = 'multiline initializer'; Declaration = "[UdonSynced] private int[] values =`n        new int[]`n        {`n            1,`n            2`n        };"; NewLine = "`n" },
+        @{ Label = 'attribute with trailing line comment'; Declaration = "[UdonSynced] // Applies to the immediately following physical line.`n    private float[] values;"; NewLine = "`n" },
+        @{ Label = 'multiple declarators'; Declaration = '[UdonSynced] private int[] values, previousValues;'; NewLine = "`n" }
     )
 
     foreach ($Case in $Cases) {
-        $Source = "using UdonSharp;`npublic class Sample : UdonSharpBehaviour`n{`n    $($Case.Declaration)`n}"
+        $Source = "using UdonSharp;$($Case.NewLine)public class Sample : UdonSharpBehaviour$($Case.NewLine){$($Case.NewLine)    $($Case.Declaration)$($Case.NewLine)}"
         Assert-Contains $Case.Label (Invoke-Hook $Source) $SyncBloatWarning
     }
 
@@ -61,6 +66,40 @@ public class Sample : UdonSharpBehaviour
 }
 '@
     Assert-NotContains 'unsynced int[]/float[]' (Invoke-Hook $UnsyncedSource) $SyncBloatWarning
+
+    $CommentedSameLineSource = @'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    /*
+    [UdonSynced] private int[] values;
+    */
+}
+'@
+    Assert-NotContains 'same-line declaration in block comment' (Invoke-Hook $CommentedSameLineSource) $SyncBloatWarning
+
+    $CommentedPrecedingLineSource = @'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    /*
+    [UdonSynced]
+    private float[] values;
+    */
+}
+'@
+    Assert-NotContains 'preceding-line declaration in block comment' (Invoke-Hook $CommentedPrecedingLineSource) $SyncBloatWarning
+
+    $SeparatedAttributeSource = @'
+using UdonSharp;
+public class Sample : UdonSharpBehaviour
+{
+    [UdonSynced] // The blank line consumes the attribute association.
+
+    private int[] values;
+}
+'@
+    Assert-NotContains 'attribute does not skip a physical line' (Invoke-Hook $SeparatedAttributeSource) $SyncBloatWarning
 
     Write-Output ""
     Write-Output "Summary: $Passed passed, $Failed failed"

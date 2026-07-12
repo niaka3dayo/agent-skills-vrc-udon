@@ -134,19 +134,59 @@ fi
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
 if awk '
-    function is_synced_array_field(line) {
-        return line ~ /^[ \t]*((public|private|protected|internal|static|readonly)[ \t]+)*(int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*([ \t]*=[^;]*)?[ \t]*;[ \t]*(\/\/.*)?$/
+    function mask_block_comments(line,    masked, position, pair) {
+        masked = ""
+        position = 1
+        while (position <= length(line)) {
+            pair = substr(line, position, 2)
+            if (in_block_comment) {
+                if (pair == "*/") {
+                    masked = masked "  "
+                    in_block_comment = 0
+                    position += 2
+                } else {
+                    masked = masked " "
+                    position++
+                }
+            } else if (pair == "//") {
+                return masked substr(line, position)
+            } else if (pair == "/*") {
+                masked = masked "  "
+                in_block_comment = 1
+                position += 2
+            } else {
+                masked = masked substr(line, position, 1)
+                position++
+            }
+        }
+        return masked
     }
 
-    previous_line_has_attribute && is_synced_array_field($0) { found = 1; exit }
+    function is_synced_array_field_prefix(line) {
+        return line ~ /^[ \t]*((public|private|protected|internal|static|readonly)[ \t]+)*(int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)/
+    }
 
     {
+        line = $0
+        sub(/\r$/, "", line)
+        line = mask_block_comments(line)
+
+        if (previous_line_has_attribute && is_synced_array_field_prefix(line)) {
+            found = 1
+            exit
+        }
+
         previous_line_has_attribute = 0
-        if ($0 ~ /^[ \t]*\[UdonSynced\]/) {
-            declaration = $0
+        if (line ~ /^[ \t]*\[UdonSynced\]/) {
+            declaration = line
             sub(/^[ \t]*\[UdonSynced\][ \t]*/, "", declaration)
-            if (is_synced_array_field(declaration)) { found = 1; exit }
-            if (declaration ~ /^[ \t]*$/) previous_line_has_attribute = 1
+            if (is_synced_array_field_prefix(declaration)) {
+                found = 1
+                exit
+            }
+            if (line ~ /^[ \t]*\[UdonSynced\][ \t]*(\/\/.*)?$/) {
+                previous_line_has_attribute = 1
+            }
         }
     }
 

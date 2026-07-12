@@ -133,8 +133,71 @@ if ($SyncedCount -gt 5) {
 }
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
-$SyncedArrayFieldPattern = '(?m)^[ \t]*\[UdonSynced\][ \t]*(?:\r?\n[ \t]*)?(?:(?:public|private|protected|internal|static|readonly)[ \t]+)*(?:int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*(?:[ \t]*=[^;\r\n]*)?[ \t]*;[ \t]*(?://[^\r\n]*)?\r?$'
-if ($FileContent -match $SyncedArrayFieldPattern) {
+function Get-BlockCommentMaskedLine([string]$Line, [ref]$InBlockComment) {
+    $Masked = [System.Text.StringBuilder]::new($Line.Length)
+    $Index = 0
+
+    while ($Index -lt $Line.Length) {
+        $HasNextCharacter = $Index + 1 -lt $Line.Length
+        if ($InBlockComment.Value) {
+            if ($HasNextCharacter -and $Line[$Index] -eq '*' -and $Line[$Index + 1] -eq '/') {
+                [void]$Masked.Append('  ')
+                $InBlockComment.Value = $false
+                $Index += 2
+            } else {
+                [void]$Masked.Append(' ')
+                $Index++
+            }
+        } elseif ($HasNextCharacter -and $Line[$Index] -eq '/' -and $Line[$Index + 1] -eq '/') {
+            [void]$Masked.Append($Line.Substring($Index))
+            break
+        } elseif ($HasNextCharacter -and $Line[$Index] -eq '/' -and $Line[$Index + 1] -eq '*') {
+            [void]$Masked.Append('  ')
+            $InBlockComment.Value = $true
+            $Index += 2
+        } else {
+            [void]$Masked.Append($Line[$Index])
+            $Index++
+        }
+    }
+
+    return $Masked.ToString()
+}
+
+$SyncedArrayFieldPrefixPattern = '^[ \t]*(?:(?:public|private|protected|internal|static|readonly)[ \t]+)*(?:int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(?:=|,|;)'
+$UdonSyncedAttributePrefixPattern = '^[ \t]*\[UdonSynced\][ \t]*'
+$StandaloneUdonSyncedAttributePattern = '^[ \t]*\[UdonSynced\][ \t]*(?://.*)?$'
+$PreviousLineHasAttribute = $false
+$InBlockComment = $false
+$FoundSyncedArrayField = $false
+$Reader = [System.IO.StringReader]::new($FileContent)
+
+try {
+    while ($null -ne ($Line = $Reader.ReadLine())) {
+        $MaskedLine = Get-BlockCommentMaskedLine $Line ([ref]$InBlockComment)
+
+        if ($PreviousLineHasAttribute -and $MaskedLine -match $SyncedArrayFieldPrefixPattern) {
+            $FoundSyncedArrayField = $true
+            break
+        }
+
+        $PreviousLineHasAttribute = $false
+        if ($MaskedLine -match $UdonSyncedAttributePrefixPattern) {
+            $Declaration = $MaskedLine -replace $UdonSyncedAttributePrefixPattern, ''
+            if ($Declaration -match $SyncedArrayFieldPrefixPattern) {
+                $FoundSyncedArrayField = $true
+                break
+            }
+            if ($MaskedLine -match $StandaloneUdonSyncedAttributePattern) {
+                $PreviousLineHasAttribute = $true
+            }
+        }
+    }
+} finally {
+    $Reader.Dispose()
+}
+
+if ($FoundSyncedArrayField) {
     $Warnings += "[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows."
 }
 
