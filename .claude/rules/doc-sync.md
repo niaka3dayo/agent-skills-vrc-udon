@@ -30,7 +30,7 @@ Any change to these paths requires a documentation sync check:
 ## What to Update Together (Release Flow)
 
 These fields must be bumped together on `dev` via a `chore(version): bump to vX.Y.Z` PR
-**before** opening the release PR. See CLAUDE.md "Release Guide" Step 1 for the exact procedure.
+**before** opening the release PR. See CLAUDE.md "Release Guide" Step 2 for the exact procedure.
 `publish.yml` does mutate them in the CI runner as a safety net, but those edits are not
 committed back, so the source-of-truth must be kept current by hand:
 
