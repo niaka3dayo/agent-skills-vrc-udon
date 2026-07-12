@@ -22,7 +22,7 @@ Use `Networking.IsClogged` to check for network queue backup:
 if (Networking.IsClogged)
 {
     // Network is congested - defer synchronization
-    SendCustomEventDelayedSeconds(nameof(RetrySync), 1.0f);
+    SendCustomEventDelayedSeconds(nameof(_RetrySync), 1.0f);
     return;
 }
 RequestSerialization();
@@ -56,24 +56,24 @@ private void RequestSync()
 
     if (now >= lastSyncTime + SyncInterval)
     {
-        ExecuteSync();
+        _ExecuteSync();
     }
     else
     {
         float delay = (float)(lastSyncTime + SyncInterval - now) + 0.001f;
-        SendCustomEventDelayedSeconds(nameof(ExecuteSync), delay);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteSync), delay);
         isPendingSync = true;
     }
 }
 
-public void ExecuteSync()
+public void _ExecuteSync()
 {
     isPendingSync = false;
     if (!Networking.IsOwner(gameObject)) return;
 
     if (Networking.IsClogged)
     {
-        SendCustomEventDelayedSeconds(nameof(ExecuteSync), RetryInterval);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteSync), RetryInterval);
         isPendingSync = true;
         return;
     }
@@ -119,11 +119,11 @@ private void RequestPeriodicSync()
     if (isPendingPeriodicSync) return;
     if (!Networking.IsOwner(gameObject)) return;
 
-    SendCustomEventDelayedSeconds(nameof(ExecutePeriodicSync), PeriodicSyncInterval);
+    SendCustomEventDelayedSeconds(nameof(_ExecutePeriodicSync), PeriodicSyncInterval);
     isPendingPeriodicSync = true;
 }
 
-public void ExecutePeriodicSync()
+public void _ExecutePeriodicSync()
 {
     isPendingPeriodicSync = false;
     if (!Networking.IsOwner(gameObject)) return;
@@ -354,9 +354,44 @@ using VRC.Udon.Common.Interfaces;
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class GameManager : UdonSharpBehaviour
 {
-    [UdonSynced] private int[] boardState;
-    [UdonSynced] private int currentTurn;
-    [UdonSynced] private int gamePhase; // 0=Lobby, 1=Playing, 2=Result
+    private const int BoardSize = 9;
+    private const int LobbyPhase = 0;
+    private const int PlayingPhase = 1;
+
+    [UdonSynced] private int[] boardState = new int[BoardSize];
+    [UdonSynced] private int currentTurn = 1;
+    [UdonSynced] private int gamePhase = LobbyPhase;
+    [UdonSynced] private int playerOneId = -1;
+    [UdonSynced] private int playerTwoId = -1;
+    [UdonSynced] private int currentTurnPlayerId = -1;
+
+    void Start()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        _ResetSessionToLobby();
+        RequestSerialization();
+    }
+
+    // Called by trusted owner-side session setup after choosing two players.
+    // The leading underscore prevents legacy network calls to this local API.
+    public void _StartTwoPlayerSession(int firstPlayerId, int secondPlayerId)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        VRCPlayerApi firstPlayer = VRCPlayerApi.GetPlayerById(firstPlayerId);
+        VRCPlayerApi secondPlayer = VRCPlayerApi.GetPlayerById(secondPlayerId);
+        if (firstPlayer == null || !firstPlayer.IsValid()) return;
+        if (secondPlayer == null || !secondPlayer.IsValid()) return;
+        if (firstPlayerId == secondPlayerId) return;
+
+        boardState = new int[BoardSize];
+        playerOneId = firstPlayerId;
+        playerTwoId = secondPlayerId;
+        currentTurn = 1;
+        currentTurnPlayerId = playerOneId;
+        gamePhase = PlayingPhase;
+        RequestSerialization();
+    }
 
     // --- Input from UI (fires on all clients) ---
     public void _OnCellClicked(int cellIndex)
@@ -378,20 +413,22 @@ public class GameManager : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example session policy only: this sample lets the current instance
-        // master submit moves. Replace with your world's turn/role policy.
-        if (!caller.isMaster) return;
+        // Owner-controlled session policy: only the synced current-turn player
+        // selected by the owner-side setup path may submit this move.
+        if (caller.playerId != currentTurnPlayerId) return;
 
         // Ownership controls where synced mutation occurs; it does not
         // authenticate or authorize caller.
         if (!Networking.IsOwner(gameObject)) return;
 
-        if (gamePhase != 1) return;                    // Ignore if not in game
-        if (cellIndex < 0 || cellIndex >= boardState.Length) return;
+        if (gamePhase != PlayingPhase) return;
+        if (boardState == null || boardState.Length != BoardSize) return;
+        if (cellIndex < 0 || cellIndex >= BoardSize) return;
         if (boardState[cellIndex] != 0) return;        // Already occupied
 
         boardState[cellIndex] = currentTurn;
         currentTurn = (currentTurn % 2) + 1;
+        currentTurnPlayerId = currentTurn == 1 ? playerOneId : playerTwoId;
         RequestSerialization();
     }
 
@@ -404,6 +441,16 @@ public class GameManager : UdonSharpBehaviour
 
     private void _UpdateBoardDisplay() { /* Reflect boardState in UI */ }
     private void _UpdateTurnIndicator() { /* Display currentTurn */ }
+
+    private void _ResetSessionToLobby()
+    {
+        boardState = new int[BoardSize];
+        currentTurn = 1;
+        gamePhase = LobbyPhase;
+        playerOneId = -1;
+        playerTwoId = -1;
+        currentTurnPlayerId = -1;
+    }
 }
 ```
 
@@ -411,7 +458,7 @@ public class GameManager : UdonSharpBehaviour
 - UI callback -> `SendCustomNetworkEvent(Owner)` -> Owner validates and modifies -> `RequestSerialization()` -> Everyone receives via `OnDeserialization()`
 - Non-owners can still press buttons (delegated to owner)
 - The event carries move data only; sender identity comes from `NetworkCalling.CallingPlayer`, never a claimed `playerId`
-- `caller.isMaster` is an example policy for this standalone sample, not a universal game rule; replace it with a deliberate world-specific policy
+- The owner-controlled `_StartTwoPlayerSession` setup initializes the exact nine-cell board and selects the synced current-turn player
 - The receiver keeps its local ownership guard for synced mutation, separately from caller authorization
 
 

@@ -164,6 +164,8 @@ Rules are constraint files that guide AI agents before code generation.
 | `udonsharp-networking` | Ownership model, sync modes, anti-patterns, NetworkCallable constraints |
 | `udonsharp-sync-selection` | Sync decision tree, data budget targets, 6 minimization principles |
 
+**Networking rule:** A parameterless `public` method without a leading `_` is a legacy network entry. Prefix local-only/custom public methods with `_`, and use `[NetworkCallable]` to expose only intentional entries. Authorize `NetworkCalling.CallingPlayer` separately from receiver ownership. Never use instance master as a security or access-control boundary.
+
 ### Sync Decision Tree
 
 ```

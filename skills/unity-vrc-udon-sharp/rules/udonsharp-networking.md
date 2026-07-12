@@ -78,7 +78,7 @@ using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-public class MasterControlledScore : UdonSharpBehaviour
+public class OwnerControlledScore : UdonSharpBehaviour
 {
     [UdonSynced] private int score;
 
@@ -101,9 +101,11 @@ public class MasterControlledScore : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example session policy only: this world lets the current instance
-        // master reset the score. Choose a policy that fits your world.
-        if (!caller.isMaster) return;
+        // Owner-only action policy: authorize the sender against the object
+        // owner, then separately require local receiver ownership below.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
 
         // This authorizes where synced state may be mutated; it does not
         // authenticate or authorize the caller.
@@ -117,13 +119,23 @@ public class MasterControlledScore : UdonSharpBehaviour
 
 ### Network Event Hardening
 
-- Legacy compatibility remains active: every parameterless `public` method whose name does not start with an underscore is callable through `SendCustomNetworkEvent`, even without `[NetworkCallable]`.
-- Prefix local-only public event targets and helpers with an underscore and do not add `[NetworkCallable]`. An underscore prevents legacy network calls; `[NetworkCallable]` explicitly makes an underscore-prefixed method network-callable.
-- Treat every network parameter, including a claimed `playerId` or display name, as caller-controlled data. Never use it for authorization.
-- In a network entry point, require `NetworkCalling.InNetworkCall`, read `NetworkCalling.CallingPlayer`, validate it, and apply an explicit world-specific authorization policy. `CallingPlayer` is null or invalid outside an active network call; the call context remains active through nested method or cross-behaviour calls until the network entry point returns.
-- Keep the receiver-side `Networking.IsOwner(gameObject)` guard before mutating synced state. Ownership authorizes the mutation location; it does not authenticate or authorize the caller.
+A parameterless public UdonSharp method whose name does not start with `_` remains exposed to legacy `SendCustomNetworkEvent` calls even without `[NetworkCallable]`.
 
-The `caller.isMaster` check above is one understandable session policy, not a universal rule. The master role can transfer when a player leaves; use the identity derived from `CallingPlayer` with the policy appropriate to your world.
+A leading underscore blocks legacy network calls to a public method.
+
+`[NetworkCallable]` explicitly exposes an underscore-prefixed public method to network calls.
+
+`NetworkCalling.InNetworkCall` remains true through nested methods and cross-behaviour calls until the network entry method returns.
+
+`NetworkCalling.CallingPlayer` is null or invalid outside a network call.
+
+Caller authorization and receiver ownership are separate checks: authorize `NetworkCalling.CallingPlayer`, then use `Networking.IsOwner(gameObject)` to guard synced mutation on the receiver.
+
+- Prefix local-only public event targets and helpers with an underscore and do not add `[NetworkCallable]`.
+- Treat every network parameter, including a claimed `playerId` or display name, as caller-controlled data. Never use it for authorization.
+- In a network entry point, require `NetworkCalling.InNetworkCall`, read `NetworkCalling.CallingPlayer`, validate it, and apply an explicit session policy owned by the world.
+
+> **Official warning:** Instance master is for gameplay/session arbitration, not security or access control. Do not use `isMaster` as an authorization boundary. Prefer an object-owner policy or an owner-controlled synced role/turn field.
 
 ### NetworkCallable Constraints
 

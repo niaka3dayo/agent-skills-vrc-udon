@@ -194,7 +194,7 @@ public override void OnPlayerTriggerEnter(VRCPlayerApi player)
 }
 
 // Check before accessing synced player
-public void DoSomethingWithPlayer()
+public void _DoSomethingWithPlayer()
 {
     VRCPlayerApi player = VRCPlayerApi.GetPlayerById(syncedPlayerId);
     if (player == null || !player.IsValid())
@@ -215,7 +215,7 @@ public void DoSomethingWithPlayer()
 
 ```text
 
-[UdonBehaviour] SendCustomEvent: Method 'MyMethod' not found
+[UdonBehaviour] SendCustomEvent: Method '_MyMethod' not found
 
 ```
 
@@ -229,17 +229,17 @@ public void DoSomethingWithPlayer()
 ```csharp
 
 // Wrong - Method is private
-private void MyMethod() { }
+private void _MyMethod() { }
 
 // Wrong - Method has parameters
-public void MyMethod(int value) { }
+public void _MyMethod(int value) { }
 
 // Correct - Public, parameterless
-public void MyMethod() { }
+public void _MyMethod() { }
 
 // For passing data, use SetProgramVariable first
 otherScript.SetProgramVariable("inputValue", 42);
-otherScript.SendCustomEvent("ProcessInput");
+otherScript.SendCustomEvent("_ProcessInput");
 
 ```
 
@@ -369,7 +369,7 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 
 ```csharp
 
-public void ChangeValue()
+public void _ChangeValue()
 {
     myValue = 42;
     RequestSerialization(); // Required for Manual sync mode!
@@ -381,7 +381,7 @@ public void ChangeValue()
 
 ```csharp
 
-public void ChangeValue()
+public void _ChangeValue()
 {
     if (!Networking.IsOwner(gameObject))
     {
@@ -543,13 +543,13 @@ Method 'X' cannot be called as a network event
 ```csharp
 
 // WRONG
-public void MyMethod(int value) { } // Missing attribute
+public void _MyMethod(int value) { } // Missing attribute
 
-private void MyMethod(int value) { } // Private
+private void _MyMethod(int value) { } // Private
 
 // CORRECT
 [NetworkCallable]
-public void MyMethod(int value) { }
+public void _MyMethod(int value) { }
 
 ```
 
@@ -1325,12 +1325,12 @@ void Update()
 }
 
 // Do this instead
-public void Activate()
+public void _Activate()
 {
     enabled = true;
 }
 
-public void Deactivate()
+public void _Deactivate()
 {
     enabled = false;
 }
@@ -1455,7 +1455,7 @@ public class BrokenGimmick : UdonSharpBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlaySound()
+    public void _PlaySound()
     {
         audioSource.Play(); // NullReferenceException!
     }
@@ -1496,7 +1496,7 @@ public class RobustGimmick : UdonSharpBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlaySound()
+    public void _PlaySound()
     {
         Initialize(); // Guard against being called externally first
         if (audioSource != null)
@@ -1615,18 +1615,18 @@ transform.position = pos;
 
 private bool _shouldExecute = true;
 
-public void ScheduleAction()
+public void _ScheduleAction()
 {
     _shouldExecute = true;
-    SendCustomEventDelayedSeconds(nameof(DelayedAction), 5f);
+    SendCustomEventDelayedSeconds(nameof(_DelayedAction), 5f);
 }
 
-public void CancelAction()
+public void _CancelAction()
 {
     _shouldExecute = false;
 }
 
-public void DelayedAction()
+public void _DelayedAction()
 {
     if (!_shouldExecute) return;
     // Do action

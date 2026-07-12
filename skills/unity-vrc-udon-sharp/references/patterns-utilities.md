@@ -81,8 +81,8 @@ public class DoorController : UdonSharpBehaviour
         doorBus.RegisterListener(this);
     }
 
-    // Called by EventBus.RaiseEvent("OnDoorOpened")
-    public void OnDoorOpened()
+    // Called by EventBus.RaiseEvent("_OnDoorOpened")
+    public void _OnDoorOpened()
     {
         doorAnimator.SetTrigger("Open");
     }
@@ -100,7 +100,7 @@ public class DoorTrigger : UdonSharpBehaviour
     {
         if (player.isLocal)
         {
-            doorBus.RaiseEvent("OnDoorOpened");
+            doorBus.RaiseEvent("_OnDoorOpened");
         }
     }
 }
@@ -352,7 +352,7 @@ This three-layer structure gives you:
 
 | Layer | Responsibility |
 |---|---|
-| **Worker** | Does the work; stores results in `public` fields; calls `callback.SendCustomEvent(nameof(OnResultReady))` |
+| **Worker** | Does the work; stores results in `public` fields; calls `callback.SendCustomEvent(nameof(_OnResultReady))` |
 | **Mediator** | Receives the string event; reads worker's public fields; calls the typed abstract method |
 | **Abstract base** | Declares the typed callback signature; concrete subclasses override it |
 
@@ -420,7 +420,7 @@ public class DataProcessor : UdonSharpBehaviour
         // Notify mediator via string event.
         // SendCustomEvent dispatches by method-name string; the literal spells
         // out the cross-behaviour contract at the call site.
-        _mediator.SendCustomEvent("OnResultReady");
+        _mediator.SendCustomEvent("_OnResultReady");
     }
 }
 ```
@@ -440,7 +440,7 @@ public class ProcessMediator : UdonSharpBehaviour
     [SerializeField] private ProcessCallbackBase _callback;
 
     // Called by DataProcessor via SendCustomEvent
-    public void OnResultReady()
+    public void _OnResultReady()
     {
         if (_callback == null) return;
 
@@ -492,7 +492,7 @@ public class MyResultHandler : ProcessCallbackBase
 - The mediator holds the `ProcessCallbackBase` reference as the **abstract type**, not the concrete type. This means any subclass of `ProcessCallbackBase` can be plugged in without changing the mediator.
 - The `[AddComponentMenu("")]` on `ProcessCallbackBase` keeps it out of Unity's Add Component menu.
 - `abstract` methods are `public` in the abstract class, but calling them via `SendCustomEvent` on an abstract class reference is unreliable: abstract methods have no concrete Udon bytecode body, so the Udon VM cannot dispatch to them by name. The mediator therefore uses a direct typed call (`_callback.OnProcessComplete(...)`) against the concrete instance. This is intentional — it is the typed boundary.
-- The worker's public result fields (`ResultSuccess`, `ResultData`) act as a temporary buffer. Read them synchronously inside `OnResultReady`; they may be overwritten if a second `Process` call fires before your handler completes.
+- The worker's public result fields (`ResultSuccess`, `ResultData`) act as a temporary buffer. Read them synchronously inside `_OnResultReady`; they may be overwritten if a second `Process` call fires before your handler completes.
 
 **When to use:**
 
@@ -517,13 +517,13 @@ using VRC.SDK3.Components;
 
 private VRCTweenHandle _retryTimer;
 
-public void ScheduleRetry()
+public void _ScheduleRetry()
 {
     _retryTimer.Kill(); // invalid/default handles no-op
-    _retryTimer = VRCTween.DelayedCall(this, nameof(OnRetryFired), 5f);
+    _retryTimer = VRCTween.DelayedCall(this, nameof(_OnRetryFired), 5f);
 }
 
-public void CancelPendingRetry()
+public void _CancelPendingRetry()
 {
     _retryTimer.Kill();
 }
@@ -592,9 +592,9 @@ public class RetryController : UdonSharpBehaviour
     /// <summary>
     /// Schedules a retry. Cancels any previously pending retry first.
     /// </summary>
-    public void ScheduleRetry()
+    public void _ScheduleRetry()
     {
-        CancelPendingRetry();
+        _CancelPendingRetry();
 
         if (_timerTemplate == null) { Debug.LogError("[RetryController] Timer template not assigned"); return; }
 
@@ -602,7 +602,7 @@ public class RetryController : UdonSharpBehaviour
         CancellableTimer timer = _pendingTimer.GetComponent<CancellableTimer>();
         if (timer == null) { Debug.LogError("[RetryController] CancellableTimer component missing"); Destroy(_pendingTimer); _pendingTimer = null; return; }
         timer.CallbackTarget = this;
-        timer.CallbackMethod = nameof(OnRetryFired);
+        timer.CallbackMethod = nameof(_OnRetryFired);
         _pendingTimer.SetActive(true);
 
         // The callback fires on the helper; destroying _pendingTimer before
@@ -615,7 +615,7 @@ public class RetryController : UdonSharpBehaviour
     /// <summary>
     /// Cancels the pending retry if one is scheduled.
     /// </summary>
-    public void CancelPendingRetry()
+    public void _CancelPendingRetry()
     {
         if (_pendingTimer != null)
         {
@@ -627,7 +627,7 @@ public class RetryController : UdonSharpBehaviour
     /// <summary>
     /// Invoked by the timer when the delay expires without cancellation.
     /// </summary>
-    public void OnRetryFired()
+    public void _OnRetryFired()
     {
         _pendingTimer = null;
         Debug.Log("[RetryController] Retry timer fired — executing retry logic.");
@@ -853,7 +853,7 @@ public class LoadOrchestrator : UdonSharpBehaviour
     void Start()
     {
         // Default handler: show a simple status label.
-        _onSuccess = UdonActionExt.New(this, nameof(DefaultSuccessHandler));
+        _onSuccess = UdonActionExt.New(this, nameof(_DefaultSuccessHandler));
     }
 
     /// <summary>
@@ -864,13 +864,13 @@ public class LoadOrchestrator : UdonSharpBehaviour
         _onSuccess = UdonActionExt.New(target, methodName);
     }
 
-    public void SimulateLoad()
+    public void _SimulateLoad()
     {
         Debug.Log("[LoadOrchestrator] Load complete — invoking success callback.");
         UdonActionExt.Invoke(_onSuccess);
     }
 
-    public void DefaultSuccessHandler()
+    public void _DefaultSuccessHandler()
     {
         Debug.Log("[LoadOrchestrator] Default success handler called.");
     }

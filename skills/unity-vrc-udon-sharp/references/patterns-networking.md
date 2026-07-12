@@ -146,6 +146,8 @@ using VRC.Udon.Common.Interfaces;
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class NetworkCallableBasic : UdonSharpBehaviour
 {
+    private const int MaxMessageLength = 256;
+
     public TextMeshProUGUI messageText;
 
     [NetworkCallable]
@@ -155,6 +157,7 @@ public class NetworkCallableBasic : UdonSharpBehaviour
 
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
+        if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
 
         messageText.text = $"{caller.displayName}: {message}";
     }
@@ -170,7 +173,7 @@ public class NetworkCallableBasic : UdonSharpBehaviour
 }
 ```
 
-The message remains caller-controlled content, but its displayed sender identity comes from `NetworkCalling.CallingPlayer`, not a claimed network parameter. `_BroadcastMessage` is a local-only public method, so it starts with an underscore and omits `[NetworkCallable]`; `_ShowMessage` is intentionally exposed by the attribute despite its leading underscore.
+The message remains caller-controlled content, but its displayed sender identity comes from `NetworkCalling.CallingPlayer`, not a claimed network parameter. The 256-character maximum is this receiver example's policy, not a VRChat platform limit. `_BroadcastMessage` is a local-only public method, so it starts with an underscore and omits `[NetworkCallable]`; `_ShowMessage` is intentionally exposed by the attribute despite its leading underscore.
 
 ### Damage System with NetworkCallable
 
@@ -189,27 +192,27 @@ public class DamageReceiver : UdonSharpBehaviour
     public TextMeshProUGUI healthText;
 
     // Local-only entry used by the attacker's gameplay code.
-    public void _SendDamageRequest(int damage, Vector3 hitPosition)
+    public void _SendDamageRequest(int damage)
     {
         SendCustomNetworkEvent(
             NetworkEventTarget.Owner,
             nameof(_RequestDamage),
-            damage,
-            hitPosition
+            damage
         );
     }
 
     [NetworkCallable]
-    public void _RequestDamage(int damage, Vector3 hitPosition)
+    public void _RequestDamage(int damage)
     {
         if (!NetworkCalling.InNetworkCall) return;
 
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example session policy only: this sample lets the current instance
-        // master submit damage. Replace this with the policy for your game.
-        if (!caller.isMaster) return;
+        // Owner-only action policy for this focused sample.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
 
         // This receiver-side check authorizes synced mutation location. It
         // does not authenticate or authorize the caller above.
@@ -218,7 +221,6 @@ public class DamageReceiver : UdonSharpBehaviour
         if (damage <= 0 || damage > 25) return;
 
         health = Mathf.Max(0, health - damage);
-        _ShowLocalHitEffect(hitPosition);
         RequestSerialization();
     }
 
@@ -226,15 +228,10 @@ public class DamageReceiver : UdonSharpBehaviour
     {
         healthText.text = $"HP: {health}";
     }
-
-    private void _ShowLocalHitEffect(Vector3 position)
-    {
-        Debug.Log($"Accepted hit at {position}");
-    }
 }
 ```
 
-Sending directly to `NetworkEventTarget.Owner` preserves the original requester's `CallingPlayer`. Do not receive on one client and forward the same claimed identity as a parameter: the forwarded call would have a new caller context. The `caller.isMaster` check is only an example policy, not a universal damage rule.
+Sending directly to `NetworkEventTarget.Owner` preserves the original requester's `CallingPlayer`. Do not receive on one client and forward the same claimed identity as a parameter: the forwarded call would have a new caller context. This focused sample sends only bounded damage because hit position is unnecessary to its authorization lesson.
 
 ### Chat System
 
@@ -249,6 +246,8 @@ using VRC.Udon.Common.Interfaces;
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class ChatSystem : UdonSharpBehaviour
 {
+    private const int MaxMessageLength = 256;
+
     public TextMeshProUGUI chatLog;
     public UnityEngine.UI.InputField inputField;
 
@@ -262,6 +261,7 @@ public class ChatSystem : UdonSharpBehaviour
 
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
+        if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
 
         messages[messageIndex] = $"[{caller.displayName}] {message}";
         messageIndex = (messageIndex + 1) % messages.Length;
@@ -296,6 +296,8 @@ public class ChatSystem : UdonSharpBehaviour
     }
 }
 ```
+
+The 256-character maximum is this receiver example's policy, not a VRChat platform limit. Validate on receipt even when the sender UI also limits input.
 
 ## Persistence Patterns (SDK 3.7.4+)
 
@@ -333,21 +335,21 @@ public class SettingsManager : UdonSharpBehaviour
         initialized = true;
     }
 
-    public void OnVolumeChanged()
+    public void _OnVolumeChanged()
     {
         if (!initialized) return;
         PlayerData.SetFloat(Networking.LocalPlayer, "volume", volumeSlider.value);
         ApplyVolume(volumeSlider.value);
     }
 
-    public void OnMusicToggled()
+    public void _OnMusicToggled()
     {
         if (!initialized) return;
         PlayerData.SetBool(Networking.LocalPlayer, "musicEnabled", musicToggle.isOn);
         ApplyMusic(musicToggle.isOn);
     }
 
-    public void OnQualityChanged()
+    public void _OnQualityChanged()
     {
         if (!initialized) return;
         PlayerData.SetInt(Networking.LocalPlayer, "quality", qualityDropdown.value);
@@ -393,7 +395,7 @@ public class UnlockSystem : UdonSharpBehaviour
         Debug.Log($"Unlocked: {unlockKeys[index]}");
     }
 
-    public void ResetAllUnlocks()
+    public void _ResetAllUnlocks()
     {
         if (!dataReady) return;
 
@@ -774,13 +776,13 @@ public class DebouncedSearch : UdonSharpBehaviour
     /// Call this whenever input changes. Only the callback scheduled after the
     /// last call within debounceDelay seconds will actually execute.
     /// </summary>
-    public void OnInputChanged()
+    public void _OnInputChanged()
     {
         _pendingCount++;
-        SendCustomEventDelayedSeconds(nameof(ExecuteSearch), debounceDelay);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteSearch), debounceDelay);
     }
 
-    public void ExecuteSearch()
+    public void _ExecuteSearch()
     {
         // Public only because Udon event targets must be — do not call this
         // directly; stray calls would drive the pending counter negative.

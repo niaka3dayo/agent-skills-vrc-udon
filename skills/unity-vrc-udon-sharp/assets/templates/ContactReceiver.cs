@@ -248,7 +248,7 @@ public class ContactReceiver : UdonSharpBehaviour
     /// Resets internal contact state (e.g. call from OnPlayerLeft to clean up
     /// if a player disconnects while their avatar is overlapping the receiver).
     /// </summary>
-    public void ResetContactState()
+    public void _ResetContactState()
     {
         _contactCount = 0;
 

@@ -199,13 +199,13 @@ public class DynamicReceiver : UdonSharpBehaviour
         receiver = GetComponent<VRCContactReceiver>();
     }
 
-    public void EnableAvatarHandsOnly()
+    public void _EnableAvatarHandsOnly()
     {
         receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar);
         receiver.UpdateCollisionTags(new string[] { "Hand", "Finger" });
     }
 
-    public void EnableAvatarsAndWorldSenders()
+    public void _EnableAvatarsAndWorldSenders()
     {
         receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar | DynamicsUsageFlags.World);
         receiver.UpdateCollisionTags(new string[] { "Hand", "Finger", "Head", "Foot", "Custom" });
@@ -248,7 +248,7 @@ public class ProjectileContact : UdonSharpBehaviour
         sender = GetComponent<VRCContactSender>();
     }
 
-    public void Launch()
+    public void _Launch()
     {
         // The contact sender will trigger OnContactEnter
         // on any receiver it collides with
@@ -419,12 +419,12 @@ public class ConstraintController : UdonSharpBehaviour
     public VRCPositionConstraint posConstraint;
     public VRCAimConstraint aimConstraint;
 
-    public void EnableConstraint()
+    public void _EnableConstraint()
     {
         posConstraint.IsActive = true;
     }
 
-    public void DisableConstraint()
+    public void _DisableConstraint()
     {
         posConstraint.IsActive = false;
     }
@@ -563,7 +563,7 @@ public class ConstraintToggle : UdonSharpBehaviour
     public bool useWeightFade = false;
 
     // Called from a UI button or InteractEvent
-    public void EnableConstraint()
+    public void _EnableConstraint()
     {
         if (positionConstraint == null) return;
 
@@ -577,7 +577,7 @@ public class ConstraintToggle : UdonSharpBehaviour
         }
     }
 
-    public void DisableConstraint()
+    public void _DisableConstraint()
     {
         if (positionConstraint == null) return;
 
@@ -592,7 +592,7 @@ public class ConstraintToggle : UdonSharpBehaviour
     }
 
     // Toggle helper – safe to call from network events
-    public void ToggleConstraint()
+    public void _ToggleConstraint()
     {
         if (positionConstraint == null) return;
         positionConstraint.IsActive = !positionConstraint.IsActive;
@@ -660,7 +660,7 @@ public class ConstraintSourceSwapper : UdonSharpBehaviour
     }
 
     // Remove all sources except the first, then clear it
-    public void ClearAllSources()
+    public void _ClearAllSources()
     {
         if (spotlightAim == null) return;
 
@@ -805,6 +805,7 @@ public class PhysicalButton : UdonSharpBehaviour
         );
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void DoButtonAction()
     {
         Debug.Log("Button action executed!");

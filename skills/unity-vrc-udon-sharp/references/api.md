@@ -250,7 +250,7 @@ if (NetworkCalling.InNetworkCall && caller != null && caller.IsValid())
 // Get queued events for a specific method on this behaviour
 int queuedCount = NetworkCalling.GetQueuedEvents(
     (IUdonEventReceiver)this,
-    nameof(MyNetworkMethod)
+    nameof(_MyNetworkMethod)
 );
 
 // Get total queued events across entire world
@@ -289,7 +289,7 @@ public class NetworkMonitor : UdonSharpBehaviour
     {
         int myEventQueue = NetworkCalling.GetQueuedEvents(
             (IUdonEventReceiver)this,
-            nameof(OnNetworkEvent)
+            nameof(_OnNetworkEvent)
         );
         int totalQueue = NetworkCalling.GetAllQueuedEvents();
 
@@ -298,17 +298,17 @@ public class NetworkMonitor : UdonSharpBehaviour
                           $"Clogged: {Networking.IsClogged}";
     }
 
-    public void SendEvent()
+    public void _SendEvent()
     {
         // Check before sending to avoid queue buildup
-        if (NetworkCalling.GetQueuedEvents((IUdonEventReceiver)this, nameof(OnNetworkEvent)) < 10)
+        if (NetworkCalling.GetQueuedEvents((IUdonEventReceiver)this, nameof(_OnNetworkEvent)) < 10)
         {
-            SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnNetworkEvent));
+            SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_OnNetworkEvent));
         }
     }
 
     [NetworkCallable]
-    public void OnNetworkEvent()
+    public void _OnNetworkEvent()
     {
         Debug.Log("Network event received!");
     }
@@ -423,7 +423,8 @@ public class PooledObject : UdonSharpBehaviour
     // Set by the pool manager after TryToSpawn(); null when unassigned
     public VRCPlayerApi Owner;
 
-    // Called on all clients when the object is assigned to a new owner
+    // Called on all clients when the object is assigned to a new owner.
+    // NETWORK-EXPOSURE: LEGACY
     public void OnOwnerSet()
     {
         // React to ownership assignment here
@@ -539,6 +540,7 @@ public class PoolInteractForwarded : UdonSharpBehaviour
         SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerSpawn));
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void OwnerSpawn()
     {
         // Defensive: if ownership transferred between the event send and arrival,
@@ -1287,6 +1289,7 @@ public class DollyController : UdonSharpBehaviour
     [SerializeField] private VRCCameraDollyAnimation dollyAnimation;
 
     // Call this to start the camera dolly animation for the local player
+    // NETWORK-EXPOSURE: LEGACY
     public void PlayDolly()
     {
         if (!Utilities.IsValid(dollyAnimation)) return;

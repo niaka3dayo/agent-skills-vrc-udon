@@ -52,7 +52,7 @@ public class BatchedSync : UdonSharpBehaviour
         ScheduleBatchedSync();
     }
 
-    public void AdvanceRound()
+    public void _AdvanceRound()
     {
         if (!Networking.IsOwner(gameObject)) return;
 

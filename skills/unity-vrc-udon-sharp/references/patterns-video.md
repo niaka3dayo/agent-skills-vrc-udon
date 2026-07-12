@@ -109,14 +109,14 @@ public class VideoPlayerStateMachine : UdonSharpBehaviour
 
     // === Public API ===
 
-    public void RequestPlay()
+    public void _RequestPlay()
     {
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
         SetState(StateLoading);
         // Caller is responsible for calling _videoPlayer.PlayURL(url)
     }
 
-    public void RequestPause()
+    public void _RequestPause()
     {
         if (_playerState != StatePlaying) return;
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -124,7 +124,7 @@ public class VideoPlayerStateMachine : UdonSharpBehaviour
         SetState(StatePaused);
     }
 
-    public void RequestResume()
+    public void _RequestResume()
     {
         if (_playerState != StatePaused) return;
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
@@ -132,7 +132,7 @@ public class VideoPlayerStateMachine : UdonSharpBehaviour
         SetState(StatePlaying);
     }
 
-    public void RequestStop()
+    public void _RequestStop()
     {
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
         _videoPlayer.Stop();
@@ -230,7 +230,7 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 
     // === Owner: commit current sync state ===
 
-    public void UpdateSyncedPosition()
+    public void _UpdateSyncedPosition()
     {
         if (!Networking.IsOwner(gameObject)) return;
 
@@ -248,7 +248,7 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
         return _syncStartTime + (elapsed / 1000f) * _syncSpeed;
     }
 
-    public void ApplySyncedPosition()
+    public void _ApplySyncedPosition()
     {
         float expected = CalcExpectedPosition();
         float duration = _videoPlayer.GetDuration();
@@ -265,12 +265,12 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
     // === Playback state — consumers must call these when playback state changes ===
     // Note: drift correction is suppressed while paused to avoid spurious seeks.
 
-    public void OnPlay()
+    public void _OnPlay()
     {
         _isPlaying = true;
     }
 
-    public void OnPause()
+    public void _OnPause()
     {
         _isPlaying = false;
     }
@@ -295,7 +295,7 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        ApplySyncedPosition();
+        _ApplySyncedPosition();
     }
 }
 ```
@@ -508,7 +508,7 @@ OnVideoError
   → permanent error?  → SetState(Error), notify user, stop
   → retriable error?
       → retryCount < maxRetries?
-          → schedule RetryLoad after retryDelay seconds
+    → schedule _RetryLoad after retryDelay seconds
           → if PlayerError and retryCount >= maxRetries/2 → swap player type
       → retryCount >= maxRetries  → SetState(Error), give up
 ```
@@ -581,7 +581,7 @@ public class VideoErrorHandler : UdonSharpBehaviour
                 NotifyPermanentError(error);
                 return;
             }
-            SendCustomEventDelayedSeconds(nameof(RetryLoad), _rateLimitedDelay);
+            SendCustomEventDelayedSeconds(nameof(_RetryLoad), _rateLimitedDelay);
             return;
         }
 
@@ -601,10 +601,10 @@ public class VideoErrorHandler : UdonSharpBehaviour
             _activePlayer  = _usingFallback ? _fallbackPlayer : _primaryPlayer;
         }
 
-        SendCustomEventDelayedSeconds(nameof(RetryLoad), _defaultRetryDelay);
+        SendCustomEventDelayedSeconds(nameof(_RetryLoad), _defaultRetryDelay);
     }
 
-    public void RetryLoad()
+    public void _RetryLoad()
     {
         if (_currentUrl == null || string.IsNullOrEmpty(_currentUrl.Get())) return;
         // In production, route through UrlLoadScheduler (see Rate Limit Resolver pattern)
@@ -710,7 +710,7 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
     }
 
     // Owner-only: advance to the next queue entry
-    public void AdvanceQueue()
+    public void _AdvanceQueue()
     {
         if (!Networking.IsOwner(gameObject)) return;
 
@@ -747,7 +747,7 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
     }
 
     // Owner-only: shuffle remaining entries (Fisher-Yates on indices after head)
-    public void ShuffleRemaining()
+    public void _ShuffleRemaining()
     {
         if (!Networking.IsOwner(gameObject)) return;
 
@@ -819,7 +819,7 @@ public class SyncedPlaylistManager : UdonSharpBehaviour
             return;
         }
 
-        AdvanceQueue();
+        _AdvanceQueue();
     }
 }
 ```
@@ -882,7 +882,7 @@ public class PlatformUrlSelector : UdonSharpBehaviour
     }
 
     // Play using the runtime pair (Solution B)
-    public void PlayWithRuntimeSelection()
+    public void _PlayWithRuntimeSelection()
     {
 #if UNITY_ANDROID
         VRCUrl selected = _questUrl;

@@ -66,13 +66,13 @@ The third argument of `SendCustomEventDelayedSeconds` / `SendCustomEventDelayedF
 
 ```csharp
 // Default (Update timing)
-SendCustomEventDelayedSeconds(nameof(MyMethod), 2.0f);
+SendCustomEventDelayedSeconds(nameof(_MyMethod), 2.0f);
 
 // Execute at FixedUpdate timing (SDK 3.10.2+)
-SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
+SendCustomEventDelayedSeconds(nameof(_PhysicsAction), 1.0f, EventTiming.FixedUpdate);
 
 // Frame delay + PostLateUpdate timing (SDK 3.10.2+)
-SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
+SendCustomEventDelayedFrames(nameof(_CameraFollow), 1, EventTiming.PostLateUpdate);
 ```
 
 > **Note**: `EventTiming.FixedUpdate` is suitable for processing that needs to sync with physics calculations, and `EventTiming.PostLateUpdate` is suitable for camera following and post-IK corrections.

@@ -73,8 +73,10 @@ public class DamageSystem : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example session policy only; replace it with the policy for your game.
-        if (!caller.isMaster) return;
+        // Concrete owner-only caller policy for this migration sample.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
 
         // Receiver ownership controls synced mutation, not caller authorization.
         if (!Networking.IsOwner(gameObject)) return;
@@ -95,7 +97,7 @@ public class DamageSystem : UdonSharpBehaviour
 }
 ```
 
-Network parameters carry the action data, not trusted sender identity. For privileged calls, derive the sender from `NetworkCalling.CallingPlayer`, validate it, and apply the world's authorization policy. The leading underscore keeps `_SendDamage` out of the legacy network-callable surface; `[NetworkCallable]` intentionally exposes `_TakeDamage` despite its underscore.
+Network parameters carry the action data, not trusted sender identity. This migration executes both a concrete `1..25` damage bound and an owner-only caller policy derived from `NetworkCalling.CallingPlayer`; neither rule is left as a comment-only placeholder. The leading underscore keeps `_SendDamage` out of the legacy network-callable surface; `[NetworkCallable]` intentionally exposes `_TakeDamage` despite its underscore.
 
 Constraints on `[NetworkCallable]` methods:
 - Method must be `public`
@@ -268,8 +270,8 @@ public class ConstraintController : UdonSharpBehaviour
 {
     public VRCPositionConstraint posConstraint;
 
-    public void EnableFollow() => posConstraint.IsActive = true;
-    public void DisableFollow() => posConstraint.IsActive = false;
+    public void _EnableFollow() => posConstraint.IsActive = true;
+    public void _DisableFollow() => posConstraint.IsActive = false;
 
     public void SetWeight(float w) => posConstraint.SetSourceWeight(0, w);
 }
@@ -314,10 +316,10 @@ See [persistence.md](persistence.md) for a full monitoring example.
 
 ```csharp
 // Schedule a physics-safe callback
-SendCustomEventDelayedSeconds(nameof(PhysicsStep), 1.0f, EventTiming.FixedUpdate);
+SendCustomEventDelayedSeconds(nameof(_PhysicsStep), 1.0f, EventTiming.FixedUpdate);
 
 // Schedule a camera-follow update after IK
-SendCustomEventDelayedFrames(nameof(UpdateCamera), 1, EventTiming.PostLateUpdate);
+SendCustomEventDelayedFrames(nameof(_UpdateCamera), 1, EventTiming.PostLateUpdate);
 ```
 
 `FixedUpdate` and `PostLateUpdate` are new in SDK 3.10.2; `Update` and `LateUpdate` existed since SDK 3.7.1.

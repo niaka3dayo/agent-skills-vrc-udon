@@ -136,7 +136,7 @@ private void Initialize() {
     audioSource = GetComponent<AudioSource>();
 }
 
-public void PlaySound() {
+public void _PlaySound() {
     Initialize(); // Guard against external calls
     audioSource.Play();
 }
@@ -188,23 +188,23 @@ player.Immobilize(true/false)
 
 ```csharp
 // Instead of coroutines
-SendCustomEventDelayedSeconds(nameof(MyMethod), 2.0f);
-SendCustomEventDelayedFrames(nameof(MyMethod), 1);
+SendCustomEventDelayedSeconds(nameof(_MyMethod), 2.0f);
+SendCustomEventDelayedFrames(nameof(_MyMethod), 1);
 
 // EventTiming (SDK 3.10.2+): FixedUpdate / PostLateUpdate
-SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
-SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
+SendCustomEventDelayedSeconds(nameof(_PhysicsAction), 1.0f, EventTiming.FixedUpdate);
+SendCustomEventDelayedFrames(nameof(_CameraFollow), 1, EventTiming.PostLateUpdate);
 
 // Repeating (single-instance, sparse timers only — see patterns-performance.md
 // "Event Dispatch & Cross-Behaviour Call Cost Tiers" for many-instance / short-period alternatives)
-public void StartLoop() {
+public void _StartLoop() {
     _running = true;
-    DoLoop();
+    _DoLoop();
 }
-public void DoLoop() {
+public void _DoLoop() {
     if (!_running) return;
     // ... action ...
-    SendCustomEventDelayedSeconds(nameof(DoLoop), 1.0f);
+    SendCustomEventDelayedSeconds(nameof(_DoLoop), 1.0f);
 }
 ```
 
@@ -219,13 +219,13 @@ using VRC.SDK3.Components;
 
 private VRCTweenHandle _scaleTween;
 
-public void Pulse() {
+public void _Pulse() {
     _scaleTween.Kill(); // safe no-op when invalid/default
     _scaleTween = gameObject.TweenScale(Vector3.one * 1.2f, 0.15f, VRCTweenEase.OutQuad)
-        .OnComplete(this, nameof(OnPulseUp));
+        .OnComplete(this, nameof(_OnPulseUp));
 }
 
-public void OnPulseUp() {
+public void _OnPulseUp() {
     _scaleTween = gameObject.TweenScale(Vector3.one, 0.15f, VRCTweenEase.OutQuad);
 }
 
@@ -256,11 +256,11 @@ For simple world scripts, do not add an asmdef by default. If a package/asmdef w
 
 ```csharp
 // Call method on another script
-otherScript.SendCustomEvent("MethodName");
+otherScript.SendCustomEvent("_MethodName");
 
 // Pass data
 otherScript.SetProgramVariable("fieldName", value);
-otherScript.SendCustomEvent("ProcessData");
+otherScript.SendCustomEvent("_ProcessData");
 
 // Legacy network event: a parameterless public method without a leading _
 // remains network-callable even without [NetworkCallable].
@@ -298,8 +298,10 @@ public class HardenedDamage : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example session policy only; choose the policy for your world.
-        if (!caller.isMaster) return;
+        // Owner-only caller policy.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
 
         // Ownership controls the mutation location, not caller authorization.
         if (!Networking.IsOwner(gameObject)) return;

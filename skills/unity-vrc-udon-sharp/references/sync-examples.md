@@ -54,14 +54,15 @@ public class HitTarget : UdonSharpBehaviour
         SendCustomNetworkEvent(NetworkEventTarget.All, "Hit");
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void Hit()
     {
         if (!gameObject.activeSelf) return;
         gameObject.SetActive(false);
-        SendCustomEventDelayedSeconds("Respawn", 5.0f);
+        SendCustomEventDelayedSeconds("_Respawn", 5.0f);
     }
 
-    public void Respawn()
+    public void _Respawn()
     {
         gameObject.SetActive(true);
     }
@@ -114,6 +115,7 @@ public class EventOnlyLock : UdonSharpBehaviour
         SendCustomNetworkEvent(NetworkEventTarget.All, "Unlock");
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void Unlock()
     {
         gameObject.SetActive(false);
@@ -154,6 +156,7 @@ public class SyncedCounter : UdonSharpBehaviour
         SendCustomNetworkEvent(NetworkEventTarget.Owner, "AddCount");
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void AddCount() // Only executed by owner
     {
         ++SyncedButtonCount;
@@ -182,10 +185,10 @@ public class SyncedLock : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        RefreshDoor();
+        _RefreshDoor();
     }
 
-    public void RefreshDoor()
+    public void _RefreshDoor()
     {
         if (SyncedIsUnlocked) Unlock();
     }
@@ -201,6 +204,7 @@ public class SyncedLock : UdonSharpBehaviour
         RequestSerialization();
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void Unlock()
     {
         DoorObject.SetActive(false);
@@ -251,6 +255,7 @@ public class VoteSystemCore : UdonSharpBehaviour
     // --- Local variables ---
     public bool voted; // Double-vote prevention (local, no sync needed)
 
+    // NETWORK-EXPOSURE: LEGACY
     public void VoteToYes() // Only executed by owner
     {
         ++SyncedYesCount;

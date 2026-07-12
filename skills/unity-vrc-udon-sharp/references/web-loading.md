@@ -95,7 +95,7 @@ public class UserUrlLoader : UdonSharpBehaviour
     [SerializeField] private VRCUrlInputField urlInputField;
 
     // Called from UI button's OnClick
-    public void OnLoadButtonClicked()
+    public void _OnLoadButtonClicked()
     {
         VRCUrl url = urlInputField.GetUrl();
         VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
@@ -128,7 +128,7 @@ public class UserUrlLoader : UdonSharpBehaviour
 private VRCImageDownloader _downloader; // Initialize in Start()
 private int _currentIndex = 0;
 
-public void LoadNext()
+public void _LoadNext()
 {
     if (_currentIndex >= imageUrls.Length) _currentIndex = 0;
     _downloader.DownloadImage(
@@ -145,7 +145,7 @@ public void LoadNext()
 // Server-side routing pattern: Fixed single URL, server returns the data
 [SerializeField] private VRCUrl scoreBoardUrl; // "https://example.github.io/scores.json"
 
-public void FetchScores()
+public void _FetchScores()
 {
     VRCStringDownloader.LoadUrl(scoreBoardUrl, (IUdonEventReceiver)this);
 }
@@ -220,7 +220,7 @@ public class StringDownloadExample : UdonSharpBehaviour
 {
     public VRCUrl dataUrl;
 
-    public void StartDownload()
+    public void _StartDownload()
     {
         VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
     }
@@ -344,7 +344,7 @@ public class ImageDownloadExample : UdonSharpBehaviour
         _downloader = new VRCImageDownloader();
     }
 
-    public void StartDownload()
+    public void _StartDownload()
     {
         // Dispose previous download result
         if (_currentDownload != null)
@@ -436,7 +436,7 @@ public class JsonDownloadExample : UdonSharpBehaviour
     [Header("Display")]
     public UnityEngine.UI.Text statusText;
 
-    public void FetchData()
+    public void _FetchData()
     {
         VRCStringDownloader.LoadUrl(jsonUrl, (IUdonEventReceiver)this);
     }
@@ -506,7 +506,7 @@ private int _retryCount = 0;
 private const int MAX_RETRIES = 3;
 private const float RETRY_DELAY = 6.0f; // 5-second limit + margin
 
-public void StartDownload()
+public void _StartDownload()
 {
     _retryCount = 0;
     VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
@@ -518,7 +518,7 @@ public override void OnStringLoadError(IVRCStringDownload result)
     {
         _retryCount++;
         Debug.LogWarning($"[Download] Retry {_retryCount}/{MAX_RETRIES}");
-        SendCustomEventDelayedSeconds(nameof(RetryDownload), RETRY_DELAY);
+        SendCustomEventDelayedSeconds(nameof(_RetryDownload), RETRY_DELAY);
     }
     else
     {
@@ -526,7 +526,7 @@ public override void OnStringLoadError(IVRCStringDownload result)
     }
 }
 
-public void RetryDownload()
+public void _RetryDownload()
 {
     VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
 }
@@ -544,14 +544,14 @@ void Start()
     _results = new string[urls.Length];
 }
 
-public void StartBatchDownload()
+public void _StartBatchDownload()
 {
     _currentIndex = 0;
     _results = new string[urls.Length];
-    DownloadNext();
+    _DownloadNext();
 }
 
-private void DownloadNext()
+public void _DownloadNext()
 {
     if (_currentIndex >= urls.Length)
     {
@@ -566,7 +566,7 @@ public override void OnStringLoadSuccess(IVRCStringDownload result)
     _results[_currentIndex] = result.Result;
     _currentIndex++;
     // Delay to respect rate limiting
-    SendCustomEventDelayedSeconds(nameof(DownloadNext), 5.5f);
+    SendCustomEventDelayedSeconds(nameof(_DownloadNext), 5.5f);
 }
 
 public override void OnStringLoadError(IVRCStringDownload result)
@@ -574,7 +574,7 @@ public override void OnStringLoadError(IVRCStringDownload result)
     Debug.LogError($"[Batch] Error at index {_currentIndex}: {result.Error}");
     _results[_currentIndex] = null;
     _currentIndex++;
-    SendCustomEventDelayedSeconds(nameof(DownloadNext), 5.5f);
+    SendCustomEventDelayedSeconds(nameof(_DownloadNext), 5.5f);
 }
 
 private void OnAllDownloadsComplete()

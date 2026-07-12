@@ -176,7 +176,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
         // Schedule a deferred verification pass to catch any assignments that may
         // have been written just before the previous master left (race condition).
-        SendCustomEventDelayedSeconds(nameof(VerifyAssignments), 2f);
+        SendCustomEventDelayedSeconds(nameof(_VerifyAssignments), 2f);
     }
 
     /// <summary>
@@ -184,7 +184,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// Assigns slots to any current players who lack one and frees slots whose
     /// player is no longer in the instance.
     /// </summary>
-    public void VerifyAssignments()
+    public void _VerifyAssignments()
     {
         if (!Networking.IsMaster) return;
 
@@ -218,7 +218,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
             if (_freeCount == 0)
             {
-                Debug.LogWarning($"[PlayerPool] VerifyAssignments: no free slot for {players[p].displayName}.");
+                Debug.LogWarning($"[PlayerPool] _VerifyAssignments: no free slot for {players[p].displayName}.");
                 continue;
             }
 

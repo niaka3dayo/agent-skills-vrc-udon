@@ -322,7 +322,7 @@ public class PlayerBadge : UdonSharpBehaviour
     }
 
     // Called by world logic when the local player earns prestige
-    public void GrantPrestige()
+    public void _GrantPrestige()
     {
         if (!Networking.IsOwner(gameObject)) return;
         if (!initialized) return;
@@ -419,7 +419,7 @@ public class StorageMonitor : UdonSharpBehaviour
 
         // Show initial usage and schedule periodic refresh
         ShowUsage(player);
-        SendCustomEventDelayedSeconds(nameof(RequestRefresh), RefreshInterval);
+        SendCustomEventDelayedSeconds(nameof(_RequestRefresh), RefreshInterval);
     }
 
     // Called by VRChat when fresh storage usage data is available.
@@ -430,7 +430,7 @@ public class StorageMonitor : UdonSharpBehaviour
     }
 
     // Periodic refresh event
-    public void RequestRefresh()
+    public void _RequestRefresh()
     {
         VRCPlayerApi local = Networking.LocalPlayer;
         if (local == null || !local.IsValid()) return;
@@ -438,7 +438,7 @@ public class StorageMonitor : UdonSharpBehaviour
         Networking.RequestStorageUsageUpdate();
 
         // Schedule next refresh
-        SendCustomEventDelayedSeconds(nameof(RequestRefresh), RefreshInterval);
+        SendCustomEventDelayedSeconds(nameof(_RequestRefresh), RefreshInterval);
     }
 
     private void ShowUsage(VRCPlayerApi player)
@@ -548,13 +548,13 @@ public class SettingsManager : UdonSharpBehaviour
     }
 
     // Called by UI events
-    public void OnVolumeChanged()
+    public void _OnVolumeChanged()
     {
         if (!initialized) return;
         PlayerData.SetFloat(Networking.LocalPlayer, "musicVolume", volumeSlider.value);
     }
 
-    public void OnMusicToggled()
+    public void _OnMusicToggled()
     {
         if (!initialized) return;
         PlayerData.SetBool(Networking.LocalPlayer, "musicEnabled", musicToggle.isOn);
@@ -816,7 +816,7 @@ public class DataAgingExample : UdonSharpBehaviour
 ### Checking Saved Data
 
 ```csharp
-public void DebugPrintAllData()
+public void _DebugPrintAllData()
 {
     VRCPlayerApi local = Networking.LocalPlayer;
     string[] keys = PlayerData.GetKeys(local);

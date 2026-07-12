@@ -47,7 +47,7 @@ public class MyScript : UdonSharpBehaviour
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
     // Editor-only code here
-    public void EditorOnlyMethod()
+    public void _EditorOnlyMethod()
     {
         Debug.Log("This only exists in editor!");
     }
@@ -270,7 +270,7 @@ using UdonSharpEditor;
 public class MyToolWindow : EditorWindow
 {
     [MenuItem("Tools/My UdonSharp Tool")]
-    public static void ShowWindow()
+    public static void _ShowWindow()
     {
         GetWindow<MyToolWindow>("My Tool");
     }

@@ -20,6 +20,8 @@ using VRC.Udon.Common.Interfaces;
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class UndoableGameManager : UdonSharpBehaviour
 {
+    private const int MaxMoves = 100;
+
     // --- Synced data ---
     [UdonSynced] private byte[] currentState;     // Current game state
     [UdonSynced] private byte[] stateHistory;     // All history (flat array)
@@ -30,7 +32,8 @@ public class UndoableGameManager : UdonSharpBehaviour
     {
         stateSize = 40; // Example: 40 elements. Adjust to your game's state size.
         currentState = new byte[stateSize];
-        stateHistory = new byte[stateSize * 100]; // Max 100 moves
+        // One initial entry plus MaxMoves subsequent move entries.
+        stateHistory = new byte[stateSize * (MaxMoves + 1)];
         _InitializeGame();
         _SaveStateToHistory(); // Initial state = history[0]
     }
@@ -58,6 +61,8 @@ public class UndoableGameManager : UdonSharpBehaviour
         // authorization is handled separately above.
         if (!Networking.IsOwner(gameObject)) return;
         if (!_IsValidMove(from, to)) return;
+        // Reject before mutating currentState when all move slots are used.
+        if (historyCount >= MaxMoves + 1) return;
 
         _ExecuteMove(from, to);
         _SaveStateToHistory(); // Save once after the operation
@@ -112,8 +117,7 @@ public class UndoableGameManager : UdonSharpBehaviour
         _UpdateDisplay();
     }
 
-    // Example session policy: only the current instance master may mutate the
-    // shared history. Replace this with the policy appropriate to your game.
+    // Owner-only session policy: the sender must be the current object owner.
     private bool _IsAuthorizedNetworkCaller()
     {
         if (!NetworkCalling.InNetworkCall) return false;
@@ -121,7 +125,10 @@ public class UndoableGameManager : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return false;
 
-        return caller.isMaster;
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return false;
+
+        return caller.playerId == owner.playerId;
     }
 
     // =========================================================================

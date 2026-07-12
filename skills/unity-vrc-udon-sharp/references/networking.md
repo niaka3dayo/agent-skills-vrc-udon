@@ -120,7 +120,7 @@ public class NoSyncExample : UdonSharpBehaviour
     // Cannot use [UdonSynced] with NoVariableSync mode!
     // [UdonSynced] private int score; // ERROR!
 
-    public void TriggerGlobalEvent()
+    public void _TriggerGlobalEvent()
     {
         SendCustomNetworkEvent(
             VRC.Udon.Common.Interfaces.NetworkEventTarget.All,
@@ -128,6 +128,7 @@ public class NoSyncExample : UdonSharpBehaviour
         );
     }
 
+    // NETWORK-EXPOSURE: LEGACY
     public void OnGlobalEvent()
     {
         // All players execute this
@@ -181,7 +182,7 @@ public class SeparatedSyncLogic : UdonSharpBehaviour
     // This script is on a SEPARATE GameObject without VRC_ObjectSync
     [UdonSynced] public int useCount;
 
-    public void IncrementUse()
+    public void _IncrementUse()
     {
         if (!Networking.IsOwner(gameObject))
         {
@@ -218,11 +219,12 @@ Network events are **not re-sent** to late joiners:
 
 ```csharp
 // PROBLEM: Late joiners miss this event
-public void StartGame()
+public void _StartGame()
 {
     SendCustomNetworkEvent(NetworkEventTarget.All, "OnGameStarted");
 }
 
+// NETWORK-EXPOSURE: LEGACY
 public void OnGameStarted()
 {
     // Late joiners never receive this!
@@ -256,7 +258,7 @@ private void OnGamePhaseChanged()
     }
 }
 
-public void StartGame()
+public void _StartGame()
 {
     if (!Networking.IsOwner(gameObject)) return;
     GamePhase = 1;
@@ -638,7 +640,7 @@ public Vector3 SmoothPosition
 After changing synced variables, call `RequestSerialization()`:
 
 ```csharp
-public void IncrementScore()
+public void _IncrementScore()
 {
     if (!Networking.IsOwner(gameObject))
     {
@@ -700,6 +702,7 @@ SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.Owner, "Pro
 
 // Legacy receiving method: public, parameterless, and no leading underscore.
 // It remains network-callable without [NetworkCallable].
+// NETWORK-EXPOSURE: LEGACY
 public void OnButtonPressed()
 {
     Debug.Log("Button pressed!");
@@ -724,7 +727,11 @@ public void _ApplyLocalPreview()
 
 > **SDK 3.8.1+ new targets**: `NetworkEventTarget.Others` sends to "everyone except the sender", preventing duplicate effect/sound playback. `NetworkEventTarget.Self` can be used for local-only processing.
 
-For backward compatibility, every parameterless `public` UdonSharp method whose name does not start with an underscore remains callable through `SendCustomNetworkEvent`, even when it has no `[NetworkCallable]` attribute. Prefix a local-only public event target with `_` and leave off `[NetworkCallable]`. Conversely, adding `[NetworkCallable]` explicitly makes an underscore-prefixed method network-callable.
+A parameterless public UdonSharp method whose name does not start with `_` remains exposed to legacy `SendCustomNetworkEvent` calls even without `[NetworkCallable]`.
+
+A leading underscore blocks legacy network calls to a public method.
+
+`[NetworkCallable]` explicitly exposes an underscore-prefixed public method to network calls.
 
 **Limitations (Legacy)**:
 - Cannot send parameters with network events
@@ -738,13 +745,19 @@ For backward compatibility, every parameterless `public` UdonSharp method whose 
 
 Treat the name and parameters of every network event as caller-controlled input. In particular, a `playerId`, display name, role flag, or claimed identity passed as a parameter must never authorize a privileged action. Read the sender from the active network-call context, then apply an explicit policy owned by the world.
 
-`NetworkCalling.CallingPlayer` and `NetworkCalling.InNetworkCall` are available in SDK 3.8.1+ for both attributed and legacy network events:
+`NetworkCalling.CallingPlayer` and `NetworkCalling.InNetworkCall` are available in SDK 3.8.1+ for both attributed and legacy network events.
 
-- `CallingPlayer` is the `VRCPlayerApi` for the player who initiated the active network call. It is null or invalid outside that context.
-- `InNetworkCall` indicates whether execution is still inside the network call. The context remains active through nested methods and cross-behaviour calls until the network entry point returns.
-- A direct local method call is not a network call. Require `InNetworkCall` when a method must only accept network-originated requests.
+`NetworkCalling.InNetworkCall` remains true through nested methods and cross-behaviour calls until the network entry method returns.
 
-The following complete example uses `caller.isMaster` as a concrete session policy. This is an example, not a universal rule: the master role can transfer when a player leaves, and many worlds should use a different policy. The important pattern is to derive the sender from `CallingPlayer` and evaluate a deliberate policy against that sender.
+`NetworkCalling.CallingPlayer` is null or invalid outside a network call.
+
+Caller authorization and receiver ownership are separate checks: authorize `NetworkCalling.CallingPlayer`, then use `Networking.IsOwner(gameObject)` to guard synced mutation on the receiver.
+
+A direct local method call is not a network call. Require `InNetworkCall` when a method must only accept network-originated requests.
+
+> **Official warning:** Instance master is for gameplay/session arbitration, not security or access control. Do not use `isMaster` as an authorization boundary. VRChat's [Object Ownership](https://creators.vrchat.com/worlds/udon/networking/ownership/) and [Network Components](https://creators.vrchat.com/worlds/udon/networking/network-components/) documentation explicitly warns against using master to gate access.
+
+The following complete example uses an owner-only caller policy. Sender authorization is evaluated against the object owner, while the receiver separately verifies that it is the local owner before mutating synced state.
 
 ```csharp
 using UdonSharp;
@@ -776,8 +789,9 @@ public class NetworkHardenedReset : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example world policy: only the current instance master may reset.
-        if (!caller.isMaster) return;
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
 
         // Keep this receiver-side guard for synced state. It authorizes where
         // mutation happens; it does not authenticate or authorize the caller.
@@ -817,7 +831,7 @@ using VRC.SDK3.UdonNetworkCalling;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-public class MasterControlledDamage : UdonSharpBehaviour
+public class OwnerControlledDamage : UdonSharpBehaviour
 {
     [UdonSynced] private int health = 100;
 
@@ -829,8 +843,9 @@ public class MasterControlledDamage : UdonSharpBehaviour
         VRCPlayerApi caller = NetworkCalling.CallingPlayer;
         if (caller == null || !caller.IsValid()) return;
 
-        // Example world policy only. Replace with the policy for your game.
-        if (!caller.isMaster) return;
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
         if (!Networking.IsOwner(gameObject)) return;
         if (damage <= 0 || damage > 25) return;
 
@@ -929,6 +944,7 @@ public void _SendLegacyAttack(int damage)
     SendCustomNetworkEvent(NetworkEventTarget.All, "OnAttack");
 }
 
+// NETWORK-EXPOSURE: LEGACY
 public void OnAttack()
 {
     // pendingDamage may still be the old value (race condition)
@@ -972,13 +988,14 @@ private void _ProcessDamage(int damage, VRCPlayerApi caller)
 
 ```csharp
 // PROBLEM: Event may arrive before syncedData is updated on remote clients
-public void SendDataWithEvent()
+public void _SendDataWithEvent()
 {
     syncedData = "important data";
     RequestSerialization();
     SendCustomNetworkEvent(NetworkEventTarget.All, "ProcessData");
 }
 
+// NETWORK-EXPOSURE: LEGACY
 public void ProcessData()
 {
     // syncedData might still be the OLD value here!
@@ -1002,7 +1019,7 @@ public string SyncedData
     }
 }
 
-public void SendData()
+public void _SendData()
 {
     SyncedData = "important data";
     RequestSerialization();
@@ -1021,25 +1038,30 @@ private void ProcessData()
 Since direct player targeting is not available, include the target player's ID as a `[NetworkCallable]` parameter and let each receiver filter locally:
 
 ```csharp
-public void SendMessageToPlayer(VRCPlayerApi player, string msg)
+private const int MaxMessageLength = 256;
+
+public void _SendMessageToPlayer(VRCPlayerApi player, string msg)
 {
     SendCustomNetworkEvent(
         NetworkEventTarget.All,
-        nameof(CheckMessage),
+        nameof(_CheckMessage),
         player.playerId,
         msg
     );
 }
 
 [NetworkCallable]
-public void CheckMessage(int targetPlayerId, string message)
+public void _CheckMessage(int targetPlayerId, string message)
 {
+    if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
     if (Networking.LocalPlayer.playerId != targetPlayerId) return;
-    ProcessMessage(message);
+    _ProcessMessage(message);
 }
 ```
 
 Passing both the target and payload as event parameters avoids the synced-variable/event ordering race described above. For pre-3.8.1 SDKs, use synced variables and react in `OnDeserialization`/`FieldChangeCallback`, not in a paired network event.
+
+The 256-character maximum is this receiver example's policy, not a VRChat platform limit.
 
 This `targetPlayerId` is routing data only. It identifies which receiver should act; it does not identify or authorize the sender. Any privileged handling must separately use `NetworkCalling.CallingPlayer` and a world-specific authorization policy.
 
@@ -1145,7 +1167,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 > **Warning**: `Networking.IsMaster` is not deprecated, but it is fragile in practice. The instance master is the first player to join. If that player leaves, the master role transfers to another player, creating a brief window where no action runs, or two clients race to act simultaneously. Prefer owner-centric patterns for any logic that must run reliably. See [Owner-Centric Architecture Migration](#owner-centric-architecture-migration) below.
 
 ```csharp
-public void DoMasterAction()
+public void _DoMasterAction()
 {
     if (Networking.IsMaster)
     {
@@ -1159,7 +1181,7 @@ public void DoMasterAction()
 ### Local Player Detection
 
 ```csharp
-public void OnInteract()
+public void _OnInteract()
 {
     VRCPlayerApi localPlayer = Networking.LocalPlayer;
 
@@ -1178,7 +1200,7 @@ public void OnInteract()
 [UdonSynced] private double gameStartTime;
 [UdonSynced] private bool gameRunning;
 
-public void StartGame()
+public void _StartGame()
 {
     if (!Networking.IsOwner(gameObject))
     {
@@ -1228,7 +1250,7 @@ so all clients converge to the new owner's authoritative state.
 **Before (IsMaster)**
 
 ```csharp
-public void StartGame()
+public void _StartGame()
 {
     if (!Networking.IsMaster) return;  // Fragile: master may leave mid-check
 
@@ -1244,7 +1266,7 @@ public void StartGame()
 // Assign one dedicated GameObject as the "game manager" object.
 // Its owner is the authoritative game controller.
 
-public void StartGame()
+public void _StartGame()
 {
     if (!Networking.IsOwner(gameObject)) return;  // Stable: exactly one owner
 
@@ -1272,7 +1294,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
         // Resume any periodic owner duties here
         if (gameRunning)
         {
-            SendCustomEventDelayedSeconds(nameof(OwnerHeartbeat), 1.0f);
+            SendCustomEventDelayedSeconds(nameof(_OwnerHeartbeat), 1.0f);
         }
     }
 }

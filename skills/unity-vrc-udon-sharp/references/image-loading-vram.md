@@ -117,7 +117,7 @@ public class SafeImageLoader : UdonSharpBehaviour
         _downloader = new VRCImageDownloader();
     }
 
-    public void LoadImage()
+    public void _LoadImage()
     {
         // Dispose the previous download result wrapper (frees VRC internal state)
         if (_currentDownload != null)
@@ -212,7 +212,7 @@ State 2 — Fade complete
 ### Important: No Coroutines in UdonSharp
 
 UdonSharp does not support C# coroutines (`IEnumerator` / `yield return`). For
-time-delayed operations, use `SendCustomEventDelayedSeconds(nameof(MethodName), delay)`.
+time-delayed operations, use `SendCustomEventDelayedSeconds(nameof(_MethodName), delay)`.
 
 ### Full Double-Buffer Implementation
 
@@ -269,12 +269,12 @@ public class DoubleBufferImageDisplay : UdonSharpBehaviour
         SetRendererAlpha(rendererB, 0f);
 
         // Load the first image
-        LoadNextImage();
+        _LoadNextImage();
     }
 
     // ── Download ────────────────────────────────────────────────────────────
 
-    private void LoadNextImage()
+    public void _LoadNextImage()
     {
         if (imageUrls == null || imageUrls.Length == 0) return;
 
@@ -336,7 +336,7 @@ public class DoubleBufferImageDisplay : UdonSharpBehaviour
     {
         Debug.LogError($"[DoubleBuffer] Error {result.ErrorCode}: {result.Error}");
         // Retry after display duration to keep cycling
-        SendCustomEventDelayedSeconds(nameof(LoadNextImage), displayDuration);
+        SendCustomEventDelayedSeconds(nameof(_LoadNextImage), displayDuration);
     }
 
     // ── Fade animation via Update ────────────────────────────────────────────
@@ -373,16 +373,16 @@ public class DoubleBufferImageDisplay : UdonSharpBehaviour
 
         // The old texture is no longer visible — safe to destroy VRAM now
         // Use a small delay to ensure the render frame has fully committed
-        SendCustomEventDelayedSeconds(nameof(DestroyOldTexture), 0.1f);
+        SendCustomEventDelayedSeconds(nameof(_DestroyOldTexture), 0.1f);
 
         // Schedule the next download after the display duration
-        SendCustomEventDelayedSeconds(nameof(LoadNextImage), displayDuration);
+        SendCustomEventDelayedSeconds(nameof(_LoadNextImage), displayDuration);
     }
 
     /** Called via SendCustomEventDelayedSeconds after the fade is complete.
      *  Must be public because SendCustomEventDelayedSeconds requires a public method.
      *  Do not call directly from other behaviours. */
-    public void DestroyOldTexture()
+    public void _DestroyOldTexture()
     {
         if (_textureToDispose != null)
         {
@@ -510,10 +510,10 @@ public class StockModeGallery : UdonSharpBehaviour
         _downloader = new VRCImageDownloader();
 
         // Start the sequential download chain (no loop — UdonSharp has no closures)
-        DownloadNext();
+        _DownloadNext();
     }
 
-    public void DownloadNext()
+    public void _DownloadNext()
     {
         int idx = _nextDownloadIndex;
         if (idx < 0 || idx >= _count) return;
@@ -534,7 +534,7 @@ public class StockModeGallery : UdonSharpBehaviour
         // Schedule the next download 5.5 s later to respect the 5-second rate limit
         if (_nextDownloadIndex < _count)
         {
-            SendCustomEventDelayedSeconds(nameof(DownloadNext), 5.5f);
+            SendCustomEventDelayedSeconds(nameof(_DownloadNext), 5.5f);
         }
     }
 
@@ -575,13 +575,13 @@ public class StockModeGallery : UdonSharpBehaviour
         displayRenderer.material = galleryMaterials[index];
     }
 
-    public void ShowNext()
+    public void _ShowNext()
     {
         int next = (_displayIndex + 1) % _count;
         ShowImage(next);
     }
 
-    public void ShowPrev()
+    public void _ShowPrev()
     {
         int prev = (_displayIndex - 1 + _count) % _count;
         ShowImage(prev);
@@ -820,10 +820,10 @@ public class StaggeredImageLoader : UdonSharpBehaviour
 
         // Stagger initial download by order × base delay
         float initialDelay = _delayOrder * _baseDelaySeconds;
-        SendCustomEventDelayedSeconds(nameof(BeginDownload), initialDelay);
+        SendCustomEventDelayedSeconds(nameof(_BeginDownload), initialDelay);
     }
 
-    public void BeginDownload()
+    public void _BeginDownload()
     {
         if (_currentDownload != null)
         {
@@ -860,14 +860,14 @@ public class StaggeredImageLoader : UdonSharpBehaviour
         }
 
         // Schedule next refresh — staggered so each instance refreshes at its own offset
-        SendCustomEventDelayedSeconds(nameof(BeginDownload), _refreshInterval);
+        SendCustomEventDelayedSeconds(nameof(_BeginDownload), _refreshInterval);
     }
 
     public override void OnImageLoadError(IVRCImageDownload result)
     {
         Debug.LogError($"[StaggeredLoader #{_delayOrder}] Error {result.ErrorCode}: {result.Error}");
         // Retry after a full base delay to avoid colliding with other instances
-        SendCustomEventDelayedSeconds(nameof(BeginDownload), _baseDelaySeconds);
+        SendCustomEventDelayedSeconds(nameof(_BeginDownload), _baseDelaySeconds);
     }
 
     void OnDestroy()
@@ -917,7 +917,7 @@ public class StaggeredImageLoader : UdonSharpBehaviour
 | World crashes after many image cycles | VRAM exhausted from accumulated undestroyed textures | Audit every `OnImageLoadSuccess` callback; verify `Destroy(oldTexture)` is called before the new texture is stored |
 | Images in a multi-loader world load very slowly | All loaders downloading simultaneously, saturating the shared rate limit | Assign staggered `delayOrder` values to each loader |
 | `Dispose()` call does not seem to free memory | `Dispose()` frees VRC wrappers, not GPU texture memory | Call `Destroy(texture)` explicitly on textures you own; `Dispose()` is not a substitute |
-| Download cycle stops after an error | `OnImageLoadError` not implemented; no retry scheduled | Implement `OnImageLoadError` and call `SendCustomEventDelayedSeconds(nameof(BeginDownload), retryDelay)` |
+| Download cycle stops after an error | `OnImageLoadError` not implemented; no retry scheduled | Implement `OnImageLoadError` and call `SendCustomEventDelayedSeconds(nameof(_BeginDownload), retryDelay)` |
 | Texture pop-in visible when switching display images | New texture not fully applied before fade begins | Apply texture to back renderer first, then start the fade in the same callback frame |
 | Material instance shared between objects causes unexpected texture changes | Using `renderer.sharedMaterial` instead of `renderer.material` | Use `renderer.material` to get an instanced material; always apply textures to the instance |
 
