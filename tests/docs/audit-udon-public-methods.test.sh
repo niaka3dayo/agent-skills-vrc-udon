@@ -36,7 +36,7 @@ assert_accepted_count() {
 
 assert_accepted_count \
     "$FIXTURES/valid" \
-    "PASS: audited 16 public instance methods (2 runtime callbacks, 2 editor callbacks, 6 NetworkCallable entries, 6 local/custom underscore methods); classified 40 public declarations"
+    "PASS: audited 24 public instance methods (6 runtime callbacks, 2 editor callbacks, 10 NetworkCallable entries, 6 local/custom underscore methods); classified 62 public declarations"
 
 assert_rejected "$FIXTURES/invalid/public-nonvoid.cs" "public int ExposedValue()"
 assert_rejected "$FIXTURES/invalid/multiline.cs" "public void MultilineExposure()"
@@ -61,5 +61,24 @@ assert_rejected "$FIXTURES/invalid/unterminated-literal.cs" "unterminated string
 assert_rejected "$FIXTURES/invalid/unterminated-comment.cs" "unterminated block comment"
 assert_rejected "$FIXTURES/invalid/unterminated-attribute.cs" "unmatched '['"
 assert_rejected "$FIXTURES/invalid/unclassified-public.cs" "unclassified public declaration"
+assert_rejected "$FIXTURES/invalid/container-exposure.md" "public void BlockquoteRemoteExposure()"
+assert_rejected "$FIXTURES/invalid/malformed-container-csharp.md" "unterminated C# Markdown fence"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be virtual"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be override"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be abstract"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be extern"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be async"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method must be an instance method"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot have more than 8 parameters"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable parameter cannot use params"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable parameter cannot have a default value"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be generic"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable parameter cannot use ref, out, in, or this"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method cannot be overloaded"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "NetworkCallable method must be public"
+assert_rejected "$FIXTURES/invalid/network-callable-contract.cs" "unsupported NetworkCallable parameter type"
+assert_rejected "$FIXTURES/invalid/unrelated-namespace-shadow.cs" "NetworkCallable method must return void"
+assert_rejected "$FIXTURES/invalid/unknown-attribute-binding.cs" "cannot safely bind NetworkCallable attribute name"
+assert_rejected "$FIXTURES/invalid/network-callable-nonmethod.cs" "NetworkCallable attribute must target a method"
 
-echo "PASS: public method audit regression fixtures (5 valid files, 23 invalid files)"
+echo "PASS: public method audit regression fixtures (9 valid files, 30 invalid files)"

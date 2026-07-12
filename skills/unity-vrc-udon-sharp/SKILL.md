@@ -1,20 +1,15 @@
 ---
 name: unity-vrc-udon-sharp
 description: >-
-    UdonSharp scripting skill for VRChat world development. Use when writing,
-    reviewing, debugging, or migrating UdonSharp C# / UdonBehaviour code for SDK
-    3.7.1-3.10.4. Covers Udon compile constraints such as List<T>, async/await,
-    try/catch, and LINQ; networking with UdonSynced, RequestSerialization,
-    FieldChangeCallback, NetworkCallable, and NetworkCalling sender validation;
-    PlayerData / PlayerObject
-    persistence; PhysBones, Contacts, VRCTween, and VRCPhysBoneCollider access;
-    DataList / DataDictionary capacity APIs; Web Loading; VRAM and texture
-    lifecycle; asmdef / U# Assembly Definition guidance; VPM package boundaries;
-    Auto Referenced tradeoffs; and event handling. Triggers on UdonSharp, Udon,
-    VRC SDK, UdonBehaviour, VRCPlayerApi, SendCustomEvent, synced variables,
-    NetworkCalling, CallingPlayer, network event authorization, Box Contacts,
-    Global Avatar PhysBone Colliders, DataList capacity,
-    DataDictionary EnsureCapacity, VRChat world scripting, and C# to Udon.
+    UdonSharp scripting skill for SDK 3.7.1-3.10.4. Use when writing,
+    reviewing, debugging, or migrating UdonSharp C# and UdonBehaviour code.
+    Positive triggers include UdonSharp, NetworkCallable, NetworkCalling,
+    CallingPlayer, Udon network authorization, synced runtime state, a local public helper,
+    public-method audit, and C# to Udon conversion. Dynamics,
+    persistence, tween, collection, web, and component APIs trigger this skill
+    only when the request is about Udon, C#, or runtime API access. Excludes
+    scene setup, component setup, Build Panel work, layers, optimization, and
+    upload; route those requests to unity-vrc-world-sdk-3.
 license: MIT
 metadata:
     author: niaka3dayo

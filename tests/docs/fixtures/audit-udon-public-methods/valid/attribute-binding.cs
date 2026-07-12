@@ -13,7 +13,7 @@ public class AttributeBinding
     public void _ExplicitAttributeNameStillBinds(int value) { }
 
     [VRC.SDK3.UdonNetworkCalling.NetworkCallable]
-    private void _PreviousMember(int value) { }
+    public void _PreviousMember(int value) { }
 
     public int PreviousMemberDoesNotBleed(int value) => value;
 }

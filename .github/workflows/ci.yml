@@ -66,6 +66,9 @@ jobs:
       - name: Check network event hardening and SDK coverage
         run: bash tests/docs/network-event-hardening.test.sh
 
+      - name: Check Skill metadata routing contract
+        run: bash tests/docs/skill-routing-contract.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest

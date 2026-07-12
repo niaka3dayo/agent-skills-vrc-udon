@@ -45,7 +45,7 @@ public class SimplePool : UdonSharpBehaviour
 ## Master-Managed Player Object Pool
 
 A networked pattern that assigns a unique pool object to each player present in the world.
-The instance master owns all assignment logic; other clients react to synced state via `OnDeserialization`.
+The instance master is the non-security session coordinator, while manager GameObject ownership is the write authority for the synced assignment table. Other clients react to synced state via `OnDeserialization`.
 
 Instance master may coordinate capacity or a fair lottery, but master status can change and does not grant access-control authority. Use an explicit owner-controlled session role policy or platform moderation primitives for exclusions and privileged actions.
 
@@ -60,19 +60,19 @@ Instance master may coordinate capacity or a fair lottery, but master status can
 |---|---|---|
 | `_assignments` | `[UdonSynced] int[]` | Maps pool index → VRC player ID (0 = unassigned) |
 | `_poolObjects` | `UdonSharpBehaviour[]` | Inspector-assigned pool object references |
-| `_freeQueue` | `int[]` (local) | FIFO ring buffer of free slot indices (master only) |
+| `_freeQueue` | `int[]` (local) | FIFO ring buffer of free slot indices (coordinator/manager owner only) |
 | `_freeHead/Tail` | `int` (local) | Ring-buffer pointers for O(1) enqueue / dequeue |
 | `_previousAssignments` | `int[]` (local) | Snapshot used in `OnDeserialization` for change detection |
 
 **Template:** [assets/templates/MasterManagedPlayerPool.cs](../assets/templates/MasterManagedPlayerPool.cs)
 
-The implementation uses `Manual` sync mode. On `Start`, it allocates `_assignments[]` (synced) and the local `_freeQueue` ring buffer. Only the master initialises the free queue. `OnPlayerJoined`/`OnPlayerLeft` (master only) dequeue/enqueue slots and call `RequestSerialization`. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterTransferred(VRCPlayerApi)` rebuilds the free queue and schedules a deferred `_VerifyAssignments` call to close the race-condition window.
+The implementation uses `Manual` sync mode. On `Start`, it allocates only local buffers; the coordinator acquires ownership of the manager GameObject before it can create or mutate `_assignments[]`. `OnPlayerJoined`/`OnPlayerLeft` write and serialize only while the local client is both instance master and manager owner. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterTransferred(VRCPlayerApi)` rebuilds the free queue only after the incoming master has acquired manager ownership, then schedules a deferred `_VerifyAssignments` call to close the race-condition window.
 
 
 ### Key Design Decisions
 
-**Why master-only assignment?**
-Centralising writes to the master eliminates the need for distributed conflict resolution. Only one client ever calls `RequestSerialization`, so the synced array is always consistent.
+**Why require both coordinator status and manager ownership?**
+Master selects the current non-security coordinator, but only the manager owner can serialize its synced fields. The incoming master explicitly takes manager ownership even when the former master remains in the instance. Every assignment mutation and serialization checks both invariants, so a stale former coordinator cannot write after handoff.
 
 **Why a FIFO queue instead of a linear scan?**
 `OnPlayerJoined` runs on every join event. A ring-buffer dequeue is O(1) regardless of pool size, keeping join latency predictable.
@@ -84,7 +84,7 @@ Centralising writes to the master eliminates the need for distributed conflict r
 When a late joiner receives their first `OnDeserialization`, `_previousAssignments` is all-zeros, so every occupied slot in `_assignments` is detected as a new assignment and the corresponding pool objects are activated automatically.
 
 **Master handoff race condition**
-There is a brief window between the old master leaving and the new master being elected where join/leave events may be dropped. The 2-second deferred `_VerifyAssignments` call reconciles the assignment table against the live player list to close this gap.
+Master can change even while the former master remains in the instance. The incoming master first acquires manager ownership, then performs an idempotent reconciliation and schedules the same bounded pass again after 2 seconds. Rebuilding the free queue from `_assignments` before allocation preserves live assignments, recovers free slots, fills missed joins, removes departed players, and remains safe if transfer/ownership callbacks arrive more than once. Player IDs in `_assignments` remain the assignment identity; manager ownership is only write authority.
 
 ### Usage Notes
 

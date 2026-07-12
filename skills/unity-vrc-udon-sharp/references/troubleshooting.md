@@ -540,12 +540,16 @@ Method 'X' cannot be called as a network event
 
 **Solution:**
 
-```csharp
+```text
 
 // WRONG
 public void _MyMethod(int value) { } // Missing attribute
 
 private void _MyMethod(int value) { } // Private
+
+```
+
+```csharp
 
 // CORRECT
 [NetworkCallable]
@@ -569,11 +573,15 @@ public void _MyMethod(int value) { }
 2. Check rate limits (default 5/sec, max 100/sec)
 3. Ensure all clients are on SDK 3.8.1+
 
-```csharp
+```text
 
 // WRONG - VRCPlayerApi is not syncable
 [NetworkCallable]
 public void _SetTarget(VRCPlayerApi player) { }
+
+```
+
+```csharp
 
 // CORRECT - Use a bounded ID parameter and derive authorization from the caller context
 [NetworkCallable(1)]

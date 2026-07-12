@@ -6,8 +6,9 @@ using VRC.Udon;
 /// <summary>
 /// Master-managed player object pool.
 ///
-/// The instance master maintains the canonical assignment table (_assignments)
-/// and syncs it to all clients. Non-master clients react in OnDeserialization.
+/// The instance master coordinates the session, while ownership of this manager
+/// GameObject is the write authority for _assignments. Non-authority clients
+/// react in OnDeserialization.
 /// Use this only for non-security session arbitration such as fixed capacity or
 /// a fair slot lottery. Master status can change and grants no access-control
 /// authority. Use explicit owner-controlled session roles or platform
@@ -27,7 +28,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     [SerializeField] private UdonSharpBehaviour[] _poolObjects;
 
     // -------------------------------------------------------------------------
-    // Synced state  (master writes, all clients read)
+    // Synced state  (master + manager owner writes, all clients read)
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -59,16 +60,16 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// </summary>
     private int[] _previousAssignments;
 
+    /// <summary>Prevents duplicate ownership callbacks from stacking timers.</summary>
+    private bool _verificationScheduled;
+
     // =========================================================================
     // Lifecycle
     // =========================================================================
 
     void Start()
     {
-        int poolSize = _poolObjects.Length;
-
-        // Allocate synced array (all slots start unassigned)
-        _assignments = new int[poolSize];
+        int poolSize = _poolObjects == null ? 0 : _poolObjects.Length;
 
         // Allocate local change-detection snapshot
         _previousAssignments = new int[poolSize];
@@ -79,13 +80,9 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
         _freeTail = 0;
         _freeCount = 0;
 
-        // Only the master initialises the free queue; all slots start free
         if (Networking.IsMaster)
         {
-            for (int i = 0; i < poolSize; i++)
-            {
-                _EnqueueFree(i);
-            }
+            _AcquireManagerOwnership();
         }
     }
 
@@ -95,41 +92,51 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
     public override void OnPlayerJoined(VRCPlayerApi player)
     {
-        // Only the master manages assignments
-        if (!Networking.IsMaster) return;
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
         if (!Utilities.IsValid(player)) return;
+        bool changed = _EnsureAssignmentTable();
+        _RebuildFreeQueue();
+
+        // Duplicate join callbacks must not assign a second slot.
+        if (_FindSlotForPlayer(player.playerId) >= 0)
+        {
+            if (changed) _SerializeAssignments();
+            return;
+        }
 
         if (_freeCount == 0)
         {
             Debug.LogWarning($"[PlayerPool] No free slot for player {player.playerId} ({player.displayName}). Pool is full.");
+            if (changed) _SerializeAssignments();
             return;
         }
 
         int slot = _DequeueFree();
         _assignments[slot] = player.playerId;
 
-        // Push the updated table to all clients
-        RequestSerialization();
+        _SerializeAssignments();
     }
 
     public override void OnPlayerLeft(VRCPlayerApi player)
     {
-        // Only the master manages assignments
-        if (!Networking.IsMaster) return;
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
         if (!Utilities.IsValid(player)) return;
+        bool changed = _EnsureAssignmentTable();
+        _RebuildFreeQueue();
 
         // Find the slot held by this player
         int slot = _FindSlotForPlayer(player.playerId);
         if (slot < 0)
         {
             // Player had no assigned slot (e.g. pool was full when they joined)
+            if (changed) _SerializeAssignments();
             return;
         }
 
         _assignments[slot] = 0;   // mark as free in the synced array
         _EnqueueFree(slot);       // return to the local free queue
 
-        RequestSerialization();
+        _SerializeAssignments();
     }
 
     // =========================================================================
@@ -138,9 +145,12 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
+        if (_assignments == null || _previousAssignments == null) return;
+        int assignmentCount = Mathf.Min(_assignments.Length, _previousAssignments.Length);
+
         // Compare the newly received _assignments against our previous snapshot
         // and activate / deactivate pool objects accordingly.
-        for (int i = 0; i < _assignments.Length; i++)
+        for (int i = 0; i < assignmentCount; i++)
         {
             int newId = _assignments[i];
             int oldId = _previousAssignments[i];
@@ -164,7 +174,12 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
         }
 
         // Update snapshot
-        System.Array.Copy(_assignments, _previousAssignments, _assignments.Length);
+        System.Array.Copy(_assignments, _previousAssignments, assignmentCount);
+        for (int i = assignmentCount; i < _previousAssignments.Length; i++)
+        {
+            if (_previousAssignments[i] != 0) _DeactivateSlot(i);
+            _previousAssignments[i] = 0;
+        }
     }
 
     // =========================================================================
@@ -173,13 +188,36 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
     public override void OnMasterTransferred(VRCPlayerApi newMaster)
     {
-        // Only the incoming master needs to rebuild the local free queue
         if (!Networking.IsMaster) return;
+        _AcquireManagerOwnership();
+    }
 
-        _RebuildFreeQueue();
+    public override void OnOwnershipTransferred(VRCPlayerApi newOwner)
+    {
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
+        _EstablishCoordinator();
+    }
 
-        // Schedule a deferred verification pass to catch any assignments that may
-        // have been written just before the previous master left (race condition).
+    private void _AcquireManagerOwnership()
+    {
+        if (!Networking.IsMaster) return;
+        VRCPlayerApi localPlayer = Networking.LocalPlayer;
+        if (!Utilities.IsValid(localPlayer)) return;
+
+        if (!Networking.IsOwner(gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        }
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
+        _EstablishCoordinator();
+    }
+
+    private void _EstablishCoordinator()
+    {
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
+        _ReconcileAssignments();
+        if (_verificationScheduled) return;
+        _verificationScheduled = true;
         SendCustomEventDelayedSeconds(nameof(_VerifyAssignments), 2f);
     }
 
@@ -190,13 +228,20 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// </summary>
     public void _VerifyAssignments()
     {
-        if (!Networking.IsMaster) return;
+        _verificationScheduled = false;
+        _ReconcileAssignments();
+    }
+
+    private void _ReconcileAssignments()
+    {
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
+
+        bool changed = _EnsureAssignmentTable();
+        _RebuildFreeQueue();
 
         int playerCount = VRCPlayerApi.GetPlayerCount();
         VRCPlayerApi[] players = new VRCPlayerApi[playerCount];
         VRCPlayerApi.GetPlayers(players);
-
-        bool changed = false;
 
         // --- Free slots whose player is gone ---
         for (int i = 0; i < _assignments.Length; i++)
@@ -207,10 +252,23 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
             if (!Utilities.IsValid(assigned))
             {
                 _assignments[i] = 0;
-                _EnqueueFree(i);
                 changed = true;
+                continue;
+            }
+
+            // Preserve the first live slot and free any duplicate player ID.
+            for (int previous = 0; previous < i; previous++)
+            {
+                if (_assignments[previous] != _assignments[i]) continue;
+                _assignments[i] = 0;
+                changed = true;
+                break;
             }
         }
+
+        // Rebuild after freeing stale entries so duplicate verification calls
+        // cannot enqueue a slot twice.
+        _RebuildFreeQueue();
 
         // --- Assign slots to players who have none ---
         for (int p = 0; p < players.Length; p++)
@@ -233,7 +291,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
 
         if (changed)
         {
-            RequestSerialization();
+            _SerializeAssignments();
         }
     }
 
@@ -272,6 +330,9 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// <summary>Add a slot index to the tail of the free queue.</summary>
     private void _EnqueueFree(int slot)
     {
+        if (_freeQueue == null || _freeQueue.Length == 0) return;
+        if (slot < 0 || slot >= _freeQueue.Length) return;
+        if (_freeCount >= _freeQueue.Length) return;
         _freeQueue[_freeTail] = slot;
         _freeTail = (_freeTail + 1) % _freeQueue.Length;
         _freeCount++;
@@ -280,6 +341,7 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// <summary>Remove and return the slot index at the head of the free queue.</summary>
     private int _DequeueFree()
     {
+        if (_freeQueue == null || _freeQueue.Length == 0 || _freeCount <= 0) return -1;
         int slot = _freeQueue[_freeHead];
         _freeHead = (_freeHead + 1) % _freeQueue.Length;
         _freeCount--;
@@ -292,10 +354,12 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// </summary>
     private void _RebuildFreeQueue()
     {
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
         _freeHead = 0;
         _freeTail = 0;
         _freeCount = 0;
 
+        if (_assignments == null) return;
         for (int i = 0; i < _assignments.Length; i++)
         {
             if (_assignments[i] == 0)
@@ -314,10 +378,38 @@ public class MasterManagedPlayerPool : UdonSharpBehaviour
     /// </summary>
     private int _FindSlotForPlayer(int playerId)
     {
+        if (_assignments == null) return -1;
         for (int i = 0; i < _assignments.Length; i++)
         {
             if (_assignments[i] == playerId) return i;
         }
         return -1;
+    }
+
+    /// <summary>
+    /// Resize the synced table only while this client is both coordinator and
+    /// manager owner. Existing bounded assignments survive a template resize.
+    /// </summary>
+    private bool _EnsureAssignmentTable()
+    {
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return false;
+        int poolSize = _poolObjects == null ? 0 : _poolObjects.Length;
+        if (_assignments != null && _assignments.Length == poolSize) return false;
+
+        int[] replacement = new int[poolSize];
+        if (_assignments != null)
+        {
+            int copyLength = Mathf.Min(_assignments.Length, replacement.Length);
+            System.Array.Copy(_assignments, replacement, copyLength);
+        }
+        _assignments = replacement;
+        return true;
+    }
+
+    /// <summary>Serialize only while both coordinator invariants still hold.</summary>
+    private void _SerializeAssignments()
+    {
+        if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;
+        RequestSerialization();
     }
 }

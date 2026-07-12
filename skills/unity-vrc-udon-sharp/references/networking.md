@@ -909,13 +909,17 @@ public class OwnerControlledDamage : UdonSharpBehaviour
 | `void` return required | A `[NetworkCallable]` method must return `void`. |
 | `static` not allowed | Static methods cannot be used |
 | `virtual`/`override` not allowed | Virtual methods cannot be used |
+| Simple method declaration only | Generic, abstract, extern, async, sealed, operator, and explicit-interface forms are not allowed |
 | No overloading | Multiple methods with the same name not allowed |
 | Maximum 8 parameters | More than 8 parameters not allowed |
+| No by-reference parameters | `ref`, `out`, and `in` parameters are not allowed |
+| No `params` parameters | Parameter arrays declared with `params` are not allowed |
+| No default parameter values | Every argument must be supplied explicitly |
 | Syncable types only | Parameters limited to syncable types |
 
 ### Rate Limiting
 
-`[NetworkCallable]` accepts an optional integer parameter that controls remote send pacing for that event on a behaviour. This value also acts as the network cost/priority indicator — higher values consume more network budget and are scheduled at higher priority.
+`[NetworkCallable]` accepts an optional integer parameter that controls how many remote sends per second the sender may dispatch for that event on that behaviour. Sends above that pace wait in the sender's event queue.
 
 ```csharp
 // Default: 5 calls/sec per event per behaviour (no argument)
@@ -926,14 +930,14 @@ public void _NormalEvent(int value) { }
 [NetworkCallable(100)]
 public void _HighFrequencyEvent(float value) { }
 
-// Low rate: 1 call/sec (minimal network cost)
+// Low rate: 1 remote send/sec for this event on this behaviour
 [NetworkCallable(1)]
 public void _RareBroadcast(string message) { }
 ```
 
 `[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Local and `NetworkEventTarget.Self` execution bypass the rate limit, while `NetworkEventTarget.All` can fan one send out to many receiver executions. The limit also does not bound the work performed by one accepted call. Sender-side queue queries describe the current sender's queue, not aggregate work at receivers. Use receiver-local cooldowns, idempotence, fixed-capacity storage, deduplication, and per-call input validation wherever aggregate resource use matters.
 
-The default rate is **5 calls/sec** and the configurable maximum is **100 calls/sec**. The server silently drops events only in one documented case: players in the same instance running different world versions whose rate limits disagree.
+The default rate is **5 calls/sec** and the configurable maximum is **100 calls/sec**. A rate-limit disagreement between players running different versions of the same world is the documented non-malicious drop scenario. Separately, server-side enforcement also protects against malicious use; that protection is not a delivery guarantee for accepted or queued events.
 
 ### Types Usable as Parameters
 
@@ -942,6 +946,7 @@ Only types syncable with `[UdonSynced]` can be used as parameters:
 | Type | Size | Notes |
 |------|------|-------|
 | `bool` | 1 byte | |
+| `char` | 2 bytes | |
 | `byte`, `sbyte` | 1 byte | |
 | `short`, `ushort` | 2 bytes | |
 | `int`, `uint` | 4 bytes | |

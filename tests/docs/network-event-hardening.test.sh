@@ -79,6 +79,32 @@ require_order() {
     fi
 }
 
+require_string_order() {
+    local haystack="$1"
+    local first="$2"
+    local second="$3"
+    local first_line
+    local second_line
+    first_line="$(grep -nF "$first" <<<"$haystack" | head -1 | cut -d: -f1 || true)"
+    second_line="$(grep -nF "$second" <<<"$haystack" | head -1 | cut -d: -f1 || true)"
+    if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
+        echo "ERROR: source section must contain '$first' before '$second'" >&2
+        exit 1
+    fi
+}
+
+require_count() {
+    local path="$1"
+    local needle="$2"
+    local expected="$3"
+    local actual
+    actual="$(grep -Fc "$needle" "$path" || true)"
+    if [ "$actual" -ne "$expected" ]; then
+        echo "ERROR: $path contains '$needle' $actual times; expected $expected" >&2
+        exit 1
+    fi
+}
+
 # Current support declarations must agree on the SDK 3.10.4 upper bound.
 require_text "$CONTRIBUTING" "SDK 3.7.1 - 3.10.4"
 require_text "$CONSTRAINTS_RULE" "**SDK Coverage**: 3.7.1 - 3.10.4"
@@ -245,6 +271,25 @@ require_order "$BANDWIDTH_REF" 'if (cellIndex < 0 || cellIndex >= BoardSize) ret
 forbid_text "$UDON_DIR" 'OnMasterClientSwitched'
 require_text "$POOL_TEMPLATE" 'public override void OnMasterTransferred(VRCPlayerApi newMaster)'
 require_text "$PATTERNS_REF" '`OnMasterTransferred(VRCPlayerApi)` rebuilds the free queue'
+require_text "$POOL_TEMPLATE" 'Networking.SetOwner(Networking.LocalPlayer, gameObject);'
+require_text "$POOL_TEMPLATE" 'if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;'
+require_text "$POOL_TEMPLATE" 'public override void OnOwnershipTransferred(VRCPlayerApi newOwner)'
+require_text "$POOL_TEMPLATE" 'SendCustomEventDelayedSeconds(nameof(_VerifyAssignments), 2f);'
+ACQUIRE_BODY="$(awk '
+    /private void _AcquireManagerOwnership\(\)/ { in_method = 1 }
+    /private void _EstablishCoordinator\(\)/ { exit }
+    in_method { print }
+' "$POOL_TEMPLATE")"
+require_string_order "$ACQUIRE_BODY" 'Networking.SetOwner(Networking.LocalPlayer, gameObject);' '_EstablishCoordinator();'
+require_count "$POOL_TEMPLATE" 'if (!Networking.IsMaster || !Networking.IsOwner(gameObject)) return;' 8
+require_count "$POOL_TEMPLATE" 'RequestSerialization();' 1
+ASSIGNMENT_WRITE_COUNT="$(grep -Ec '_assignments(\[[^]]+\])? = ' "$POOL_TEMPLATE" || true)"
+if [ "$ASSIGNMENT_WRITE_COUNT" -ne 6 ]; then
+    echo "ERROR: assignment mutation inventory changed; review every write guard" >&2
+    exit 1
+fi
+forbid_text "$PATTERNS_REF" 'The instance master owns all assignment logic'
+require_text "$PATTERNS_REF" 'manager GameObject ownership is the write authority'
 require_text "$API_REF" '[UdonSynced] private int[] assignedPlayerIds;'
 require_text "$API_REF" 'assignedPlayerIds = new int[objectPool.Pool.Length];'
 require_text "$API_REF" 'int poolIndex = _FindPoolIndex(spawned);'
@@ -297,6 +342,13 @@ for path in "$NETWORKING_REF" "$API_REF" "$SYNC_EXAMPLES" "$DYNAMICS_REF" "$RULE
     require_text "$path" "$RATE_NOT_BOUND"
 done
 require_text "$NETWORKING_REF" 'Local and `NetworkEventTarget.Self` execution bypass the rate limit, while `NetworkEventTarget.All` can fan one send out to many receiver executions.'
+forbid_text "$NETWORKING_REF" 'network cost/priority indicator'
+forbid_text "$NETWORKING_REF" 'network cost'
+forbid_text "$NETWORKING_REF" 'scheduled at higher priority'
+require_text "$NETWORKING_REF" 'the documented non-malicious drop scenario'
+require_text "$NETWORKING_REF" 'server-side enforcement also protects against malicious use'
+require_text "$NETWORKING_REF" '| No `params` parameters |'
+require_text "$NETWORKING_REF" '| No default parameter values |'
 require_text "$API_REF" 'private float lastAcceptedEventTime = float.MinValue;'
 require_text "$API_REF" 'if (Time.time - lastAcceptedEventTime < ReceiverCooldown) return;'
 require_text "$DYNAMICS_REF" 'if (Time.time - lastAcceptedActionTime < ReceiverCooldown) return;'
