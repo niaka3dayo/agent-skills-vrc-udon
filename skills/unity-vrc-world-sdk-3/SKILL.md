@@ -9,7 +9,7 @@ description: >
     baked lighting, Quest/Android limits, Dynamics for Worlds, Build Panel
     validation alerts, and upload workflow.
     SDK 3.7.1 - 3.10.4 coverage.
-    Triggers on: VRChat world, VRC SDK, scene setup, VRC_SceneDescriptor,
+    Triggers on: VRChat world, VRChat world scripting, VRC SDK, scene setup, VRC_SceneDescriptor,
     spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
     PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders,
     VRCPhysBoneCollider, VRCTween, optimization, Quest support, light baking,

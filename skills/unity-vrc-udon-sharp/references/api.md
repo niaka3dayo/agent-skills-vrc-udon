@@ -231,23 +231,45 @@ VRCPlayerApi player = VRCPlayerApi.GetPlayerById(int playerId);
 
 ## NetworkCalling Class (SDK 3.8.1+)
 
-Monitoring and management of the network event queue.
+Sender context plus monitoring and management of the network event queue.
 
 ```csharp
 using VRC.SDK3.UdonNetworkCalling;
 
+// True throughout the active network-call lifetime, including nested calls.
+bool inNetworkCall = NetworkCalling.InNetworkCall;
+
+// The player who initiated the active network call. This is null or invalid
+// when execution is not inside a network call.
+VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+if (NetworkCalling.InNetworkCall && caller != null && caller.IsValid())
+{
+    Debug.Log($"Network call from {caller.displayName}");
+}
+
 // Get queued events for a specific method on this behaviour
 int queuedCount = NetworkCalling.GetQueuedEvents(
     (IUdonEventReceiver)this,
-    nameof(MyNetworkMethod)
+    nameof(_MyNetworkMethod)
 );
 
-// Get total queued events across entire world
+// Get all outgoing events queued by this local sender
 int totalQueued = NetworkCalling.GetAllQueuedEvents();
 
 // Check if network is congested (also available via Networking.IsClogged)
 bool isClogged = Networking.IsClogged;
 ```
+
+### Sender Context Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `NetworkCalling.CallingPlayer` | `VRCPlayerApi` | Player who initiated the active network call; null or invalid outside a network call |
+| `NetworkCalling.InNetworkCall` | `bool` | True until the network entry point returns, including execution in nested methods or secondary behaviours |
+
+These properties apply to `[NetworkCallable]` and legacy network events. Do not use a `playerId`, display name, or identity value received as a network parameter for authorization. Read `CallingPlayer`, validate it, then apply the world's explicit authorization policy. `Networking.IsOwner(gameObject)` is still required before the receiver mutates synced state, but that ownership check controls mutation location and does not authorize the caller.
+
+Official behavior reference: [VRChat Network Events](https://creators.vrchat.com/worlds/udon/networking/events/).
 
 ### Usage Example: Rate Limit Monitoring
 
@@ -261,13 +283,16 @@ using VRC.Udon.Common.Interfaces;
 
 public class NetworkMonitor : UdonSharpBehaviour
 {
+    private const float ReceiverCooldown = 1f;
+
     [SerializeField] private TextMeshProUGUI statusText;
+    private float lastAcceptedEventTime = float.MinValue;
 
     void Update()
     {
         int myEventQueue = NetworkCalling.GetQueuedEvents(
             (IUdonEventReceiver)this,
-            nameof(OnNetworkEvent)
+            nameof(_OnNetworkEvent)
         );
         int totalQueue = NetworkCalling.GetAllQueuedEvents();
 
@@ -276,22 +301,33 @@ public class NetworkMonitor : UdonSharpBehaviour
                           $"Clogged: {Networking.IsClogged}";
     }
 
-    public void SendEvent()
+    public void _SendEvent()
     {
         // Check before sending to avoid queue buildup
-        if (NetworkCalling.GetQueuedEvents((IUdonEventReceiver)this, nameof(OnNetworkEvent)) < 10)
+        if (NetworkCalling.GetQueuedEvents((IUdonEventReceiver)this, nameof(_OnNetworkEvent)) < 10)
         {
-            SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnNetworkEvent));
+            SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_OnNetworkEvent));
         }
     }
 
-    [NetworkCallable]
-    public void OnNetworkEvent()
+    [NetworkCallable(1)]
+    public void _OnNetworkEvent()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may request a diagnostic entry. This receiver-local
+        // cooldown bounds aggregate execution across all callers.
+        if (Time.time - lastAcceptedEventTime < ReceiverCooldown) return;
+        lastAcceptedEventTime = Time.time;
         Debug.Log("Network event received!");
     }
 }
 ```
+
+This diagnostic entry is open to any valid caller. `[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. `GetQueuedEvents` and `GetAllQueuedEvents` observe this client's outgoing queue. The receiver-local cooldown is what caps aggregate log execution on each client.
 
 ## VRC_Pickup
 
@@ -394,20 +430,18 @@ When writing an UdonSharp behaviour that is intended to run on pooled objects, i
 
 ```csharp
 using UdonSharp;
+using UnityEngine;
 using VRC.SDKBase;
 
 public class PooledObject : UdonSharpBehaviour
 {
-    // Set by the pool manager after TryToSpawn(); null when unassigned
-    public VRCPlayerApi Owner;
-
-    // Called on all clients when the object is assigned to a new owner
-    public void OnOwnerSet()
+    // This callback reports network ownership only. Assignment identity belongs
+    // to the manager's synced table and must not be inferred from this callback.
+    public override void OnOwnershipTransferred(VRCPlayerApi player)
     {
-        // React to ownership assignment here
-        if (Utilities.IsValid(Owner))
+        if (player != null && player.IsValid())
         {
-            Debug.Log($"Object assigned to: {Owner.displayName}");
+            Debug.Log($"Network owner changed to: {player.displayName}");
         }
     }
 
@@ -420,7 +454,6 @@ public class PooledObject : UdonSharpBehaviour
     void OnDisable()
     {
         // Fired when Return() deactivates this object.
-        Owner = null;
     }
 }
 ```
@@ -441,9 +474,27 @@ public class PoolManager : UdonSharpBehaviour
 {
     public VRCObjectPool objectPool;
 
+    // Manager-owned assignment identity. Indexes exactly match objectPool.Pool.
+    [UdonSynced] private int[] assignedPlayerIds;
+
+    void Start()
+    {
+        if (!Utilities.IsValid(objectPool)) return;
+        assignedPlayerIds = new int[objectPool.Pool.Length];
+    }
+
     public override void OnPlayerJoined(VRCPlayerApi player)
     {
-        // Only the pool owner (e.g. master) calls TryToSpawn
+        if (player == null || !player.IsValid()) return;
+        if (!Utilities.IsValid(objectPool)) return;
+        if (!Networking.IsOwner(gameObject)) return;
+        if (assignedPlayerIds == null || assignedPlayerIds.Length != objectPool.Pool.Length) return;
+
+        // The manager owner coordinates pool state; this is not caller authorization.
+        if (!Networking.IsOwner(objectPool.gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, objectPool.gameObject);
+        }
         if (!Networking.IsOwner(objectPool.gameObject)) return;
 
         GameObject spawned = objectPool.TryToSpawn();
@@ -453,36 +504,83 @@ public class PoolManager : UdonSharpBehaviour
             return;
         }
 
-        // Transfer ownership of the spawned object to the joining player
-        Networking.SetOwner(player, spawned);
-
-        PooledObject pooledBehaviour = (PooledObject)spawned.GetComponent(typeof(PooledObject));
-        if (Utilities.IsValid(pooledBehaviour))
+        int poolIndex = _FindPoolIndex(spawned);
+        if (poolIndex < 0)
         {
-            pooledBehaviour.Owner = player;
-            pooledBehaviour.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PooledObject.OnOwnerSet));
+            objectPool.Return(spawned);
+            return;
         }
+
+        // Record durable assignment identity before pooled-object ownership changes.
+        assignedPlayerIds[poolIndex] = player.playerId;
+        RequestSerialization();
+
+        // Network ownership is independent from assignment identity.
+        Networking.SetOwner(player, spawned);
     }
 
     public override void OnPlayerLeft(VRCPlayerApi player)
     {
+        if (player == null || !player.IsValid()) return;
+        if (!Utilities.IsValid(objectPool)) return;
+        if (!Networking.IsOwner(gameObject)) return;
+        if (assignedPlayerIds == null || assignedPlayerIds.Length != objectPool.Pool.Length) return;
+
+        int poolIndex = _FindAssignedPoolIndex(player.playerId);
+        if (poolIndex < 0) return;
+
+        if (!Networking.IsOwner(objectPool.gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, objectPool.gameObject);
+        }
         if (!Networking.IsOwner(objectPool.gameObject)) return;
 
-        // Find and return the object assigned to the leaving player
-        foreach (GameObject obj in objectPool.Pool)
+        GameObject pooledObject = objectPool.Pool[poolIndex];
+        if (!Networking.IsOwner(pooledObject))
         {
-            if (!obj.activeInHierarchy) continue;
-
-            PooledObject pooledBehaviour = (PooledObject)obj.GetComponent(typeof(PooledObject));
-            if (Utilities.IsValid(pooledBehaviour) && pooledBehaviour.Owner == player)
-            {
-                objectPool.Return(obj);
-                break;
-            }
+            Networking.SetOwner(Networking.LocalPlayer, pooledObject);
         }
+
+        assignedPlayerIds[poolIndex] = 0;
+        objectPool.Return(pooledObject);
+        RequestSerialization();
+    }
+
+    public override void OnOwnershipTransferred(VRCPlayerApi newOwner)
+    {
+        if (newOwner == null || !newOwner.IsValid() || !newOwner.isLocal) return;
+        if (!Utilities.IsValid(objectPool)) return;
+
+        // The assignment table is preserved by synced state across handoff.
+        // Taking pool ownership does not rewrite any assignment entry.
+        if (!Networking.IsOwner(objectPool.gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, objectPool.gameObject);
+        }
+        RequestSerialization();
+    }
+
+    private int _FindPoolIndex(GameObject target)
+    {
+        for (int i = 0; i < objectPool.Pool.Length; i++)
+        {
+            if (objectPool.Pool[i] == target) return i;
+        }
+        return -1;
+    }
+
+    private int _FindAssignedPoolIndex(int playerId)
+    {
+        for (int i = 0; i < assignedPlayerIds.Length; i++)
+        {
+            if (assignedPlayerIds[i] == playerId) return i;
+        }
+        return -1;
     }
 }
 ```
+
+The synchronized `assignedPlayerIds` table is the assignment source of truth. Pooled-object ownership may change before `OnPlayerLeft`, so neither `Networking.GetOwner` nor `PooledObject.OnOwnershipTransferred` may be used to identify the assigned player. The manager's synced array survives manager/master handoff; the incoming manager owner only reacquires pool ownership and reserializes the existing table.
 
 ### Usage Pattern: Interact-Driven (User-Triggered)
 
@@ -501,6 +599,7 @@ The Master-Managed pattern above protects its pool calls with an `IsOwner` guard
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
@@ -514,24 +613,31 @@ public class PoolInteractForwarded : UdonSharpBehaviour
         // NetworkEventTarget.Owner targets the owner of THIS UdonBehaviour's
         // GameObject. Since this script is co-located with objectPool, the
         // event is delivered to the pool owner — no ownership change needed.
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerSpawn));
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerSpawn));
     }
 
-    public void OwnerSpawn()
+    [NetworkCallable(1)]
+    public void _OwnerSpawn()
     {
-        // Defensive: if ownership transferred between the event send and arrival,
-        // the new owner will still see this fire on the old owner's client; the
-        // guard makes the call a safe no-op rather than silently spawning on
-        // a stale owner.
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may request one available pooled object; this is an open interaction policy.
+        if (!Utilities.IsValid(objectPool)) return;
+        if (!Networking.IsOwner(gameObject)) return;
         if (!Networking.IsOwner(objectPool.gameObject)) return;
+
         objectPool.Shuffle();
         GameObject spawned = objectPool.TryToSpawn();
+        if (spawned == null) return;
         // ... assign ownership of `spawned` if needed
     }
 }
 ```
 
-`OwnerSpawn` runs on the client that owns this script's GameObject (which, per the co-location precondition above, is the pool owner). The `IsOwner` guard is defensive against a race where ownership transfers between the `SendCustomNetworkEvent` call and the handler arriving on the previous owner's client.
+`_OwnerSpawn` runs on the client that owns this script's GameObject, which is also the pool owner under the co-location precondition. The caller check enforces the open interaction policy, and pool capacity limits the number of active objects. The attribute paces each sender's event sends; it does not cap aggregate receiver work. Ownership routing chooses the receiver; it does not authorize the caller.
 
 #### Tier 2 — Take ownership first (acceptable)
 
@@ -1160,9 +1266,8 @@ public class DroneCheckpoint : UdonSharpBehaviour
 {
     [SerializeField] private Transform respawnPoint;
 
-    public override void OnDroneTriggerEnter(Collider other)
+    public override void OnDroneTriggerEnter(VRCDroneApi drone)
     {
-        VRCDroneApi drone = Networking.LocalPlayer.GetDrone();
         if (!Utilities.IsValid(drone)) return;
 
         // Teleport the drone back to the respawn point
@@ -1258,16 +1363,35 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.Udon.Common.Interfaces;
 
 public class DollyController : UdonSharpBehaviour
 {
+    private const float ReceiverCooldown = 5f;
+
     // Drag the GameObject that holds VRC Camera Dolly Animation into this field
     [SerializeField] private VRCCameraDollyAnimation dollyAnimation;
+    private float lastDollyTime = float.MinValue;
 
-    // Call this to start the camera dolly animation for the local player
-    public void PlayDolly()
+    public void _RequestDollyForAll()
     {
+        SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_PlayDolly));
+    }
+
+    [NetworkCallable(1)]
+    public void _PlayDolly()
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may start this local-only cosmetic effect. The
+        // receiver cooldown bounds aggregate restarts from all callers.
+        if (Time.time - lastDollyTime < ReceiverCooldown) return;
         if (!Utilities.IsValid(dollyAnimation)) return;
+        lastDollyTime = Time.time;
         dollyAnimation.Import();
     }
 }
@@ -1277,7 +1401,7 @@ public class DollyController : UdonSharpBehaviour
 
 ### Limitations
 
-- The API applies the animation to the **local player only**. To trigger it for all players, use `SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayDolly))`.
+- The API applies the animation to the **local player only**. `_RequestDollyForAll` asks each client to run `_PlayDolly`; the receiver validates the active caller before starting the effect.
 - `Import()` is the only scripting entry point on the official page; runtime reads or writes of animation, path, or point parameters from UdonSharp are not documented — treat anything beyond `Import()` as unverified.
 - There is no event callback when the animation completes.
 - No ClientSim preview; Build and Test is required to see the animation.

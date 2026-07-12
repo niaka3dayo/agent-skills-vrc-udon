@@ -80,13 +80,13 @@ public class AvatarScaleUI : UdonSharpBehaviour
     void OnEnable()
     {
         Initialize();
-        ApplyScale();
+        _ApplyScale();
     }
 
     void Start()
     {
         Initialize();
-        ApplyScale();
+        _ApplyScale();
     }
 
     private void Initialize()
@@ -103,7 +103,7 @@ public class AvatarScaleUI : UdonSharpBehaviour
     /// <summary>
     /// Call this when the avatar changes or periodically to keep the UI in sync.
     /// </summary>
-    public void ApplyScale()
+    public void _ApplyScale()
     {
         Initialize();
 
@@ -130,7 +130,7 @@ public class AvatarScaleUI : UdonSharpBehaviour
 > **Key notes:**
 > - `GetTrackingData(Head).position.y` returns the world-space Y of the player's head, which correlates with avatar scale.
 > - Clamp the scale factor to avoid UI becoming invisible (tiny avatars) or enormous (giant avatars).
-> - Call `ApplyScale()` from `OnAvatarEyeHeightChanged(VRCPlayerApi, float)` or `OnAvatarChanged(VRCPlayerApi)` — both fire for every player, so early-return unless `player.isLocal`. `player.GetAvatarEyeHeightAsMeters()` is the direct avatar scale source when you do not need the head-Y heuristic.
+> - Call `_ApplyScale()` from `OnAvatarEyeHeightChanged(VRCPlayerApi, float)` or `OnAvatarChanged(VRCPlayerApi)` — both fire for every player, so early-return unless `player.isLocal`. `player.GetAvatarEyeHeightAsMeters()` is the direct avatar scale source when you do not need the head-Y heuristic.
 
 ---
 
@@ -320,7 +320,7 @@ public class DynamicPlayerList : UdonSharpBehaviour
     [Tooltip("Prefix for generated button names")]
     [SerializeField] private string buttonPrefix = "PlayerBtn_";
 
-    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before OnPlayerButtonClicked
+    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before _OnPlayerButtonClicked
 
     private GameObject[] _activeButtons = new GameObject[0];
 
@@ -330,20 +330,20 @@ public class DynamicPlayerList : UdonSharpBehaviour
         {
             buttonTemplate.SetActive(false);
         }
-        RefreshPlayerList();
+        _RefreshPlayerList();
     }
 
     public override void OnPlayerJoined(VRCPlayerApi player)
     {
-        RefreshPlayerList();
+        _RefreshPlayerList();
     }
 
     public override void OnPlayerLeft(VRCPlayerApi player)
     {
-        RefreshPlayerList();
+        _RefreshPlayerList();
     }
 
-    public void RefreshPlayerList()
+    public void _RefreshPlayerList()
     {
         // Clean up existing buttons
         for (int i = 0; i < _activeButtons.Length; i++)
@@ -377,7 +377,7 @@ public class DynamicPlayerList : UdonSharpBehaviour
             {
                 handler.buttonIndex = players[i].playerId;
                 handler.targetScript = this;
-                handler.methodName = nameof(OnPlayerButtonClicked);
+                handler.methodName = nameof(_OnPlayerButtonClicked);
             }
 
             // Set display text
@@ -394,7 +394,7 @@ public class DynamicPlayerList : UdonSharpBehaviour
     /// <summary>
     /// Called by ButtonHandler after it writes selectedIndex.
     /// </summary>
-    public void OnPlayerButtonClicked()
+    public void _OnPlayerButtonClicked()
     {
         int playerId = selectedIndex;
         selectedIndex = -1;
@@ -418,7 +418,7 @@ public class DynamicPlayerList : UdonSharpBehaviour
 
 > **Key notes:**
 > - `Object.Instantiate()` works in UdonSharp for scene objects. The template button must exist in the scene (not an asset prefab).
-> - Add the `ButtonHandler` component from `patterns-core.md` to the template button. Wire the Button's OnClick to `SendCustomEvent("OnClick")` on that handler; it writes `selectedIndex` before calling `OnPlayerButtonClicked`.
+> - Add the `ButtonHandler` component from `patterns-core.md` to the template button. Wire the Button's OnClick to `SendCustomEvent("_OnClick")` on that handler; it writes `selectedIndex` before calling `_OnPlayerButtonClicked`.
 > - Always check `IsValid()` before using a `VRCPlayerApi` reference, as players may leave between list refresh and click.
 > - For large player counts (80+), consider recycling buttons instead of Destroy/Instantiate every refresh.
 
@@ -595,7 +595,7 @@ public class LookupLocalization : UdonSharpBehaviour
     /// <summary>
     /// Called from a language toggle button to switch manually.
     /// </summary>
-    public void ToggleLanguage()
+    public void _ToggleLanguage()
     {
         CurrentLanguage = _currentLanguage == 0 ? 1 : 0;
     }
@@ -654,7 +654,7 @@ public class ToggleAnimatorBridge : UdonSharpBehaviour
     /// <summary>
     /// Hook this to Toggle.onValueChanged in the Inspector.
     /// </summary>
-    public void OnToggleValueChanged()
+    public void _OnToggleValueChanged()
     {
         Initialize();
 
@@ -697,7 +697,7 @@ public class ToggleAnimatorBridge : UdonSharpBehaviour
 ```
 
 > **Key notes:**
-> - Wire `OnToggleValueChanged()` to the Toggle's `onValueChanged` event in the Unity Inspector.
+> - Wire `_OnToggleValueChanged()` to the Toggle's `onValueChanged` event in the Unity Inspector.
 > - Use `SetIsOnWithoutNotify()` when restoring state from persistence or network sync to avoid re-triggering the callback loop.
 > - The `ColorBlock` on the Toggle's `Graphic` handles hover/pressed states automatically; this pattern only manages the custom handle color.
 
@@ -772,7 +772,7 @@ public class UISettingsStore : UdonSharpBehaviour
     /// <summary>
     /// Call this when the player changes volume via the UI slider.
     /// </summary>
-    public void OnVolumeChanged()
+    public void _OnVolumeChanged()
     {
         if (volumeSlider == null) return;
 
@@ -799,7 +799,7 @@ public class UISettingsStore : UdonSharpBehaviour
     /// <summary>
     /// Reset all settings to sentinel values (will use defaults on next load).
     /// </summary>
-    public void ResetToDefaults()
+    public void _ResetToDefaults()
     {
         Networking.SetOwner(_localPlayer, gameObject);
         savedVolume = -1;
@@ -897,7 +897,7 @@ public class MenuEventBroadcaster : UdonSharpBehaviour
     /// <summary>
     /// Open the menu and notify all listeners.
     /// </summary>
-    public void OpenMenu()
+    public void _OpenMenu()
     {
         if (_isOpen) return;
         _isOpen = true;
@@ -907,7 +907,7 @@ public class MenuEventBroadcaster : UdonSharpBehaviour
     /// <summary>
     /// Close the menu and notify all listeners.
     /// </summary>
-    public void CloseMenu()
+    public void _CloseMenu()
     {
         if (!_isOpen) return;
         _isOpen = false;
@@ -917,15 +917,15 @@ public class MenuEventBroadcaster : UdonSharpBehaviour
     /// <summary>
     /// Toggle the menu state.
     /// </summary>
-    public void ToggleMenu()
+    public void _ToggleMenu()
     {
         if (_isOpen)
         {
-            CloseMenu();
+            _CloseMenu();
         }
         else
         {
-            OpenMenu();
+            _OpenMenu();
         }
     }
 
@@ -1034,7 +1034,7 @@ public class FingerPointer : UdonSharpBehaviour
     /// <summary>
     /// Call once per frame from the canvas manager to update finger position.
     /// </summary>
-    public void UpdateTracking()
+    public void _UpdateTracking()
     {
         IsTracking = false;
 
@@ -1054,7 +1054,7 @@ public class FingerPointer : UdonSharpBehaviour
     /// <summary>
     /// Trigger haptic feedback on this hand.
     /// </summary>
-    public void PlayHaptic()
+    public void _PlayHaptic()
     {
         if (!Utilities.IsValid(_localPlayer)) return;
         if (!_isVR) return;
@@ -1069,7 +1069,7 @@ public class FingerPointer : UdonSharpBehaviour
     /// <summary>
     /// Returns true if this pointer is configured for the left hand.
     /// </summary>
-    public bool GetIsLeftHand()
+    public bool _GetIsLeftHand()
     {
         return isLeftHand;
     }
@@ -1077,7 +1077,7 @@ public class FingerPointer : UdonSharpBehaviour
     /// <summary>
     /// Returns true if the local player is in VR.
     /// </summary>
-    public bool GetIsVR()
+    public bool _GetIsVR()
     {
         return _isVR;
     }
@@ -1175,12 +1175,12 @@ public class FingerTouchCanvas : UdonSharpBehaviour
         {
             if (leftPointer != null)
             {
-                leftPointer.UpdateTracking();
+    leftPointer._UpdateTracking();
                 ProcessFingerPointer(leftPointer, 0);
             }
             if (rightPointer != null)
             {
-                rightPointer.UpdateTracking();
+    rightPointer._UpdateTracking();
                 ProcessFingerPointer(rightPointer, 1);
             }
         }
@@ -1226,7 +1226,7 @@ public class FingerTouchCanvas : UdonSharpBehaviour
             _isPressed[pointerIndex] = true;
             _isDragging[pointerIndex] = false;
             _pressStartLocalXY[pointerIndex] = new Vector2(localPos.x, localPos.y);
-            pointer.PlayHaptic();
+    pointer._PlayHaptic();
             FirePointerDown(pointerIndex);
         }
         else if (!isTouching && _isPressed[pointerIndex])
@@ -1482,56 +1482,56 @@ public class AppModule : UdonSharpBehaviour
     /// <summary>
     /// Called when this app becomes the active app.
     /// </summary>
-    public virtual void OnAppOpen()
+    public virtual void _OnAppOpen()
     {
     }
 
     /// <summary>
     /// Called when this app is being replaced by another app or the home screen.
     /// </summary>
-    public virtual void OnAppClose()
+    public virtual void _OnAppClose()
     {
     }
 
     /// <summary>
     /// Called when the device is picked up while this app is active.
     /// </summary>
-    public virtual void OnDevicePickup()
+    public virtual void _OnDevicePickup()
     {
     }
 
     /// <summary>
     /// Called when the device use button is pressed while this app is active.
     /// </summary>
-    public virtual void OnDeviceUseDown()
+    public virtual void _OnDeviceUseDown()
     {
     }
 
     /// <summary>
     /// Called when the device use button is released while this app is active.
     /// </summary>
-    public virtual void OnDeviceUseUp()
+    public virtual void _OnDeviceUseUp()
     {
     }
 
     /// <summary>
     /// Called when the device is dropped while this app is active.
     /// </summary>
-    public virtual void OnDeviceDrop()
+    public virtual void _OnDeviceDrop()
     {
     }
 
     /// <summary>
     /// Called when a pointer press occurs on this app's UI.
     /// </summary>
-    public virtual void OnAppPointerDown()
+    public virtual void _OnAppPointerDown()
     {
     }
 
     /// <summary>
     /// Called when a pointer release occurs on this app's UI.
     /// </summary>
-    public virtual void OnAppPointerUp()
+    public virtual void _OnAppPointerUp()
     {
     }
 }
@@ -1583,14 +1583,14 @@ public class AppManager : UdonSharpBehaviour
     private bool _isTransitioning = false;
     private int _previousAppIndex = -1;
 
-    // Pending open state — carries the requested operation from OpenApp/CloseCurrentApp
+    // Pending open state — carries the requested operation from OpenApp/_CloseCurrentApp
     // into OnOwnershipTransferred so the callback knows which app to open.
     // Note: Networking.SetOwner is locally immediate (post-2021.2.2), so a request that
     // already owns the object can execute synchronously; this field exists for the
     // ownership-transfer code path only.
     // -2 = no pending operation, -1 = pending close, >= 0 = pending open index
     private int _pendingOpenIndex = -2;
-    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before OnIconButtonClicked
+    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before _OnIconButtonClicked
 
     /// <summary>
     /// Synced property: when the synced value changes, trigger a transition.
@@ -1685,7 +1685,7 @@ public class AppManager : UdonSharpBehaviour
             {
                 handler.buttonIndex = i;
                 handler.targetScript = this;
-                handler.methodName = nameof(OnIconButtonClicked);
+                handler.methodName = nameof(_OnIconButtonClicked);
             }
 
             // Set icon texture if a RawImage is present on the template
@@ -1729,7 +1729,7 @@ public class AppManager : UdonSharpBehaviour
     /// <summary>
     /// Close the current app and return to the home state (no app active).
     /// </summary>
-    public void CloseCurrentApp()
+    public void _CloseCurrentApp()
     {
         VRCPlayerApi local = Networking.LocalPlayer;
         if (local == null) return;
@@ -1765,7 +1765,7 @@ public class AppManager : UdonSharpBehaviour
     /// <summary>
     /// Called by ButtonHandler after it writes selectedIndex.
     /// </summary>
-    public void OnIconButtonClicked()
+    public void _OnIconButtonClicked()
     {
         int appIndex = selectedIndex;
         selectedIndex = -1;
@@ -1785,7 +1785,7 @@ public class AppManager : UdonSharpBehaviour
         {
             if (Utilities.IsValid(_apps[_previousAppIndex]))
             {
-                _apps[_previousAppIndex].OnAppClose();
+        _apps[_previousAppIndex]._OnAppClose();
             }
         }
 
@@ -1859,7 +1859,7 @@ public class AppManager : UdonSharpBehaviour
             {
                 if (Utilities.IsValid(_apps[_currentAppIndex]))
                 {
-                    _apps[_currentAppIndex].OnAppOpen();
+        _apps[_currentAppIndex]._OnAppOpen();
                 }
             }
         }
@@ -1869,22 +1869,22 @@ public class AppManager : UdonSharpBehaviour
 
     public override void OnPickup()
     {
-        ForwardToCurrentApp("OnDevicePickup");
+        ForwardToCurrentApp("_OnDevicePickup");
     }
 
     public override void OnDrop()
     {
-        ForwardToCurrentApp("OnDeviceDrop");
+        ForwardToCurrentApp("_OnDeviceDrop");
     }
 
     public override void OnPickupUseDown()
     {
-        ForwardToCurrentApp("OnDeviceUseDown");
+        ForwardToCurrentApp("_OnDeviceUseDown");
     }
 
     public override void OnPickupUseUp()
     {
-        ForwardToCurrentApp("OnDeviceUseUp");
+        ForwardToCurrentApp("_OnDeviceUseUp");
     }
 
     private void ForwardToCurrentApp(string eventName)
@@ -1901,7 +1901,7 @@ public class AppManager : UdonSharpBehaviour
     /// <summary>
     /// Returns the number of discovered apps.
     /// </summary>
-    public int GetAppCount()
+    public int _GetAppCount()
     {
         return _appCount;
     }
@@ -1909,7 +1909,7 @@ public class AppManager : UdonSharpBehaviour
     /// <summary>
     /// Returns the currently active app index (-1 if none).
     /// </summary>
-    public int GetCurrentAppIndex()
+    public int _GetCurrentAppIndex()
     {
         return _currentAppIndex;
     }
@@ -1922,12 +1922,12 @@ public class AppManager : UdonSharpBehaviour
 - Any scenario requiring CanvasGroup-based animated transitions between UI panels with network sync.
 
 > **Key notes:**
-> - `AppModule` uses `virtual` lifecycle methods. Subclasses override only the hooks they need (e.g., a clock app only overrides `OnAppOpen` to start its timer).
+> - `AppModule` uses `virtual` lifecycle methods. Subclasses override only the hooks they need (e.g., a clock app only overrides `_OnAppOpen` to start its timer).
 > - `CanvasGroup.alpha` controls visibility, `interactable` controls whether UI elements respond to input, and `blocksRaycasts` controls whether the panel intercepts pointer events. All three must be managed together for correct transitions.
 > - The `[FieldChangeCallback]` attribute on `SyncedAppIndex` ensures the property setter runs on all clients when the synced value changes, triggering the transition on remote players.
 > - App discovery iterates `appsParent` children at `Start()`. Adding or removing apps at runtime is not supported — all apps must be present in the scene hierarchy at load time.
 > - Pickup events (`OnPickup`, `OnDrop`, `OnPickupUseDown`, `OnPickupUseUp`) are forwarded from the manager to the active app via `SendCustomEvent`, allowing each app to respond to device interactions independently.
-> - Icon buttons are instantiated from a scene template at startup. Add `ButtonHandler` from `patterns-core.md` to the template and wire each Button's OnClick to `SendCustomEvent("OnClick")` on that handler; the handler writes `selectedIndex` before calling `OnIconButtonClicked`.
+> - Icon buttons are instantiated from a scene template at startup. Add `ButtonHandler` from `patterns-core.md` to the template and wire each Button's OnClick to `SendCustomEvent("_OnClick")` on that handler; the handler writes `selectedIndex` before calling `_OnIconButtonClicked`.
 
 ---
 

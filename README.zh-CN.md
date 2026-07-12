@@ -164,6 +164,8 @@ UdonSharp 脚本核心技能。涵盖编译约束、网络同步、事件和模�
 | `udonsharp-networking` | Ownership 模型、同步模式、反模式、NetworkCallable 约束 |
 | `udonsharp-sync-selection` | 同步决策树、数据预算目标、6 条最小化原则 |
 
+**网络规则：** 名称不以 `_` 开头的无参数 `public` 方法会暴露给旧式网络调用。为仅限本地或自定义的 `public` 方法添加 `_`，只通过 `[NetworkCallable]` 显式公开所需入口。判断调用者权限时，应先确认 `NetworkCalling.InNetworkCall`，再读取 `NetworkCalling.CallingPlayer`，并与接收端所有权分开检查。不要将实例 Master 作为安全或访问控制边界。
+
 ### 同步决策树
 
 ```text

@@ -164,6 +164,8 @@ UdonSharp 스크립팅 핵심 스킬. 컴파일 제약, 네트워킹, 이벤트,
 | `udonsharp-networking` | Ownership 모델, 동기화 모드, 안티패턴, NetworkCallable 제약 |
 | `udonsharp-sync-selection` | 동기화 의사 결정 트리, 데이터 예산 목표, 6가지 최소화 원칙 |
 
+**네트워크 규칙:** 이름이 `_`로 시작하지 않는 매개변수 없는 `public` 메서드는 레거시 네트워크 호출에 노출됩니다. 로컬 전용/사용자 정의 `public` 메서드에는 `_`를 붙이고, 필요한 진입점만 `[NetworkCallable]`로 명시적으로 공개하세요. 송신자 권한을 확인할 때는 먼저 `NetworkCalling.InNetworkCall`을 확인한 후 `NetworkCalling.CallingPlayer`를 읽고, 수신 측 소유권과 별도로 검사해야 합니다. 인스턴스 마스터를 보안 또는 접근 제어 경계로 사용하지 마세요.
+
 ### 동기화 의사 결정 트리
 
 ```text

@@ -162,9 +162,10 @@ public class SyncedObject : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Public method to set state (for external scripts).
+    /// Local-only public method to set state for external scripts.
+    /// The leading underscore prevents legacy network calls.
     /// </summary>
-    public void SetState(bool newState)
+    public void _SetState(bool newState)
     {
         _isInitialized = true;
 
@@ -180,7 +181,7 @@ public class SyncedObject : UdonSharpBehaviour
     /// <summary>
     /// Public method to get current state.
     /// </summary>
-    public bool GetState()
+    public bool _GetState()
     {
         return _isActive;
     }
@@ -188,7 +189,7 @@ public class SyncedObject : UdonSharpBehaviour
     /// <summary>
     /// Get the player who last interacted with this object.
     /// </summary>
-    public VRCPlayerApi GetLastInteractor()
+    public VRCPlayerApi _GetLastInteractor()
     {
         return VRCPlayerApi.GetPlayerById(lastInteractorId);
     }

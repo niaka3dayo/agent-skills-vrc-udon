@@ -14,7 +14,7 @@ using VRC.Udon;
 /// Usage:
 /// 1. Attach to a GameObject in the scene
 /// 2. Assign visual feedback objects per state in the Inspector
-/// 3. Call Activate() from a trigger, button, or another UdonBehaviour
+/// 3. Call _Activate() from a trigger, button, or another UdonBehaviour
 /// 4. Only the owner drives timed transitions; all players apply visuals via OnDeserialization
 /// </summary>
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -78,7 +78,7 @@ public class StateMachine : UdonSharpBehaviour
     // receives the synced state via OnDeserialization.
     private bool _isInitialized = false;
 
-    // Guards against scheduling multiple concurrent timers (e.g. rapid Activate calls)
+    // Guards against scheduling multiple concurrent timers (e.g. rapid _Activate calls)
     private bool _timerPending = false;
 
     // -------------------------------------------------------------------------
@@ -100,11 +100,11 @@ public class StateMachine : UdonSharpBehaviour
     /// Trigger the state machine from Idle -> Active.
     /// No-ops if not currently in Idle state.
     /// </summary>
-    public void Activate()
+    public void _Activate()
     {
         if (_currentState != STATE_IDLE)
         {
-            LogDebug("Activate() ignored: not in Idle state");
+            LogDebug("_Activate() ignored: not in Idle state");
             return;
         }
 
@@ -116,7 +116,7 @@ public class StateMachine : UdonSharpBehaviour
     /// Force reset to Idle from any state (owner only).
     /// Useful for emergency stop buttons or admin controls.
     /// </summary>
-    public void ForceIdle()
+    public void _ForceIdle()
     {
         TakeOwnershipIfNeeded();
         _timerPending = false;
@@ -126,7 +126,7 @@ public class StateMachine : UdonSharpBehaviour
     /// <summary>
     /// Returns the current state constant (STATE_IDLE, STATE_ACTIVE, STATE_COOLDOWN).
     /// </summary>
-    public int GetCurrentState()
+    public int _GetCurrentState()
     {
         return _currentState;
     }
@@ -141,7 +141,7 @@ public class StateMachine : UdonSharpBehaviour
     /// </summary>
     public override void Interact()
     {
-        Activate();
+        _Activate();
     }
 
     // -------------------------------------------------------------------------

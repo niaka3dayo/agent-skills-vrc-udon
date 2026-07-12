@@ -48,44 +48,69 @@ BaseGimmick[] all = GetComponents<BaseGimmick>();   // plural form also works
 
 Before SDK 3.8.1, network events had no parameter support. Callers had to pre-load synced variables and call `RequestSerialization()` before sending an event, creating race conditions.
 
+SDKs before 3.8.1 do not define the `NetworkCallable` attribute or parameterized network-event API, so code that uses them normally fails to compile.
+
 `[NetworkCallable]` adds up to 8 typed parameters per network call, eliminating the pre-serialization pattern. The attribute lives in `VRC.SDK3.UdonNetworkCalling`.
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class DamageSystem : UdonSharpBehaviour
 {
+    [UdonSynced] private int health = 100;
+
     // Before (SDK 3.7): set synced var, RequestSerialization, then fire event
     // After (SDK 3.8.1): pass parameters directly
 
-    [NetworkCallable]
-    public void TakeDamage(int damage, int attackerId)
+    [NetworkCallable(1)]
+    public void _TakeDamage(int damage)
     {
-        // Parameters arrive atomically — no race condition
-        Debug.Log($"Took {damage} damage from player {attackerId}");
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Concrete owner-only caller policy for this migration sample.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
+
+        // Receiver ownership controls synced mutation, not caller authorization.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (damage <= 0 || damage > 25) return;
+
+        health = Mathf.Max(0, health - damage);
+        RequestSerialization();
     }
 
-    public void SendDamage(int damage, int attackerId)
+    public void _SendDamage(int damage)
     {
         SendCustomNetworkEvent(
-            NetworkEventTarget.All,
-            nameof(TakeDamage),
-            damage,
-            attackerId
+            NetworkEventTarget.Owner,
+            nameof(_TakeDamage),
+            damage
         );
     }
 }
 ```
 
+Network parameters carry the action data, not trusted sender identity. This migration executes both a concrete `1..25` damage bound and an owner-only caller policy derived from `NetworkCalling.CallingPlayer`; neither rule is left as a comment-only placeholder. The leading underscore keeps `_SendDamage` out of the legacy network-callable surface; `[NetworkCallable]` intentionally exposes `_TakeDamage` despite its underscore.
+
 Constraints on `[NetworkCallable]` methods:
 - Method must be `public`
+- A `[NetworkCallable]` method must return `void`.
 - Cannot be `static`, `virtual`, or `override`
 - No method overloading
 - Maximum 8 parameters
 - Parameter types must be syncable types (same set as `[UdonSynced]`)
 - Default rate limit: 5 calls/sec/event; configurable up to 100/sec via `[NetworkCallable(n)]`
+
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Local/self calls bypass the pacing, so migrated receivers still need their own idempotence, cooldown, capacity, deduplication, and input checks where aggregate work matters.
 
 #### New NetworkEventTarget Values (SDK 3.8.1+)
 
@@ -250,8 +275,8 @@ public class ConstraintController : UdonSharpBehaviour
 {
     public VRCPositionConstraint posConstraint;
 
-    public void EnableFollow() => posConstraint.IsActive = true;
-    public void DisableFollow() => posConstraint.IsActive = false;
+    public void _EnableFollow() => posConstraint.IsActive = true;
+    public void _DisableFollow() => posConstraint.IsActive = false;
 
     public void SetWeight(float w) => posConstraint.SetSourceWeight(0, w);
 }
@@ -296,10 +321,10 @@ See [persistence.md](persistence.md) for a full monitoring example.
 
 ```csharp
 // Schedule a physics-safe callback
-SendCustomEventDelayedSeconds(nameof(PhysicsStep), 1.0f, EventTiming.FixedUpdate);
+SendCustomEventDelayedSeconds(nameof(_PhysicsStep), 1.0f, EventTiming.FixedUpdate);
 
 // Schedule a camera-follow update after IK
-SendCustomEventDelayedFrames(nameof(UpdateCamera), 1, EventTiming.PostLateUpdate);
+SendCustomEventDelayedFrames(nameof(_UpdateCamera), 1, EventTiming.PostLateUpdate);
 ```
 
 `FixedUpdate` and `PostLateUpdate` are new in SDK 3.10.2; `Update` and `LateUpdate` existed since SDK 3.7.1.

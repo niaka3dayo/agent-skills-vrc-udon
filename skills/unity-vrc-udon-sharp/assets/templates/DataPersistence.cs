@@ -24,7 +24,7 @@ public class DataPersistence : UdonSharpBehaviour
     // -------------------------------------------------------------------------
 
     [Header("UI Elements")]
-    [Tooltip("Button that calls SaveData() via SendCustomEvent")]
+    [Tooltip("Button that calls _SaveData() via SendCustomEvent")]
     public UnityEngine.UI.Button saveButton;
 
     [Tooltip("Volume slider — value is auto-saved on change")]
@@ -179,21 +179,21 @@ public class DataPersistence : UdonSharpBehaviour
 
     /// <summary>
     /// Explicit save triggered by a UI button.
-    /// Wire the button's OnClick to call this via SendCustomEvent("SaveData").
+    /// Wire the button's OnClick to call this via SendCustomEvent("_SaveData").
     /// </summary>
-    public void SaveData()
+    public void _SaveData()
     {
         if (!_dataRestored)
         {
             SetStatus("Still loading — please wait.");
-            LogDebug("SaveData() called before OnPlayerRestored.");
+            LogDebug("_SaveData() called before OnPlayerRestored.");
             return;
         }
 
         VRCPlayerApi local = Networking.LocalPlayer;
         if (local == null || !local.IsValid())
         {
-            LogDebug("LocalPlayer not valid during SaveData().");
+            LogDebug("LocalPlayer not valid during _SaveData().");
             return;
         }
 
@@ -202,7 +202,7 @@ public class DataPersistence : UdonSharpBehaviour
         WriteAllData(local);
 
         SetStatus("Saved!");
-        LogDebug($"SaveData: score={_highScore}, vol={_volume}, music={_musicOn}");
+        LogDebug($"_SaveData: score={_highScore}, vol={_volume}, music={_musicOn}");
     }
 
     // -------------------------------------------------------------------------
@@ -211,9 +211,9 @@ public class DataPersistence : UdonSharpBehaviour
 
     /// <summary>
     /// Auto-save for the volume slider.
-    /// Wire the slider's OnValueChanged to call this via SendCustomEvent("OnVolumeChanged").
+    /// Wire the slider's OnValueChanged to call this via SendCustomEvent("_OnVolumeChanged").
     /// </summary>
-    public void OnVolumeChanged()
+    public void _OnVolumeChanged()
     {
         if (!_dataRestored)
         {
@@ -236,9 +236,9 @@ public class DataPersistence : UdonSharpBehaviour
 
     /// <summary>
     /// Auto-save for the music toggle.
-    /// Wire the toggle's OnValueChanged to call this via SendCustomEvent("OnMusicToggled").
+    /// Wire the toggle's OnValueChanged to call this via SendCustomEvent("_OnMusicToggled").
     /// </summary>
-    public void OnMusicToggled()
+    public void _OnMusicToggled()
     {
         if (!_dataRestored)
         {
@@ -319,13 +319,13 @@ public class DataPersistence : UdonSharpBehaviour
     // -------------------------------------------------------------------------
 
     /// <summary>Returns the in-memory high score. Valid after OnPlayerRestored.</summary>
-    public int GetHighScore()
+    public int _GetHighScore()
     {
         return _highScore;
     }
 
     /// <summary>Returns true once OnPlayerRestored has fired for the local player.</summary>
-    public bool IsDataReady()
+    public bool _IsDataReady()
     {
         return _dataRestored;
     }

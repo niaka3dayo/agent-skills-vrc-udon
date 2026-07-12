@@ -269,7 +269,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
     [SerializeField] private VRCUrl[] _packUrlsAndroid;
 
     /** Returns the URL array for the current build platform */
-    public VRCUrl[] GetPlatformUrls()
+    public VRCUrl[] _GetPlatformUrls()
     {
 #if UNITY_ANDROID
         return _packUrlsAndroid;
@@ -279,7 +279,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
     }
 
     /** Returns the opaque texture format for the current build platform */
-    public TextureFormat GetOpaqueFormat()
+    public TextureFormat _GetOpaqueFormat()
     {
 #if UNITY_ANDROID
         return TextureFormat.ETC2_RGB;
@@ -289,7 +289,7 @@ public class PlatformFormatSelector : UdonSharpBehaviour
     }
 
     /** Returns the alpha-capable texture format for the current build platform */
-    public TextureFormat GetAlphaFormat()
+    public TextureFormat _GetAlphaFormat()
     {
 #if UNITY_ANDROID
         return TextureFormat.ETC2_RGBA8;
@@ -618,7 +618,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
             ParseIndexFile(result.Result);
             _indexReady = true;
             // Begin loading all UI slots
-            SendCustomEvent(nameof(LoadNextSlot));
+            SendCustomEvent(nameof(_LoadNextSlot));
             return;
         }
 
@@ -675,7 +675,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
 
     private int _slotLoadCursor = 0;
 
-    public void LoadNextSlot()
+    public void _LoadNextSlot()
     {
         if (_slotLoadCursor >= _uiSlots.Length) return;
         int slotIdx = _slotLoadCursor;
@@ -703,7 +703,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
             if (_cacheKeys[i] == urlIdx)
             {
                 ApplyTextureFromCache(slotIdx, _cacheData[i], innerIdx);
-                SendCustomEvent(nameof(LoadNextSlot));
+                SendCustomEvent(nameof(_LoadNextSlot));
                 return;
             }
         }
@@ -714,7 +714,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
         _pendingSlotIndex = slotIdx;
         VRCStringDownloader.LoadUrl(_packUrls[urlIdx], (IUdonEventReceiver)this);
         // Rate limit: next slot after 5.5 s
-        SendCustomEventDelayedSeconds(nameof(LoadNextSlot), 5.5f);
+        SendCustomEventDelayedSeconds(nameof(_LoadNextSlot), 5.5f);
     }
 
     // ── Pack parsing ─────────────────────────────────────────────────────────
@@ -883,7 +883,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
 | Index file parses but `TryGetAddress` always returns false | Resource ID string case mismatch between JSON and `_slotResourceIds` inspector values | Ensure exact string match; JSON keys are case-sensitive |
 | Pack parses but inner texture is blank | `innerIndex` out of range for the decoded `blocks` array | Log `blocks.Length` and `innerIdx`; confirm JSON `entries` array length matches the pack |
 | All downloads stall after one error | `_pendingUrlIndex` is not reset in `OnStringLoadError`; next callback is misrouted | Reset `_pendingUrlIndex = -1` and `_pendingSlotIndex = -1` in `OnStringLoadError` |
-| UI slots load slowly even with cache hits | Your implementation delays `LoadNextSlot` even when serving from cache | Follow the example above: dispatch `LoadNextSlot` immediately on cache hits; only delay when a network download is initiated |
+| UI slots load slowly even with cache hits | Your implementation delays `_LoadNextSlot` even when serving from cache | Follow the example above: dispatch `_LoadNextSlot` immediately on cache hits; only delay when a network download is initiated |
 
 ---
 

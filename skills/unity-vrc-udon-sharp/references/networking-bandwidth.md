@@ -22,7 +22,7 @@ Use `Networking.IsClogged` to check for network queue backup:
 if (Networking.IsClogged)
 {
     // Network is congested - defer synchronization
-    SendCustomEventDelayedSeconds(nameof(RetrySync), 1.0f);
+    SendCustomEventDelayedSeconds(nameof(_RetrySync), 1.0f);
     return;
 }
 RequestSerialization();
@@ -56,24 +56,24 @@ private void RequestSync()
 
     if (now >= lastSyncTime + SyncInterval)
     {
-        ExecuteSync();
+        _ExecuteSync();
     }
     else
     {
         float delay = (float)(lastSyncTime + SyncInterval - now) + 0.001f;
-        SendCustomEventDelayedSeconds(nameof(ExecuteSync), delay);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteSync), delay);
         isPendingSync = true;
     }
 }
 
-public void ExecuteSync()
+public void _ExecuteSync()
 {
     isPendingSync = false;
     if (!Networking.IsOwner(gameObject)) return;
 
     if (Networking.IsClogged)
     {
-        SendCustomEventDelayedSeconds(nameof(ExecuteSync), RetryInterval);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteSync), RetryInterval);
         isPendingSync = true;
         return;
     }
@@ -119,11 +119,11 @@ private void RequestPeriodicSync()
     if (isPendingPeriodicSync) return;
     if (!Networking.IsOwner(gameObject)) return;
 
-    SendCustomEventDelayedSeconds(nameof(ExecutePeriodicSync), PeriodicSyncInterval);
+    SendCustomEventDelayedSeconds(nameof(_ExecutePeriodicSync), PeriodicSyncInterval);
     isPendingPeriodicSync = true;
 }
 
-public void ExecutePeriodicSync()
+public void _ExecutePeriodicSync()
 {
     isPendingPeriodicSync = false;
     if (!Networking.IsOwner(gameObject)) return;
@@ -343,60 +343,123 @@ For multiplayer games, the recommended design is **"only the owner modifies stat
 
 ### Code Example: Owner-Centric GameManager
 
-This example uses `[NetworkCallable]`, so full scripts need `using VRC.SDK3.UdonNetworkCalling;`.
+This example uses `[NetworkCallable]` and sender context from `VRC.SDK3.UdonNetworkCalling`.
 
 ```csharp
+using UdonSharp;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class GameManager : UdonSharpBehaviour
 {
-    [UdonSynced] private int[] boardState;
-    [UdonSynced] private int currentTurn;
-    [UdonSynced] private int gamePhase; // 0=Lobby, 1=Playing, 2=Result
+    private const int BoardSize = 9;
+    private const int LobbyPhase = 0;
+    private const int PlayingPhase = 1;
+
+    [UdonSynced] private int[] boardState = new int[BoardSize];
+    [UdonSynced] private int currentTurn = 1;
+    [UdonSynced] private int gamePhase = LobbyPhase;
+    [UdonSynced] private int playerOneId = -1;
+    [UdonSynced] private int playerTwoId = -1;
+    [UdonSynced] private int currentTurnPlayerId = -1;
+
+    void Start()
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+        _ResetSessionToLobby();
+        RequestSerialization();
+    }
+
+    // Called by trusted owner-side session setup after choosing two players.
+    // The leading underscore prevents legacy network calls to this local API.
+    public void _StartTwoPlayerSession(int firstPlayerId, int secondPlayerId)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        VRCPlayerApi firstPlayer = VRCPlayerApi.GetPlayerById(firstPlayerId);
+        VRCPlayerApi secondPlayer = VRCPlayerApi.GetPlayerById(secondPlayerId);
+        if (firstPlayer == null || !firstPlayer.IsValid()) return;
+        if (secondPlayer == null || !secondPlayer.IsValid()) return;
+        if (firstPlayerId == secondPlayerId) return;
+
+        boardState = new int[BoardSize];
+        playerOneId = firstPlayerId;
+        playerTwoId = secondPlayerId;
+        currentTurn = 1;
+        currentTurnPlayerId = playerOneId;
+        gamePhase = PlayingPhase;
+        RequestSerialization();
+    }
 
     // --- Input from UI (fires on all clients) ---
-    public void OnCellClicked(int cellIndex)
+    public void _OnCellClicked(int cellIndex)
     {
         // Delegate to owner (works even if self is owner)
         SendCustomNetworkEvent(
             NetworkEventTarget.Owner,
-            nameof(OwnerProcessMove),
-            cellIndex,
-            Networking.LocalPlayer.playerId
+            nameof(_OwnerProcessMove),
+            cellIndex
         );
     }
 
     // --- Owner only ---
     [NetworkCallable]
-    public void OwnerProcessMove(int cellIndex, int playerId)
+    public void _OwnerProcessMove(int cellIndex)
     {
-        if (gamePhase != 1) return;           // Ignore if not in game
-        if (playerId != GetCurrentPlayerId()) return; // Ignore if not their turn
-        if (boardState[cellIndex] != 0) return;       // Already occupied
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Owner-controlled session policy: only the synced current-turn player
+        // selected by the owner-side setup path may submit this move.
+        if (caller.playerId != currentTurnPlayerId) return;
+
+        // Ownership controls where synced mutation occurs; it does not
+        // authenticate or authorize caller.
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (gamePhase != PlayingPhase) return;
+        if (boardState == null || boardState.Length != BoardSize) return;
+        if (cellIndex < 0 || cellIndex >= BoardSize) return;
+        if (boardState[cellIndex] != 0) return;        // Already occupied
 
         boardState[cellIndex] = currentTurn;
         currentTurn = (currentTurn % 2) + 1;
+        currentTurnPlayerId = currentTurn == 1 ? playerOneId : playerTwoId;
         RequestSerialization();
     }
 
     // --- All clients: update display ---
     public override void OnDeserialization()
     {
-        UpdateBoardDisplay();
-        UpdateTurnIndicator();
+        _UpdateBoardDisplay();
+        _UpdateTurnIndicator();
     }
 
-    private int GetCurrentPlayerId() { /* ... */ return 0; }
-    private void UpdateBoardDisplay() { /* Reflect boardState in UI */ }
-    private void UpdateTurnIndicator() { /* Display currentTurn */ }
+    private void _UpdateBoardDisplay() { /* Reflect boardState in UI */ }
+    private void _UpdateTurnIndicator() { /* Display currentTurn */ }
+
+    private void _ResetSessionToLobby()
+    {
+        boardState = new int[BoardSize];
+        currentTurn = 1;
+        gamePhase = LobbyPhase;
+        playerOneId = -1;
+        playerTwoId = -1;
+        currentTurnPlayerId = -1;
+    }
 }
 ```
 
 **Key points:**
 - UI callback -> `SendCustomNetworkEvent(Owner)` -> Owner validates and modifies -> `RequestSerialization()` -> Everyone receives via `OnDeserialization()`
 - Non-owners can still press buttons (delegated to owner)
-- Invalid operations can be rejected by the owner (design similar to server authority)
+- The event carries move data only; sender identity comes from `NetworkCalling.CallingPlayer`, never a claimed `playerId`
+- The owner-controlled `_StartTwoPlayerSession` setup initializes the exact nine-cell board and selects the synced current-turn player
+- The receiver keeps its local ownership guard for synced mutation, separately from caller authorization
 
 
 ## See Also

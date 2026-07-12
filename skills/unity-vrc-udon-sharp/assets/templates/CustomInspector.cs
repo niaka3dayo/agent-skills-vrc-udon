@@ -77,7 +77,7 @@ public class CustomInspectorExample : UdonSharpBehaviour
     /// <summary>
     /// Editor-only: Reset to default values.
     /// </summary>
-    public void ResetToDefaults()
+    public void _ResetToDefaults()
     {
         displayName = "Example Object";
         speed = 5.0f;
@@ -243,7 +243,7 @@ public class CustomInspectorExampleEditor : Editor
         if (GUILayout.Button("Reset to Defaults"))
         {
             Undo.RecordObject(script, "Reset to Defaults");
-            script.ResetToDefaults();
+            script._ResetToDefaults();
             // Sync proxy to UdonBehaviour
             UdonSharpEditorUtility.CopyProxyToUdon(script);
         }
