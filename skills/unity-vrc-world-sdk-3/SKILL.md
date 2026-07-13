@@ -1,22 +1,17 @@
 ---
 name: unity-vrc-world-sdk-3
 description: >
-    VRChat World SDK 3 scene and Inspector setup, component placement and
-    configuration, optimization, and upload guide. Use this skill when
-    configuring VRChat world scenes, placing SDK components, setting up layers,
-    optimizing performance, or uploading worlds.
-    Covers VRC_SceneDescriptor, spawn points, VRC_Pickup, VRC_Station,
-    VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, layer/collision matrix,
-    baked lighting, Quest/Android limits, Dynamics for Worlds, Build Panel
-    validation alerts, and upload workflow.
-    SDK 3.7.1 - 3.10.4 coverage.
-    Triggers on: VRChat world scene, VRC SDK, scene setup, VRC_SceneDescriptor,
-    spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
+    VRChat World SDK 3 guide for scene and Inspector setup, component placement,
+    optimization, and upload. Use for VRChat world scene configuration,
+    VRC SDK components, layers, baked lighting, Quest/Android performance,
+    Dynamics for Worlds, Build Panel warning triage, validation, and upload.
+    Covers VRC_SceneDescriptor, VRC_Pickup, VRC_Station, VRC_Mirror,
+    VRC_ObjectSync, VRC_CameraDolly, spawn points, collision matrices,
     PhysBone and Contact component placement, Box Contacts,
-    Global Avatar PhysBone Colliders, VRCPhysBoneCollider component setup,
-    optimization, Quest support, light baking,
-    upload, SDK validation, Build Panel warning, Auto Fix, red warning,
-    yellow warning, white warning, FPS improvement.
+    Global Avatar PhysBone Colliders, and VRCPhysBoneCollider component setup.
+    SDK 3.7.1-3.10.4. Triggers on: VRChat world scene, VRC SDK, scene setup,
+    component placement, optimization, Quest support, light baking, upload,
+    SDK validation, Build Panel warning, Auto Fix, red warning, yellow warning, or white warning.
     Do not use for UdonSharp C# or VRCTween calls; use
     unity-vrc-udon-sharp for runtime scripting.
 license: MIT

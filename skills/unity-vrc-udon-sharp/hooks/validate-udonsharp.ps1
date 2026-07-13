@@ -453,6 +453,12 @@ foreach ($Line in [regex]::Split($MaskedSource, '\r?\n')) {
         '',
         1
     )
+    $Candidate = [regex]::Replace(
+        $Candidate,
+        '^[ \t]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[ \t]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*=>',
+        '',
+        1
+    )
     $Candidate = [regex]::Replace($Candidate, '(^|[;{ \t])(get|set|init)[ \t]*=>', ' ')
     if ($Candidate -match '\)[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)' -or
         $Candidate -match '(^|[=(, \t])[A-Za-z_][A-Za-z0-9_]*[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)') {
@@ -465,88 +471,179 @@ if ($HasLambda) {
 }
 
 function Get-SyncStats([string]$Source) {
-    function Find-AttributeGroupEnd([string]$Text) {
+    function Get-AttributeFlags([string]$Content) {
+        $Compact = $Content -replace '[ \t\r\n]', ''
+        $Target = ''
+        if ($Compact -match '^(assembly|module|field|event|method|param|property|return|type|typevar):') {
+            $Target = $Matches[1]
+            $Compact = $Compact.Substring($Matches[0].Length)
+        }
+
+        $Synced = $false
+        $NoVariableSync = $false
+        $Segment = [System.Text.StringBuilder]::new()
         $Parens = 0
-        for ($Position = 1; $Position -lt $Text.Length; $Position++) {
-            if ($Position + 1 -lt $Text.Length -and $Text.Substring($Position, 2) -eq '[]') {
-                $Position++
+        $Brackets = 0
+        $Braces = 0
+        $Segments = [System.Collections.Generic.List[string]]::new()
+        for ($Position = 0; $Position -lt $Compact.Length; $Position++) {
+            $Character = $Compact[$Position]
+            if ($Character -eq ',' -and $Parens -eq 0 -and $Brackets -eq 0 -and $Braces -eq 0) {
+                $Segments.Add($Segment.ToString())
+                [void]$Segment.Clear()
                 continue
             }
-            if ($Text[$Position] -eq '(') { $Parens++ }
-            elseif ($Text[$Position] -eq ')' -and $Parens -gt 0) { $Parens-- }
-            elseif ($Text[$Position] -eq ']' -and $Parens -eq 0) { return $Position }
+            [void]$Segment.Append($Character)
+            if ($Character -eq '(') { $Parens++ }
+            elseif ($Character -eq ')' -and $Parens -gt 0) { $Parens-- }
+            elseif ($Character -eq '[') { $Brackets++ }
+            elseif ($Character -eq ']' -and $Brackets -gt 0) { $Brackets-- }
+            elseif ($Character -eq '{') { $Braces++ }
+            elseif ($Character -eq '}' -and $Braces -gt 0) { $Braces-- }
         }
-        return -1
+        $Segments.Add($Segment.ToString())
+
+        foreach ($Attribute in $Segments) {
+            if (-not $Attribute) { continue }
+            $Open = $Attribute.IndexOf('(')
+            if ($Open -ge 0) {
+                $Name = $Attribute.Substring(0, $Open)
+                $Arguments = $Attribute.Substring($Open + 1, $Attribute.Length - $Open - 2)
+            } else {
+                $Name = $Attribute
+                $Arguments = ''
+            }
+            $Name = $Name -replace '^global::', '' -replace '^UdonSharp\.', '' -replace 'Attribute$', ''
+
+            if (($Target -eq '' -or $Target -eq 'field') -and $Name -eq 'UdonSynced') {
+                $Synced = $true
+            }
+            if (($Target -eq '' -or $Target -eq 'type') -and $Name -eq 'UdonBehaviourSyncMode') {
+                $Arguments = $Arguments -replace 'global::', '' -replace 'UdonSharp\.', ''
+                if ($Arguments -eq 'BehaviourSyncMode.NoVariableSync') {
+                    $NoVariableSync = $true
+                }
+            }
+        }
+
+        return [pscustomobject]@{
+            Synced = $Synced
+            NoVariableSync = $NoVariableSync
+        }
     }
 
-    function Process-Declaration([string]$Declaration) {
-        $Declaration = $Declaration.TrimStart()
-        $IsClass = $Declaration -match '^((public|private|protected|internal|abstract|sealed|static|partial)[ \t]+)*class[ \t]+'
-        $IsField = $Declaration -notmatch '^(class|struct|interface|enum|delegate|event)[ \t]+' -and
-            $Declaration -notmatch '[)][ \t]*(\{|=>)' -and
-            $Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new)[ \t]+)*([A-Za-z_][A-Za-z0-9_.:<>,?]*[ \t]*(\[[ \t]*\])?[ \t]+)+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)'
+    function Reset-PendingDeclaration {
+        $State.PendingSynced = $false
+        $State.PendingNoVariableSync = $false
+        $State.DeclarationBuffer = ''
+    }
+
+    function Add-DeclarationFragment([string]$Fragment) {
+        if (-not ($State.PendingSynced -or $State.PendingNoVariableSync)) { return }
+        $Fragment = ($Fragment -replace '[ \t\r\n]+', ' ').Trim()
+        if (-not $Fragment) { return }
+        if ($State.DeclarationBuffer) {
+            $State.DeclarationBuffer += ' ' + $Fragment
+        } else {
+            $State.DeclarationBuffer = $Fragment
+        }
+        $Declaration = ($State.DeclarationBuffer -replace '[ \t\r\n]+', ' ').Trim()
+        $IsClass = $Declaration -match '^((public|private|protected|internal|abstract|sealed|static|partial|new) +)*class +[A-Za-z_][A-Za-z0-9_]*'
+        $IsField = $Declaration -notmatch '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*(class|struct|interface|enum|delegate|event|record) +' -and
+            $Declaration -notmatch '[)] *(\{|=>)' -and
+            $Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*([A-Za-z_][A-Za-z0-9_.:<>,?]* *(\[ *\])? +)+[A-Za-z_][A-Za-z0-9_]* *(=|,|;)'
 
         if ($State.PendingNoVariableSync -and $IsClass) {
             $State.HasNoVariableSync = $true
+            Reset-PendingDeclaration
+            return
         }
         if ($State.PendingSynced -and $IsField) {
             $State.SyncedCount++
-            if ($Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new)[ \t]+)*(int|float)[ \t]*\[[ \t]*\][ \t]+') {
+            if ($Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*(int|float) *\[ *\] +') {
                 $State.HasLargeSyncedArray = $true
             }
+            Reset-PendingDeclaration
+            return
         }
-        $State.PendingSynced = $false
-        $State.PendingNoVariableSync = $false
+
+        $IsOther = $Declaration -match '^((public|private|protected|internal|abstract|sealed|static|partial|readonly|new) +)*(class|struct|interface|enum|delegate|event|record|namespace)( |$)' -or
+            $Declaration -match '[({;]|=>'
+        if ($IsOther) { Reset-PendingDeclaration }
+    }
+
+    function Start-Attribute {
+        $State.CollectingAttribute = $true
+        [void]$State.AttributeContent.Clear()
+        $State.AttributeParens = 0
+        $State.AttributeBrackets = 0
+        $State.AttributeBraces = 0
+    }
+
+    function Read-SourceLine([string]$Line) {
+        if ($State.DeclarationBuffer) {
+            Add-DeclarationFragment $Line
+            return
+        }
+
+        $Position = 0
+        while ($Position -lt $Line.Length) {
+            if ($State.CollectingAttribute) {
+                $Character = $Line[$Position]
+                if ($Character -eq ']' -and $State.AttributeParens -eq 0 -and
+                    $State.AttributeBrackets -eq 0 -and $State.AttributeBraces -eq 0) {
+                    $Flags = Get-AttributeFlags $State.AttributeContent.ToString()
+                    $State.PendingSynced = $State.PendingSynced -or $Flags.Synced
+                    $State.PendingNoVariableSync = $State.PendingNoVariableSync -or $Flags.NoVariableSync
+                    $State.CollectingAttribute = $false
+                    [void]$State.AttributeContent.Clear()
+                    $Position++
+                    continue
+                }
+
+                [void]$State.AttributeContent.Append($Character)
+                if ($Character -eq '(') { $State.AttributeParens++ }
+                elseif ($Character -eq ')' -and $State.AttributeParens -gt 0) { $State.AttributeParens-- }
+                elseif ($Character -eq '[') { $State.AttributeBrackets++ }
+                elseif ($Character -eq ']' -and $State.AttributeBrackets -gt 0) { $State.AttributeBrackets-- }
+                elseif ($Character -eq '{') { $State.AttributeBraces++ }
+                elseif ($Character -eq '}' -and $State.AttributeBraces -gt 0) { $State.AttributeBraces-- }
+                $Position++
+                continue
+            }
+
+            while ($Position -lt $Line.Length -and ($Line[$Position] -eq ' ' -or $Line[$Position] -eq [char]9)) {
+                $Position++
+            }
+            if ($Position -ge $Line.Length) { return }
+            if ($Line[$Position] -eq '[') {
+                Start-Attribute
+                $Position++
+                continue
+            }
+
+            Add-DeclarationFragment $Line.Substring($Position)
+            return
+        }
     }
 
     $State = @{
         PendingSynced = $false
         PendingNoVariableSync = $false
+        DeclarationBuffer = ''
+        CollectingAttribute = $false
+        AttributeContent = [System.Text.StringBuilder]::new()
+        AttributeParens = 0
+        AttributeBrackets = 0
+        AttributeBraces = 0
         SyncedCount = 0
         HasNoVariableSync = $false
         HasLargeSyncedArray = $false
     }
 
     foreach ($Line in [regex]::Split($Source, '\r?\n')) {
-        $Rest = $Line.TrimStart()
-        $FoundGroup = $false
-        $LineSynced = $false
-        $LineNoVariableSync = $false
-
-        while ($Rest.StartsWith('[')) {
-            $End = Find-AttributeGroupEnd $Rest
-            if ($End -lt 0) { break }
-            $FoundGroup = $true
-            $Compact = $Rest.Substring(1, $End - 1) -replace '[ \t\r\n]', ''
-            $Target = ''
-            if ($Compact -match '^(type|field):') {
-                $Target = $Matches[1]
-                $Compact = $Compact.Substring($Matches[0].Length)
-            }
-            if (($Target -eq '' -or $Target -eq 'field') -and
-                $Compact -match '(^|,)((global::)?UdonSharp\.)?UdonSynced(Attribute)?($|,|\()') {
-                $LineSynced = $true
-            }
-            if (($Target -eq '' -or $Target -eq 'type') -and
-                $Compact -match '(^|,)((global::)?UdonSharp\.)?UdonBehaviourSyncMode(Attribute)?\(BehaviourSyncMode\.NoVariableSync\)($|,)') {
-                $LineNoVariableSync = $true
-            }
-            $Rest = $Rest.Substring($End + 1).TrimStart()
-        }
-
-        if ($FoundGroup) {
-            $State.PendingSynced = $State.PendingSynced -or $LineSynced
-            $State.PendingNoVariableSync = $State.PendingNoVariableSync -or $LineNoVariableSync
-            if ($Rest) {
-                Process-Declaration $Rest
-            }
-            continue
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($Line) -and
-            ($State.PendingSynced -or $State.PendingNoVariableSync)) {
-            Process-Declaration $Line
-        }
+        if ($State.CollectingAttribute) { [void]$State.AttributeContent.Append([char]10) }
+        Read-SourceLine $Line
     }
 
     return [pscustomobject]@{
@@ -555,7 +652,6 @@ function Get-SyncStats([string]$Source) {
         HasLargeSyncedArray = $State.HasLargeSyncedArray
     }
 }
-
 
 $SyncStats = Get-SyncStats $MaskedSource
 $SyncedCount = $SyncStats.SyncedCount

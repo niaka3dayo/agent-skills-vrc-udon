@@ -16,10 +16,16 @@ interpolation-code-lf	runtime-interpolation-code.cs	LF	GENERIC;METHOD_OVERLOAD
 interpolation-code-crlf	runtime-interpolation-code.cs	CRLF	GENERIC;METHOD_OVERLOAD
 attribute-boundaries-lf	runtime-attribute-boundaries.cs	LF	SYNC_ARRAY;SYNC_MODE_CONFLICT
 attribute-boundaries-crlf	runtime-attribute-boundaries.cs	CRLF	SYNC_ARRAY;SYNC_MODE_CONFLICT
+multiline-attributes-lf	runtime-multiline-attributes.cs	LF	SYNC_ARRAY;SYNC_MODE_CONFLICT
+multiline-attributes-crlf	runtime-multiline-attributes.cs	CRLF	SYNC_ARRAY;SYNC_MODE_CONFLICT
+nested-attribute-decoys-lf	runtime-nested-attribute-decoys.cs	LF	-
+nested-attribute-decoys-crlf	runtime-nested-attribute-decoys.cs	CRLF	-
 indexer-decoy-lf	runtime-indexer-decoy.cs	LF	-
 indexer-decoy-crlf	runtime-indexer-decoy.cs	CRLF	-
 same-line-lambda-lf	runtime-lambda-same-line.cs	LF	LAMBDA
 same-line-lambda-crlf	runtime-lambda-same-line.cs	CRLF	LAMBDA
+expression-body-decoys-lf	runtime-expression-body-decoys.cs	LF	-
+expression-body-decoys-crlf	runtime-expression-body-decoys.cs	CRLF	-
 attribute-blank-trivia-lf	runtime-attribute-blank-trivia.cs	LF	SYNC_ARRAY
 attribute-blank-trivia-crlf	runtime-attribute-blank-trivia.cs	CRLF	SYNC_ARRAY
 all-rules-lf	runtime-all-rules.cs	LF	GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;REF_PARAMETER;OUT_PARAMETER;MULTIDIM_ARRAY;METHOD_OVERLOAD

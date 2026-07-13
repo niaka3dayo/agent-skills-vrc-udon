@@ -13,6 +13,27 @@ frontmatter_description() {
     ' "$1"
 }
 
+folded_description_length() {
+    awk '
+        /^description:[[:space:]]*>[+-]?[[:space:]]*$/ {
+            in_description = 1
+            next
+        }
+        in_description && /^[^[:space:]]/ { exit }
+        in_description {
+            line = $0
+            sub(/^    /, "", line)
+            if (has_line) total++
+            total += length(line)
+            has_line = 1
+        }
+        END {
+            if (!has_line) exit 2
+            print total + 1
+        }
+    ' "$1"
+}
+
 require_text() {
     local haystack="$1"
     local needle="$2"
@@ -33,6 +54,14 @@ forbid_text() {
 
 UDON_DESCRIPTION="$(frontmatter_description "$UDON_SKILL")"
 WORLD_DESCRIPTION="$(frontmatter_description "$WORLD_SKILL")"
+
+for skill in "$UDON_SKILL" "$WORLD_SKILL"; do
+    length="$(folded_description_length "$skill")"
+    if [ "$length" -gt 1024 ]; then
+        echo "ERROR: Skill description exceeds 1024 characters: $skill ($length)" >&2
+        exit 1
+    fi
+done
 
 # Positive Udon/runtime phrases must remain explicit in the Udon Skill metadata.
 for phrase in UdonSharp NetworkCalling CallingPlayer 'network authorization' \

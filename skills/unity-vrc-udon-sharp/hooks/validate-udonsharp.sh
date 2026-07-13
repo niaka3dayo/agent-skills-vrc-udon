@@ -474,6 +474,7 @@ if awk '
         line = $0
         candidate = line
         sub(/^[[:blank:]]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[[:blank:]]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[[:blank:]]+[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*\([^)]*\)[[:blank:]]*=>/, "", candidate)
+        sub(/^[[:blank:]]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[[:blank:]]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[[:blank:]]+[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*=>/, "", candidate)
         gsub(/(^|[;{[:blank:]])(get|set|init)[[:blank:]]*=>/, " ", candidate)
         if (candidate ~ /\)[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/ ||
             candidate ~ /(^|[=(,[:blank:]])[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/) {
@@ -486,110 +487,184 @@ if awk '
     warnings+=("[UdonSharp] WARNING: Lambda expression detected. Use named methods instead.")
 fi
 
-# Parse only leading attribute sections and attach them to the following
-# declaration. A single record set drives sync count, array, and mode checks.
+# Parse leading attribute sections and attach them to the declaration that
+# follows. The scanner handles multiline sections and declarations, and only
+# splits attribute lists on top-level commas.
 if ! sync_stats=$(awk '
     function reset_pending() {
         pending_synced = 0
         pending_no_variable_sync = 0
+        declaration_buffer = ""
     }
 
-    function find_group_end(text,    position, pair, parens) {
-        parens = 0
-        for (position = 2; position <= length(text); position++) {
-            pair = substr(text, position, 2)
-            if (pair == "[]") {
-                position++
-                continue
-            }
-            character = substr(text, position, 1)
-            if (character == "(") parens++
-            else if (character == ")" && parens > 0) parens--
-            else if (character == "]" && parens == 0) return position
+    function normalize_space(text) {
+        gsub(/[ \t\r\n]+/, " ", text)
+        sub(/^ /, "", text)
+        sub(/ $/, "", text)
+        return text
+    }
+
+    function inspect_attribute(segment, target,    compact, name, arguments, open) {
+        compact = segment
+        gsub(/[ \t\r\n]/, "", compact)
+        if (compact == "") return
+
+        open = index(compact, "(")
+        if (open > 0) {
+            name = substr(compact, 1, open - 1)
+            arguments = substr(compact, open + 1, length(compact) - open - 1)
+        } else {
+            name = compact
+            arguments = ""
         }
-        return 0
+        sub(/^global::/, "", name)
+        sub(/^UdonSharp[.]/, "", name)
+        sub(/Attribute$/, "", name)
+
+        if ((target == "" || target == "field") && name == "UdonSynced") {
+            pending_synced = 1
+        }
+        if ((target == "" || target == "type") && name == "UdonBehaviourSyncMode") {
+            gsub(/global::/, "", arguments)
+            gsub(/UdonSharp[.]/, "", arguments)
+            if (arguments == "BehaviourSyncMode.NoVariableSync") {
+                pending_no_variable_sync = 1
+            }
+        }
     }
 
-    function inspect_group(content,    compact, target) {
+    function inspect_group(content,    compact, target, position, character, segment, parens, brackets, braces) {
         compact = content
         gsub(/[ \t\r\n]/, "", compact)
         target = ""
-        if (compact ~ /^(type|field):/) {
+        if (compact ~ /^(assembly|module|field|event|method|param|property|return|type|typevar):/) {
             target = compact
             sub(/:.*/, "", target)
-            sub(/^(type|field):/, "", compact)
+            sub(/^[^:]*:/, "", compact)
         }
 
-        if ((target == "" || target == "field") &&
-            compact ~ /(^|,)((global::)?UdonSharp[.])?UdonSynced(Attribute)?($|,|[(])/) {
-            line_synced = 1
+        segment = ""
+        parens = brackets = braces = 0
+        for (position = 1; position <= length(compact); position++) {
+            character = substr(compact, position, 1)
+            if (character == "," && parens == 0 && brackets == 0 && braces == 0) {
+                inspect_attribute(segment, target)
+                segment = ""
+                continue
+            }
+            segment = segment character
+            if (character == "(") parens++
+            else if (character == ")" && parens > 0) parens--
+            else if (character == "[") brackets++
+            else if (character == "]" && brackets > 0) brackets--
+            else if (character == "{") braces++
+            else if (character == "}" && braces > 0) braces--
         }
-        if ((target == "" || target == "type") &&
-            compact ~ /(^|,)((global::)?UdonSharp[.])?UdonBehaviourSyncMode(Attribute)?[(]BehaviourSyncMode[.]NoVariableSync[)]($|,)/) {
-            line_no_variable_sync = 1
-        }
+        inspect_attribute(segment, target)
     }
 
-    function parse_leading_groups(text,    rest, end, content) {
-        line_synced = 0
-        line_no_variable_sync = 0
-        group_count = 0
-        rest = text
-        sub(/^[ \t]*/, "", rest)
-
-        while (substr(rest, 1, 1) == "[") {
-            end = find_group_end(rest)
-            if (end == 0) break
-            content = substr(rest, 2, end - 2)
-            inspect_group(content)
-            group_count++
-            rest = substr(rest, end + 1)
-            sub(/^[ \t]*/, "", rest)
-        }
-
-        attribute_remainder = rest
-        return group_count
+    function begin_attribute() {
+        collecting_attribute = 1
+        attribute_content = ""
+        attribute_parens = 0
+        attribute_brackets = 0
+        attribute_braces = 0
     }
 
     function is_class(declaration) {
-        return declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial)[ \t]+)*class[ \t]+/
+        return declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial|new)[ ]+)*class[ ]+[A-Za-z_][A-Za-z0-9_]*/
     }
 
     function is_field(declaration) {
-        if (declaration ~ /^(class|struct|interface|enum|delegate|event)[ \t]+/) return 0
-        if (declaration ~ /[)][ \t]*(\{|=>)/) return 0
-        return declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ \t]+)*([A-Za-z_][A-Za-z0-9_.:<>,?]*[ \t]*(\[[ \t]*\])?[ \t]+)+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)/
+        if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*(class|struct|interface|enum|delegate|event|record)[ ]+/) return 0
+        if (declaration ~ /[)][ ]*(\{|=>)/) return 0
+        return declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*([A-Za-z_][A-Za-z0-9_.:<>,?]*[ ]*(\[[ ]*\])?[ ]+)+[A-Za-z_][A-Za-z0-9_]*[ ]*(=|,|;)/
     }
 
-    function process_declaration(declaration) {
-        sub(/^[ \t]*/, "", declaration)
-        if (pending_no_variable_sync && is_class(declaration)) has_no_variable_sync = 1
+    function is_other_declaration(declaration) {
+        if (declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial|readonly|new)[ ]+)*(class|struct|interface|enum|delegate|event|record|namespace)([ ]|$)/) return 1
+        return declaration ~ /[({;]|=>/
+    }
+
+    function process_declaration(fragment,    declaration) {
+        if (!(pending_synced || pending_no_variable_sync)) return
+        fragment = normalize_space(fragment)
+        if (fragment == "") return
+        if (declaration_buffer != "") declaration_buffer = declaration_buffer " " fragment
+        else declaration_buffer = fragment
+        declaration = normalize_space(declaration_buffer)
+
+        if (pending_no_variable_sync && is_class(declaration)) {
+            has_no_variable_sync = 1
+            reset_pending()
+            return
+        }
         if (pending_synced && is_field(declaration)) {
             synced_count++
-            if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ \t]+)*(int|float)[ \t]*\[[ \t]*\][ \t]+/) {
+            if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*(int|float)[ ]*\[[ ]*\][ ]+/) {
                 has_large_synced_array = 1
             }
+            reset_pending()
+            return
         }
-        reset_pending()
+        if (is_other_declaration(declaration)) reset_pending()
     }
 
-    BEGIN { reset_pending() }
+    function consume_line(text,    position, character, remainder) {
+        if (declaration_buffer != "") {
+            process_declaration(text)
+            return
+        }
+
+        position = 1
+        while (position <= length(text)) {
+            if (collecting_attribute) {
+                character = substr(text, position, 1)
+                if (character == "]" && attribute_parens == 0 &&
+                    attribute_brackets == 0 && attribute_braces == 0) {
+                    inspect_group(attribute_content)
+                    collecting_attribute = 0
+                    attribute_content = ""
+                    position++
+                    continue
+                }
+
+                attribute_content = attribute_content character
+                if (character == "(") attribute_parens++
+                else if (character == ")" && attribute_parens > 0) attribute_parens--
+                else if (character == "[") attribute_brackets++
+                else if (character == "]" && attribute_brackets > 0) attribute_brackets--
+                else if (character == "{") attribute_braces++
+                else if (character == "}" && attribute_braces > 0) attribute_braces--
+                position++
+                continue
+            }
+
+            while (position <= length(text) && substr(text, position, 1) ~ /[ \t]/) position++
+            if (position > length(text)) return
+            if (substr(text, position, 1) == "[") {
+                begin_attribute()
+                position++
+                continue
+            }
+
+            remainder = substr(text, position)
+            process_declaration(remainder)
+            return
+        }
+    }
+
+    BEGIN {
+        reset_pending()
+        collecting_attribute = 0
+    }
 
     {
         line = $0
         sub(/\r$/, "", line)
-
-        if (parse_leading_groups(line)) {
-            pending_synced = pending_synced || line_synced
-            pending_no_variable_sync = pending_no_variable_sync || line_no_variable_sync
-            if (attribute_remainder !~ /^[ \t]*$/) {
-                process_declaration(attribute_remainder)
-            }
-            next
-        }
-
-        if (line ~ /^[ \t]*$/) next
-        if (pending_synced || pending_no_variable_sync) process_declaration(line)
+        if (line ~ /^[ \t]*$/ && !collecting_attribute) next
+        if (collecting_attribute) attribute_content = attribute_content "\n"
+        consume_line(line)
     }
 
     END {
