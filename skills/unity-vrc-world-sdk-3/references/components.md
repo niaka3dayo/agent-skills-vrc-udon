@@ -691,7 +691,7 @@ In worlds, Udon can access `VRCPhysBoneCollider` for runtime-controlled collider
 For the detailed Udon API, event callbacks, and examples, use the UdonSharp dynamics/API references rather than duplicating script guidance here:
 
 - [dynamics.md PhysBones](../../unity-vrc-udon-sharp/references/dynamics.md#physbones)
-- [api.md PhysBones and Contacts](../../unity-vrc-udon-sharp/references/api.md#physbones-and-contacts-sdk-3100)
+- [api.md PhysBones and Contacts](../../unity-vrc-udon-sharp/references/api.md#vrchat-dynamics-api-sdk-3100)
 
 ---
 

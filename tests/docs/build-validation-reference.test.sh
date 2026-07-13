@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORLD_SKILL="$ROOT_DIR/skills/unity-vrc-world-sdk-3/SKILL.md"
 UDON_SKILL="$ROOT_DIR/skills/unity-vrc-udon-sharp/SKILL.md"
 REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/build-validation.md"
+COMPONENTS_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/components.md"
+UDON_API_REF="$ROOT_DIR/skills/unity-vrc-udon-sharp/references/api.md"
 
 require_file() {
     local path="$1"
@@ -19,6 +21,15 @@ require_text() {
     local needle="$2"
     if ! grep -Fq "$needle" "$path"; then
         echo "ERROR: $path does not contain expected text: $needle" >&2
+        exit 1
+    fi
+}
+
+forbid_text() {
+    local path="$1"
+    local needle="$2"
+    if grep -Fq "$needle" "$path"; then
+        echo "ERROR: $path contains obsolete text: $needle" >&2
         exit 1
     fi
 }
@@ -69,5 +80,20 @@ for path in \
     require_file "$path"
     require_text "$path" "build-validation.md"
 done
+
+# Keep the World component reference aligned with the known ASCII Udon API
+# heading and its GitHub-Flavored Markdown fragment.
+DYNAMICS_HEADING='## VRChat Dynamics API (SDK 3.10.0+)'
+require_text "$UDON_API_REF" "$DYNAMICS_HEADING"
+DYNAMICS_SLUG="$(printf '%s\n' "$DYNAMICS_HEADING" \
+    | sed -E 's/^#{1,6}[[:space:]]+//' \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/[^a-z0-9 _-]//g; s/[[:space:]]+/-/g; s/-+/-/g; s/^-|-$//g')"
+if [[ "$DYNAMICS_SLUG" != "vrchat-dynamics-api-sdk-3100" ]]; then
+    echo "ERROR: unexpected GFM slug for known Dynamics heading: $DYNAMICS_SLUG" >&2
+    exit 1
+fi
+require_text "$COMPONENTS_REF" "../../unity-vrc-udon-sharp/references/api.md#$DYNAMICS_SLUG"
+forbid_text "$COMPONENTS_REF" "#physbones-and-contacts-sdk-3100"
 
 echo "PASS: build-validation reference coverage smoke test"
