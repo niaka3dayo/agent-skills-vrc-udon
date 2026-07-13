@@ -7,6 +7,8 @@ $Hook = Join-Path $RepoRoot "skills/unity-vrc-udon-sharp/hooks/validate-udonshar
 $SharedFixtures = Join-Path $RepoRoot "tests/hooks/fixtures/validate-udonsharp"
 $SharedRules = Join-Path $SharedFixtures "rules.tsv"
 $SharedCases = Join-Path $SharedFixtures "cases.tsv"
+$TemplateCases = Join-Path $SharedFixtures "template-cases.tsv"
+$TemplateRoot = Join-Path $RepoRoot "skills/unity-vrc-udon-sharp/assets/templates"
 $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("validate-udonsharp-" + [guid]::NewGuid())
 $SyncBloatWarning = 'Synced int[]/float[] detected'
 $Passed = 0
@@ -22,6 +24,33 @@ function Invoke-Hook([string]$Source, [string]$LeafName = $null) {
     Set-Content -LiteralPath $FilePath -Value $Source
     $Payload = @{ tool_input = @{ file_path = $FilePath } } | ConvertTo-Json -Compress
     return $Payload | & $Hook 2>&1 | Out-String
+}
+
+function Invoke-HookProcess([string]$Payload) {
+    $PowerShellPath = (Get-Process -Id $PID).Path
+    $StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $StartInfo.FileName = $PowerShellPath
+    $StartInfo.Arguments = '-NoLogo -NoProfile -File "' + $Hook + '"'
+    $StartInfo.UseShellExecute = $false
+    $StartInfo.CreateNoWindow = $true
+    $StartInfo.RedirectStandardInput = $true
+    $StartInfo.RedirectStandardOutput = $true
+    $StartInfo.RedirectStandardError = $true
+
+    $Process = New-Object System.Diagnostics.Process
+    $Process.StartInfo = $StartInfo
+    [void]$Process.Start()
+    $Process.StandardInput.Write($Payload)
+    $Process.StandardInput.Close()
+    $Stdout = $Process.StandardOutput.ReadToEnd()
+    $Stderr = $Process.StandardError.ReadToEnd()
+    $Process.WaitForExit()
+
+    return [pscustomobject]@{
+        ExitCode = $Process.ExitCode
+        Stdout = $Stdout
+        Stderr = $Stderr
+    }
 }
 
 function Assert-Contains([string]$Label, [string]$Actual, [string]$Expected) {
@@ -84,6 +113,65 @@ function Invoke-SharedParityMatrix {
     }
     Write-Output 'PASS [shared rules] 22-rule inventory is exact'
     $script:Passed++
+
+    function Convert-WarningLinesToRuleIds([string[]]$Lines) {
+        $ActualIds = New-Object System.Collections.Generic.List[string]
+        $SeenActualIds = New-Object 'System.Collections.Generic.HashSet[string]'
+
+        foreach ($WarningLine in $Lines) {
+            if ($WarningLine.Contains('[UdonSharp] VALIDATOR-WARNING:') -or
+                $WarningLine.Contains('lexical mask length mismatch') -or
+                $WarningLine.Contains('MASK_LENGTH_MISMATCH')) {
+                throw 'validator internal failure detected'
+            }
+            if ($WarningLine -notmatch '\[UdonSharp\] (?:BLOCKED|WARNING|SYNC-BLOAT|ERROR):') {
+                continue
+            }
+
+            $MatchingIds = New-Object System.Collections.Generic.List[string]
+            for ($Index = 0; $Index -lt $RuleIds.Count; $Index++) {
+                if ($WarningLine.Contains($RuleSubstrings[$Index])) {
+                    $MatchingIds.Add($RuleIds[$Index])
+                }
+            }
+            if ($MatchingIds.Count -ne 1) {
+                throw "warning line maps to $($MatchingIds.Count) rule IDs: $WarningLine"
+            }
+            if (-not $SeenActualIds.Add($MatchingIds[0])) {
+                throw "duplicate actual rule ID: $($MatchingIds[0])"
+            }
+            $ActualIds.Add($MatchingIds[0])
+        }
+
+        return $ActualIds.ToArray()
+    }
+
+    $SyntheticLines = @(
+        "[UdonSharp] BLOCKED: $($RuleSubstrings[1])",
+        "[UdonSharp] BLOCKED: $($RuleSubstrings[0])"
+    )
+    try {
+        $SyntheticActual = (Convert-WarningLinesToRuleIds $SyntheticLines) -join ';'
+        if ($SyntheticActual -eq "$($RuleIds[1]);$($RuleIds[0])") {
+            Write-Output 'PASS [shared mapping] actual warning order is preserved'
+            $script:Passed++
+        } else {
+            Write-Output 'FAIL [shared mapping] actual warning order was reordered'
+            $script:Failed++
+        }
+    } catch {
+        Write-Output "FAIL [shared mapping] $($_.Exception.Message)"
+        $script:Failed++
+    }
+
+    try {
+        [void](Convert-WarningLinesToRuleIds @('[UdonSharp] VALIDATOR-WARNING: validation skipped (MASK_LENGTH_MISMATCH)'))
+        Write-Output 'FAIL [shared mapping] internal failure was accepted'
+        $script:Failed++
+    } catch {
+        Write-Output 'PASS [shared mapping] internal failure is rejected'
+        $script:Passed++
+    }
 
     $SeenCaseIds = New-Object 'System.Collections.Generic.HashSet[string]'
     $ExpectedRuleCoverage = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -161,21 +249,10 @@ function Invoke-SharedParityMatrix {
         $Payload = @{ tool_input = @{ file_path = $Materialized } } | ConvertTo-Json -Compress
         $ActualOutput = $Payload | & $Hook 2>&1 | Out-String
 
-        $ActualIds = New-Object System.Collections.Generic.List[string]
-        $MappedWarningCount = 0
-        for ($Index = 0; $Index -lt $RuleIds.Count; $Index++) {
-            $Count = ([regex]::Matches($ActualOutput, [regex]::Escape($RuleSubstrings[$Index]))).Count
-            if ($Count -gt 1) {
-                Write-Output "FAIL [shared case $CaseId] duplicate actual rule ID: $($RuleIds[$Index])"
-                $script:Failed++
-            } elseif ($Count -eq 1) {
-                $ActualIds.Add($RuleIds[$Index])
-                $MappedWarningCount++
-            }
-        }
-        $WarningCount = ([regex]::Matches($ActualOutput, '\[UdonSharp\] (?:BLOCKED|WARNING|SYNC-BLOAT|ERROR):')).Count
-        if ($WarningCount -ne $MappedWarningCount) {
-            Write-Output "FAIL [shared case $CaseId] unknown warning detected"
+        try {
+            $ActualIds = @(Convert-WarningLinesToRuleIds ([regex]::Split($ActualOutput, '\r?\n')))
+        } catch {
+            Write-Output "FAIL [shared case $CaseId] warning mapping failed: $($_.Exception.Message)"
             Write-Output $ActualOutput
             $script:Failed++
             continue
@@ -196,6 +273,52 @@ function Invoke-SharedParityMatrix {
             Write-Output "  actual:   $ActualDisplay"
             $script:Failed++
         }
+    }
+
+    $TemplateCount = 0
+    foreach ($Line in Get-Content -LiteralPath $TemplateCases) {
+        $TemplateCount++
+        $Columns = $Line.Split([char]9)
+        if ($Columns.Count -ne 2 -or -not $Columns[0] -or -not $Columns[1]) {
+            Write-Output "FAIL [template case $TemplateCount] malformed template-cases.tsv row"
+            $script:Failed++
+            continue
+        }
+        $TemplateName, $TemplateExpected = $Columns
+        $TemplatePath = Join-Path $TemplateRoot $TemplateName
+        if (-not (Test-Path -LiteralPath $TemplatePath -PathType Leaf)) {
+            Write-Output "FAIL [template case $TemplateName] missing template"
+            $script:Failed++
+            continue
+        }
+        $Payload = @{ tool_input = @{ file_path = $TemplatePath } } | ConvertTo-Json -Compress
+        $TemplateOutput = $Payload | & $Hook 2>&1 | Out-String
+        try {
+            $TemplateActual = @(Convert-WarningLinesToRuleIds ([regex]::Split($TemplateOutput, '\r?\n'))) -join ';'
+        } catch {
+            Write-Output "FAIL [template case $TemplateName] warning mapping failed: $($_.Exception.Message)"
+            $script:Failed++
+            continue
+        }
+        if ($TemplateExpected -eq '-') { $TemplateExpected = '' }
+        if ($TemplateActual -eq $TemplateExpected) {
+            $TemplateDisplay = $TemplateActual
+            if (-not $TemplateDisplay) { $TemplateDisplay = '-' }
+            Write-Output "PASS [template case $TemplateName] rules=$TemplateDisplay"
+            $script:Passed++
+        } else {
+            Write-Output "FAIL [template case $TemplateName] expected=$TemplateExpected actual=$TemplateActual"
+            $script:Failed++
+        }
+    }
+
+    $RepositoryTemplateCount = @(Get-ChildItem -LiteralPath $TemplateRoot -Filter '*.cs' -File).Count
+    if ($TemplateCount -eq $RepositoryTemplateCount) {
+        Write-Output "PASS [template cases] manifest covers all $TemplateCount templates"
+        $script:Passed++
+    } else {
+        Write-Output "FAIL [template cases] manifest=$TemplateCount repository=$RepositoryTemplateCount"
+        $script:Failed++
     }
 
     foreach ($RuleId in $RuleIds) {
@@ -239,8 +362,31 @@ try {
     Assert-Contains 'missing path input JSON passthrough' $MissingPathOutput '"tool_input":{}'
 
     $MalformedPayload = '{"tool_input":'
-    $MalformedOutput = $MalformedPayload | & $Hook 2>&1 | Out-String
-    Assert-Contains 'malformed input JSON passthrough' $MalformedOutput '{"tool_input":'
+    $MalformedResult = Invoke-HookProcess $MalformedPayload
+    if ($MalformedResult.ExitCode -eq 0) {
+        Write-Output 'PASS [malformed input JSON] exit=0'
+        $script:Passed++
+    } else {
+        Write-Output "FAIL [malformed input JSON] exit=$($MalformedResult.ExitCode)"
+        $script:Failed++
+    }
+    if ($MalformedResult.Stdout.Trim() -eq $MalformedPayload) {
+        Write-Output 'PASS [malformed input JSON] stdout passes input through'
+        $script:Passed++
+    } else {
+        Write-Output 'FAIL [malformed input JSON] stdout changed the input'
+        $script:Failed++
+    }
+    $ExpectedOperationalWarning = '[UdonSharp] VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)'
+    if ($MalformedResult.Stderr.TrimEnd("`r", "`n") -eq $ExpectedOperationalWarning -and
+        ($MalformedResult.Stderr -split "`n").Count -eq 2) {
+        Write-Output 'PASS [malformed input JSON] exactly one stderr warning line'
+        $script:Passed++
+    } else {
+        Write-Output 'FAIL [malformed input JSON] stderr is not exactly one warning line'
+        Write-Output $MalformedResult.Stderr
+        $script:Failed++
+    }
 
     $UnsyncedSource = @'
 using UdonSharp;
@@ -290,12 +436,78 @@ public class Sample : UdonSharpBehaviour
 using UdonSharp;
 public class Sample : UdonSharpBehaviour
 {
-    [UdonSynced] // The blank line consumes the attribute association.
+    [UdonSynced] // Blank trivia does not detach an attribute from its declaration.
 
     private int[] values;
 }
 '@
-    Assert-NotContains 'attribute does not skip a physical line' (Invoke-Hook $SeparatedAttributeSource) $SyncBloatWarning
+    Assert-Contains 'blank trivia preserves attribute attachment' (Invoke-Hook $SeparatedAttributeSource) $SyncBloatWarning
+
+    $NoFinalLf = 'alpha' + [char]10 + 'beta'
+    $NoFinalCrLf = $NoFinalLf.Replace([string][char]10, ([string][char]13 + [char]10))
+    if ($NoFinalCrLf -eq ('alpha' + [char]13 + [char]10 + 'beta') -and
+        -not $NoFinalCrLf.EndsWith([string][char]10)) {
+        Write-Output 'PASS [materializer] CRLF conversion preserves missing final newline'
+        $script:Passed++
+    } else {
+        Write-Output 'FAIL [materializer] CRLF conversion changed missing final newline'
+        $script:Failed++
+    }
+
+    $FinalLf = 'alpha' + [char]10 + 'beta' + [char]10
+    $FinalCrLf = $FinalLf.Replace([string][char]10, ([string][char]13 + [char]10))
+    if ($FinalCrLf -eq ('alpha' + [char]13 + [char]10 + 'beta' + [char]13 + [char]10)) {
+        Write-Output 'PASS [materializer] CRLF conversion preserves final newline'
+        $script:Passed++
+    } else {
+        Write-Output 'FAIL [materializer] CRLF conversion lost final newline'
+        $script:Failed++
+    }
+
+    $Quotes = '"' * 15000
+    $NearQuotes = '"' * 14999
+    $RawPerformanceSource = @(
+        'using UdonSharp;'
+        'public class RawPerformance : UdonSharpBehaviour'
+        '{'
+        ('    private string value = ' + $Quotes)
+        $NearQuotes
+        ($Quotes + ';')
+        '}'
+    ) -join [char]10
+    $RawStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $RawPerformanceOutput = Invoke-Hook $RawPerformanceSource 'raw-performance.cs'
+    $RawStopwatch.Stop()
+    Assert-NotContains 'raw string scan has no internal failure' $RawPerformanceOutput 'VALIDATOR-WARNING'
+    if ($RawStopwatch.Elapsed.TotalSeconds -lt 8) {
+        Write-Output ("PASS [raw string linear scan] elapsed={0:N3}s" -f $RawStopwatch.Elapsed.TotalSeconds)
+        $script:Passed++
+    } else {
+        Write-Output ("FAIL [raw string linear scan] elapsed={0:N3}s" -f $RawStopwatch.Elapsed.TotalSeconds)
+        $script:Failed++
+    }
+
+    # A run-length probe must reject a non-matching start in constant time.
+    # Without the start-character guard, Regex.Match scans toward the final
+    # quote for every incomplete `$x` token and makes the lexer quadratic.
+    $DollarPerformanceSource = @(
+        'using UdonSharp;'
+        'public class DollarPerformance : UdonSharpBehaviour'
+        '{'
+        ('    private int value = ' + ('$x' * 15000) + '";')
+        '}'
+    ) -join [char]10
+    $DollarStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $DollarPerformanceOutput = Invoke-Hook $DollarPerformanceSource 'dollar-performance.cs'
+    $DollarStopwatch.Stop()
+    Assert-NotContains 'dollar probe has no internal failure' $DollarPerformanceOutput 'VALIDATOR-WARNING'
+    if ($DollarStopwatch.Elapsed.TotalSeconds -lt 8) {
+        Write-Output ("PASS [dollar probe linear scan] elapsed={0:N3}s" -f $DollarStopwatch.Elapsed.TotalSeconds)
+        $script:Passed++
+    } else {
+        Write-Output ("FAIL [dollar probe linear scan] elapsed={0:N3}s" -f $DollarStopwatch.Elapsed.TotalSeconds)
+        $script:Failed++
+    }
 
     Invoke-SharedParityMatrix
 

@@ -16,14 +16,16 @@ input=$(cat)
 # images and macOS without Homebrew jq (Issue #165, Case A). Pass input
 # through so the original edit still propagates downstream.
 if ! command -v jq &>/dev/null; then
-    echo "$input"
+    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)\n' >&2
+    printf '%s\n' "$input"
     exit 0
 fi
 
-# Tolerate jq parse failures: if the incoming JSON is malformed, fall through
-# to the empty-file_path branch (which exits cleanly) instead of aborting
-# under set -e (Issue #165, Case B).
-file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""' 2>/dev/null || true)
+if ! file_path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""' 2>/dev/null); then
+    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)\n' >&2
+    printf '%s\n' "$input"
+    exit 0
+fi
 
 # Only process .cs files
 if [[ ! "$file_path" =~ \.cs$ ]]; then
@@ -36,41 +38,90 @@ if [[ ! -f "$file_path" ]]; then
     echo "$input"
     exit 0
 fi
+if [[ ! -r "$file_path" ]]; then
+    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (SOURCE_READ_FAILED)\n' >&2
+    printf '%s\n' "$input"
+    exit 0
+fi
 
-# Mask comments and C# literals for structural and sync-only predicates. The
-# output preserves every byte and physical line break; general rules continue
-# to inspect the raw source so interpolation expressions remain visible.
-masked_file=$(mktemp)
+# Build a code-only view of the source. Comments and literal text become spaces,
+# while executable code inside interpolation holes stays visible to every rule.
+# CR/LF positions and byte length are preserved.
+masked_file=""
+skip_validation() {
+    local code="$1"
+    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (%s)\n' "$code" >&2
+    printf '%s\n' "$input"
+    exit 0
+}
+
+if ! masked_file=$(mktemp 2>/dev/null); then
+    skip_validation "TEMP_CREATE_FAILED"
+fi
 trap 'rm -f "$masked_file"' EXIT
+
 ends_with_lf=0
 if [[ -s "$file_path" ]] && [[ "$(tail -c 1 "$file_path" | wc -l | tr -d '[:space:]')" -eq 1 ]]; then
     ends_with_lf=1
 fi
 
-LC_ALL=C awk -v ends_with_lf="$ends_with_lf" '
+if ! LC_ALL=C awk -v ends_with_lf="$ends_with_lf" '
     BEGIN {
-        CODE = 0
         LINE_COMMENT = 1
         BLOCK_COMMENT = 2
-        REGULAR_STRING = 3
-        VERBATIM_STRING = 4
-        CHARACTER = 5
-        RAW_STRING = 6
-        state = CODE
+        comment_state = 0
+        stack_depth = 0
         quote_character = sprintf("%c", 39)
         first_record = 1
     }
 
-    function spaces(count,    result) {
-        result = ""
-        while (count-- > 0) result = result " "
-        return result
+    function emit_mask(count) {
+        while (count-- > 0) printf " "
     }
 
-    function quote_run(text, start,    count) {
+    function run_length(text, start, wanted,    count) {
         count = 0
-        while (substr(text, start + count, 1) == "\"") count++
+        while (substr(text, start + count, 1) == wanted) count++
         return count
+    }
+
+    function push_literal(kind_value, interpolated_value, quote_width_value, brace_width_value) {
+        stack_depth++
+        frame_type[stack_depth] = "L"
+        literal_kind[stack_depth] = kind_value
+        interpolated[stack_depth] = interpolated_value
+        quote_width[stack_depth] = quote_width_value
+        brace_width[stack_depth] = brace_width_value
+    }
+
+    function push_hole(width) {
+        stack_depth++
+        frame_type[stack_depth] = "H"
+        close_width[stack_depth] = width
+        paren_depth[stack_depth] = 0
+        bracket_depth[stack_depth] = 0
+        code_brace_depth[stack_depth] = 0
+        format_mode[stack_depth] = 0
+    }
+
+    function pop_frame(    depth) {
+        depth = stack_depth
+        delete frame_type[depth]
+        delete literal_kind[depth]
+        delete interpolated[depth]
+        delete quote_width[depth]
+        delete brace_width[depth]
+        delete close_width[depth]
+        delete paren_depth[depth]
+        delete bracket_depth[depth]
+        delete code_brace_depth[depth]
+        delete format_mode[depth]
+        stack_depth--
+    }
+
+    function open_interpolation(run, width) {
+        emit_mask(run)
+        push_hole(width)
     }
 
     {
@@ -85,160 +136,251 @@ LC_ALL=C awk -v ends_with_lf="$ends_with_lf" '
 
             if (character == "\r") {
                 printf "\r"
-                if (state == LINE_COMMENT || state == REGULAR_STRING || state == CHARACTER) state = CODE
+                if (comment_state == LINE_COMMENT) comment_state = 0
+                if (stack_depth > 0 && frame_type[stack_depth] == "L" &&
+                    (literal_kind[stack_depth] == "R" || literal_kind[stack_depth] == "C")) {
+                    pop_frame()
+                }
                 position++
                 continue
             }
 
-            if (state == LINE_COMMENT) {
-                printf " "
+            if (comment_state == LINE_COMMENT) {
+                emit_mask(1)
                 position++
                 continue
             }
 
-            if (state == BLOCK_COMMENT) {
+            if (comment_state == BLOCK_COMMENT) {
                 if (character == "*" && next_character == "/") {
-                    printf "  "
-                    state = CODE
+                    emit_mask(2)
+                    comment_state = 0
                     position += 2
                 } else {
-                    printf " "
+                    emit_mask(1)
                     position++
                 }
                 continue
             }
 
-            if (state == REGULAR_STRING || state == CHARACTER) {
-                closing_character = state == REGULAR_STRING ? "\"" : quote_character
-                if (character == "\\") {
-                    printf " "
-                    position++
-                    if (position <= length(line) && substr(line, position, 1) != "\r") {
-                        printf " "
+            if (stack_depth > 0 && frame_type[stack_depth] == "L") {
+                kind = literal_kind[stack_depth]
+
+                if (kind == "R" || kind == "C") {
+                    closing = kind == "R" ? "\"" : quote_character
+                    if (character == "\\") {
+                        emit_mask(1)
+                        position++
+                        if (position <= length(line) && substr(line, position, 1) != "\r") {
+                            emit_mask(1)
+                            position++
+                        }
+                        continue
+                    }
+                    if (character == closing) {
+                        emit_mask(1)
+                        position++
+                        pop_frame()
+                        continue
+                    }
+                } else if (kind == "V" && character == "\"") {
+                    count = run_length(line, position, "\"")
+                    emit_mask(count)
+                    position += count
+                    if (count % 2 == 1) pop_frame()
+                    continue
+                } else if (kind == "W" && character == "\"") {
+                    count = run_length(line, position, "\"")
+                    if (count >= quote_width[stack_depth]) {
+                        width = quote_width[stack_depth]
+                        emit_mask(width)
+                        position += width
+                        pop_frame()
+                    } else {
+                        emit_mask(count)
+                        position += count
+                    }
+                    continue
+                }
+
+                if (interpolated[stack_depth] && character == "{") {
+                    count = run_length(line, position, "{")
+                    width = brace_width[stack_depth]
+                    if (width == 1) {
+                        if (count % 2 == 0) {
+                            emit_mask(count)
+                        } else {
+                            open_interpolation(count, width)
+                        }
+                    } else if (count < width) {
+                        emit_mask(count)
+                    } else {
+                        open_interpolation(count, width)
+                    }
+                    position += count
+                    continue
+                }
+                if (interpolated[stack_depth] && character == "}") {
+                    count = run_length(line, position, "}")
+                    emit_mask(count)
+                    position += count
+                    continue
+                }
+
+                emit_mask(1)
+                position++
+                continue
+            }
+
+            if (stack_depth > 0 && frame_type[stack_depth] == "H") {
+                if (format_mode[stack_depth]) {
+                    if (character == "}") {
+                        count = run_length(line, position, "}")
+                        width = close_width[stack_depth]
+                        if (count >= width) {
+                            emit_mask(width)
+                            position += width
+                            pop_frame()
+                        } else {
+                            emit_mask(count)
+                            position += count
+                        }
+                    } else {
+                        emit_mask(1)
                         position++
                     }
-                } else {
-                    printf " "
-                    if (character == closing_character) state = CODE
-                    position++
+                    continue
                 }
-                continue
-            }
 
-            if (state == VERBATIM_STRING) {
-                if (character == "\"" && next_character == "\"") {
-                    printf "  "
-                    position += 2
-                } else {
-                    printf " "
-                    if (character == "\"") state = CODE
-                    position++
+                if (character == "}" &&
+                    paren_depth[stack_depth] == 0 &&
+                    bracket_depth[stack_depth] == 0 &&
+                    code_brace_depth[stack_depth] == 0) {
+                    count = run_length(line, position, "}")
+                    width = close_width[stack_depth]
+                    if (count >= width) {
+                        emit_mask(width)
+                        position += width
+                        pop_frame()
+                        continue
+                    }
                 }
-                continue
-            }
 
-            if (state == RAW_STRING) {
-                if (character == "\"" && quote_run(line, position) >= raw_delimiter_length) {
-                    printf "%s", spaces(raw_delimiter_length)
-                    position += raw_delimiter_length
-                    state = CODE
-                } else {
-                    printf " "
+                if (character == ":" &&
+                    paren_depth[stack_depth] == 0 &&
+                    bracket_depth[stack_depth] == 0 &&
+                    code_brace_depth[stack_depth] == 0 &&
+                    substr(line, position - 1, 1) != ":" &&
+                    next_character != ":") {
+                    emit_mask(1)
+                    format_mode[stack_depth] = 1
                     position++
+                    continue
                 }
-                continue
             }
 
             if (character == "/" && next_character == "/") {
-                printf "  "
-                state = LINE_COMMENT
+                emit_mask(2)
+                comment_state = LINE_COMMENT
                 position += 2
                 continue
             }
             if (character == "/" && next_character == "*") {
-                printf "  "
-                state = BLOCK_COMMENT
+                emit_mask(2)
+                comment_state = BLOCK_COMMENT
                 position += 2
                 continue
             }
 
             if (character == "$") {
-                dollar_count = 0
-                while (substr(line, position + dollar_count, 1) == "$") dollar_count++
+                dollar_count = run_length(line, position, "$")
                 after_dollars = position + dollar_count
-                delimiter_length = quote_run(line, after_dollars)
+                delimiter_length = run_length(line, after_dollars, "\"")
                 if (delimiter_length >= 3) {
-                    printf "%s", spaces(dollar_count + delimiter_length)
-                    raw_delimiter_length = delimiter_length
-                    state = RAW_STRING
+                    emit_mask(dollar_count + delimiter_length)
+                    push_literal("W", 1, delimiter_length, dollar_count)
                     position += dollar_count + delimiter_length
                     continue
                 }
                 if (dollar_count == 1 && substr(line, after_dollars, 2) == "@\"") {
-                    printf "   "
-                    state = VERBATIM_STRING
+                    emit_mask(3)
+                    push_literal("V", 1, 1, 1)
                     position += 3
                     continue
                 }
                 if (dollar_count == 1 && substr(line, after_dollars, 1) == "\"") {
-                    printf "  "
-                    state = REGULAR_STRING
+                    emit_mask(2)
+                    push_literal("R", 1, 1, 1)
                     position += 2
                     continue
                 }
             }
 
             if (character == "@" && substr(line, position + 1, 2) == "$\"") {
-                printf "   "
-                state = VERBATIM_STRING
+                emit_mask(3)
+                push_literal("V", 1, 1, 1)
                 position += 3
                 continue
             }
             if (character == "@" && next_character == "\"") {
-                printf "  "
-                state = VERBATIM_STRING
+                emit_mask(2)
+                push_literal("V", 0, 1, 0)
                 position += 2
                 continue
             }
 
             if (character == "\"") {
-                delimiter_length = quote_run(line, position)
+                delimiter_length = run_length(line, position, "\"")
                 if (delimiter_length >= 3) {
-                    printf "%s", spaces(delimiter_length)
-                    raw_delimiter_length = delimiter_length
-                    state = RAW_STRING
+                    emit_mask(delimiter_length)
+                    push_literal("W", 0, delimiter_length, 0)
                     position += delimiter_length
                 } else {
-                    printf " "
-                    state = REGULAR_STRING
+                    emit_mask(1)
+                    push_literal("R", 0, 1, 0)
                     position++
                 }
                 continue
             }
 
             if (character == quote_character) {
-                printf " "
-                state = CHARACTER
+                emit_mask(1)
+                push_literal("C", 0, 1, 0)
                 position++
                 continue
+            }
+
+            if (stack_depth > 0 && frame_type[stack_depth] == "H") {
+                if (character == "(") paren_depth[stack_depth]++
+                else if (character == ")" && paren_depth[stack_depth] > 0) paren_depth[stack_depth]--
+                else if (character == "[") bracket_depth[stack_depth]++
+                else if (character == "]" && bracket_depth[stack_depth] > 0) bracket_depth[stack_depth]--
+                else if (character == "{") code_brace_depth[stack_depth]++
+                else if (character == "}" && code_brace_depth[stack_depth] > 0) code_brace_depth[stack_depth]--
             }
 
             printf "%s", character
             position++
         }
 
-        if (state == LINE_COMMENT || state == REGULAR_STRING || state == CHARACTER) state = CODE
+        if (comment_state == LINE_COMMENT) comment_state = 0
+        if (stack_depth > 0 && frame_type[stack_depth] == "L" &&
+            (literal_kind[stack_depth] == "R" || literal_kind[stack_depth] == "C")) {
+            pop_frame()
+        }
     }
 
     END {
         if (ends_with_lf) printf "\n"
     }
-' "$file_path" > "$masked_file"
+' "$file_path" > "$masked_file" 2>/dev/null; then
+    skip_validation "LEXER_FAILED"
+fi
 
-if [[ "$(wc -c < "$file_path" | tr -d '[:space:]')" -ne "$(wc -c < "$masked_file" | tr -d '[:space:]')" ]]; then
-    echo "[UdonSharp] validator internal error: lexical mask length mismatch" >&2
-    echo "$input"
-    exit 0
+source_length=$(wc -c < "$file_path" 2>/dev/null | tr -d '[:space:]') || skip_validation "SOURCE_READ_FAILED"
+masked_length=$(wc -c < "$masked_file" 2>/dev/null | tr -d '[:space:]') || skip_validation "LEXER_FAILED"
+if [[ "$source_length" != "$masked_length" ]]; then
+    skip_validation "MASK_LENGTH_MISMATCH"
 fi
 
 # Require a concrete UdonSharpBehaviour base, including qualified and using-
@@ -286,116 +428,207 @@ fi
 warnings=()
 
 # Blocked generics
-if grep -qE "List<|Dictionary<|HashSet<|Queue<|Stack<" "$file_path"; then
+if grep -qE "List<|Dictionary<|HashSet<|Queue<|Stack<" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Generic collections (List<T>, Dictionary<K,V>) not supported. Use arrays or DataList/DataDictionary.")
 fi
 
 # async/await
-if grep -qE "\basync\b|\bawait\b" "$file_path"; then
+if grep -qE "\basync\b|\bawait\b" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: async/await not supported. Use SendCustomEventDelayedSeconds() instead.")
 fi
 
 # try/catch
-if grep -qE "\btry\s*\{|\bcatch\s*\(|\bfinally\s*\{" "$file_path"; then
+if grep -qE "\btry\s*\{|\bcatch\s*\(|\bfinally\s*\{" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: try/catch/finally not supported. Use defensive null checks and validation.")
 fi
 
 # LINQ
-if grep -qE "\.Where\(|\.Select\(|\.OrderBy\(|\.FirstOrDefault\(|\.Any\(|\.All\(" "$file_path"; then
+if grep -qE "\.Where\(|\.Select\(|\.OrderBy\(|\.FirstOrDefault\(|\.Any\(|\.All\(" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: LINQ not supported. Use manual for loops.")
 fi
 
 # yield return (coroutines)
-if grep -qE "\byield\s+return\b" "$file_path"; then
+if grep -qE "\byield\s+return\b" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Coroutines (yield return) not supported. Use SendCustomEventDelayedSeconds().")
 fi
 
 # interface declaration
-if grep -qE "^\s*(public\s+)?interface\s+" "$file_path"; then
+if grep -qE "^\s*(public\s+)?interface\s+" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Interfaces not supported. Use base class inheritance or SendCustomEvent pattern.")
 fi
 
 # StartCoroutine
-if grep -qE "StartCoroutine\s*\(" "$file_path"; then
+if grep -qE "StartCoroutine\s*\(" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: StartCoroutine not available. Use SendCustomEventDelayedSeconds() instead.")
 fi
 
 # Check for AddListener (not supported - delegates blocked)
-if grep -qE "\.AddListener\s*\(" "$file_path"; then
+if grep -qE "\.AddListener\s*\(" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: AddListener() not supported. Use Inspector OnClick -> SendCustomEvent instead.")
 fi
 
-# Lambda expressions
-if grep -qE '\)[ \t]*=>[ \t]*(\{|[^;{]+;)' "$file_path"; then
+# Lambda expressions on one physical line. Keep Bash and PowerShell on the
+# same ASCII space/tab contract and exclude declaration/property expression bodies.
+if awk '
+    {
+        line = $0
+        candidate = line
+        sub(/^[[:blank:]]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[[:blank:]]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[[:blank:]]+[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*\([^)]*\)[[:blank:]]*=>/, "", candidate)
+        gsub(/(^|[;{[:blank:]])(get|set|init)[[:blank:]]*=>/, " ", candidate)
+        if (candidate ~ /\)[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/ ||
+            candidate ~ /(^|[=(,[:blank:]])[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/) {
+            found = 1
+            exit
+        }
+    }
+    END { exit found ? 0 : 1 }
+' "$masked_file"; then
     warnings+=("[UdonSharp] WARNING: Lambda expression detected. Use named methods instead.")
 fi
 
-# Attribute-aware sync inventory from MaskedSource. Comments and literals do
-# not contribute attributes, counts, modes, or call-presence predicates.
-sync_stats=$(awk '
-    function analyze_attribute(content,    compact) {
-        compact = content
-        gsub(/[ \t\r\n]/, "", compact)
-        if (compact ~ /(^|,|:)UdonSynced(Attribute)?($|,|\()/) synced_count++
-        if (compact ~ /(^|,)UdonBehaviourSyncMode(Attribute)?\(BehaviourSyncMode\.NoVariableSync\)($|,)/) has_no_variable_sync = 1
+# Parse only leading attribute sections and attach them to the following
+# declaration. A single record set drives sync count, array, and mode checks.
+if ! sync_stats=$(awk '
+    function reset_pending() {
+        pending_synced = 0
+        pending_no_variable_sync = 0
     }
 
-    {
-        line = $0 "\n"
-        for (position = 1; position <= length(line); position++) {
-            character = substr(line, position, 1)
-            pair = substr(line, position, 2)
-            if (!in_attribute) {
-                if (character == "[") {
-                    in_attribute = 1
-                    attribute_content = ""
-                }
-            } else if (pair == "[]") {
-                attribute_content = attribute_content pair
+    function find_group_end(text,    position, pair, parens) {
+        parens = 0
+        for (position = 2; position <= length(text); position++) {
+            pair = substr(text, position, 2)
+            if (pair == "[]") {
                 position++
-            } else if (character == "]") {
-                analyze_attribute(attribute_content)
-                in_attribute = 0
-                attribute_content = ""
-            } else {
-                attribute_content = attribute_content character
+                continue
             }
+            character = substr(text, position, 1)
+            if (character == "(") parens++
+            else if (character == ")" && parens > 0) parens--
+            else if (character == "]" && parens == 0) return position
+        }
+        return 0
+    }
+
+    function inspect_group(content,    compact, target) {
+        compact = content
+        gsub(/[ \t\r\n]/, "", compact)
+        target = ""
+        if (compact ~ /^(type|field):/) {
+            target = compact
+            sub(/:.*/, "", target)
+            sub(/^(type|field):/, "", compact)
+        }
+
+        if ((target == "" || target == "field") &&
+            compact ~ /(^|,)((global::)?UdonSharp[.])?UdonSynced(Attribute)?($|,|[(])/) {
+            line_synced = 1
+        }
+        if ((target == "" || target == "type") &&
+            compact ~ /(^|,)((global::)?UdonSharp[.])?UdonBehaviourSyncMode(Attribute)?[(]BehaviourSyncMode[.]NoVariableSync[)]($|,)/) {
+            line_no_variable_sync = 1
         }
     }
 
-    END { printf "%d|%d\n", synced_count, has_no_variable_sync }
-' "$masked_file")
-IFS='|' read -r synced_count has_no_variable_sync <<< "$sync_stats"
+    function parse_leading_groups(text,    rest, end, content) {
+        line_synced = 0
+        line_no_variable_sync = 0
+        group_count = 0
+        rest = text
+        sub(/^[ \t]*/, "", rest)
+
+        while (substr(rest, 1, 1) == "[") {
+            end = find_group_end(rest)
+            if (end == 0) break
+            content = substr(rest, 2, end - 2)
+            inspect_group(content)
+            group_count++
+            rest = substr(rest, end + 1)
+            sub(/^[ \t]*/, "", rest)
+        }
+
+        attribute_remainder = rest
+        return group_count
+    }
+
+    function is_class(declaration) {
+        return declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial)[ \t]+)*class[ \t]+/
+    }
+
+    function is_field(declaration) {
+        if (declaration ~ /^(class|struct|interface|enum|delegate|event)[ \t]+/) return 0
+        if (declaration ~ /[)][ \t]*(\{|=>)/) return 0
+        return declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ \t]+)*([A-Za-z_][A-Za-z0-9_.:<>,?]*[ \t]*(\[[ \t]*\])?[ \t]+)+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)/
+    }
+
+    function process_declaration(declaration) {
+        sub(/^[ \t]*/, "", declaration)
+        if (pending_no_variable_sync && is_class(declaration)) has_no_variable_sync = 1
+        if (pending_synced && is_field(declaration)) {
+            synced_count++
+            if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ \t]+)*(int|float)[ \t]*\[[ \t]*\][ \t]+/) {
+                has_large_synced_array = 1
+            }
+        }
+        reset_pending()
+    }
+
+    BEGIN { reset_pending() }
+
+    {
+        line = $0
+        sub(/\r$/, "", line)
+
+        if (parse_leading_groups(line)) {
+            pending_synced = pending_synced || line_synced
+            pending_no_variable_sync = pending_no_variable_sync || line_no_variable_sync
+            if (attribute_remainder !~ /^[ \t]*$/) {
+                process_declaration(attribute_remainder)
+            }
+            next
+        }
+
+        if (line ~ /^[ \t]*$/) next
+        if (pending_synced || pending_no_variable_sync) process_declaration(line)
+    }
+
+    END {
+        printf "%d|%d|%d\n", synced_count, has_no_variable_sync, has_large_synced_array
+    }
+' "$masked_file"); then
+    skip_validation "ATTRIBUTE_SCAN_FAILED"
+fi
+IFS='|' read -r synced_count has_no_variable_sync has_large_synced_array <<< "$sync_stats"
 
 # Networking issues
 if [[ "$synced_count" -gt 0 ]]; then
     if ! grep -qE "RequestSerialization\s*\(" "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no RequestSerialization(). Required for Manual sync mode.")
     fi
-    if ! grep -qE "Networking\.SetOwner\s*\(|SetOwner\s*\(" "$masked_file"; then
-        warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no Networking.SetOwner(). Ownership required to modify synced variables.")
+    if ! grep -qE "Networking\.(SetOwner|IsOwner)\s*\(|(^|[^.[:alnum:]_])IsOwner\s*\(" "$masked_file"; then
+        warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no Networking.SetOwner() or Networking.IsOwner() guard. Confirm ownership before writes.")
     fi
 fi
 
 # VRCPlayerApi without validity check
-if grep -qE "VRCPlayerApi\s+\w+\s*=" "$file_path"; then
-    if ! grep -qE "\.IsValid\s*\(\)|player\s*!=\s*null" "$file_path"; then
+if grep -qE "VRCPlayerApi\s+\w+\s*=" "$masked_file"; then
+    if ! grep -qE "\.IsValid\s*\(\)|Utilities\.IsValid\s*\(|player\s*!=\s*null" "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: VRCPlayerApi used. Always check player != null && player.IsValid() before use.")
     fi
 fi
 
 # Check for override on Unity standard callbacks (should NOT have override)
-if grep -qE "override\s+void\s+(OnTriggerEnter|OnTriggerStay|OnTriggerExit|OnCollisionEnter|OnCollisionStay|OnCollisionExit|OnAnimatorMove|OnAnimatorIK)" "$file_path"; then
+if grep -qE "override\s+void\s+(OnTriggerEnter|OnTriggerStay|OnTriggerExit|OnCollisionEnter|OnCollisionStay|OnCollisionExit|OnAnimatorMove|OnAnimatorIK)" "$masked_file"; then
     warnings+=("[UdonSharp] WARNING: Unity callbacks (OnTriggerEnter etc.) should NOT use 'override'. Only VRChat events need override.")
 fi
 
 # Generic GetComponent<UdonBehaviour> (not exposed)
-if grep -qE "GetComponent<UdonBehaviour>" "$file_path"; then
+if grep -qE "GetComponent<UdonBehaviour>" "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: GetComponent<UdonBehaviour>() not exposed. Use (UdonBehaviour)GetComponent(typeof(UdonBehaviour)) instead.")
 fi
 
 # System.Net / System.IO (blocked - use VRC downloaders)
-if grep -qE "using\s+System\.(Net|IO)\b|System\.Net\.|System\.IO\." "$file_path"; then
+if grep -qE "using\s+System\.(Net|IO)\b|System\.Net\.|System\.IO\." "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: System.Net/System.IO not available. Use VRCStringDownloader or VRCImageDownloader instead. See references/web-loading.md.")
 fi
 
@@ -405,74 +638,7 @@ if [[ "$synced_count" -gt 5 ]]; then
 fi
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
-if awk '
-    function is_synced_array_field_prefix(line) {
-        return line ~ /^[ \t]*((public|private|protected|internal|static|readonly)[ \t]+)*(int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)/
-    }
-
-    function find_attribute_group_end(text,    character, position) {
-        position = 2
-        while (position <= length(text)) {
-            if (substr(text, position, 2) == "[]") {
-                position += 2
-                continue
-            }
-
-            character = substr(text, position, 1)
-            if (character == "]") return position
-            position++
-        }
-
-        return 0
-    }
-
-    function parse_leading_attribute_groups(line,    closing_bracket, content, rest) {
-        attribute_group_count = 0
-        attribute_has_udon_synced = 0
-        rest = line
-        sub(/^[ \t]*/, "", rest)
-
-        while (substr(rest, 1, 1) == "[") {
-            closing_bracket = find_attribute_group_end(rest)
-            if (closing_bracket == 0) break
-
-            content = substr(rest, 2, closing_bracket - 2)
-            if (content ~ /(^|,)[ \t]*UdonSynced(Attribute)?[ \t]*($|,|[(])/) {
-                attribute_has_udon_synced = 1
-            }
-
-            attribute_group_count++
-            rest = substr(rest, closing_bracket + 1)
-            sub(/^[ \t]*/, "", rest)
-        }
-
-        attribute_remainder = rest
-        return attribute_group_count
-    }
-
-    {
-        line = $0
-        sub(/\r$/, "", line)
-
-        if (previous_line_has_attribute && is_synced_array_field_prefix(line)) {
-            found = 1
-            exit
-        }
-
-        previous_line_has_attribute = 0
-        if (parse_leading_attribute_groups(line) && attribute_has_udon_synced) {
-            if (is_synced_array_field_prefix(attribute_remainder)) {
-                found = 1
-                exit
-            }
-            if (attribute_remainder ~ /^[ \t]*$/) {
-                previous_line_has_attribute = 1
-            }
-        }
-    }
-
-    END { exit found ? 0 : 1 }
-' "$masked_file"; then
+if [[ "$has_large_synced_array" -eq 1 ]]; then
     warnings+=("[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows.")
 fi
 
@@ -482,22 +648,22 @@ if [[ "$has_no_variable_sync" -eq 1 && "$synced_count" -gt 0 ]]; then
 fi
 
 # ref parameter in method declaration
-if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bref\s+\w' "$file_path"; then
+if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bref\s+\w' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: ref parameters not supported in UdonSharp. Use return values or synced fields instead.")
 fi
 
 # out parameter in method declaration
-if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bout\s+\w' "$file_path"; then
+if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bout\s+\w' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: out parameters not supported in UdonSharp. Use return values instead.")
 fi
 
 # Multi-dimensional arrays (T[,])
-if grep -qE '\w+\s*\[,' "$file_path"; then
+if grep -qE '\w+\s*\[,' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead.")
 fi
 
 # Method overloading (same name, different signatures)
-overloaded=$(grep -oE '^\s*(public|private|protected|internal|override|virtual|static|public\s+override|private\s+static|public\s+static)(\s+(public|private|protected|internal|override|virtual|static))?\s+(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(' "$file_path" \
+overloaded=$(grep -oE '^\s*(public|private|protected|internal|override|virtual|static|public\s+override|private\s+static|public\s+static)(\s+(public|private|protected|internal|override|virtual|static))?\s+(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(' "$masked_file" \
     | grep -oE '[A-Za-z_][A-Za-z0-9_]*\s*\($' \
     | sed 's/[[:space:]]*($//' \
     | sort | uniq -d)

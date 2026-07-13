@@ -2,6 +2,7 @@ using UdonSharp;
 
 public class RuntimeSplitLambdaLines : UdonSharpBehaviour
 {
-    private void FirstHalf() =>
-    value => {
+    private void FirstHalf() => Select(
+        value
+        => value + 1);
 }
