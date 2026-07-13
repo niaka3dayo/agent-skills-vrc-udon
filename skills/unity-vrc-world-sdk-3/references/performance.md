@@ -1,33 +1,18 @@
 # VRChat World Performance Optimization
 
-## Performance Targets
+## Project-defined criteria
 
-The frame-rate values in this section are project validation targets, not VRChat
-upload limits. Choose targets for the devices you support, then test representative
-scenes and player counts on those devices.
-
-### Minimum Requirements
-
-| Platform | FPS Target | Measurement Point |
-|----------|-----------|-------------------|
-| PC VR | 45+ FPS | Spawn point, 1 player |
-| PC Desktop | 60+ FPS | Spawn point, 1 player |
-| Quest | 72 FPS | Spawn point, 1 player |
-
-### Performance Tiers
-
-```text
-Excellent: 90+ FPS (PC), 72 FPS stable (Quest)
-Good: 60-90 FPS (PC), 60-72 FPS (Quest)
-Acceptable: 45-60 FPS (PC), 45-60 FPS (Quest)
-Poor: < 45 FPS - improvement required
-```
+VRChat does not publish one fixed FPS upload threshold for worlds. Define a
+frame-time or frame-rate target for every supported device from the experience's
+representative scenes and expected player count. Record the test scene, device,
+client mode, player count, and thermal state with each result so later runs are
+comparable.
 
 ---
 
 ## Optimization Workflow
 
-If FPS is below target, follow this workflow — measure before guessing:
+If a measured result misses the project target, follow this workflow — measure before guessing:
 
 ```text
 1. Measure
@@ -367,7 +352,7 @@ public void _SlowUpdate()
 ### PC Optimization Checklist
 
 ```text
-□ 45+ FPS in VR
+□ Project-defined performance target met in representative scenes and player counts
 □ Minimal realtime lights
 □ Mirror = default OFF
 □ Light baking complete
@@ -386,7 +371,7 @@ public void _SlowUpdate()
 Window > Analysis > Profiler
 
 Items to check:
-- CPU Usage: Below 16ms (60FPS)
+- CPU Usage: Compare main-thread and rendering frame time with the project criterion
 - Rendering: Draw Calls, Tris, Batches
 - Memory: Texture usage
 ```
@@ -428,7 +413,7 @@ In-game checks:
 ## Quick Optimization Checklist
 
 ```text
-□ 45+ FPS (VR) achieved
+□ Project-defined performance target met on every supported device
 □ Light baking complete
 □ Realtime lighting and shadows justified by profiling
 □ Mirror default OFF
@@ -682,7 +667,7 @@ Verify all items below before uploading a Quest-compatible world build.
 ```text
 □ Build and Run targeting Android in Unity — check for shader errors
 □ Tested in VRChat on actual Quest hardware or using a Quest emulator
-□ Frame rate monitored: stable 72 FPS at spawn with 1 player
+□ Frame time or frame rate measured in representative scenes and at the expected player count
 □ No visible lighting artifacts (dark patches, blown-out areas)
 □ All interactive elements (pickups, triggers) work correctly on Quest
 □ No crashes or memory warnings during extended play session
@@ -694,9 +679,9 @@ Verify all items below before uploading a Quest-compatible world build.
 
 VRChat does **not** have a formal in-client performance ranking system for worlds (unlike avatars which display Excellent/Good/Medium/Poor badges). There is no SDK-enforced ranking threshold that blocks world uploads based on polygon count or draw calls.
 
-Use the **FPS targets** at the top as project criteria. The 100 MB compressed
-world-size rule is a hard Android limit; triangle, material, and rendering values
-are budgets to validate through profiling, not upload gates.
+Use the **Project-defined criteria** at the top for performance validation. The
+100 MB compressed world-size rule is a hard Android limit; triangle, material,
+and rendering values are budgets to validate through profiling, not upload gates.
 
 ### Official World Triangle Budget (Quest)
 

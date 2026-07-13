@@ -10,6 +10,7 @@ UDON_API_REF="$ROOT_DIR/skills/unity-vrc-udon-sharp/references/api.md"
 PERFORMANCE_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/performance.md"
 LIGHTING_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/lighting.md"
 WORLD_CHEATSHEET="$ROOT_DIR/skills/unity-vrc-world-sdk-3/CHEATSHEET.md"
+UPLOAD_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/upload.md"
 UDON_MIGRATION_REF="$ROOT_DIR/skills/unity-vrc-udon-sharp/references/sdk-migration.md"
 
 require_file() {
@@ -123,6 +124,19 @@ for path in "$UDON_SKILL" "$UDON_MIGRATION_REF"; do
     forbid_text "$path" 'SDK versions below 3.9.0'
     forbid_text "$path" 'New world uploads are no longer possible'
 done
+for path in "$ROOT_DIR"/README*.md; do
+    forbid_text "$path" 'December 2, 2025'
+    forbid_text "$path" '2025年12月2日'
+    forbid_text "$path" '2025년 12월 2일'
+    forbid_text "$path" '2025 年 12 月 2 日'
+done
+for path in "$WORLD_SKILL" "$PERFORMANCE_REF" "$WORLD_CHEATSHEET" "$UPLOAD_REF"; do
+    forbid_text "$path" '45+ FPS'
+    forbid_text "$path" '60+ FPS'
+    forbid_text "$path" '72 FPS'
+    forbid_text "$path" 'FPS Target'
+    forbid_text "$path" 'Minimum Requirements'
+done
 for obsolete_claim in '| Real-time shadows | Not supported |' \
     '❌ Real-time shadow casting and receiving' \
     '□ No real-time shadow settings on any light' \
@@ -153,5 +167,9 @@ require_text "$PERFORMANCE_REF" 'not an upload limit'
 require_text "$LIGHTING_REF" 'target-device profiling'
 require_text "$WORLD_CHEATSHEET" 'profile on the target Android device'
 require_text "$WORLD_SKILL" 'static checks; import them into the target SDK project'
+require_text "$WORLD_SKILL" 'supported devices, representative scenes, and expected player count'
+require_text "$PERFORMANCE_REF" 'Project-defined criteria'
+require_text "$WORLD_CHEATSHEET" 'Project-defined'
+require_text "$UPLOAD_REF" 'Project-defined frame-time or frame-rate target met'
 
 echo "PASS: build-validation reference coverage smoke test"

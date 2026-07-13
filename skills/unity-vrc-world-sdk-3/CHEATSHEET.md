@@ -28,7 +28,7 @@
 □ Respawn Height set (below the floor)
 □ "Setup Layers for VRChat" executed
 □ Light baking complete
-□ 45+ FPS (VR)
+□ Project-defined performance target met on each supported device
 ```
 
 ### VRC_SceneDescriptor
@@ -206,7 +206,7 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 
 | Item | PC | Quest |
 |------|-----|-------|
-| FPS Target | 45+ VR, 60+ Desktop | 72 |
+| Performance criteria | Project-defined | Project-defined |
 | Mirrors | 1 (default OFF) | 0-1 |
 | Video Players | 1-2 recommended | 1 recommended |
 | Realtime Lighting | Profile | Baked by default; profile on the target Android device before keeping realtime lights or shadows |
@@ -334,7 +334,7 @@ OnVideoReady()
 □ Layer/Collision verified
 □ Lights baked
 □ Mirror OFF default
-□ 45+ FPS (VR)
+□ Project-defined performance target met on each supported device
 □ No Validation errors
 ```
 

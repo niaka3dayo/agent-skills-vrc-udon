@@ -47,6 +47,12 @@ jobs:
       - name: Smoke test validate-udonsharp.sh
         run: bash tests/hooks/validate-udonsharp.test.sh
 
+      - name: Check BusyBox awk portability
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y busybox
+          bash tests/hooks/validate-udonsharp.busybox.test.sh
+
       - name: Smoke test validate-udonsharp.ps1
         shell: pwsh
         run: ./tests/hooks/validate-udonsharp.test.ps1

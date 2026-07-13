@@ -36,6 +36,12 @@ sync-initializer-commas-lf	runtime-sync-initializer-commas.cs	LF	-
 sync-initializer-commas-crlf	runtime-sync-initializer-commas.cs	CRLF	-
 compact-sync-declarations-lf	runtime-compact-sync-declarations.cs	LF	SYNC_COUNT;SYNC_MODE_CONFLICT
 compact-sync-declarations-crlf	runtime-compact-sync-declarations.cs	CRLF	SYNC_COUNT;SYNC_MODE_CONFLICT
+compact-sync-after-ordinary-lf	runtime-compact-sync-after-ordinary.cs	LF	SYNC_COUNT;SYNC_MODE_CONFLICT
+compact-sync-after-ordinary-crlf	runtime-compact-sync-after-ordinary.cs	CRLF	SYNC_COUNT;SYNC_MODE_CONFLICT
+constructor-return-decoys-lf	runtime-constructor-return-decoys.cs	LF	-
+constructor-return-decoys-crlf	runtime-constructor-return-decoys.cs	CRLF	-
+unicode-expression-body-decoys-lf	runtime-unicode-expression-body-decoys.cs	LF	-
+unicode-expression-body-decoys-crlf	runtime-unicode-expression-body-decoys.cs	CRLF	-
 attribute-blank-trivia-lf	runtime-attribute-blank-trivia.cs	LF	SYNC_ARRAY
 attribute-blank-trivia-crlf	runtime-attribute-blank-trivia.cs	CRLF	SYNC_ARRAY
 all-rules-lf	runtime-all-rules.cs	LF	GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;REF_PARAMETER;OUT_PARAMETER;MULTIDIM_ARRAY;METHOD_OVERLOAD

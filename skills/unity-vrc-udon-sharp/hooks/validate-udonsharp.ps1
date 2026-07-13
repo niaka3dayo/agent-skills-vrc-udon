@@ -450,23 +450,37 @@ if ($MaskedSource -match '\.AddListener\s*\(') {
 
 # Lambda expressions on one physical line. Simple and parenthesized forms use
 # the same ASCII space/tab contract as the Bash hook.
+$IdentifierPattern = '@?[_\p{L}\p{Nl}][_\p{L}\p{Nl}\p{Nd}\p{Pc}\p{Mn}\p{Mc}\p{Cf}]*'
+$ModifierPattern = '^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+'
+function Remove-DeclarationExpressionBodyPrefix([string]$Text) {
+    $Arrow = $Text.IndexOf('=>')
+    if ($Arrow -lt 0) { return $Text }
+
+    $Left = $Text.Substring(0, $Arrow).Trim()
+    while ($Left -match $ModifierPattern) {
+        $Left = $Left.Substring($Matches[0].Length)
+    }
+
+    if ($Left.EndsWith(')')) {
+        $Open = $Left.IndexOf('(')
+        if ($Open -lt 0) { return $Text }
+        $Prefix = $Left.Substring(0, $Open).Trim()
+        if ($Prefix -match '[=;{}]') { return $Text }
+    } else {
+        if ($Left -match '[=;{}()]') { return $Text }
+        $Prefix = $Left
+    }
+
+    if ($Prefix -notmatch '^(?<Return>.+?)[ \t]+(?<Name>' + $IdentifierPattern + ')$') { return $Text }
+    return $Text.Substring($Arrow + 2)
+}
+
 $HasLambda = $false
 foreach ($Line in [regex]::Split($MaskedSource, '\r?\n')) {
-    $Candidate = [regex]::Replace(
-        $Line,
-        '^[ \t]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[ \t]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*\([^)]*\)[ \t]*=>',
-        '',
-        1
-    )
-    $Candidate = [regex]::Replace(
-        $Candidate,
-        '^[ \t]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[ \t]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*=>',
-        '',
-        1
-    )
+    $Candidate = Remove-DeclarationExpressionBodyPrefix $Line
     $Candidate = [regex]::Replace($Candidate, '(^|[;{ \t])(get|set|init)[ \t]*=>', ' ')
     if ($Candidate -match '\)[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)' -or
-        $Candidate -match '(^|[=(, \t])[A-Za-z_][A-Za-z0-9_]*[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)') {
+        $Candidate -match ('(^|[=(, \t])' + $IdentifierPattern + '[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)')) {
         $HasLambda = $true
         break
     }
@@ -684,6 +698,21 @@ function Get-SyncStats([string]$Source) {
         return $Text.Length
     }
 
+    function Find-AttributeAfterBoundary([string]$Text, [int]$Start) {
+        $AfterBoundary = $false
+        for ($Position = $Start; $Position -lt $Text.Length; $Position++) {
+            $Character = $Text[$Position]
+            if ($Character -eq ';' -or $Character -eq '{' -or $Character -eq '}') {
+                $AfterBoundary = $true
+                continue
+            }
+            if ($AfterBoundary -and ($Character -eq ' ' -or $Character -eq [char]9)) { continue }
+            if ($AfterBoundary -and $Character -eq '[') { return $Position }
+            if ($AfterBoundary) { $AfterBoundary = $false }
+        }
+        return $Text.Length
+    }
+
     function Start-Attribute {
         $State.CollectingAttribute = $true
         [void]$State.AttributeContent.Clear()
@@ -736,7 +765,8 @@ function Get-SyncStats([string]$Source) {
                 $Position = Add-DeclarationFragment $Line $Position
                 continue
             }
-            return
+            $Position = Find-AttributeAfterBoundary $Line $Position
+            if ($Position -ge $Line.Length) { return }
         }
     }
 
@@ -849,6 +879,7 @@ if ($MaskedSource -match '\w+\s*\[,') {
 # not skipped by a fixed return-type pattern.
 $MethodNames = foreach ($Line in [regex]::Split($MaskedSource, '\r?\n')) {
     $Declaration = $Line.Trim()
+    if ($Declaration -match '^(return|throw|yield|case|goto)([ \t]|$)') { continue }
     while ($Declaration -match '^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+') {
         $Declaration = $Declaration.Substring($Matches[0].Length)
     }

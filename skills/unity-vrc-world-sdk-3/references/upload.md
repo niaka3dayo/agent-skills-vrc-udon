@@ -39,7 +39,7 @@ Complete upload procedure and best practices.
   □ Mirror is default OFF
 
 □ Performance
-  □ 45+ FPS in VR
+  □ Project-defined frame-time or frame-rate target met in representative scenes and player counts
   □ Lightmaps baked
   □ Minimal realtime lights
 

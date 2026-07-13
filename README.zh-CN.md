@@ -223,7 +223,7 @@ Bash 验证器需要 `jq`。如果无法使用 `jq`，钩子会原样传递输�
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（头像）、Mirror 渲染顺序修复 | 已支持 |
 | **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 访问、DataList/DataDictionary 容量 API | 最新稳定版 |
 
-> **注意**：SDK < 3.9.0 已于 2025 年 12 月 2 日弃用。上传新世界需要 3.9.0+。
+> **注意**：发布前，请确认项目使用的是 VRChat 当前支持的 SDK 版本。
 
 ---
 

@@ -292,13 +292,9 @@ Exactly **one** is required in every VRChat world.
 
 ## Performance
 
-### Target FPS
+### Performance Criteria
 
-| Platform   | FPS Target | Measurement Point      |
-| ---------- | ---------- | ---------------------- |
-| PC VR      | 45+ FPS    | Spawn point, 1 player  |
-| PC Desktop | 60+ FPS    | Spawn point, 1 player  |
-| Quest      | 72 FPS     | Spawn point, 1 player  |
+Define the performance target from the supported devices, representative scenes, and expected player count. Record a frame-time or frame-rate target for each build target before profiling. VRChat does not provide one fixed FPS upload threshold for worlds.
 
 ### Starting Budgets
 
@@ -415,7 +411,7 @@ When preserving an existing `AudioSource`, keep `volume`, `spatialBlend`, `rollo
 □ Layer/Collision Matrix verified
 □ Light baking complete
 □ Mirror default OFF
-□ 45+ FPS in VR
+□ Project-defined frame-time or frame-rate target met in representative scenes and player counts
 □ No Validation errors
 □ Content Warnings set
 □ Capacity set

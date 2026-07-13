@@ -388,7 +388,8 @@ fi
 
 # Require a concrete UdonSharpBehaviour base, including qualified and using-
 # alias forms. External project types are intentionally not resolved here.
-if ! LC_ALL=C awk '
+base_scan_status=0
+LC_ALL=C awk '
     function has_base(source, base,    pattern) {
         pattern = "class[[:space:]]+" identifier_pattern "[[:space:]]*:[^{;]*[,:[:space:]]" base "([,<{[:space:]]|$)"
         return source ~ pattern
@@ -402,7 +403,8 @@ if ! LC_ALL=C awk '
     }
 
     {
-        source = source (NR == 1 ? "" : " ") $0
+        separator = (NR == 1 ? "" : " ")
+        source = source separator $0
     }
 
     END {
@@ -430,9 +432,13 @@ if ! LC_ALL=C awk '
         }
         exit 1
     }
-' "$masked_file"; then
+' "$masked_file" || base_scan_status=$?
+if [[ "$base_scan_status" -eq 1 ]]; then
     echo "$input"
     exit 0
+fi
+if [[ "$base_scan_status" -ne 0 ]]; then
+    skip_validation "BASE_SCAN_FAILED"
 fi
 
 # === Validation Rules ===
@@ -481,14 +487,54 @@ fi
 # Lambda expressions on one physical line. Keep Bash and PowerShell on the
 # same ASCII space/tab contract and exclude declaration/property expression bodies.
 if awk '
+    function trim(text) {
+        sub(/^[ \t]+/, "", text)
+        sub(/[ \t]+$/, "", text)
+        return text
+    }
+
+    function is_identifier(name) {
+        return name ~ identifier_pattern
+    }
+
+    function strip_declaration_arrow(text,    arrow, left, open, prefix, name, return_type) {
+        arrow = index(text, "=>")
+        if (arrow == 0) return text
+
+        left = trim(substr(text, 1, arrow - 1))
+        while (match(left, /^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+/)) {
+            left = substr(left, RLENGTH + 1)
+        }
+
+        if (substr(left, length(left), 1) == ")") {
+            open = index(left, "(")
+            if (open == 0) return text
+            prefix = trim(substr(left, 1, open - 1))
+            if (prefix ~ /[=;{}]/) return text
+        } else {
+            if (left ~ /[=;{}()]/) return text
+            prefix = left
+        }
+
+        name = prefix
+        sub(/^.*[ \t]/, "", name)
+        return_type = prefix
+        sub(/[ \t][^ \t]*$/, "", return_type)
+        if (return_type == prefix || trim(return_type) == "" || !is_identifier(name)) return text
+        return substr(text, arrow + 2)
+    }
+
+    BEGIN {
+        identifier_pattern = "^@?(_|[^[:space:][:punct:][:digit:]])(_|[^[:space:][:punct:]])*$"
+        simple_lambda_pattern = "(^|[=(,[:blank:]])@?(_|[^[:space:][:punct:][:digit:]])(_|[^[:space:][:punct:]])*[[:blank:]]*=>[[:blank:]]*(\\{|[^;{]+;)"
+    }
+
     {
         line = $0
-        candidate = line
-        sub(/^[[:blank:]]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[[:blank:]]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[[:blank:]]+[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*\([^)]*\)[[:blank:]]*=>/, "", candidate)
-        sub(/^[[:blank:]]*((public|private|protected|internal|static|virtual|override|abstract|sealed|new)[[:blank:]]+)*[A-Za-z_][A-Za-z0-9_.:<>,?\[\]]*[[:blank:]]+[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*=>/, "", candidate)
+        candidate = strip_declaration_arrow(line)
         gsub(/(^|[;{[:blank:]])(get|set|init)[[:blank:]]*=>/, " ", candidate)
         if (candidate ~ /\)[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/ ||
-            candidate ~ /(^|[=(,[:blank:]])[A-Za-z_][A-Za-z0-9_]*[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/) {
+            candidate ~ simple_lambda_pattern) {
             found = 1
             exit
         }
@@ -726,6 +772,21 @@ if ! sync_stats=$(LC_ALL=C awk '
         return length(text) + 1
     }
 
+    function find_attribute_after_boundary(text, start,    position, character, after_boundary) {
+        after_boundary = 0
+        for (position = start; position <= length(text); position++) {
+            character = substr(text, position, 1)
+            if (character == ";" || character == "{" || character == "}") {
+                after_boundary = 1
+                continue
+            }
+            if (after_boundary && character ~ /[ \t]/) continue
+            if (after_boundary && character == "[") return position
+            if (after_boundary) after_boundary = 0
+        }
+        return length(text) + 1
+    }
+
     function consume_line(text,    position, character) {
         position = 1
         while (position <= length(text)) {
@@ -766,7 +827,8 @@ if ! sync_stats=$(LC_ALL=C awk '
                 position = consume_declaration_fragment(text, position)
                 continue
             }
-            return
+            position = find_attribute_after_boundary(text, position)
+            if (position > length(text)) return
         }
     }
 
@@ -870,6 +932,7 @@ overloaded=$(LC_ALL=C awk '
 
     {
         declaration = trim($0)
+        if (declaration ~ /^(return|throw|yield|case|goto)([ \t]|$)/) next
         while (match(declaration, /^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+/)) {
             declaration = substr(declaration, RLENGTH + 1)
         }

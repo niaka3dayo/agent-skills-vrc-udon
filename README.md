@@ -224,7 +224,7 @@ through unchanged and emits `VALIDATOR-WARNING: validation skipped
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Supported |
 | **3.10.4** | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary capacity APIs | Latest Stable |
 
-> **Note**: SDK < 3.9.0 was deprecated on December 2, 2025. New world uploads require 3.9.0+.
+> **Note**: Before publishing, confirm that the project uses an SDK version currently supported by VRChat.
 
 ---
 

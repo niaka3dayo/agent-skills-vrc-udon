@@ -224,7 +224,7 @@ validation skipped (JQ_UNAVAILABLE)`을 출력합니다.
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (아바타), Mirror 렌더 순서 수정 | 지원 |
 | **3.10.4** | VRCTween, Box형 Contacts, Global Avatar PhysBone Colliders, 월드 `VRCPhysBoneCollider` Udon 접근, DataList/DataDictionary 용량 API | 최신 안정 버전 |
 
-> **참고**: SDK 3.9.0 미만은 2025년 12월 2일에 지원이 종료되었습니다. 새로운 월드 업로드에는 3.9.0 이상이 필요합니다.
+> **참고**: 게시하기 전에 프로젝트에서 VRChat이 현재 지원하는 SDK 버전을 사용하고 있는지 확인하세요.
 
 ---
 
