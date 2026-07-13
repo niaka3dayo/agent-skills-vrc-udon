@@ -202,6 +202,9 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 同時支援 **Bash**（`validate-udonsharp.sh`）與 **PowerShell**（`validate-udonsharp.ps1`）。
 
+Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入，並輸出
+`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，不會將其視為驗證成功。
+
 ---
 
 ## SDK 版本

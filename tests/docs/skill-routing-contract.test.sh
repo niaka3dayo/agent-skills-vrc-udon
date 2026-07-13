@@ -26,7 +26,7 @@ forbid_text() {
     local haystack="$1"
     local needle="$2"
     if grep -Fq "$needle" <<<"$haystack"; then
-        echo "ERROR: Udon routing metadata still has a broad trigger: $needle" >&2
+        echo "ERROR: routing metadata contains an ambiguous trigger: $needle" >&2
         exit 1
     fi
 }
@@ -46,12 +46,22 @@ for phrase in 'scene setup' 'component setup' 'Build Panel' layers optimization 
     require_text "$UDON_DESCRIPTION" "$phrase"
 done
 
-# These broad/component-oriented phrases are owned by the World Skill, not bare
-# activation terms in the Udon Skill frontmatter.
-for phrase in 'VRC SDK' 'VRChat world' PhysBones Contacts 'Box Contacts' \
-    'Global Avatar PhysBone Colliders' VRCPhysBoneCollider VRCTween; do
-    forbid_text "$UDON_DESCRIPTION" "$phrase"
-    require_text "$WORLD_DESCRIPTION" "$phrase"
+# Runtime API contexts belong to Udon even when they mention Dynamics or tweening.
+for phrase in 'VRCTween calls' 'PhysBone/Contact callbacks' \
+    'VRCPhysBoneCollider runtime access'; do
+    require_text "$UDON_DESCRIPTION" "$phrase"
 done
 
-echo "PASS: static Skill metadata routing contract (not a model-router test; 7 positive, 7 exclusion, 8 overlap phrases)"
+# Scene and Inspector contexts belong to World SDK 3. The World description must
+# also reject the ambiguous "world scripting" phrase and route C# calls back to Udon.
+for phrase in 'VRChat world scene' 'VRC SDK' 'component placement' \
+    'VRCPhysBoneCollider component setup' 'Build Panel warning'; do
+    require_text "$WORLD_DESCRIPTION" "$phrase"
+done
+for phrase in 'VRChat world scripting' 'Triggers on: VRCTween'; do
+    forbid_text "$WORLD_DESCRIPTION" "$phrase"
+done
+require_text "$WORLD_DESCRIPTION" 'Do not use for UdonSharp C# or VRCTween calls'
+require_text "$WORLD_DESCRIPTION" 'unity-vrc-udon-sharp for runtime scripting'
+
+echo "PASS: static contextual Skill metadata routing contract (not a model-router test)"

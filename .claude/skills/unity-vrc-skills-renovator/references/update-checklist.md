@@ -221,7 +221,7 @@ Sync the Rules layer and Enforcement layer with Knowledge layer changes.
 
 - [ ] Remove deprecated patterns from templates
 - [ ] Reflect new recommended patterns in templates
-- [ ] Verify templates don't trigger validation hook warnings
+- [ ] Verify templates have no unexpected validation warnings relative to `tests/hooks/fixtures/validate-udonsharp/template-cases.tsv`
 
 ## Phase 8: Verification
 

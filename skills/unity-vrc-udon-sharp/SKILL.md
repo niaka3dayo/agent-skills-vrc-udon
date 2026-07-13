@@ -5,9 +5,10 @@ description: >-
     reviewing, debugging, or migrating UdonSharp C# and UdonBehaviour code.
     Positive triggers include UdonSharp, NetworkCallable, NetworkCalling,
     CallingPlayer, Udon network authorization, synced runtime state, a local public helper,
-    public-method audit, and C# to Udon conversion. Dynamics,
-    persistence, tween, collection, web, and component APIs trigger this skill
-    only when the request is about Udon, C#, or runtime API access. Excludes
+    public-method audit, and C# to Udon conversion. VRCTween calls,
+    PhysBone/Contact callbacks, world VRCPhysBoneCollider runtime access,
+    persistence, collection, web, and other component APIs trigger this skill
+    when the request is about Udon, C#, or runtime API access. Excludes
     scene setup, component setup, Build Panel work, layers, optimization, and
     upload; route those requests to unity-vrc-world-sdk-3.
 license: MIT
@@ -292,6 +293,10 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 |------|----------|---------|
 | `validate-udonsharp.ps1` | Windows (PowerShell) | PostToolUse constraint validation |
 | `validate-udonsharp.sh` | Linux/macOS (Bash) | PostToolUse constraint validation |
+
+The Bash validator requires `jq`. If it is unavailable, the hook passes its
+input through unchanged and emits `VALIDATOR-WARNING: validation skipped
+(JQ_UNAVAILABLE)` instead of silently reporting successful validation.
 
 ## Quick Reference
 

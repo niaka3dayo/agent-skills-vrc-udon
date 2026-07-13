@@ -1,21 +1,24 @@
 ---
 name: unity-vrc-world-sdk-3
 description: >
-    VRChat World SDK 3 scene setup and optimization guide.
-    Use this skill when configuring VRChat world scenes, placing SDK components,
-    setting up layers, optimizing performance, or uploading worlds.
+    VRChat World SDK 3 scene and Inspector setup, component placement and
+    configuration, optimization, and upload guide. Use this skill when
+    configuring VRChat world scenes, placing SDK components, setting up layers,
+    optimizing performance, or uploading worlds.
     Covers VRC_SceneDescriptor, spawn points, VRC_Pickup, VRC_Station,
     VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, layer/collision matrix,
     baked lighting, Quest/Android limits, Dynamics for Worlds, Build Panel
     validation alerts, and upload workflow.
     SDK 3.7.1 - 3.10.4 coverage.
-    Triggers on: VRChat world, VRChat world scripting, VRC SDK, scene setup, VRC_SceneDescriptor,
+    Triggers on: VRChat world scene, VRC SDK, scene setup, VRC_SceneDescriptor,
     spawn point, VRC_Pickup, VRC_Station, VRC_ObjectSync, layer setup,
-    PhysBones, Contacts, Box Contacts, Global Avatar PhysBone Colliders,
-    VRCPhysBoneCollider, VRCTween, optimization, Quest support, light baking,
+    PhysBone and Contact component placement, Box Contacts,
+    Global Avatar PhysBone Colliders, VRCPhysBoneCollider component setup,
+    optimization, Quest support, light baking,
     upload, SDK validation, Build Panel warning, Auto Fix, red warning,
     yellow warning, white warning, FPS improvement.
-    Related: Use unity-vrc-udon-sharp for UdonSharp C# coding.
+    Do not use for UdonSharp C# or VRCTween calls; use
+    unity-vrc-udon-sharp for runtime scripting.
 license: MIT
 metadata:
     author: niaka3dayo
@@ -42,6 +45,25 @@ metadata:
 
 ---
 
+## v2.6.0 Method Migration
+
+The following public methods were renamed because an unprefixed, parameterless
+public UdonSharp method remains callable through legacy network dispatch:
+
+| Before | After |
+|---|---|
+| `ForceDropPickup` | `_ForceDropPickup` |
+| `IsHeld` | `_IsHeld` |
+| `IsOccupied` | `_IsOccupied` |
+| `StopSound` | `_StopSound` |
+| `SlowUpdate` | `_SlowUpdate` |
+
+Update Inspector event strings, `SendCustomEvent*` calls, delayed events and
+`nameof(...)` expressions, and cross-behaviour calls. Compatibility aliases are
+not provided because an old unprefixed alias would restore the same legacy network exposure.
+
+---
+
 ## Common Mistakes (NEVER List)
 
 These cause silent world failures, performance disasters, or Quest incompatibility:
@@ -49,13 +71,13 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | # | NEVER do this | Why it hurts | Use instead |
 |---|---------------|-------------|-------------|
 | 1 | Enable Mirror by default (active on world join) | Renders the entire scene twice — immediate FPS halving, catastrophic on Quest | Default Mirror OFF; add UdonSharp toggle or player-triggered activation |
-| 2 | Use realtime directional lights with real-time shadows | Quest has no hardware shadow acceleration; shadow casters commonly cost on the order of 10-30 FPS in practice (varies by scene) | Baked lightmaps + light probes; set lights to Baked or Mixed mode |
+| 2 | Use realtime directional lights with real-time shadows without profiling | Realtime shadow cost varies with scene geometry, view, and target device and can dominate frame time on Android | Prefer baked lightmaps + light probes; profile the target device before keeping any realtime shadows |
 | 3 | Set Respawn Height at or above the world floor | Player respawns → falls → respawns again → infinite loop; players cannot recover | Set to an unreachable depth (e.g., floor at Y=0 → Respawn at Y=-100) |
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
 | 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile with post-processing disabled |
 | 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
 | 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use VRC Constraints (SDK 3.10.0+, world-supported) or Animator-driven transforms, and remove cloth from Quest meshes |
-| 8 | Upload without completing a lightmap bake | Realtime GI calculates at runtime — commonly on the order of 3-5× draw call overhead in practice, unacceptable on Quest | Always bake lights before upload; Progressive GPU lightmapper is fastest |
+| 8 | Upload without completing a lightmap bake | Realtime GI adds substantial scene-dependent render cost and is unsuitable as an unmeasured fallback on Android | Bake lights before upload, then verify the result on the target device |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit (PC) / 5-10 (Quest) as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
 | 11 | Add VRC_UIShape to a Screen Space or Overlay Canvas | VRC_UIShape requires World Space Canvas; other modes throw a runtime Unity error in VRChat — the UI renders visually but is not interactive, with no visible error to the world builder | Set Canvas > Render Mode to World Space before adding VRC_UIShape |
@@ -101,7 +123,11 @@ Quest (Meta Quest 2/3/Pro) defines the performance budget:
 - **VRAM**: ~4 GB shared with OS (vs 6–12 GB on PC); no HDR framebuffer
 - **Thermal throttling**: Sustained 100% GPU load causes clock reduction within minutes
 
-If a world runs at 72 FPS on Quest with a single test client, it will typically run at 90+ FPS on PC — though results vary by shader complexity, CPU-bound workloads, and hardware differences. The converse rarely holds. Verify against the [official VRChat optimization documentation](https://creators.vrchat.com/worlds/udon/performance-and-optimization/) before publishing.
+Measure each target device independently; PC results do not establish Android
+performance, and a single-client Quest result does not predict a particular PC
+frame rate. Use the Unity Profiler and the [official Android content optimization
+guide](https://creators.vrchat.com/platforms/android/quest-content-optimization/)
+before publishing.
 
 **NEVER optimize exclusively for PC with "Quest support added later"** — by that point, lighting, materials, and mesh density are all locked to PC quality, and the Quest port requires rebuilding everything.
 

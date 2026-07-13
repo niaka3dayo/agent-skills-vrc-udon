@@ -7,6 +7,7 @@ UDON_SKILL="$ROOT_DIR/skills/unity-vrc-udon-sharp/SKILL.md"
 REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/build-validation.md"
 COMPONENTS_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/components.md"
 UDON_API_REF="$ROOT_DIR/skills/unity-vrc-udon-sharp/references/api.md"
+PERFORMANCE_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/performance.md"
 
 require_file() {
     local path="$1"
@@ -95,5 +96,20 @@ if [[ "$DYNAMICS_SLUG" != "vrchat-dynamics-api-sdk-3100" ]]; then
 fi
 require_text "$COMPONENTS_REF" "../../unity-vrc-udon-sharp/references/api.md#$DYNAMICS_SLUG"
 forbid_text "$COMPONENTS_REF" "#physbones-and-contacts-sdk-3100"
+
+# Keep optimization references on the current official Android guide.
+CURRENT_ANDROID_GUIDE='https://creators.vrchat.com/platforms/android/quest-content-optimization/'
+OLD_ANDROID_GUIDE='https://creators.vrchat.com/platforms/android/android-content-optimization/'
+OLD_UDON_PERFORMANCE_GUIDE='https://creators.vrchat.com/worlds/udon/performance-and-optimization/'
+require_text "$WORLD_SKILL" "$CURRENT_ANDROID_GUIDE"
+require_text "$PERFORMANCE_REF" "$CURRENT_ANDROID_GUIDE"
+for path in "$WORLD_SKILL" "$PERFORMANCE_REF"; do
+    forbid_text "$path" "$OLD_ANDROID_GUIDE"
+    forbid_text "$path" "$OLD_UDON_PERFORMANCE_GUIDE"
+done
+for obsolete_claim in '10-30 FPS' '3-5× draw call overhead' \
+    'typically run at 90+ FPS on PC'; do
+    forbid_text "$WORLD_SKILL" "$obsolete_claim"
+done
 
 echo "PASS: build-validation reference coverage smoke test"

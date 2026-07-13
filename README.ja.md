@@ -202,6 +202,10 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 **Bash**（`validate-udonsharp.sh`）と **PowerShell**（`validate-udonsharp.ps1`）の両方に対応しています。
 
+Bash版の検証には `jq` が必要です。利用できない場合は入力を変更せずに通し、
+検証済みとは扱わず `VALIDATOR-WARNING: validation skipped
+(JQ_UNAVAILABLE)` を出力します。
+
 ---
 
 ## SDKバージョン

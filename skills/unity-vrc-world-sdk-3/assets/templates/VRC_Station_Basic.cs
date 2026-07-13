@@ -176,7 +176,7 @@ public class VRC_Station_Basic : UdonSharpBehaviour
     /// Returns whether any player is currently in this station.
     /// This is a local approximation based on received events and may be
     /// briefly inconsistent for late-joining players.
-    /// Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.
+    /// Leading underscore keeps this public member available to local code while blocking legacy network dispatch.
     /// </summary>
     public bool _IsOccupied()
     {

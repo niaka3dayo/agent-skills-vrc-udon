@@ -202,6 +202,10 @@ PostToolUse hooks that auto-run when `.cs` files are edited.
 
 Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-udonsharp.ps1`).
 
+The Bash validator requires `jq`. If `jq` is unavailable, it passes the input
+through unchanged and emits `VALIDATOR-WARNING: validation skipped
+(JQ_UNAVAILABLE)`; it does not silently claim that validation succeeded.
+
 ---
 
 ## SDK Versions

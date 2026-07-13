@@ -333,7 +333,7 @@ void Start()
     SendCustomEventDelayedSeconds(nameof(_SlowUpdate), 0.5f);
 }
 
-// Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.
+// Leading underscore keeps this public member available to local code while blocking legacy network dispatch.
 public void _SlowUpdate()
 {
     // Processing every 0.5 seconds
@@ -697,7 +697,7 @@ In practice, use the **FPS tiers** at the top of this document as the pass/fail 
 ### Official World Triangle Budget (Quest)
 
 From the official Android Content Optimization documentation:
-<https://creators.vrchat.com/platforms/android/android-content-optimization/>
+<https://creators.vrchat.com/platforms/android/quest-content-optimization/>
 
 ```text
 Total world triangle budget (Quest/Android): ~250,000 triangles
@@ -710,7 +710,7 @@ Total world triangle budget (Quest/Android): ~250,000 triangles
 ### Per-Object Polygon Guidelines (Quest)
 
 These are approximate guidelines based on community practice and the official optimization guide:
-<https://creators.vrchat.com/platforms/android/android-content-optimization/>
+<https://creators.vrchat.com/platforms/android/quest-content-optimization/>
 
 | Object Category | Triangle Target | Notes |
 |---|---|---|
@@ -724,7 +724,7 @@ These are approximate guidelines based on community practice and the official op
 
 No hard SDK limit exists for draw calls. The targets below are community-derived approximate
 guidelines, not official VRChat thresholds. Verify current recommendations against the
-official documentation: <https://creators.vrchat.com/platforms/android/android-content-optimization/>
+official documentation: <https://creators.vrchat.com/platforms/android/quest-content-optimization/>
 
 > These are community-derived approximate guidelines, not official VRChat thresholds.
 

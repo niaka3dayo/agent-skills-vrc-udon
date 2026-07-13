@@ -134,7 +134,7 @@ public class VRC_Pickup_Rigidbody : UdonSharpBehaviour
     /// <summary>
     /// Forcibly drops the pickup from the local player's hand.
     /// Has no effect if this player is not currently holding the object.
-    /// Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.
+    /// Leading underscore keeps this public member available to local code while blocking legacy network dispatch.
     /// </summary>
     public void _ForceDropPickup()
     {
@@ -147,7 +147,7 @@ public class VRC_Pickup_Rigidbody : UdonSharpBehaviour
 
     /// <summary>
     /// Returns whether the local player is currently holding this pickup.
-    /// Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.
+    /// Leading underscore keeps this public member available to local code while blocking legacy network dispatch.
     /// </summary>
     public bool _IsHeld()
     {

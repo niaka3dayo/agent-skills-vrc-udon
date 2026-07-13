@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 UDON_DIR="$ROOT_DIR/skills/unity-vrc-udon-sharp"
 WORLD_DIR="$ROOT_DIR/skills/unity-vrc-world-sdk-3"
+WORLD_SKILL="$WORLD_DIR/SKILL.md"
 RULE="$UDON_DIR/rules/udonsharp-networking.md"
 CONSTRAINTS_RULE="$UDON_DIR/rules/udonsharp-constraints.md"
 NETWORKING_REF="$UDON_DIR/references/networking.md"
@@ -107,6 +108,39 @@ require_count() {
         exit 1
     fi
 }
+
+# v2.6.0 consumer migration guidance must ship with the packaged World Skill.
+for mapping in \
+    '| `ForceDropPickup` | `_ForceDropPickup` |' \
+    '| `IsHeld` | `_IsHeld` |' \
+    '| `IsOccupied` | `_IsOccupied` |' \
+    '| `StopSound` | `_StopSound` |' \
+    '| `SlowUpdate` | `_SlowUpdate` |'; do
+    require_text "$WORLD_SKILL" "$mapping"
+done
+for phrase in 'Inspector event strings' '`SendCustomEvent*` calls' \
+    'delayed events' '`nameof(...)` expressions' 'cross-behaviour calls' \
+    'Compatibility aliases are' 'legacy network exposure'; do
+    require_text "$WORLD_SKILL" "$phrase"
+done
+
+OLD_LOCAL_COMMENT='Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.'
+NEW_LOCAL_COMMENT='Leading underscore keeps this public member available to local code while blocking legacy network dispatch.'
+forbid_text "$WORLD_DIR" "$OLD_LOCAL_COMMENT"
+LOCAL_COMMENT_COUNT="$(grep -RF "$NEW_LOCAL_COMMENT" "$WORLD_DIR" | wc -l)"
+if [ "$LOCAL_COMMENT_COUNT" -ne 5 ]; then
+    echo "ERROR: expected 5 accurate local-member comments, found $LOCAL_COMMENT_COUNT" >&2
+    exit 1
+fi
+
+# Bash validator prerequisites and fail-open behavior are user-visible in every
+# packaged entrypoint, including translated READMEs.
+for path in "$UDON_DIR/SKILL.md" "$README_EN" "$README_JA" "$README_KO" \
+    "$README_ZH_CN" "$README_ZH_TW"; do
+    require_text "$path" '`jq`'
+    require_text "$path" 'VALIDATOR-WARNING'
+    require_text "$path" 'JQ_UNAVAILABLE'
+done
 
 # Current support declarations must agree on the SDK 3.10.4 upper bound.
 require_text "$CONTRIBUTING" "SDK 3.7.1 - 3.10.4"
