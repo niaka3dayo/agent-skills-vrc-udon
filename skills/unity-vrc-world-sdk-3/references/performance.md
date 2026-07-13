@@ -330,14 +330,15 @@ void Update()
 // Space out frequent processing
 void Start()
 {
-    SendCustomEventDelayedSeconds(nameof(SlowUpdate), 0.5f);
+    SendCustomEventDelayedSeconds(nameof(_SlowUpdate), 0.5f);
 }
 
-public void SlowUpdate()
+// Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.
+public void _SlowUpdate()
 {
     // Processing every 0.5 seconds
     DoHeavyCalculation();
-    SendCustomEventDelayedSeconds(nameof(SlowUpdate), 0.5f);
+    SendCustomEventDelayedSeconds(nameof(_SlowUpdate), 0.5f);
 }
 ```
 

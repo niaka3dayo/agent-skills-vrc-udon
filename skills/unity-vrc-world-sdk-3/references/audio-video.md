@@ -170,7 +170,8 @@ public class AudioController : UdonSharpBehaviour
         audioSource.volume = Mathf.Clamp01(volume);
     }
 
-    public void StopSound()
+    // Leading underscore keeps this public custom event callable locally while blocking legacy network dispatch.
+    public void _StopSound()
     {
         audioSource.Stop();
     }

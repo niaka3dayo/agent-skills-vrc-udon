@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 UDON_DIR="$ROOT_DIR/skills/unity-vrc-udon-sharp"
+WORLD_DIR="$ROOT_DIR/skills/unity-vrc-world-sdk-3"
 RULE="$UDON_DIR/rules/udonsharp-networking.md"
 CONSTRAINTS_RULE="$UDON_DIR/rules/udonsharp-constraints.md"
 NETWORKING_REF="$UDON_DIR/references/networking.md"
@@ -193,6 +194,7 @@ forbid_regex "$UNDO_TEMPLATE" 'caller\.isMaster'
 # Package-wide public method exposure classifications are structurally audited.
 bash "$PUBLIC_METHOD_AUDIT_TEST"
 python3 "$PUBLIC_METHOD_AUDIT" "$UDON_DIR"
+python3 "$PUBLIC_METHOD_AUDIT" "$WORLD_DIR"
 forbid_text "$UDON_DIR" '// NETWORK-EXPOSURE: LEGACY'
 
 # Security-sensitive examples use attributed underscore entries and explicit policies.
