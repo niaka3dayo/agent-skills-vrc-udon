@@ -43,8 +43,225 @@ if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
 
 $FileContent = Get-Content -LiteralPath $FilePath -Raw
 
-# Check if this is an UdonSharp file
-if ($FileContent -notmatch 'using UdonSharp|UdonSharpBehaviour') {
+function Get-CSharpLexicallyMaskedSource([string]$Source) {
+    $Code = 0
+    $LineComment = 1
+    $BlockComment = 2
+    $RegularString = 3
+    $VerbatimString = 4
+    $Character = 5
+    $RawString = 6
+    $State = $Code
+    $RawDelimiterLength = 0
+    $Builder = [System.Text.StringBuilder]::new($Source.Length)
+    $Index = 0
+
+    while ($Index -lt $Source.Length) {
+        $Current = $Source[$Index]
+        $HasNext = $Index + 1 -lt $Source.Length
+        $Next = if ($HasNext) { $Source[$Index + 1] } else { [char]0 }
+
+        if ($Current -eq "`r" -or $Current -eq "`n") {
+            [void]$Builder.Append($Current)
+            if ($State -eq $LineComment -or $State -eq $RegularString -or $State -eq $Character) {
+                $State = $Code
+            }
+            $Index++
+            continue
+        }
+
+        if ($State -eq $LineComment) {
+            [void]$Builder.Append(' ')
+            $Index++
+            continue
+        }
+
+        if ($State -eq $BlockComment) {
+            if ($HasNext -and $Current -eq '*' -and $Next -eq '/') {
+                [void]$Builder.Append(' ', 2)
+                $State = $Code
+                $Index += 2
+            } else {
+                [void]$Builder.Append(' ')
+                $Index++
+            }
+            continue
+        }
+
+        if ($State -eq $RegularString -or $State -eq $Character) {
+            $ClosingCharacter = if ($State -eq $RegularString) { '"' } else { "'" }
+            if ($Current -eq '\') {
+                [void]$Builder.Append(' ')
+                $Index++
+                if ($Index -lt $Source.Length -and $Source[$Index] -ne "`r" -and $Source[$Index] -ne "`n") {
+                    [void]$Builder.Append(' ')
+                    $Index++
+                }
+            } else {
+                [void]$Builder.Append(' ')
+                if ($Current -eq $ClosingCharacter) {
+                    $State = $Code
+                }
+                $Index++
+            }
+            continue
+        }
+
+        if ($State -eq $VerbatimString) {
+            if ($HasNext -and $Current -eq '"' -and $Next -eq '"') {
+                [void]$Builder.Append(' ', 2)
+                $Index += 2
+            } else {
+                [void]$Builder.Append(' ')
+                if ($Current -eq '"') {
+                    $State = $Code
+                }
+                $Index++
+            }
+            continue
+        }
+
+        if ($State -eq $RawString) {
+            $QuoteCount = 0
+            while ($Index + $QuoteCount -lt $Source.Length -and $Source[$Index + $QuoteCount] -eq '"') {
+                $QuoteCount++
+            }
+            if ($QuoteCount -ge $RawDelimiterLength) {
+                [void]$Builder.Append(' ', $RawDelimiterLength)
+                $Index += $RawDelimiterLength
+                $State = $Code
+            } else {
+                [void]$Builder.Append(' ')
+                $Index++
+            }
+            continue
+        }
+
+        if ($HasNext -and $Current -eq '/' -and $Next -eq '/') {
+            [void]$Builder.Append(' ', 2)
+            $State = $LineComment
+            $Index += 2
+            continue
+        }
+        if ($HasNext -and $Current -eq '/' -and $Next -eq '*') {
+            [void]$Builder.Append(' ', 2)
+            $State = $BlockComment
+            $Index += 2
+            continue
+        }
+
+        if ($Current -eq '$') {
+            $DollarCount = 0
+            while ($Index + $DollarCount -lt $Source.Length -and $Source[$Index + $DollarCount] -eq '$') {
+                $DollarCount++
+            }
+            $AfterDollars = $Index + $DollarCount
+            $QuoteCount = 0
+            while ($AfterDollars + $QuoteCount -lt $Source.Length -and $Source[$AfterDollars + $QuoteCount] -eq '"') {
+                $QuoteCount++
+            }
+            if ($QuoteCount -ge 3) {
+                [void]$Builder.Append(' ', $DollarCount + $QuoteCount)
+                $RawDelimiterLength = $QuoteCount
+                $State = $RawString
+                $Index += $DollarCount + $QuoteCount
+                continue
+            }
+            if ($DollarCount -eq 1 -and $AfterDollars + 1 -lt $Source.Length -and
+                $Source[$AfterDollars] -eq '@' -and $Source[$AfterDollars + 1] -eq '"') {
+                [void]$Builder.Append(' ', 3)
+                $State = $VerbatimString
+                $Index += 3
+                continue
+            }
+            if ($DollarCount -eq 1 -and $AfterDollars -lt $Source.Length -and $Source[$AfterDollars] -eq '"') {
+                [void]$Builder.Append(' ', 2)
+                $State = $RegularString
+                $Index += 2
+                continue
+            }
+        }
+
+        if ($Current -eq '@' -and $Index + 2 -lt $Source.Length -and
+            $Source[$Index + 1] -eq '$' -and $Source[$Index + 2] -eq '"') {
+            [void]$Builder.Append(' ', 3)
+            $State = $VerbatimString
+            $Index += 3
+            continue
+        }
+        if ($Current -eq '@' -and $HasNext -and $Next -eq '"') {
+            [void]$Builder.Append(' ', 2)
+            $State = $VerbatimString
+            $Index += 2
+            continue
+        }
+
+        if ($Current -eq '"') {
+            $QuoteCount = 0
+            while ($Index + $QuoteCount -lt $Source.Length -and $Source[$Index + $QuoteCount] -eq '"') {
+                $QuoteCount++
+            }
+            if ($QuoteCount -ge 3) {
+                [void]$Builder.Append(' ', $QuoteCount)
+                $RawDelimiterLength = $QuoteCount
+                $State = $RawString
+                $Index += $QuoteCount
+            } else {
+                [void]$Builder.Append(' ')
+                $State = $RegularString
+                $Index++
+            }
+            continue
+        }
+
+        if ($Current -eq "'") {
+            [void]$Builder.Append(' ')
+            $State = $Character
+            $Index++
+            continue
+        }
+
+        [void]$Builder.Append($Current)
+        $Index++
+    }
+
+    $Masked = $Builder.ToString()
+    if ($Masked.Length -ne $Source.Length) {
+        throw "lexical mask length mismatch"
+    }
+    return $Masked
+}
+
+function Test-UdonSharpBehaviourSource([string]$MaskedSource) {
+    $BaseNames = New-Object System.Collections.Generic.List[string]
+    $BaseNames.Add('UdonSharpBehaviour')
+    $BaseNames.Add('UdonSharp\.UdonSharpBehaviour')
+    $BaseNames.Add('global::UdonSharp\.UdonSharpBehaviour')
+
+    $AliasPattern = 'using\s+(?<Alias>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?<Target>(?:global::)?UdonSharp(?:\.UdonSharpBehaviour)?)\s*;'
+    foreach ($AliasMatch in [regex]::Matches($MaskedSource, $AliasPattern)) {
+        $AliasName = [regex]::Escape($AliasMatch.Groups['Alias'].Value)
+        if ($AliasMatch.Groups['Target'].Value.EndsWith('UdonSharpBehaviour')) {
+            $BaseNames.Add($AliasName)
+        } else {
+            $BaseNames.Add($AliasName + '\.UdonSharpBehaviour')
+        }
+    }
+
+    foreach ($BaseName in $BaseNames) {
+        $ClassPattern = '(?s)\bclass\s+[A-Za-z_][A-Za-z0-9_]*\s*:[^{};]*[,:\s]' + $BaseName + '(?=$|[,<{\s])'
+        if ($MaskedSource -match $ClassPattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
+$MaskedSource = Get-CSharpLexicallyMaskedSource $FileContent
+
+# Check if this is structurally an UdonSharp behaviour. External project base
+# types are intentionally not resolved by this per-file hook.
+if (-not (Test-UdonSharpBehaviourSource $MaskedSource)) {
     Write-Output $Input
     exit 0
 }
@@ -92,14 +309,33 @@ if ($FileContent -match '\.AddListener\s*\(') {
     $Warnings += "[UdonSharp] BLOCKED: AddListener() not supported. Use Inspector OnClick -> SendCustomEvent instead."
 }
 
+# Lambda expressions. Keep this on RawSource so interpolation expressions are
+# not hidden by the structural/sync lexical mask.
+if ($FileContent -match '(?m)\)[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)') {
+    $Warnings += "[UdonSharp] WARNING: Lambda expression detected. Use named methods instead."
+}
+
+# Attribute-aware sync inventory from MaskedSource.
+$SyncedCount = 0
+$HasNoVariableSync = $false
+$AttributeGroupPattern = '(?s)\[(?:[^\[\]]|\[\])*\]'
+foreach ($AttributeGroupMatch in [regex]::Matches($MaskedSource, $AttributeGroupPattern)) {
+    $AttributeContent = $AttributeGroupMatch.Value.Substring(1, $AttributeGroupMatch.Value.Length - 2)
+    $CompactAttributeContent = $AttributeContent -replace '[ \t\r\n]', ''
+    $SyncedCount += ([regex]::Matches($CompactAttributeContent, '(?:^|,|:)UdonSynced(?:Attribute)?(?:$|,|\()')).Count
+    if ($CompactAttributeContent -match '(?:^|,)UdonBehaviourSyncMode(?:Attribute)?\(BehaviourSyncMode\.NoVariableSync\)(?:$|,)') {
+        $HasNoVariableSync = $true
+    }
+}
+
 # Check for potential networking issues
-if ($FileContent -match '\[UdonSynced\]') {
+if ($SyncedCount -gt 0) {
     # Check if RequestSerialization is called
-    if ($FileContent -notmatch 'RequestSerialization\s*\(') {
+    if ($MaskedSource -notmatch 'RequestSerialization\s*\(') {
         $Warnings += "[UdonSharp] WARNING: [UdonSynced] found but no RequestSerialization(). Required for Manual sync mode."
     }
     # Check if SetOwner is called
-    if ($FileContent -notmatch 'Networking\.SetOwner\s*\(|SetOwner\s*\(') {
+    if ($MaskedSource -notmatch 'Networking\.SetOwner\s*\(|SetOwner\s*\(') {
         $Warnings += "[UdonSharp] WARNING: [UdonSynced] found but no Networking.SetOwner(). Ownership required to modify synced variables."
     }
 }
@@ -127,76 +363,32 @@ if ($FileContent -match 'using\s+System\.(Net|IO)\b|System\.Net\.|System\.IO\.')
 }
 
 # Sync bloat: too many synced variables (>5)
-$SyncedCount = ([regex]::Matches($FileContent, '\[UdonSynced\]')).Count
 if ($SyncedCount -gt 5) {
     $Warnings += "[UdonSharp] SYNC-BLOAT: $SyncedCount synced variables detected (target: <5 per behaviour). Consider minimizing synced data. See references/sync-examples.md or rules/udonsharp-sync-selection.md."
 }
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
-function Get-BlockCommentMaskedLine([string]$Line, [ref]$InBlockComment) {
-    if (-not $InBlockComment.Value -and
-        $Line.IndexOf('//', [System.StringComparison]::Ordinal) -lt 0 -and
-        $Line.IndexOf('/*', [System.StringComparison]::Ordinal) -lt 0) {
-        return $Line
-    }
-
-    $Masked = [System.Text.StringBuilder]::new($Line.Length)
-    $Index = 0
-
-    while ($Index -lt $Line.Length) {
-        $HasNextCharacter = $Index + 1 -lt $Line.Length
-        if ($InBlockComment.Value) {
-            if ($HasNextCharacter -and $Line[$Index] -eq '*' -and $Line[$Index + 1] -eq '/') {
-                [void]$Masked.Append('  ')
-                $InBlockComment.Value = $false
-                $Index += 2
-            } else {
-                [void]$Masked.Append(' ')
-                $Index++
-            }
-        } elseif ($HasNextCharacter -and $Line[$Index] -eq '/' -and $Line[$Index + 1] -eq '/') {
-            [void]$Masked.Append($Line.Substring($Index))
-            break
-        } elseif ($HasNextCharacter -and $Line[$Index] -eq '/' -and $Line[$Index + 1] -eq '*') {
-            [void]$Masked.Append('  ')
-            $InBlockComment.Value = $true
-            $Index += 2
-        } else {
-            [void]$Masked.Append($Line[$Index])
-            $Index++
-        }
-    }
-
-    return $Masked.ToString()
-}
-
 $SyncedArrayFieldPrefixPattern = '^[ \t]*(?:(?:public|private|protected|internal|static|readonly)[ \t]+)*(?:int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(?:=|,|;)'
 $LeadingAttributeGroupsPattern = '^[ \t]*(?<AttributeGroups>(?:\[(?:[^\[\]\r\n]|\[\])*\][ \t]*)+)(?<Remainder>.*)$'
 $AttributeGroupPattern = '\[((?:[^\[\]\r\n]|\[\])*)\]'
 $UdonSyncedInAttributeGroupPattern = '(?:^|,)[ \t]*UdonSynced(?:Attribute)?[ \t]*(?:$|,|\()'
 $PreviousLineHasAttribute = $false
-$InBlockComment = $false
 $FoundSyncedArrayField = $false
-$Reader = [System.IO.StringReader]::new($FileContent)
+$Reader = [System.IO.StringReader]::new($MaskedSource)
 
 try {
     while ($null -ne ($Line = $Reader.ReadLine())) {
-        if (-not $InBlockComment -and
-            -not $PreviousLineHasAttribute -and
-            $Line.IndexOf('/*', [System.StringComparison]::Ordinal) -lt 0 -and
-            $Line -notmatch '^[ \t]*\[') {
+        if (-not $PreviousLineHasAttribute -and $Line -notmatch '^[ \t]*\[') {
             continue
         }
 
-        $MaskedLine = Get-BlockCommentMaskedLine $Line ([ref]$InBlockComment)
-
-        if ($PreviousLineHasAttribute -and $MaskedLine -match $SyncedArrayFieldPrefixPattern) {
+        if ($PreviousLineHasAttribute -and $Line -match $SyncedArrayFieldPrefixPattern) {
             $FoundSyncedArrayField = $true
             break
         }
 
         $PreviousLineHasAttribute = $false
-        $AttributeLineMatch = [regex]::Match($MaskedLine, $LeadingAttributeGroupsPattern)
+        $AttributeLineMatch = [regex]::Match($Line, $LeadingAttributeGroupsPattern)
         if ($AttributeLineMatch.Success) {
             $HasUdonSyncedAttribute = $false
             foreach ($AttributeGroupMatch in [regex]::Matches($AttributeLineMatch.Groups['AttributeGroups'].Value, $AttributeGroupPattern)) {
@@ -211,7 +403,7 @@ try {
                 $FoundSyncedArrayField = $true
                 break
             }
-            if ($HasUdonSyncedAttribute -and $Declaration -match '^(?://.*)?$') {
+            if ($HasUdonSyncedAttribute -and $Declaration -match '^[ \t]*$') {
                 $PreviousLineHasAttribute = $true
             }
         }
@@ -225,7 +417,7 @@ if ($FoundSyncedArrayField) {
 }
 
 # NoVariableSync + [UdonSynced] conflict
-if ($FileContent -match 'NoVariableSync' -and $FileContent -match '\[UdonSynced\]') {
+if ($HasNoVariableSync -and $SyncedCount -gt 0) {
     $Warnings += "[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode."
 }
 

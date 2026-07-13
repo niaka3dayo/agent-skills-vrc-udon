@@ -12,6 +12,9 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOK="$REPO_ROOT/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh"
+SHARED_FIXTURES="$REPO_ROOT/tests/hooks/fixtures/validate-udonsharp"
+SHARED_RULES="$SHARED_FIXTURES/rules.tsv"
+SHARED_CASES="$SHARED_FIXTURES/cases.tsv"
 TMPROOT=$(mktemp -d)
 trap 'rm -rf "$TMPROOT"' EXIT
 
@@ -58,6 +61,171 @@ run_hook() {
     local hook_input
     hook_input="{\"tool_input\":{\"file_path\":\"$file_path\"}}"
     printf '%s' "$hook_input" | "$HOOK" 2>"$stderr_path" >/dev/null
+}
+
+run_shared_parity_matrix() {
+    local expected_inventory='GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;REF_PARAMETER;OUT_PARAMETER;MULTIDIM_ARRAY;METHOD_OVERLOAD'
+    local rule_ids=()
+    local rule_substrings=()
+    local seen_rule_ids=';'
+    local seen_rule_substrings=';'
+    local id substring extra
+
+    while IFS=$'\t' read -r id substring extra || [ -n "${id:-}" ]; do
+        if [ -z "$id" ] || [ -z "$substring" ] || [ -n "${extra:-}" ]; then
+            echo "FAIL [shared rules] malformed rules.tsv row: ${id:-}<TAB>${substring:-}"
+            FAIL=$((FAIL + 1))
+            return
+        fi
+        if [[ ! "$id" =~ ^[A-Z][A-Z0-9_]*$ ]] || [[ "$seen_rule_ids" == *";$id;"* ]]; then
+            echo "FAIL [shared rules] unknown or duplicate rule ID: $id"
+            FAIL=$((FAIL + 1))
+            return
+        fi
+        if [[ "$seen_rule_substrings" == *";$substring;"* ]]; then
+            echo "FAIL [shared rules] duplicate warning substring: $substring"
+            FAIL=$((FAIL + 1))
+            return
+        fi
+        rule_ids+=("$id")
+        rule_substrings+=("$substring")
+        seen_rule_ids+="$id;"
+        seen_rule_substrings+="$substring;"
+    done < "$SHARED_RULES"
+
+    local actual_inventory
+    actual_inventory="$(IFS=';'; echo "${rule_ids[*]}")"
+    if [ "$actual_inventory" != "$expected_inventory" ]; then
+        echo "FAIL [shared rules] 22-rule inventory mismatch"
+        echo "  expected: $expected_inventory"
+        echo "  actual:   $actual_inventory"
+        FAIL=$((FAIL + 1))
+        return
+    fi
+    echo "PASS [shared rules] 22-rule inventory is exact"
+    PASS=$((PASS + 1))
+
+    local seen_case_ids=';'
+    local expected_rule_coverage=';'
+    local case_id fixture newline expected_ids case_extra
+    local case_count=0
+    while IFS=$'\t' read -r case_id fixture newline expected_ids case_extra || [ -n "${case_id:-}" ]; do
+        case_count=$((case_count + 1))
+        if [ -z "$case_id" ] || [ -z "$fixture" ] || [ -z "$newline" ] || [ -z "$expected_ids" ] || [ -n "${case_extra:-}" ]; then
+            echo "FAIL [shared case $case_count] malformed cases.tsv row"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        if [[ "$seen_case_ids" == *";$case_id;"* ]]; then
+            echo "FAIL [shared case $case_id] duplicate case ID"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        seen_case_ids+="$case_id;"
+        if [ "$newline" != "LF" ] && [ "$newline" != "CRLF" ]; then
+            echo "FAIL [shared case $case_id] unknown newline mode: $newline"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        if [ ! -f "$SHARED_FIXTURES/$fixture" ]; then
+            echo "FAIL [shared case $case_id] missing fixture: $fixture"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+
+        local expected=''
+        local expected_seen=';'
+        if [ "$expected_ids" != "-" ]; then
+            local expected_parts=()
+            IFS=';' read -r -a expected_parts <<< "$expected_ids"
+            local expected_id
+            for expected_id in "${expected_parts[@]}"; do
+                if [[ "$seen_rule_ids" != *";$expected_id;"* ]]; then
+                    echo "FAIL [shared case $case_id] unknown expected rule ID: $expected_id"
+                    FAIL=$((FAIL + 1))
+                    expected='__INVALID__'
+                    break
+                fi
+                if [[ "$expected_seen" == *";$expected_id;"* ]]; then
+                    echo "FAIL [shared case $case_id] duplicate expected rule ID: $expected_id"
+                    FAIL=$((FAIL + 1))
+                    expected='__INVALID__'
+                    break
+                fi
+                expected_seen+="$expected_id;"
+                expected_rule_coverage+="$expected_id;"
+            done
+            if [ "$expected" = '__INVALID__' ]; then
+                continue
+            fi
+            local ordered_expected=()
+            for id in "${rule_ids[@]}"; do
+                if [[ "$expected_seen" == *";$id;"* ]]; then
+                    ordered_expected+=("$id")
+                fi
+            done
+            expected="$(IFS=';'; echo "${ordered_expected[*]}")"
+            if [ "$expected" != "$expected_ids" ]; then
+                echo "FAIL [shared case $case_id] expected IDs are not in rules.tsv order"
+                FAIL=$((FAIL + 1))
+                continue
+            fi
+        fi
+
+        local materialized="$TMPROOT/shared-$case_id.cs"
+        if [ "$newline" = "CRLF" ]; then
+            awk '{ sub(/\r$/, ""); printf "%s\r\n", $0 }' "$SHARED_FIXTURES/$fixture" > "$materialized"
+        else
+            cp "$SHARED_FIXTURES/$fixture" "$materialized"
+        fi
+
+        local stderr_path="$TMPROOT/shared-$case_id.err"
+        run_hook "$materialized" "$stderr_path"
+        if grep -Fq 'validator internal error' "$stderr_path"; then
+            echo "FAIL [shared case $case_id] lexical mask invariant failed"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        local actual_ids=()
+        local mapped_warning_count=0
+        local index count
+        for ((index = 0; index < ${#rule_ids[@]}; index++)); do
+            count="$( (grep -Fo -- "${rule_substrings[$index]}" "$stderr_path" || true) | wc -l | tr -d '[:space:]')"
+            if [ "$count" -gt 1 ]; then
+                echo "FAIL [shared case $case_id] duplicate actual rule ID: ${rule_ids[$index]}"
+                FAIL=$((FAIL + 1))
+            elif [ "$count" -eq 1 ]; then
+                actual_ids+=("${rule_ids[$index]}")
+                mapped_warning_count=$((mapped_warning_count + 1))
+            fi
+        done
+        local warning_count
+        warning_count="$( (grep -Eo '\[UdonSharp\] (BLOCKED|WARNING|SYNC-BLOAT|ERROR):' "$stderr_path" || true) | wc -l | tr -d '[:space:]')"
+        if [ "$warning_count" -ne "$mapped_warning_count" ]; then
+            echo "FAIL [shared case $case_id] unknown warning detected"
+            sed -n '1,120p' "$stderr_path"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        local actual
+        actual="$(IFS=';'; echo "${actual_ids[*]}")"
+        if [ "$actual" = "$expected" ]; then
+            echo "PASS [shared case $case_id] rules=${actual:--}"
+            PASS=$((PASS + 1))
+        else
+            echo "FAIL [shared case $case_id] rules mismatch"
+            echo "  expected: ${expected:--}"
+            echo "  actual:   ${actual:--}"
+            FAIL=$((FAIL + 1))
+        fi
+    done < "$SHARED_CASES"
+
+    for id in "${rule_ids[@]}"; do
+        if [[ "$expected_rule_coverage" != *";$id;"* ]]; then
+            echo "FAIL [shared rules] rule ID missing from expected cases: $id"
+            FAIL=$((FAIL + 1))
+        fi
+    done
 }
 
 # ------------------------------------------------------------
@@ -351,6 +519,11 @@ CSEOF
 run_hook "$CASE_V_FILE" "$TMPROOT/case_V.err"
 V_STDERR=$(cat "$TMPROOT/case_V.err")
 assert_contains "V: array type inside combined attribute group warns" "$V_STDERR" "$SYNC_BLOAT_WARNING"
+
+# ------------------------------------------------------------
+# Shared Bash/PowerShell rule inventory and lexical-mask matrix
+# ------------------------------------------------------------
+run_shared_parity_matrix
 
 echo ""
 echo "Summary: $PASS passed, $FAIL failed"

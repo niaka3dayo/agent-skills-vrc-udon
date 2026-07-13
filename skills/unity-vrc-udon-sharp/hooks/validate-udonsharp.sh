@@ -37,8 +37,247 @@ if [[ ! -f "$file_path" ]]; then
     exit 0
 fi
 
-# Check if this is an UdonSharp file
-if ! grep -q "using UdonSharp\|UdonSharpBehaviour" "$file_path" 2>/dev/null; then
+# Mask comments and C# literals for structural and sync-only predicates. The
+# output preserves every byte and physical line break; general rules continue
+# to inspect the raw source so interpolation expressions remain visible.
+masked_file=$(mktemp)
+trap 'rm -f "$masked_file"' EXIT
+ends_with_lf=0
+if [[ -s "$file_path" ]] && [[ "$(tail -c 1 "$file_path" | wc -l | tr -d '[:space:]')" -eq 1 ]]; then
+    ends_with_lf=1
+fi
+
+LC_ALL=C awk -v ends_with_lf="$ends_with_lf" '
+    BEGIN {
+        CODE = 0
+        LINE_COMMENT = 1
+        BLOCK_COMMENT = 2
+        REGULAR_STRING = 3
+        VERBATIM_STRING = 4
+        CHARACTER = 5
+        RAW_STRING = 6
+        state = CODE
+        quote_character = sprintf("%c", 39)
+        first_record = 1
+    }
+
+    function spaces(count,    result) {
+        result = ""
+        while (count-- > 0) result = result " "
+        return result
+    }
+
+    function quote_run(text, start,    count) {
+        count = 0
+        while (substr(text, start + count, 1) == "\"") count++
+        return count
+    }
+
+    {
+        if (!first_record) printf "\n"
+        first_record = 0
+        line = $0
+        position = 1
+
+        while (position <= length(line)) {
+            character = substr(line, position, 1)
+            next_character = substr(line, position + 1, 1)
+
+            if (character == "\r") {
+                printf "\r"
+                if (state == LINE_COMMENT || state == REGULAR_STRING || state == CHARACTER) state = CODE
+                position++
+                continue
+            }
+
+            if (state == LINE_COMMENT) {
+                printf " "
+                position++
+                continue
+            }
+
+            if (state == BLOCK_COMMENT) {
+                if (character == "*" && next_character == "/") {
+                    printf "  "
+                    state = CODE
+                    position += 2
+                } else {
+                    printf " "
+                    position++
+                }
+                continue
+            }
+
+            if (state == REGULAR_STRING || state == CHARACTER) {
+                closing_character = state == REGULAR_STRING ? "\"" : quote_character
+                if (character == "\\") {
+                    printf " "
+                    position++
+                    if (position <= length(line) && substr(line, position, 1) != "\r") {
+                        printf " "
+                        position++
+                    }
+                } else {
+                    printf " "
+                    if (character == closing_character) state = CODE
+                    position++
+                }
+                continue
+            }
+
+            if (state == VERBATIM_STRING) {
+                if (character == "\"" && next_character == "\"") {
+                    printf "  "
+                    position += 2
+                } else {
+                    printf " "
+                    if (character == "\"") state = CODE
+                    position++
+                }
+                continue
+            }
+
+            if (state == RAW_STRING) {
+                if (character == "\"" && quote_run(line, position) >= raw_delimiter_length) {
+                    printf "%s", spaces(raw_delimiter_length)
+                    position += raw_delimiter_length
+                    state = CODE
+                } else {
+                    printf " "
+                    position++
+                }
+                continue
+            }
+
+            if (character == "/" && next_character == "/") {
+                printf "  "
+                state = LINE_COMMENT
+                position += 2
+                continue
+            }
+            if (character == "/" && next_character == "*") {
+                printf "  "
+                state = BLOCK_COMMENT
+                position += 2
+                continue
+            }
+
+            if (character == "$") {
+                dollar_count = 0
+                while (substr(line, position + dollar_count, 1) == "$") dollar_count++
+                after_dollars = position + dollar_count
+                delimiter_length = quote_run(line, after_dollars)
+                if (delimiter_length >= 3) {
+                    printf "%s", spaces(dollar_count + delimiter_length)
+                    raw_delimiter_length = delimiter_length
+                    state = RAW_STRING
+                    position += dollar_count + delimiter_length
+                    continue
+                }
+                if (dollar_count == 1 && substr(line, after_dollars, 2) == "@\"") {
+                    printf "   "
+                    state = VERBATIM_STRING
+                    position += 3
+                    continue
+                }
+                if (dollar_count == 1 && substr(line, after_dollars, 1) == "\"") {
+                    printf "  "
+                    state = REGULAR_STRING
+                    position += 2
+                    continue
+                }
+            }
+
+            if (character == "@" && substr(line, position + 1, 2) == "$\"") {
+                printf "   "
+                state = VERBATIM_STRING
+                position += 3
+                continue
+            }
+            if (character == "@" && next_character == "\"") {
+                printf "  "
+                state = VERBATIM_STRING
+                position += 2
+                continue
+            }
+
+            if (character == "\"") {
+                delimiter_length = quote_run(line, position)
+                if (delimiter_length >= 3) {
+                    printf "%s", spaces(delimiter_length)
+                    raw_delimiter_length = delimiter_length
+                    state = RAW_STRING
+                    position += delimiter_length
+                } else {
+                    printf " "
+                    state = REGULAR_STRING
+                    position++
+                }
+                continue
+            }
+
+            if (character == quote_character) {
+                printf " "
+                state = CHARACTER
+                position++
+                continue
+            }
+
+            printf "%s", character
+            position++
+        }
+
+        if (state == LINE_COMMENT || state == REGULAR_STRING || state == CHARACTER) state = CODE
+    }
+
+    END {
+        if (ends_with_lf) printf "\n"
+    }
+' "$file_path" > "$masked_file"
+
+if [[ "$(wc -c < "$file_path" | tr -d '[:space:]')" -ne "$(wc -c < "$masked_file" | tr -d '[:space:]')" ]]; then
+    echo "[UdonSharp] validator internal error: lexical mask length mismatch" >&2
+    echo "$input"
+    exit 0
+fi
+
+# Require a concrete UdonSharpBehaviour base, including qualified and using-
+# alias forms. External project types are intentionally not resolved here.
+if ! awk '
+    function has_base(source, base,    pattern) {
+        pattern = "class[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*:[^{;]*[,:[:space:]]" base "([,<{[:space:]]|$)"
+        return source ~ pattern
+    }
+
+    {
+        source = source (NR == 1 ? "" : " ") $0
+    }
+
+    END {
+        if (has_base(source, "UdonSharpBehaviour") ||
+            has_base(source, "UdonSharp\\.UdonSharpBehaviour") ||
+            has_base(source, "global::UdonSharp\\.UdonSharpBehaviour")) exit 0
+
+        remainder = source
+        alias_pattern = "using[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(global::)?UdonSharp(\\.UdonSharpBehaviour)?[[:space:]]*;"
+        while (match(remainder, alias_pattern)) {
+            declaration = substr(remainder, RSTART, RLENGTH)
+            sub(/^using[[:space:]]+/, "", declaration)
+            split(declaration, parts, "=")
+            alias = parts[1]
+            target = parts[2]
+            gsub(/[[:space:]]/, "", alias)
+            gsub(/[[:space:];]/, "", target)
+            if (target ~ /UdonSharpBehaviour$/) {
+                if (has_base(source, alias)) exit 0
+            } else if (has_base(source, alias "\\.UdonSharpBehaviour")) {
+                exit 0
+            }
+            remainder = substr(remainder, RSTART + RLENGTH)
+        }
+        exit 1
+    }
+' "$masked_file"; then
     echo "$input"
     exit 0
 fi
@@ -87,19 +326,53 @@ if grep -qE "\.AddListener\s*\(" "$file_path"; then
 fi
 
 # Lambda expressions
-if grep -qE "=>\s*\{|=>\s*[^;{]+;" "$file_path"; then
-    # Exclude property getters/setters (get => / set =>)
-    if grep -qE "\)\s*=>" "$file_path"; then
-        warnings+=("[UdonSharp] WARNING: Lambda expression detected. Use named methods instead.")
-    fi
+if grep -qE '\)[ \t]*=>[ \t]*(\{|[^;{]+;)' "$file_path"; then
+    warnings+=("[UdonSharp] WARNING: Lambda expression detected. Use named methods instead.")
 fi
 
+# Attribute-aware sync inventory from MaskedSource. Comments and literals do
+# not contribute attributes, counts, modes, or call-presence predicates.
+sync_stats=$(awk '
+    function analyze_attribute(content,    compact) {
+        compact = content
+        gsub(/[ \t\r\n]/, "", compact)
+        if (compact ~ /(^|,|:)UdonSynced(Attribute)?($|,|\()/) synced_count++
+        if (compact ~ /(^|,)UdonBehaviourSyncMode(Attribute)?\(BehaviourSyncMode\.NoVariableSync\)($|,)/) has_no_variable_sync = 1
+    }
+
+    {
+        line = $0 "\n"
+        for (position = 1; position <= length(line); position++) {
+            character = substr(line, position, 1)
+            pair = substr(line, position, 2)
+            if (!in_attribute) {
+                if (character == "[") {
+                    in_attribute = 1
+                    attribute_content = ""
+                }
+            } else if (pair == "[]") {
+                attribute_content = attribute_content pair
+                position++
+            } else if (character == "]") {
+                analyze_attribute(attribute_content)
+                in_attribute = 0
+                attribute_content = ""
+            } else {
+                attribute_content = attribute_content character
+            }
+        }
+    }
+
+    END { printf "%d|%d\n", synced_count, has_no_variable_sync }
+' "$masked_file")
+IFS='|' read -r synced_count has_no_variable_sync <<< "$sync_stats"
+
 # Networking issues
-if grep -qE "\[UdonSynced\]" "$file_path"; then
-    if ! grep -qE "RequestSerialization\s*\(" "$file_path"; then
+if [[ "$synced_count" -gt 0 ]]; then
+    if ! grep -qE "RequestSerialization\s*\(" "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no RequestSerialization(). Required for Manual sync mode.")
     fi
-    if ! grep -qE "Networking\.SetOwner\s*\(|SetOwner\s*\(" "$file_path"; then
+    if ! grep -qE "Networking\.SetOwner\s*\(|SetOwner\s*\(" "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no Networking.SetOwner(). Ownership required to modify synced variables.")
     fi
 fi
@@ -127,41 +400,12 @@ if grep -qE "using\s+System\.(Net|IO)\b|System\.Net\.|System\.IO\." "$file_path"
 fi
 
 # Sync bloat: too many synced variables (>5)
-synced_count=$(grep -c '\[UdonSynced\]' "$file_path" 2>/dev/null) || synced_count=0
 if [[ "$synced_count" -gt 5 ]]; then
     warnings+=("[UdonSharp] SYNC-BLOAT: $synced_count synced variables detected (target: <5 per behaviour). Consider minimizing synced data. See references/sync-examples.md or rules/udonsharp-sync-selection.md.")
 fi
 
 # Sync bloat: large synced arrays (int[]/float[] instead of byte[]/short[])
 if awk '
-    function mask_block_comments(line,    masked, position, pair) {
-        masked = ""
-        position = 1
-        while (position <= length(line)) {
-            pair = substr(line, position, 2)
-            if (in_block_comment) {
-                if (pair == "*/") {
-                    masked = masked "  "
-                    in_block_comment = 0
-                    position += 2
-                } else {
-                    masked = masked " "
-                    position++
-                }
-            } else if (pair == "//") {
-                return masked substr(line, position)
-            } else if (pair == "/*") {
-                masked = masked "  "
-                in_block_comment = 1
-                position += 2
-            } else {
-                masked = masked substr(line, position, 1)
-                position++
-            }
-        }
-        return masked
-    }
-
     function is_synced_array_field_prefix(line) {
         return line ~ /^[ \t]*((public|private|protected|internal|static|readonly)[ \t]+)*(int|float)[ \t]*\[\][ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*(=|,|;)/
     }
@@ -209,7 +453,6 @@ if awk '
     {
         line = $0
         sub(/\r$/, "", line)
-        line = mask_block_comments(line)
 
         if (previous_line_has_attribute && is_synced_array_field_prefix(line)) {
             found = 1
@@ -222,20 +465,19 @@ if awk '
                 found = 1
                 exit
             }
-            if (attribute_remainder ~ /^(\/\/.*)?$/) {
+            if (attribute_remainder ~ /^[ \t]*$/) {
                 previous_line_has_attribute = 1
             }
         }
     }
 
     END { exit found ? 0 : 1 }
-' "$file_path"; then
+' "$masked_file"; then
     warnings+=("[UdonSharp] SYNC-BLOAT: Synced int[]/float[] detected. Consider byte[] or short[] if value range allows.")
 fi
 
 # NoVariableSync + [UdonSynced] conflict
-if grep -qE 'NoVariableSync' "$file_path" && \
-    grep -qE '\[UdonSynced\]' "$file_path"; then
+if [[ "$has_no_variable_sync" -eq 1 && "$synced_count" -gt 0 ]]; then
     warnings+=("[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode.")
 fi
 
