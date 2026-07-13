@@ -27,7 +27,7 @@ public class SimplePool : UdonSharpBehaviour
         }
     }
 
-    public GameObject Get()
+    public GameObject _Get()
     {
         GameObject obj = pool[nextIndex];
         obj.SetActive(true);
@@ -45,12 +45,14 @@ public class SimplePool : UdonSharpBehaviour
 ## Master-Managed Player Object Pool
 
 A networked pattern that assigns a unique pool object to each player present in the world.
-The instance master owns all assignment logic; other clients react to synced state via `OnDeserialization`.
+The instance master is the non-security session coordinator, while manager GameObject ownership is the write authority for the synced assignment table. Other clients react to synced state via `OnDeserialization`.
+
+Instance master may coordinate capacity or a fair lottery, but master status can change and does not grant access-control authority. Use an explicit owner-controlled session role policy or platform moderation primitives for exclusions and privileged actions.
 
 **When to use this pattern:**
 - Each player needs a dedicated, persistent object (nameplate, avatar attachment, scoreboard slot, etc.)
 - Pool size is fixed and known at design time (set `_poolObjects` in the Inspector)
-- Assignment authority must be centralised to avoid conflicts
+- Slot coordination must be centralised to avoid conflicts
 
 ### Architecture
 
@@ -58,19 +60,19 @@ The instance master owns all assignment logic; other clients react to synced sta
 |---|---|---|
 | `_assignments` | `[UdonSynced] int[]` | Maps pool index → VRC player ID (0 = unassigned) |
 | `_poolObjects` | `UdonSharpBehaviour[]` | Inspector-assigned pool object references |
-| `_freeQueue` | `int[]` (local) | FIFO ring buffer of free slot indices (master only) |
+| `_freeQueue` | `int[]` (local) | FIFO ring buffer of free slot indices (coordinator/manager owner only) |
 | `_freeHead/Tail` | `int` (local) | Ring-buffer pointers for O(1) enqueue / dequeue |
 | `_previousAssignments` | `int[]` (local) | Snapshot used in `OnDeserialization` for change detection |
 
 **Template:** [assets/templates/MasterManagedPlayerPool.cs](../assets/templates/MasterManagedPlayerPool.cs)
 
-The implementation uses `Manual` sync mode. On `Start`, it allocates `_assignments[]` (synced) and the local `_freeQueue` ring buffer. Only the master initialises the free queue. `OnPlayerJoined`/`OnPlayerLeft` (master only) dequeue/enqueue slots and call `RequestSerialization`. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterClientSwitched` rebuilds the free queue and schedules a deferred `VerifyAssignments` call to close the race-condition window.
+The implementation uses `Manual` sync mode. On `Start`, it allocates only local buffers; the coordinator acquires ownership of the manager GameObject before it can create or mutate `_assignments[]`. `OnPlayerJoined`/`OnPlayerLeft` write and serialize only while the local client is both instance master and manager owner. `OnDeserialization` diffs against `_previousAssignments` and calls `_ActivateSlot`/`_DeactivateSlot` only for changed entries. `OnMasterTransferred(VRCPlayerApi)` rebuilds the free queue only after the incoming master has acquired manager ownership, then schedules a deferred `_VerifyAssignments` call to close the race-condition window.
 
 
 ### Key Design Decisions
 
-**Why master-only assignment?**
-Centralising writes to the master eliminates the need for distributed conflict resolution. Only one client ever calls `RequestSerialization`, so the synced array is always consistent.
+**Why require both coordinator status and manager ownership?**
+Master selects the current non-security coordinator, but only the manager owner can serialize its synced fields. The incoming master explicitly takes manager ownership even when the former master remains in the instance. Every assignment mutation and serialization checks both invariants, so a stale former coordinator cannot write after handoff.
 
 **Why a FIFO queue instead of a linear scan?**
 `OnPlayerJoined` runs on every join event. A ring-buffer dequeue is O(1) regardless of pool size, keeping join latency predictable.
@@ -82,7 +84,7 @@ Centralising writes to the master eliminates the need for distributed conflict r
 When a late joiner receives their first `OnDeserialization`, `_previousAssignments` is all-zeros, so every occupied slot in `_assignments` is detected as a new assignment and the corresponding pool objects are activated automatically.
 
 **Master handoff race condition**
-There is a brief window between the old master leaving and the new master being elected where join/leave events may be dropped. The 2-second deferred `VerifyAssignments` call reconciles the assignment table against the live player list to close this gap.
+Master can change even while the former master remains in the instance. The incoming master first acquires manager ownership, then performs an idempotent reconciliation and schedules the same bounded pass again after 2 seconds. Rebuilding the free queue from `_assignments` before allocation preserves live assignments, recovers free slots, fills missed joins, removes departed players, and remains safe if transfer/ownership callbacks arrive more than once. Player IDs in `_assignments` remain the assignment identity; manager ownership is only write authority.
 
 ### Usage Notes
 
@@ -136,6 +138,7 @@ public class ArrayHelpers : UdonSharpBehaviour
 ### Basic Parameterized RPC
 
 ```csharp
+using TMPro;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -145,32 +148,44 @@ using VRC.Udon.Common.Interfaces;
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class NetworkCallableBasic : UdonSharpBehaviour
 {
+    private const int MaxMessageLength = 256;
+
     public TextMeshProUGUI messageText;
 
     [NetworkCallable]
-    public void ShowMessage(string message, int senderId)
+    public void _ShowMessage(string message)
     {
-        VRCPlayerApi sender = VRCPlayerApi.GetPlayerById(senderId);
-        string senderName = sender != null ? sender.displayName : "Unknown";
-        messageText.text = $"{senderName}: {message}";
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+        if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
+
+        messageText.text = $"{caller.displayName}: {message}";
     }
 
-    public void BroadcastMessage(string message)
+    public void _BroadcastMessage(string message)
     {
         SendCustomNetworkEvent(
             NetworkEventTarget.All,
-            nameof(ShowMessage),
-            message,
-            Networking.LocalPlayer.playerId
+            nameof(_ShowMessage),
+            message
         );
     }
 }
 ```
 
+The message remains caller-controlled content, but its displayed sender identity comes from `NetworkCalling.CallingPlayer`, not a claimed network parameter. The 256-character maximum is this receiver example's policy, not a VRChat platform limit. `_BroadcastMessage` is a local-only public method, so it starts with an underscore and omits `[NetworkCallable]`; `_ShowMessage` is intentionally exposed by the attribute despite its leading underscore.
+
 ### Damage System with NetworkCallable
 
 ```csharp
+using TMPro;
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class DamageReceiver : UdonSharpBehaviour
@@ -178,52 +193,37 @@ public class DamageReceiver : UdonSharpBehaviour
     [UdonSynced] private int health = 100;
     public TextMeshProUGUI healthText;
 
-    [NetworkCallable]
-    public void TakeDamage(int damage, Vector3 hitPosition, int attackerId)
+    // Local-only entry used by the attacker's gameplay code.
+    public void _SendDamageRequest(int damage)
     {
-        // Only owner processes damage
-        if (!Networking.IsOwner(gameObject))
-        {
-            // Forward to owner
-            SendCustomNetworkEvent(
-                NetworkEventTarget.Owner,
-                nameof(TakeDamage),
-                damage, hitPosition, attackerId
-            );
-            return;
-        }
-
-        health -= damage;
-        RequestSerialization();
-
-        // Notify all players of hit effect
         SendCustomNetworkEvent(
-            NetworkEventTarget.All,
-            nameof(ShowHitEffect),
-            hitPosition
+            NetworkEventTarget.Owner,
+            nameof(_RequestDamage),
+            damage
         );
-
-        if (health <= 0)
-        {
-            SendCustomNetworkEvent(
-                NetworkEventTarget.All,
-                nameof(OnDeath)
-            );
-        }
     }
 
     [NetworkCallable]
-    public void ShowHitEffect(Vector3 position)
+    public void _RequestDamage(int damage)
     {
-        // Spawn particle at hit position
-        SpawnHitParticle(position);
-    }
+        if (!NetworkCalling.InNetworkCall) return;
 
-    [NetworkCallable]
-    public void OnDeath()
-    {
-        // Play death animation/sound
-        Debug.Log("Target destroyed!");
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Owner-only action policy for this focused sample.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
+
+        // This receiver-side check authorizes synced mutation location. It
+        // does not authenticate or authorize the caller above.
+        if (!Networking.IsOwner(gameObject)) return;
+
+        if (damage <= 0 || damage > 25) return;
+
+        health = Mathf.Max(0, health - damage);
+        RequestSerialization();
     }
 
     public override void OnDeserialization()
@@ -233,14 +233,23 @@ public class DamageReceiver : UdonSharpBehaviour
 }
 ```
 
+Sending directly to `NetworkEventTarget.Owner` preserves the original requester's `CallingPlayer`. Do not receive on one client and forward the same claimed identity as a parameter: the forwarded call would have a new caller context. This focused sample sends only bounded damage because hit position is unnecessary to its authorization lesson.
+
 ### Chat System
 
 ```csharp
+using TMPro;
+using UdonSharp;
+using UnityEngine;
 using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class ChatSystem : UdonSharpBehaviour
 {
+    private const int MaxMessageLength = 256;
+
     public TextMeshProUGUI chatLog;
     public UnityEngine.UI.InputField inputField;
 
@@ -248,14 +257,20 @@ public class ChatSystem : UdonSharpBehaviour
     private int messageIndex = 0;
 
     [NetworkCallable(10)] // Allow 10 messages/sec
-    public void ReceiveMessage(string message, string senderName)
+    public void _ReceiveMessage(string message)
     {
-        messages[messageIndex] = $"[{senderName}] {message}";
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+        if (string.IsNullOrEmpty(message) || message.Length > MaxMessageLength) return;
+
+        messages[messageIndex] = $"[{caller.displayName}] {message}";
         messageIndex = (messageIndex + 1) % messages.Length;
-        UpdateChatDisplay();
+        _UpdateChatDisplay();
     }
 
-    public void SendMessage()
+    public void _SendMessage()
     {
         string msg = inputField.text;
         if (string.IsNullOrEmpty(msg)) return;
@@ -264,13 +279,12 @@ public class ChatSystem : UdonSharpBehaviour
 
         SendCustomNetworkEvent(
             NetworkEventTarget.All,
-            nameof(ReceiveMessage),
-            msg,
-            Networking.LocalPlayer.displayName
+            nameof(_ReceiveMessage),
+            msg
         );
     }
 
-    private void UpdateChatDisplay()
+    private void _UpdateChatDisplay()
     {
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
         for (int i = 0; i < messages.Length; i++)
@@ -284,6 +298,8 @@ public class ChatSystem : UdonSharpBehaviour
     }
 }
 ```
+
+The 256-character maximum is this receiver example's policy, not a VRChat platform limit. Validate on receipt even when the sender UI also limits input.
 
 ## Persistence Patterns (SDK 3.7.4+)
 
@@ -321,21 +337,21 @@ public class SettingsManager : UdonSharpBehaviour
         initialized = true;
     }
 
-    public void OnVolumeChanged()
+    public void _OnVolumeChanged()
     {
         if (!initialized) return;
         PlayerData.SetFloat(Networking.LocalPlayer, "volume", volumeSlider.value);
         ApplyVolume(volumeSlider.value);
     }
 
-    public void OnMusicToggled()
+    public void _OnMusicToggled()
     {
         if (!initialized) return;
         PlayerData.SetBool(Networking.LocalPlayer, "musicEnabled", musicToggle.isOn);
         ApplyMusic(musicToggle.isOn);
     }
 
-    public void OnQualityChanged()
+    public void _OnQualityChanged()
     {
         if (!initialized) return;
         PlayerData.SetInt(Networking.LocalPlayer, "quality", qualityDropdown.value);
@@ -381,7 +397,7 @@ public class UnlockSystem : UdonSharpBehaviour
         Debug.Log($"Unlocked: {unlockKeys[index]}");
     }
 
-    public void ResetAllUnlocks()
+    public void _ResetAllUnlocks()
     {
         if (!dataReady) return;
 
@@ -549,9 +565,9 @@ public class GrabbableRope : UdonSharpBehaviour
         releaseSound.Play();
     }
 
-    public bool HasActiveGrab() => isGrabbed;
+    public bool _HasActiveGrab() => isGrabbed;
 
-    public VRCPlayerApi GetGrabber()
+    public VRCPlayerApi _GetGrabber()
     {
         if (grabberId < 0) return null;
         return VRCPlayerApi.GetPlayerById(grabberId);
@@ -573,7 +589,7 @@ The initial state is saved as history entry 0, and resetting returns to history 
 
 **Template:** [assets/templates/UndoableGameManager.cs](../assets/templates/UndoableGameManager.cs)
 
-Syncs `currentState` (byte[]), `stateHistory` (flat byte[] of N×stateSize), and `historyCount` as `[UdonSynced]` variables. `OwnerProcessMove` (owner-only `[NetworkCallable]`) applies the move then calls `SaveStateToHistory`. `OwnerUndo` decrements `historyCount` and restores the previous snapshot. `OwnerReset` resets to `stateHistory[0]`. `OnDeserialization` only calls `UpdateDisplay` — never saves to history.
+Syncs `currentState` (byte[]), `stateHistory` (flat byte[] of N×stateSize), and `historyCount` as `[UdonSynced]` variables. `_OwnerProcessMove` (owner-targeted `[NetworkCallable]`) derives the sender from `NetworkCalling.CallingPlayer`, applies the example session policy, then calls `_SaveStateToHistory`. `_OwnerUndo` and `_OwnerReset` apply the same sender policy. `OnDeserialization` only calls `_UpdateDisplay` — never saves to history. The owner check authorizes synced mutation on the receiver; it is separate from caller authorization.
 
 **Common mistakes:**
 
@@ -624,9 +640,9 @@ Each client computes "where is **my** room?" from the local player's `RoomAssign
 | Choice | When to use | Implementation |
 |---|---|---|
 | **Self-owned** (recommended starting point) | No capacity limits, lottery is acceptable, players simply choose or randomise their own room | Each player writes only their own `RoomAssignment.roomIndex` under an `IsOwner` guard, then calls `RequestSerialization`. Interact buttons or a local random pick drive the write. |
-| **Master-approved** | Capacity caps, fair lottery across all players, reservation systems, banlist-style exclusion | Player sends a request via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)` to a Master-owned manager. The manager validates against the synced occupancy table, then writes the assignment (or rejects). See [Master-Managed Player Object Pool](#master-managed-player-object-pool) for the master-handoff race-condition mitigation. |
+| **Master-coordinated session arbitration** | Capacity caps or a fair lottery across all players | Player sends a request via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)` to a master-coordinated manager. The manager validates capacity or lottery state, then writes the assignment or rejects it. See [Master-Managed Player Object Pool](#master-managed-player-object-pool) for master-handoff reconciliation. Do not use this tier for access control. |
 
-The self-owned tier avoids the master-handoff race entirely. Escalate to master-approved only when cross-player validation is actually required.
+The self-owned tier avoids the master-handoff race. Use master coordination only when non-security session rules require cross-player arbitration. Apply exclusions or privileged permissions through an explicit owner-controlled session role policy or platform moderation primitives.
 
 ### Key Design Decisions
 
@@ -732,11 +748,11 @@ public class LocalRoomPresenter : UdonSharpBehaviour
 }
 ```
 
-The wiring for capacity-limited or master-approved variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above — keep its `_assignments[]` synced array of player IDs and add a parallel `[UdonSynced] int[] _roomIndexBySlot` indexed by the same slot id, then route writes through a master-owned manager via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`.
+The wiring for capacity-limited, master-coordinated variants follows the [Master-Managed Player Object Pool](#master-managed-player-object-pool) pattern above. Keep its `_assignments[]` synced array of player IDs, add a parallel `[UdonSynced] int[] _roomIndexBySlot` indexed by the same slot ID, then route writes through the manager owner via `SendCustomNetworkEvent(NetworkEventTarget.Owner, ...)`. This only arbitrates session capacity or lottery state.
 
 ### See Also
 
-- [Master-Managed Player Object Pool](#master-managed-player-object-pool) — slot allocation pattern, reusable for master-approved room assignment
+- [Master-Managed Player Object Pool](#master-managed-player-object-pool) — slot allocation for non-security room capacity or lottery arbitration
 - [persistence.md PlayerObject section](persistence.md#playerobject) — PlayerObject lifecycle, auto-ownership, `OnPlayerRestored`
 - [api.md VRCPlayerApi Movement Methods](api.md#movement-methods) — `TeleportTo` overloads and per-client local teleport semantics
 
@@ -762,13 +778,13 @@ public class DebouncedSearch : UdonSharpBehaviour
     /// Call this whenever input changes. Only the callback scheduled after the
     /// last call within debounceDelay seconds will actually execute.
     /// </summary>
-    public void OnInputChanged()
+    public void _OnInputChanged()
     {
         _pendingCount++;
-        SendCustomEventDelayedSeconds(nameof(ExecuteSearch), debounceDelay);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteSearch), debounceDelay);
     }
 
-    public void ExecuteSearch()
+    public void _ExecuteSearch()
     {
         // Public only because Udon event targets must be — do not call this
         // directly; stray calls would drive the pending counter negative.
@@ -927,7 +943,7 @@ public class SyncedPlaylist : UdonSharpBehaviour
         }
     }
 
-    public string[] GetTitles() => _titles;
+    public string[] _GetTitles() => _titles;
 }
 ```
 

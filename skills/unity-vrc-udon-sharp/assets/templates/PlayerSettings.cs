@@ -99,7 +99,7 @@ public class PlayerSettings : UdonSharpBehaviour
     /// <summary>
     /// Call from Interact or other event to apply settings immediately.
     /// </summary>
-    public void ApplyToLocalPlayer()
+    public void _ApplyToLocalPlayer()
     {
         VRCPlayerApi localPlayer = Networking.LocalPlayer;
         if (localPlayer != null && localPlayer.IsValid())
@@ -111,7 +111,7 @@ public class PlayerSettings : UdonSharpBehaviour
     /// <summary>
     /// Call to reset local player to defaults.
     /// </summary>
-    public void ResetLocalPlayer()
+    public void _ResetLocalPlayer()
     {
         VRCPlayerApi localPlayer = Networking.LocalPlayer;
         if (localPlayer != null && localPlayer.IsValid())

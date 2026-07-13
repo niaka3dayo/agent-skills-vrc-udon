@@ -231,7 +231,7 @@ public class ContactReceiver : UdonSharpBehaviour
     /// <summary>
     /// Returns true while at least one Contact Sender overlaps the receiver.
     /// </summary>
-    public bool IsContacted()
+    public bool _IsContacted()
     {
         return _isActive;
     }
@@ -239,7 +239,7 @@ public class ContactReceiver : UdonSharpBehaviour
     /// <summary>
     /// Returns the number of Contact Senders currently overlapping the receiver.
     /// </summary>
-    public int GetContactCount()
+    public int _GetContactCount()
     {
         return _contactCount;
     }
@@ -248,7 +248,7 @@ public class ContactReceiver : UdonSharpBehaviour
     /// Resets internal contact state (e.g. call from OnPlayerLeft to clean up
     /// if a player disconnects while their avatar is overlapping the receiver).
     /// </summary>
-    public void ResetContactState()
+    public void _ResetContactState()
     {
         _contactCount = 0;
 

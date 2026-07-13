@@ -199,13 +199,13 @@ public class DynamicReceiver : UdonSharpBehaviour
         receiver = GetComponent<VRCContactReceiver>();
     }
 
-    public void EnableAvatarHandsOnly()
+    public void _EnableAvatarHandsOnly()
     {
         receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar);
         receiver.UpdateCollisionTags(new string[] { "Hand", "Finger" });
     }
 
-    public void EnableAvatarsAndWorldSenders()
+    public void _EnableAvatarsAndWorldSenders()
     {
         receiver.UpdateContentTypes(DynamicsUsageFlags.Avatar | DynamicsUsageFlags.World);
         receiver.UpdateCollisionTags(new string[] { "Hand", "Finger", "Head", "Foot", "Custom" });
@@ -248,7 +248,7 @@ public class ProjectileContact : UdonSharpBehaviour
         sender = GetComponent<VRCContactSender>();
     }
 
-    public void Launch()
+    public void _Launch()
     {
         // The contact sender will trigger OnContactEnter
         // on any receiver it collides with
@@ -318,13 +318,13 @@ public class GrabbableRope : UdonSharpBehaviour
         Debug.Log("Rope released");
     }
 
-    public bool HasActiveGrab()
+    public bool _HasActiveGrab()
     {
         VRCPhysBone physBone = GetComponent<VRCPhysBone>();
         return physBone.IsGrabbed;
     }
 
-    public VRCPlayerApi GetGrabber()
+    public VRCPlayerApi _GetGrabber()
     {
         return currentGrabber;
     }
@@ -419,12 +419,12 @@ public class ConstraintController : UdonSharpBehaviour
     public VRCPositionConstraint posConstraint;
     public VRCAimConstraint aimConstraint;
 
-    public void EnableConstraint()
+    public void _EnableConstraint()
     {
         posConstraint.IsActive = true;
     }
 
-    public void DisableConstraint()
+    public void _DisableConstraint()
     {
         posConstraint.IsActive = false;
     }
@@ -439,13 +439,13 @@ public class ConstraintController : UdonSharpBehaviour
 
 ### VRC Constraints vs Unity Constraints
 
-VRChat provides its own constraint components that replace Unity's built-in constraints. **Unity Constraints are disabled on Quest/Android**, making VRC Constraints the only cross-platform option.
+VRChat provides its own constraint components as an alternative to Unity's built-in constraints. Worlds may use either system on Android. Prefer VRC Constraints for new work, and profile Unity Constraint-heavy scenes because overuse can significantly affect performance.
 
 #### Comparison Table
 
 | Feature | VRC Constraints | Unity Constraints |
 |---------|----------------|-------------------|
-| **Quest/Android** | Supported | Disabled |
+| **Quest/Android worlds** | Supported | Permitted; profile performance |
 | **PC** | Supported | Supported |
 | **Network sync** | Compatible with VRChat networking (sync via UdonSynced/VRC_ObjectSync) | No VRChat network integration |
 | **Performance** | Optimized for VRChat | Standard Unity performance |
@@ -473,7 +473,7 @@ public VRCParentConstraint parentConstraint;
 public VRCPositionConstraint positionConstraint;
 public VRCRotationConstraint rotationConstraint;
 
-// Wrong: Unity constraints are disabled on Quest
+// Also permitted in worlds, but profile the cost on every target device:
 // public UnityEngine.Animations.ParentConstraint parentConstraint;
 ```
 
@@ -481,10 +481,10 @@ public VRCRotationConstraint rotationConstraint;
 
 | Scenario | Recommendation |
 |----------|---------------|
-| World targets PC + Quest | **VRC Constraints** (mandatory) |
-| World targets PC only | VRC Constraints preferred (future-proof) |
+| World targets PC + Quest | VRC Constraints preferred; profile either system on target hardware |
+| World targets PC only | VRC Constraints preferred for new work |
 | Need Udon API control | **VRC Constraints** (better API) |
-| Migrating from Unity Constraints | Replace with VRC equivalents |
+| Migrating from Unity Constraints | Replace when API needs or profiling results justify it |
 | Avatar constraints | Follow VRChat avatar documentation |
 
 ## VRC Constraints Udon API
@@ -563,7 +563,7 @@ public class ConstraintToggle : UdonSharpBehaviour
     public bool useWeightFade = false;
 
     // Called from a UI button or InteractEvent
-    public void EnableConstraint()
+    public void _EnableConstraint()
     {
         if (positionConstraint == null) return;
 
@@ -577,7 +577,7 @@ public class ConstraintToggle : UdonSharpBehaviour
         }
     }
 
-    public void DisableConstraint()
+    public void _DisableConstraint()
     {
         if (positionConstraint == null) return;
 
@@ -592,7 +592,7 @@ public class ConstraintToggle : UdonSharpBehaviour
     }
 
     // Toggle helper – safe to call from network events
-    public void ToggleConstraint()
+    public void _ToggleConstraint()
     {
         if (positionConstraint == null) return;
         positionConstraint.IsActive = !positionConstraint.IsActive;
@@ -660,7 +660,7 @@ public class ConstraintSourceSwapper : UdonSharpBehaviour
     }
 
     // Remove all sources except the first, then clear it
-    public void ClearAllSources()
+    public void _ClearAllSources()
     {
         if (spotlightAim == null) return;
 
@@ -742,8 +742,17 @@ constraint.RemoveSource(count - 1);
 ### Interactive Button with Feedback
 
 ```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.Dynamics;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
 public class PhysicalButton : UdonSharpBehaviour
 {
+    private const float ReceiverCooldown = 0.5f;
+
     [Header("References")]
     public Transform buttonTop;
     public AudioSource pressSound;
@@ -756,6 +765,7 @@ public class PhysicalButton : UdonSharpBehaviour
     [UdonSynced] private bool isPressed = false;
     private Vector3 originalPosition;
     private Vector3 pressedPosition;
+    private float lastAcceptedActionTime = float.MinValue;
 
     void Start()
     {
@@ -801,16 +811,29 @@ public class PhysicalButton : UdonSharpBehaviour
         // Your button action
         SendCustomNetworkEvent(
             VRC.Udon.Common.Interfaces.NetworkEventTarget.All,
-            nameof(DoButtonAction)
+            nameof(_DoButtonAction)
         );
     }
 
-    public void DoButtonAction()
+    [NetworkCallable(2)]
+    public void _DoButtonAction()
     {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Any valid caller may trigger this diagnostic effect. The local
+        // cooldown bounds aggregate execution across all callers.
+        if (Time.time - lastAcceptedActionTime < ReceiverCooldown) return;
+        lastAcceptedActionTime = Time.time;
         Debug.Log("Button action executed!");
     }
 }
 ```
+
+The receiver accepts any valid caller because the action is diagnostic only.
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. The receiver-local cooldown bounds execution on each client; use a stricter session role policy before replacing the log with privileged or state-changing work.
 
 ### Grabbable Lever
 

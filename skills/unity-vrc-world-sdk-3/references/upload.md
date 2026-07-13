@@ -39,7 +39,7 @@ Complete upload procedure and best practices.
   □ Mirror is default OFF
 
 □ Performance
-  □ 45+ FPS in VR
+  □ Project-defined frame-time or frame-rate target met in representative scenes and player counts
   □ Lightmaps baked
   □ Minimal realtime lights
 
@@ -273,23 +273,20 @@ Public:
 ```text
 Must be set if applicable:
 
-□ Adult Language
-  - Contains adult language
+□ Sexually Suggestive
+  - Sexually suggestive content
 
-□ Blood/Gore
-  - Blood or grotesque content
+□ Adult Language and Themes
+  - Adult language and themes
 
-□ Fear/Horror
-  - Horror or fear elements
+□ Graphic Violence
+  - Graphic violence
 
-□ Nudity/Suggestive
-  - Nudity or sexually suggestive content
+□ Excessive Gore
+  - Excessive gore
 
-□ Substance Use
-  - Drug or alcohol depiction
-
-□ Violence
-  - Violent content
+□ Extreme Horror
+  - Extreme horror
 ```
 
 ### Importance of Warning Settings

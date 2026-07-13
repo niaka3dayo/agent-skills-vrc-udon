@@ -141,7 +141,7 @@ UdonSharp: Field 'X' is not serializable
 // Correct - Sync player ID instead
 [UdonSynced] private int targetPlayerId;
 
-public VRCPlayerApi GetTargetPlayer()
+public VRCPlayerApi _GetTargetPlayer()
 {
     return VRCPlayerApi.GetPlayerById(targetPlayerId);
 }
@@ -194,7 +194,7 @@ public override void OnPlayerTriggerEnter(VRCPlayerApi player)
 }
 
 // Check before accessing synced player
-public void DoSomethingWithPlayer()
+public void _DoSomethingWithPlayer()
 {
     VRCPlayerApi player = VRCPlayerApi.GetPlayerById(syncedPlayerId);
     if (player == null || !player.IsValid())
@@ -215,7 +215,7 @@ public void DoSomethingWithPlayer()
 
 ```text
 
-[UdonBehaviour] SendCustomEvent: Method 'MyMethod' not found
+[UdonBehaviour] SendCustomEvent: Method '_MyMethod' not found
 
 ```
 
@@ -229,17 +229,17 @@ public void DoSomethingWithPlayer()
 ```csharp
 
 // Wrong - Method is private
-private void MyMethod() { }
+private void _MyMethod() { }
 
 // Wrong - Method has parameters
-public void MyMethod(int value) { }
+public void _MyMethod(int value) { }
 
 // Correct - Public, parameterless
-public void MyMethod() { }
+public void _MyMethod() { }
 
 // For passing data, use SetProgramVariable first
 otherScript.SetProgramVariable("inputValue", 42);
-otherScript.SendCustomEvent("ProcessInput");
+otherScript.SendCustomEvent("_ProcessInput");
 
 ```
 
@@ -369,7 +369,7 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 
 ```csharp
 
-public void ChangeValue()
+public void _ChangeValue()
 {
     myValue = 42;
     RequestSerialization(); // Required for Manual sync mode!
@@ -381,7 +381,7 @@ public void ChangeValue()
 
 ```csharp
 
-public void ChangeValue()
+public void _ChangeValue()
 {
     if (!Networking.IsOwner(gameObject))
     {
@@ -540,16 +540,20 @@ Method 'X' cannot be called as a network event
 
 **Solution:**
 
-```csharp
+```text
 
 // WRONG
-public void MyMethod(int value) { } // Missing attribute
+public void _MyMethod(int value) { } // Missing attribute
 
-private void MyMethod(int value) { } // Private
+private void _MyMethod(int value) { } // Private
+
+```
+
+```csharp
 
 // CORRECT
 [NetworkCallable]
-public void MyMethod(int value) { }
+public void _MyMethod(int value) { }
 
 ```
 
@@ -569,15 +573,33 @@ public void MyMethod(int value) { }
 2. Check rate limits (default 5/sec, max 100/sec)
 3. Ensure all clients are on SDK 3.8.1+
 
-```csharp
+```text
 
 // WRONG - VRCPlayerApi is not syncable
 [NetworkCallable]
-public void SetTarget(VRCPlayerApi player) { }
+public void _SetTarget(VRCPlayerApi player) { }
 
-// CORRECT - Use player ID instead
-[NetworkCallable]
-public void SetTarget(int playerId) { }
+```
+
+```csharp
+
+// CORRECT - Use a bounded ID parameter and derive authorization from the caller context
+[NetworkCallable(1)]
+public void _SetTarget(int playerId)
+{
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    VRCPlayerApi owner = Networking.GetOwner(gameObject);
+    if (owner == null || !owner.IsValid()) return;
+    if (caller.playerId != owner.playerId) return;
+
+    VRCPlayerApi target = VRCPlayerApi.GetPlayerById(playerId);
+    if (target == null || !target.IsValid()) return;
+    _ApplyTarget(target);
+}
 
 ```
 
@@ -585,15 +607,30 @@ public void SetTarget(int playerId) { }
 
 ### NetworkCallable Rate Limit Exceeded
 
-**Symptoms:** Events are dropped and do not reach all clients
+**Symptoms:** Excess remote sends remain queued on the sender and arrive later than expected. Local/self execution is not paced. A documented version-mismatch case can drop events when clients in one instance use different declared rates.
 
 **Solution:**
 
 ```csharp
 
-// Increase rate limit (max 100/sec)
-[NetworkCallable(100)]
-public void HighFrequencyEvent(float value) { }
+private const float ReceiverCooldown = 0.1f;
+private float lastAcceptedEventTime = float.MinValue;
+
+// Use the lowest sender rate the effect needs and bound receiver work separately.
+[NetworkCallable(10)]
+public void _HighFrequencyEvent(float value)
+{
+    if (!NetworkCalling.InNetworkCall) return;
+
+    VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+    if (caller == null || !caller.IsValid()) return;
+
+    // Open diagnostic policy: any valid caller may submit a normalized value.
+    if (value < 0f || value > 1f) return;
+    if (Time.time - lastAcceptedEventTime < ReceiverCooldown) return;
+    lastAcceptedEventTime = Time.time;
+    Debug.Log($"Diagnostic value: {value}");
+}
 
 // Or throttle on sender side
 private float lastSendTime;
@@ -603,10 +640,12 @@ public void SendIfReady(float value)
 {
     if (Time.time - lastSendTime < SEND_INTERVAL) return;
     lastSendTime = Time.time;
-    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(HighFrequencyEvent), value);
+    SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_HighFrequencyEvent), value);
 }
 
 ```
+
+`[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Inspecting the local outgoing queue helps diagnose sender delay, while the receiver-local cooldown above caps aggregate diagnostic execution on each client.
 
 ---
 
@@ -1325,12 +1364,12 @@ void Update()
 }
 
 // Do this instead
-public void Activate()
+public void _Activate()
 {
     enabled = true;
 }
 
-public void Deactivate()
+public void _Deactivate()
 {
     enabled = false;
 }
@@ -1455,7 +1494,7 @@ public class BrokenGimmick : UdonSharpBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlaySound()
+    public void _PlaySound()
     {
         audioSource.Play(); // NullReferenceException!
     }
@@ -1496,7 +1535,7 @@ public class RobustGimmick : UdonSharpBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlaySound()
+    public void _PlaySound()
     {
         Initialize(); // Guard against being called externally first
         if (audioSource != null)
@@ -1615,18 +1654,18 @@ transform.position = pos;
 
 private bool _shouldExecute = true;
 
-public void ScheduleAction()
+public void _ScheduleAction()
 {
     _shouldExecute = true;
-    SendCustomEventDelayedSeconds(nameof(DelayedAction), 5f);
+    SendCustomEventDelayedSeconds(nameof(_DelayedAction), 5f);
 }
 
-public void CancelAction()
+public void _CancelAction()
 {
     _shouldExecute = false;
 }
 
-public void DelayedAction()
+public void _DelayedAction()
 {
     if (!_shouldExecute) return;
     // Do action
@@ -1655,7 +1694,7 @@ public void SetTarget(VRCPlayerApi player)
     _targetPlayerId = player.playerId;
 }
 
-public VRCPlayerApi GetTarget()
+public VRCPlayerApi _GetTarget()
 {
     if (_targetPlayerId < 0) return null;
 

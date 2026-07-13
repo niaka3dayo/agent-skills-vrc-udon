@@ -47,6 +47,15 @@ jobs:
       - name: Smoke test validate-udonsharp.sh
         run: bash tests/hooks/validate-udonsharp.test.sh
 
+      - name: Check BusyBox awk portability
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y busybox
+          bash tests/hooks/validate-udonsharp.busybox.test.sh
+
+      - name: Smoke test validate-udonsharp.ps1
+        shell: pwsh
+        run: ./tests/hooks/validate-udonsharp.test.ps1
 
   docs:
     name: Documentation Smoke Tests
@@ -59,6 +68,15 @@ jobs:
 
       - name: Check assembly definitions reference coverage
         run: bash tests/docs/assembly-definitions-reference.test.sh
+
+      - name: Check network event hardening and SDK coverage
+        run: bash tests/docs/network-event-hardening.test.sh
+
+      - name: Check Skill metadata routing contract
+        run: bash tests/docs/skill-routing-contract.test.sh
+
+      - name: Check layers runtime exception and evidence boundary
+        run: bash tests/docs/layers-reference-contract.test.sh
 
   markdown:
     name: Markdown Links

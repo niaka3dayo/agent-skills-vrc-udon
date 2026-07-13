@@ -30,10 +30,10 @@ public class TweenedDoor : UdonSharpBehaviour
 
     public override void Interact()
     {
-        OpenLocal();
+        _OpenLocal();
     }
 
-    public void OpenLocal()
+    public void _OpenLocal()
     {
         _doorTween.Kill(); // invalid/default handles no-op
         _pitchTween.Kill();
@@ -41,10 +41,10 @@ public class TweenedDoor : UdonSharpBehaviour
 
         _doorTween = _door.TweenLocalPosition(new Vector3(0f, 3f, 0f), 0.4f, VRCTweenEase.OutCubic);
         _pitchTween = _motor.TweenPitch(1.25f, 0.2f, VRCTweenEase.OutQuad);
-        _autoCloseTimer = VRCTween.DelayedCall(this, nameof(CloseLocal), 5f);
+        _autoCloseTimer = VRCTween.DelayedCall(this, nameof(_CloseLocal), 5f);
     }
 
-    public void CloseLocal()
+    public void _CloseLocal()
     {
         _doorTween.Kill();
         _pitchTween.Kill();
@@ -70,15 +70,20 @@ Prefer `VRCTween.DelayedCall` over `SendCustomEventDelayedSeconds` helper-`GameO
 ```csharp
 private VRCTweenHandle _timer;
 
-public void Schedule()
+public void _Schedule()
 {
     _timer.Kill();
-    _timer = VRCTween.DelayedCall(this, nameof(OnTimer), 2f);
+    _timer = VRCTween.DelayedCall(this, nameof(_OnTimer), 2f);
 }
 
-public void Cancel()
+public void _Cancel()
 {
     _timer.Kill();
+}
+
+public void _OnTimer()
+{
+    // Perform the delayed local action.
 }
 ```
 

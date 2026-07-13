@@ -17,8 +17,8 @@ using VRC.Udon;
 ///     station.ExitStation(player) manually from Udon to release the player.
 ///   - ImmobilizeForVehicle: Use this mobility mode when the station is on a
 ///     moving platform (e.g. vehicle). The player view follows the station transform.
-///   - Real-time lights and post-processing are unavailable on Quest — ensure
-///     any visual effects triggered here use baked or lightweight alternatives.
+///   - Post-processing is unavailable on Android. Prefer baked or lightweight
+///     visual effects, and retain realtime lighting only after device profiling.
 ///
 /// Sync mode note:
 ///   BehaviourSyncMode.None is intentional — this script has no UdonSynced
@@ -176,8 +176,9 @@ public class VRC_Station_Basic : UdonSharpBehaviour
     /// Returns whether any player is currently in this station.
     /// This is a local approximation based on received events and may be
     /// briefly inconsistent for late-joining players.
+    /// Leading underscore keeps this public member available to local code while blocking legacy network dispatch.
     /// </summary>
-    public bool IsOccupied()
+    public bool _IsOccupied()
     {
         return _isOccupied;
     }

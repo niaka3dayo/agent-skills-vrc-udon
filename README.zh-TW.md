@@ -164,6 +164,8 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 | `udonsharp-networking` | 所有權模型、同步模式、反模式、NetworkCallable 限制 |
 | `udonsharp-sync-selection` | 同步決策樹、資料量預算目標、6 項最小化原則 |
 
+**網路規則：** 名稱不以 `_` 開頭的無參數 `public` 方法會暴露給舊式網路呼叫。僅限本機或自訂的 `public` 方法應加上 `_`，只透過 `[NetworkCallable]` 明確公開必要入口。判斷呼叫者權限時，應先確認 `NetworkCalling.InNetworkCall`，再讀取 `NetworkCalling.CallingPlayer`，並與接收端所有權分開檢查。不要將執行個體 Master 當成安全或存取控制邊界。
+
 ### 同步決策樹
 
 ```text
@@ -200,6 +202,9 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 同時支援 **Bash**（`validate-udonsharp.sh`）與 **PowerShell**（`validate-udonsharp.ps1`）。
 
+Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入，並輸出
+`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，不會將其視為驗證成功。
+
 ---
 
 ## SDK 版本
@@ -218,7 +223,7 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（頭像）、Mirror 渲染順序修正 | 已支援 |
 | **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 存取、DataList/DataDictionary 容量 API | 最新穩定版 |
 
-> **注意**：SDK 3.9.0 以下版本已於 2025 年 12 月 2 日棄用。新的世界上傳需使用 3.9.0 以上版本。
+> **注意**：發佈前，請確認專案使用的是 VRChat 目前支援的 SDK 版本。
 
 ---
 

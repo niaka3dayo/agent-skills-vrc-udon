@@ -35,7 +35,7 @@ public class BatchedSync : UdonSharpBehaviour
     // State mutation methods — each marks dirty and schedules one batch.
     // ------------------------------------------------------------------
 
-    public void OnPlayerJoined(int slotIndex)
+    public void _OnPlayerSlotJoined(int slotIndex)
     {
         if (!Networking.IsOwner(gameObject)) return;
 
@@ -44,7 +44,7 @@ public class BatchedSync : UdonSharpBehaviour
         ScheduleBatchedSync();
     }
 
-    public void OnPlayerReady(int slotIndex)
+    public void _OnPlayerReady(int slotIndex)
     {
         if (!Networking.IsOwner(gameObject)) return;
 
@@ -52,7 +52,7 @@ public class BatchedSync : UdonSharpBehaviour
         ScheduleBatchedSync();
     }
 
-    public void AdvanceRound()
+    public void _AdvanceRound()
     {
         if (!Networking.IsOwner(gameObject)) return;
 

@@ -136,7 +136,7 @@ private void Initialize() {
     audioSource = GetComponent<AudioSource>();
 }
 
-public void PlaySound() {
+public void _PlaySound() {
     Initialize(); // Guard against external calls
     audioSource.Play();
 }
@@ -188,23 +188,23 @@ player.Immobilize(true/false)
 
 ```csharp
 // Instead of coroutines
-SendCustomEventDelayedSeconds(nameof(MyMethod), 2.0f);
-SendCustomEventDelayedFrames(nameof(MyMethod), 1);
+SendCustomEventDelayedSeconds(nameof(_MyMethod), 2.0f);
+SendCustomEventDelayedFrames(nameof(_MyMethod), 1);
 
 // EventTiming (SDK 3.10.2+): FixedUpdate / PostLateUpdate
-SendCustomEventDelayedSeconds(nameof(PhysicsAction), 1.0f, EventTiming.FixedUpdate);
-SendCustomEventDelayedFrames(nameof(CameraFollow), 1, EventTiming.PostLateUpdate);
+SendCustomEventDelayedSeconds(nameof(_PhysicsAction), 1.0f, EventTiming.FixedUpdate);
+SendCustomEventDelayedFrames(nameof(_CameraFollow), 1, EventTiming.PostLateUpdate);
 
 // Repeating (single-instance, sparse timers only — see patterns-performance.md
 // "Event Dispatch & Cross-Behaviour Call Cost Tiers" for many-instance / short-period alternatives)
-public void StartLoop() {
+public void _StartLoop() {
     _running = true;
-    DoLoop();
+    _DoLoop();
 }
-public void DoLoop() {
+public void _DoLoop() {
     if (!_running) return;
     // ... action ...
-    SendCustomEventDelayedSeconds(nameof(DoLoop), 1.0f);
+    SendCustomEventDelayedSeconds(nameof(_DoLoop), 1.0f);
 }
 ```
 
@@ -219,13 +219,13 @@ using VRC.SDK3.Components;
 
 private VRCTweenHandle _scaleTween;
 
-public void Pulse() {
+public void _Pulse() {
     _scaleTween.Kill(); // safe no-op when invalid/default
     _scaleTween = gameObject.TweenScale(Vector3.one * 1.2f, 0.15f, VRCTweenEase.OutQuad)
-        .OnComplete(this, nameof(OnPulseUp));
+        .OnComplete(this, nameof(_OnPulseUp));
 }
 
-public void OnPulseUp() {
+public void _OnPulseUp() {
     _scaleTween = gameObject.TweenScale(Vector3.one, 0.15f, VRCTweenEase.OutQuad);
 }
 
@@ -256,15 +256,19 @@ For simple world scripts, do not add an asmdef by default. If a package/asmdef w
 
 ```csharp
 // Call method on another script
-otherScript.SendCustomEvent("MethodName");
+otherScript.SendCustomEvent("_MethodName");
 
 // Pass data
 otherScript.SetProgramVariable("fieldName", value);
-otherScript.SendCustomEvent("ProcessData");
+otherScript.SendCustomEvent("_ProcessData");
 
-// Network event (legacy - no params)
+// Legacy network event: a parameterless public method without a leading _
+// remains network-callable even without [NetworkCallable].
 SendCustomNetworkEvent(NetworkEventTarget.All, "MethodName");
 SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
+
+// Local-only public event target: leading _ and no [NetworkCallable].
+public void _ApplyLocalPreview() { }
 ```
 
 ---
@@ -273,22 +277,57 @@ SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
 
 Requires `using VRC.SDK3.UdonNetworkCalling;` in scripts that declare `[NetworkCallable]` methods.
 
-```csharp
-// Method must have [NetworkCallable] attribute
-[NetworkCallable]
-public void TakeDamage(int damage, int attackerId) {
-    health -= damage;
-}
+A `[NetworkCallable]` method must return `void`.
 
-// Call with up to 8 parameters
-SendCustomNetworkEvent(
-    NetworkEventTarget.All,
-    nameof(TakeDamage),
-    damage, attackerId
-);
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class HardenedDamage : UdonSharpBehaviour
+{
+    [UdonSynced] private int health = 100;
+
+    // [NetworkCallable] intentionally exposes this underscore-prefixed method.
+    [NetworkCallable(1)]
+    public void _TakeDamage(int damage)
+    {
+        if (!NetworkCalling.InNetworkCall) return;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return;
+
+        // Owner-only caller policy.
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return;
+        if (caller.playerId != owner.playerId) return;
+
+        // Ownership controls the mutation location, not caller authorization.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (damage <= 0 || damage > 25) return;
+
+        health = Mathf.Max(0, health - damage);
+        RequestSerialization();
+    }
+
+    // Local-only request method: underscore-prefixed, no [NetworkCallable].
+    public void _SendDamage(int damage)
+    {
+        SendCustomNetworkEvent(
+            NetworkEventTarget.Owner,
+            nameof(_TakeDamage),
+            damage
+        );
+    }
+}
 ```
 
-**Constraints:** `public`, no `static`/`virtual`/`override`, max 8 params, syncable types only
+**Constraints:** `public`, `void` return, no `static`/`virtual`/`override`, max 8 params, syncable types only
+
+**Hardening:** Never authorize from a `playerId`, name, or role passed as a network parameter. During the active or nested network-call lifetime, require `NetworkCalling.InNetworkCall`, derive the sender from `NetworkCalling.CallingPlayer`, validate it, and apply an explicit world-specific policy. Outside a network call, `CallingPlayer` is null or invalid. Prefix local-only public event targets with `_` and omit `[NetworkCallable]`.
 
 ---
 

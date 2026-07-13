@@ -145,8 +145,8 @@ if (dict.ContainsKey("key1"))
 
 ```csharp
 // WRONG - overloading not supported
-public void DoSomething(int value) { }
-public void DoSomething(string value) { }  // Compile error
+public void _DoSomething(int value) { }
+public void _DoSomething(string value) { }  // Compile error
 
 // CORRECT - use distinct names
 public void DoSomethingInt(int value) { }
@@ -179,16 +179,16 @@ ProcessData(data);
 private async Task DelayedAction()
 {
     await Task.Delay(2000);
-    DoSomething();
+    _DoSomething();
 }
 
 // CORRECT - use SendCustomEventDelayedSeconds
-public void TriggerDelayed()
+public void _TriggerDelayed()
 {
-    SendCustomEventDelayedSeconds(nameof(DoSomething), 2f);
+    SendCustomEventDelayedSeconds(nameof(_DoSomething), 2f);
 }
 
-public void DoSomething()
+public void _DoSomething()
 {
     // Called 2 seconds later
 }
@@ -215,7 +215,7 @@ using System.Text;
 
 public class StringBuilderExample : UdonSharpBehaviour
 {
-    public void BuildPlayerList()
+    public void _BuildPlayerList()
     {
         VRCPlayerApi[] players = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(players);
@@ -357,7 +357,7 @@ private void EnsureInit()
     _initialized = true;
 }
 
-public void DoWork()
+public void _DoWork()
 {
     EnsureInit();
     if (_target == null) return;
@@ -426,17 +426,17 @@ BaseGimmick[] all = GetComponents<BaseGimmick>();
 
 ```csharp
 // WRONG - delegates not supported; throws at compile time
-button.onClick.AddListener(() => DoSomething());
-button.onClick.AddListener(DoSomething);
+button.onClick.AddListener(() => _DoSomething());
+button.onClick.AddListener(_DoSomething);
 
 // CORRECT - wire in the Unity Inspector:
 // 1. Select the Button GameObject
 // 2. In OnClick(), click "+"
 // 3. Drag the UdonBehaviour component into the object field
 // 4. Select the dropdown: UdonBehaviour -> SendCustomEvent (string)
-// 5. Enter the exact method name, e.g. "OnButtonClicked"
+// 5. Enter the exact method name, e.g. "_OnButtonClicked"
 
-public void OnButtonClicked()
+public void _OnButtonClicked()
 {
     // Called by the Inspector-configured OnClick event
 }
@@ -451,7 +451,7 @@ VRChat network events (`OnPlayerJoined`, `OnOwnershipRequest`, etc.) **must** us
 
 ```csharp
 // NG: override on Unity callback causes CS0115
-public override void OnTriggerEnter(Collider other) { }
+// public override void OnTriggerEnter(Collider other) { }
 
 // OK: Unity callbacks without override
 public void OnTriggerEnter(Collider other) { }
@@ -461,7 +461,7 @@ public void OnParticleCollision(GameObject other) { }
 // OK: VRChat events require override
 public override void OnPlayerJoined(VRCPlayerApi player) { }
 public override void OnPlayerLeft(VRCPlayerApi player) { }
-public override void OnOwnershipRequest(VRCPlayerApi requester, VRCPlayerApi newOwner) { }
+public override bool OnOwnershipRequest(VRCPlayerApi requester, VRCPlayerApi newOwner) => true;
 ```
 
 ---
@@ -957,7 +957,7 @@ public class SyncedUrlList : UdonSharpBehaviour
     /// <summary>
     /// Returns the current number of stored URLs.
     /// </summary>
-    public int GetCount()
+    public int _GetCount()
     {
         if (!ParseMetadata()) return 0;
         return _metadataList.Count;

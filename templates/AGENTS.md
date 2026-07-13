@@ -11,6 +11,8 @@ Read the following Rules before writing any UdonSharp code:
 - **`skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md`** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
 - **`skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md`** — Sync Pattern Decision Tree, Data Budget, Minimization
 
+Networking rule: a parameterless `public` method without a leading `_` is a legacy network entry. Prefix local-only/custom public methods with `_`, expose only intentional entries with `[NetworkCallable]`, authorize `NetworkCalling.CallingPlayer` separately from receiver ownership, and never use instance master as a security or access-control boundary.
+
 ## Skills
 
 | Skill | Purpose | Path |

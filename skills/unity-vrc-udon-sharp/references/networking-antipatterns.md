@@ -18,7 +18,7 @@ Common mistakes in UdonSharp networking that cause silent failures, data loss, o
 // Mutating [UdonSynced] without an IsOwner guard — when SetOwner has not
 // been called for the local client (e.g., owner is someone else), the
 // write is purely local and is silently reverted on the next deserialization.
-public void TryCapture()
+public void _TryCapture()
 {
     capturedBy = Networking.LocalPlayer.playerId; // No IsOwner guard — may be a non-owner write
     RequestSerialization();                        // No-op when called by a non-owner
@@ -33,7 +33,7 @@ public class CapturePoint : UdonSharpBehaviour
 {
     [UdonSynced] private int capturedBy = -1;
 
-    public void TryCapture()
+    public void _TryCapture()
     {
         // SetOwner is locally immediate. After it returns, IsOwner is true
         // for this client. Two clients racing to capture will both write
@@ -136,7 +136,7 @@ public class MapData : UdonSharpBehaviour
     // 512 x 512 grid as ints = 512 * 512 * 4 bytes = 1,048,576 bytes (~1MB) — exceeds limit!
     [UdonSynced] private int[] tiles = new int[512 * 512];
 
-    public void SaveAndSync()
+    public void _SaveAndSync()
     {
         // Packet silently dropped — recipients never update
         RequestSerialization();
@@ -158,7 +158,7 @@ public class MapData : UdonSharpBehaviour
 
     [UdonSynced] private byte[] tiles = new byte[MapSize * MapSize];
 
-    public void SaveAndSync()
+    public void _SaveAndSync()
     {
         // Check estimated size before serializing
         int estimatedBytes = tiles.Length; // 1 byte per element
@@ -268,7 +268,7 @@ public class GameFlag : UdonSharpBehaviour
 {
     [UdonSynced] public bool isCaptured;
 
-    public override void OnTriggerEnter(Collider other)
+    public void OnTriggerEnter(Collider other)
     {
         // Any player can run this, but only the owner's write will persist
         isCaptured = true;
@@ -285,7 +285,7 @@ public class GameFlag : UdonSharpBehaviour
 {
     [UdonSynced] public bool isCaptured;
 
-    public override void OnTriggerEnter(Collider other)
+    public void OnTriggerEnter(Collider other)
     {
         if (!Networking.IsOwner(gameObject))
         {
@@ -375,17 +375,17 @@ public class ThrottledSync : UdonSharpBehaviour
 
         if (remaining <= 0f)
         {
-            ExecuteSync();
+            _ExecuteSync();
         }
         else
         {
             // Schedule a single deferred sync — coalesces rapid changes
-            SendCustomEventDelayedSeconds(nameof(ExecuteSync), remaining + 0.001f);
+            SendCustomEventDelayedSeconds(nameof(_ExecuteSync), remaining + 0.001f);
             _isPendingSync = true;
         }
     }
 
-    public void ExecuteSync()
+    public void _ExecuteSync()
     {
         _isPendingSync = false;
         if (!Networking.IsOwner(gameObject)) return;
@@ -393,7 +393,7 @@ public class ThrottledSync : UdonSharpBehaviour
         if (Networking.IsClogged)
         {
             // Back off and retry during congestion
-            SendCustomEventDelayedSeconds(nameof(ExecuteSync), RetryInterval);
+            SendCustomEventDelayedSeconds(nameof(_ExecuteSync), RetryInterval);
             _isPendingSync = true;
             return;
         }
@@ -441,7 +441,7 @@ Stores three independent state values (`_questionIndex`, `_gameType`, `_category
 
 **Template:** [assets/templates/RateLimitedSync.cs](../assets/templates/RateLimitedSync.cs)
 
-Uses a `_syncLocked` bool and a `_changeCounter` int to enforce a `SyncCooldown` (0.15 s) between serializations. On the first change in a window, the lock is set and `_OnSyncUnlock` is scheduled. Subsequent changes update `_localValue` without scheduling additional events. On unlock, `ExecuteSync` copies `_localValue` to `_syncedValue` and calls `RequestSerialization`. If the counter moved during the lock, one extra window fires to guarantee the final value is transmitted.
+Uses a `_syncLocked` bool and a `_changeCounter` int to enforce a `SyncCooldown` (0.15 s) between serializations. On the first change in a window, the lock is set and `_OnSyncUnlock` is scheduled. Subsequent changes update `_localValue` without scheduling additional events. On unlock, `_ExecuteSync` copies `_localValue` to `_syncedValue` and calls `RequestSerialization`. If the counter moved during the lock, one extra window fires to guarantee the final value is transmitted.
 
 **How it works**:
 1. The first change within a cooldown window locks further serializations and schedules `_OnSyncUnlock`.

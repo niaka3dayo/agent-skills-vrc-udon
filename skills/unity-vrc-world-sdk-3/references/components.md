@@ -691,7 +691,7 @@ In worlds, Udon can access `VRCPhysBoneCollider` for runtime-controlled collider
 For the detailed Udon API, event callbacks, and examples, use the UdonSharp dynamics/API references rather than duplicating script guidance here:
 
 - [dynamics.md PhysBones](../../unity-vrc-udon-sharp/references/dynamics.md#physbones)
-- [api.md PhysBones and Contacts](../../unity-vrc-udon-sharp/references/api.md#physbones-and-contacts-sdk-3100)
+- [api.md PhysBones and Contacts](../../unity-vrc-udon-sharp/references/api.md#vrchat-dynamics-api-sdk-3100)
 
 ---
 
@@ -820,7 +820,7 @@ Entries marked "on Avatar" come from avatar-side limitations and are listed here
 ❌ Cameras on Avatar
 ❌ Lights on Avatar
 ❌ Audio Sources on Avatar
-❌ Unity Constraints (use VRC equivalents: VRCPositionConstraint, VRCRotationConstraint, VRCScaleConstraint, VRCParentConstraint, VRCAimConstraint, VRCLookAtConstraint)
+⚠️ Unity Constraints are permitted in worlds; avoid overuse and profile them on Android. Prefer VRC equivalents for new work.
 ```
 
 ### Editor-Only Objects and Components

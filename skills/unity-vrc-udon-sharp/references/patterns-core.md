@@ -20,7 +20,7 @@ public class BrokenGimmick : UdonSharpBehaviour
         audioSource = GetComponent<AudioSource>();
     }
 
-    public void PlaySound()
+    public void _PlaySound()
     {
         audioSource.Play(); // NullReferenceException!
     }
@@ -62,7 +62,7 @@ public class RobustGimmick : UdonSharpBehaviour
         }
     }
 
-    public void PlaySound()
+    public void _PlaySound()
     {
         Initialize(); // Guard against being called externally first
         if (audioSource != null)
@@ -132,7 +132,7 @@ public class DefensiveGimmick : UdonSharpBehaviour
 
     // === Public API ===
 
-    public void DoAction()
+    public void _DoAction()
     {
         Initialize(); // Defensive call
 
@@ -143,7 +143,7 @@ public class DefensiveGimmick : UdonSharpBehaviour
 
     // === Reset ===
 
-    public void ResetGimmick()
+    public void _ResetGimmick()
     {
         _initialized = false;
         Initialize();
@@ -248,10 +248,10 @@ public class CooldownButton : UdonSharpBehaviour
         }
 
         lastInteractTime = Time.time;
-        DoAction();
+        _DoAction();
     }
 
-    private void DoAction()
+    private void _DoAction()
     {
         Debug.Log("Button pressed!");
     }
@@ -385,7 +385,7 @@ public class ProximityDetector : UdonSharpBehaviour
 {
     public float detectionRange = 5.0f;
 
-    public VRCPlayerApi[] GetPlayersInRange()
+    public VRCPlayerApi[] _GetPlayersInRange()
     {
         VRCPlayerApi[] allPlayers = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(allPlayers);
@@ -424,12 +424,12 @@ public class ProximityDetector : UdonSharpBehaviour
 ### Get Remote Players
 <!-- alias: Array.FindAll alternative — local-player exclusion -->
 
-Same temp-array pattern as `GetPlayersInRange`, but excluding the local player. Useful when broadcasting to "everyone except me" or computing remote-only stats.
+Same temp-array pattern as `_GetPlayersInRange`, but excluding the local player. Useful when broadcasting to "everyone except me" or computing remote-only stats.
 
 ```csharp
 public class RemotePlayerCollector : UdonSharpBehaviour
 {
-    public VRCPlayerApi[] GetRemotePlayers()
+    public VRCPlayerApi[] _GetRemotePlayers()
     {
         VRCPlayerApi[] allPlayers = new VRCPlayerApi[VRCPlayerApi.GetPlayerCount()];
         VRCPlayerApi.GetPlayers(allPlayers);
@@ -469,13 +469,13 @@ public class SimpleTimer : UdonSharpBehaviour
     private float timeRemaining;
     private bool isRunning = false;
 
-    public void StartTimer()
+    public void _StartTimer()
     {
         timeRemaining = duration;
         isRunning = true;
     }
 
-    public void StopTimer()
+    public void _StopTimer()
     {
         isRunning = false;
     }
@@ -517,16 +517,16 @@ public class DelayedAction : UdonSharpBehaviour
 {
     public void DoAfterDelay(float seconds)
     {
-        SendCustomEventDelayedSeconds(nameof(ExecuteDelayedAction), seconds);
+        SendCustomEventDelayedSeconds(nameof(_ExecuteDelayedAction), seconds);
     }
 
-    public void ExecuteDelayedAction()
+    public void _ExecuteDelayedAction()
     {
         Debug.Log("Delayed action executed!");
     }
 
     // Cancel by disabling the component
-    public void CancelDelayed()
+    public void _CancelDelayed()
     {
         // Note: There's no direct way to cancel SendCustomEventDelayedSeconds
         // Use a flag instead
@@ -542,18 +542,18 @@ public class RepeatingAction : UdonSharpBehaviour
     public float interval = 1.0f;
     private bool isRepeating = false;
 
-    public void StartRepeating()
+    public void _StartRepeating()
     {
         isRepeating = true;
-        DoRepeat();
+        _DoRepeat();
     }
 
-    public void StopRepeating()
+    public void _StopRepeating()
     {
         isRepeating = false;
     }
 
-    public void DoRepeat()
+    public void _DoRepeat()
     {
         if (!isRepeating) return;
 
@@ -561,7 +561,7 @@ public class RepeatingAction : UdonSharpBehaviour
         Debug.Log("Tick!");
 
         // Schedule next iteration
-        SendCustomEventDelayedSeconds(nameof(DoRepeat), interval);
+        SendCustomEventDelayedSeconds(nameof(_DoRepeat), interval);
     }
 }
 ```
@@ -588,7 +588,7 @@ public class AudioPlayer : UdonSharpBehaviour
         }
     }
 
-    public void PlayRandom()
+    public void _PlayRandom()
     {
         if (clips.Length > 0)
         {
@@ -597,7 +597,7 @@ public class AudioPlayer : UdonSharpBehaviour
         }
     }
 
-    public void Stop()
+    public void _Stop()
     {
         audioSource.Stop();
     }
@@ -652,7 +652,7 @@ public class SyncedMusicPlayer : UdonSharpBehaviour
         RequestSerialization();
     }
 
-    public void TogglePlay()
+    public void _TogglePlay()
     {
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
         IsPlaying = !IsPlaying;
@@ -791,7 +791,7 @@ public class ButtonHandler : UdonSharpBehaviour
     public UdonSharpBehaviour targetScript;
     public string methodName;
 
-    public void OnClick()
+    public void _OnClick()
     {
         // Store index for target to read
         targetScript.SetProgramVariable("selectedIndex", buttonIndex);
@@ -811,7 +811,7 @@ public class SliderDisplay : UdonSharpBehaviour
     public TextMeshProUGUI valueText;
     public string format = "{0:F1}";
 
-    public void OnSliderChanged()
+    public void _OnSliderChanged()
     {
         valueText.text = string.Format(format, slider.value);
     }
@@ -913,7 +913,7 @@ public class ScoreBoard : UdonSharpBehaviour
         RefreshDisplay();
     }
 
-    public void ResetScore()
+    public void _ResetScore()
     {
         Initialize();
         _score = 0;

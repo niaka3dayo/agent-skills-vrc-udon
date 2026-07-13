@@ -47,7 +47,7 @@ public class MyScript : UdonSharpBehaviour
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
     // Editor-only code here
-    public void EditorOnlyMethod()
+    public void _EditorOnlyMethod()
     {
         Debug.Log("This only exists in editor!");
     }
@@ -270,7 +270,7 @@ using UdonSharpEditor;
 public class MyToolWindow : EditorWindow
 {
     [MenuItem("Tools/My UdonSharp Tool")]
-    public static void ShowWindow()
+    public static void _ShowWindow()
     {
         GetWindow<MyToolWindow>("My Tool");
     }
@@ -540,16 +540,8 @@ public class TeleporterSetupBuildGate : IVRCSDKBuildRequestedCallback
 
 `IPreprocessCallbackBehaviour` lives in the `VRC.SDKBase` namespace and is implemented by a `MonoBehaviour` on the content itself.
 
-Members to implement:
-
-```csharp
-public bool OnPreprocess()
-{
-    return true;
-}
-
-public int PreprocessOrder { get; }
-```
+Implement `public bool OnPreprocess()` and the `public int PreprocessOrder { get; }`
+property. The complete class below shows both interface members.
 
 > **Docs discrepancy**: the official page shows `void OnPreprocess()`, but the SDK 3.10.3 binary declares `bool OnPreprocess()` (verified via .NET metadata). Implement the `bool` form — the `void` signature fails to compile against the interface. The meaning of the return value is not documented; return `true` unless you have verified otherwise.
 

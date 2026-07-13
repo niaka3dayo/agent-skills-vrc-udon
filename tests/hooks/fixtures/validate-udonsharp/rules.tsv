@@ -1,0 +1,20 @@
+GENERIC	Generic collections (List<T>
+ASYNC	async/await not supported
+TRY_CATCH	try/catch/finally not supported
+LINQ	LINQ not supported
+YIELD_RETURN	Coroutines (yield return) not supported
+INTERFACE	Interfaces not supported
+START_COROUTINE	StartCoroutine not available
+ADD_LISTENER	AddListener() not supported
+LAMBDA	Lambda expression detected
+SYNC_NO_SERIALIZE	no RequestSerialization()
+SYNC_NO_OWNER	no Networking.SetOwner()
+PLAYER_VALIDITY	VRCPlayerApi used
+UNITY_CALLBACK_OVERRIDE	Unity callbacks (OnTriggerEnter etc.)
+GETCOMPONENT_UDON	GetComponent<UdonBehaviour>() not exposed
+SYSTEM_IO_NET	System.Net/System.IO not available
+SYNC_COUNT	synced variables detected (target: <5
+SYNC_ARRAY	Synced int[]/float[] detected
+SYNC_MODE_CONFLICT	NoVariableSync mode but [UdonSynced] variables found
+MULTIDIM_ARRAY	Multi-dimensional arrays (T[,]) not supported
+METHOD_OVERLOAD	Method overloading detected

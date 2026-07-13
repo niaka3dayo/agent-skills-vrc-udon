@@ -175,10 +175,10 @@ public class GimmickManager : UdonSharpBehaviour
     public override void Interact()
     {
         if (isProcessing) return;
-        StartProcessing();
+        _StartProcessing();
     }
 
-    public void StartProcessing()
+    public void _StartProcessing()
     {
         isProcessing = true;
 
@@ -188,10 +188,10 @@ public class GimmickManager : UdonSharpBehaviour
         }
 
         // Auto-stop after duration
-        SendCustomEventDelayedSeconds(nameof(StopProcessing), processingDuration);
+        SendCustomEventDelayedSeconds(nameof(_StopProcessing), processingDuration);
     }
 
-    public void StopProcessing()
+    public void _StopProcessing()
     {
         isProcessing = false;
 
@@ -531,7 +531,7 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
 
     // ── Public entry point ────────────────────────────────────────────────
 
-    public void BeginProcessing()
+    public void _BeginProcessing()
     {
         if (_inputLines == null || _inputLines.Length == 0) return;
 
@@ -542,12 +542,12 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
         _stopwatch.Reset();
         _stopwatch.Start();
 
-        SendCustomEvent(nameof(Step1_Parse));
+        SendCustomEvent(nameof(_Step1_Parse));
     }
 
     // ── Processing pipeline ───────────────────────────────────────────────
 
-    public void Step1_Parse()
+    public void _Step1_Parse()
     {
         while (_currentIndex < _inputLines.Length)
         {
@@ -556,7 +556,7 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
             _currentIndex++;
 
             // Yield if the frame budget is spent
-            if (BranchByBudget(nameof(Step1_Parse))) return;
+            if (BranchByBudget(nameof(_Step1_Parse))) return;
         }
 
         // All lines parsed — move to next stage via SendCustomEvent (not BranchByBudget).
@@ -564,10 +564,10 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
         // causes a deadlock because the freshly-reset stopwatch always reads 0 ms elapsed,
         // so BranchByBudget never defers and Step2 runs in the same frame budget window.
         _currentIndex = 0;
-        SendCustomEvent(nameof(Step2_Transform));
+        SendCustomEvent(nameof(_Step2_Transform));
     }
 
-    public void Step2_Transform()
+    public void _Step2_Transform()
     {
         // Reset the stopwatch at the start of each stage so the budget is fresh
         _stopwatch.Reset();
@@ -579,15 +579,15 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
             _results[_currentIndex] = _results[_currentIndex].ToUpper();
             _currentIndex++;
 
-            if (BranchByBudget(nameof(Step2_Transform))) return;
+            if (BranchByBudget(nameof(_Step2_Transform))) return;
         }
 
         // Move to next stage — use SendCustomEvent, not BranchByBudget (same reason as above)
         _currentIndex = 0;
-        SendCustomEvent(nameof(Step3_BuildUI));
+        SendCustomEvent(nameof(_Step3_BuildUI));
     }
 
-    public void Step3_BuildUI()
+    public void _Step3_BuildUI()
     {
         // Reset the stopwatch at the start of each stage so the budget is fresh
         _stopwatch.Reset();
@@ -598,13 +598,13 @@ public class FrameBudgetProcessor : UdonSharpBehaviour
             // Simulate UI construction work per entry
             _currentIndex++;
 
-            if (BranchByBudget(nameof(Step3_BuildUI))) return;
+            if (BranchByBudget(nameof(_Step3_BuildUI))) return;
         }
 
-        SendCustomEvent(nameof(OnProcessingComplete));
+        SendCustomEvent(nameof(_OnProcessingComplete));
     }
 
-    public void OnProcessingComplete()
+    public void _OnProcessingComplete()
     {
         _stopwatch.Stop();
         UnityEngine.Debug.Log("[FrameBudgetProcessor] Processing complete.");
@@ -728,7 +728,7 @@ public class RebuildableWorld : UdonSharpBehaviour
 
     // --- Full rebuild (reset, undo, late-joiner) ---
 
-    public void BeginFullRebuild()
+    public void _BeginFullRebuild()
     {
         // Hide all derived objects before rebuilding
         for (int i = 0; i < _blockPool.Length; i++)
@@ -745,7 +745,7 @@ public class RebuildableWorld : UdonSharpBehaviour
 
     public void _RebuildStep()
     {
-        // Guard: if cancelled or a new BeginFullRebuild was called while
+        // Guard: if cancelled or a new _BeginFullRebuild was called while
         // a previous deferred _RebuildStep was still pending, bail out.
         if (!_isRebuilding) return;
 
@@ -781,10 +781,10 @@ public class RebuildableWorld : UdonSharpBehaviour
     public override void OnDeserialization()
     {
         // Late joiner or owner change: full rebuild from authoritative data.
-        // If a previous rebuild is mid-flight, BeginFullRebuild resets the
+        // If a previous rebuild is mid-flight, _BeginFullRebuild resets the
         // cursor and sets _isRebuilding = true; the stale deferred callback
         // from the old rebuild bails out at the guard in _RebuildStep.
-        BeginFullRebuild();
+        _BeginFullRebuild();
     }
 }
 ```
@@ -792,7 +792,7 @@ public class RebuildableWorld : UdonSharpBehaviour
 **Key points:**
 
 - `AddPlacement` mutates the authoritative arrays and applies instant local feedback for one block — no full rebuild needed for incremental changes. It is blocked while `_isRebuilding` is true to avoid double-applying entries.
-- `BeginFullRebuild` is the universal entry point for reset, undo, and late-joiner sync. It clears all derived state and walks the authoritative data with a cursor. If called while a previous rebuild is in progress, the stale deferred `_RebuildStep` callback safely exits via the `_isRebuilding` guard.
+- `_BeginFullRebuild` is the universal entry point for reset, undo, and late-joiner sync. It clears all derived state and walks the authoritative data with a cursor. If called while a previous rebuild is in progress, the stale deferred `_RebuildStep` callback safely exits via the `_isRebuilding` guard.
 - The `_blockPool` is pre-allocated in the scene (UdonSharp cannot instantiate at runtime). The pool size must equal `MaxPlacements`; both the synced arrays and the pool share this constant.
 - `Vector3[]` sync is valid but costs 12 bytes per element. For large placement counts consider packing positions into `int[]` with fixed-point encoding — see [networking-bandwidth.md](networking-bandwidth.md).
 
@@ -839,7 +839,7 @@ These are distinct operations — conflating them causes bugs:
 
 ```csharp
 // Cancel: stop an in-progress rebuild without touching authoritative data
-public void CancelRebuild()
+public void _CancelRebuild()
 {
     _isRebuilding = false;
     // Derived state is partially rebuilt — acceptable for cancel.
@@ -847,11 +847,11 @@ public void CancelRebuild()
 }
 
 // Reset: revert authoritative data, then rebuild
-public void ResetToInitial()
+public void _ResetToInitial()
 {
     if (!Networking.IsOwner(gameObject)) return;
     _placementCount = 0;
-    BeginFullRebuild();
+    _BeginFullRebuild();
     RequestSerialization();
 }
 ```
@@ -861,7 +861,7 @@ public void ResetToInitial()
 | Guideline | Rationale |
 |-----------|-----------|
 | Keep authoritative data in synced arrays, derived state in local references | Late joiners receive authoritative data via `OnDeserialization` and rebuild locally |
-| One rebuild entry point (`BeginFullRebuild`) for all triggers | Reset, undo, late-joiner sync, and error recovery all use the same path — fewer edge cases |
+| One rebuild entry point (`_BeginFullRebuild`) for all triggers | Reset, undo, late-joiner sync, and error recovery all use the same path — fewer edge cases |
 | Do not mix rebuild progress with sync serialization | If `RequestSerialization` fires mid-rebuild, the partial derived state is irrelevant — only authoritative data is transmitted |
 | Cap operation logs with a maximum size | `byte[]` sync has a ~280KB (280,496 bytes) Manual sync limit; a 4-byte-per-op log with 1000 ops = 4 KB — well within budget |
 | Use cancel for user-initiated abort, reset for state revert | Cancel preserves partial visual progress; reset guarantees a clean starting state |
@@ -1038,14 +1038,14 @@ public class ManagedVideoLoader : UdonSharpBehaviour
     public void RequestLoad(VRCUrl url)
     {
         if (_scheduler == null) { Debug.LogError("[ManagedVideoLoader] Scheduler not assigned"); return; }
-        _scheduler.ScheduleLoad(this, nameof(OnScheduledLoad), url);
+        _scheduler.ScheduleLoad(this, nameof(_OnScheduledLoad), url);
     }
 
     /// <summary>
     /// Called by UrlLoadScheduler when it is safe to load.
     /// ScheduledUrl is already set at this point.
     /// </summary>
-    public void OnScheduledLoad()
+    public void _OnScheduledLoad()
     {
         if (ScheduledUrl == null) return;
         Debug.Log($"[ManagedVideoLoader] Loading URL: {ScheduledUrl}");

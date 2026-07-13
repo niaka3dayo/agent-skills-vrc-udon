@@ -164,6 +164,8 @@ UdonSharpスクリプティングのコアスキルです。コンパイル制�
 | `udonsharp-networking` | オーナーシップモデル、シンクモード、アンチパターン、NetworkCallableの制約 |
 | `udonsharp-sync-selection` | 同期デシジョンツリー、データバジェット目標値、6つの最小化原則 |
 
+**ネットワーク規則:** 先頭が `_` でない引数なしの `public` メソッドは、従来方式のネットワーク呼び出し対象になります。ローカル専用や独自の `public` メソッドには `_` を付け、`[NetworkCallable]` で必要な入口だけを明示的に公開してください。送信者の権限を判定するときは、まず `NetworkCalling.InNetworkCall` を確認してから `NetworkCalling.CallingPlayer` を読み、受信側の所有権とは分けて確認します。インスタンスマスターをセキュリティやアクセス制御の境界にしてはいけません。
+
 ### 同期デシジョンツリー
 
 ```
@@ -200,6 +202,10 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 **Bash**（`validate-udonsharp.sh`）と **PowerShell**（`validate-udonsharp.ps1`）の両方に対応しています。
 
+Bash版の検証には `jq` が必要です。利用できない場合は入力を変更せずに通し、
+検証済みとは扱わず `VALIDATOR-WARNING: validation skipped
+(JQ_UNAVAILABLE)` を出力します。
+
 ---
 
 ## SDKバージョン
@@ -218,7 +224,7 @@ Q3: 継続的に変化しますか？（位置・回転など）
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（アバター）、Mirror 描画タイミング修正 | サポート済み |
 | **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 最新安定版 |
 
-> **注意**: SDK 3.9.0未満は2025年12月2日に非推奨となりました。新規ワールドのアップロードには3.9.0以上が必要です。
+> **注意**: 公開前に、VRChatが現在サポートしているSDKバージョンをプロジェクトで使用していることを確認してください。
 
 ---
 

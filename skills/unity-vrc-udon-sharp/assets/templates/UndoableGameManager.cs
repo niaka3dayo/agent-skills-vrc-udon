@@ -20,6 +20,8 @@ using VRC.Udon.Common.Interfaces;
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class UndoableGameManager : UdonSharpBehaviour
 {
+    private const int MaxMoves = 100;
+
     // --- Synced data ---
     [UdonSynced] private byte[] currentState;     // Current game state
     [UdonSynced] private byte[] stateHistory;     // All history (flat array)
@@ -28,61 +30,93 @@ public class UndoableGameManager : UdonSharpBehaviour
 
     void Start()
     {
-        stateSize = 40; // Example: 40 elements. Adjust to your game's state size.
+        stateSize = 40; // Larger states increase sync payload size and may reduce sync frequency or add latency.
         currentState = new byte[stateSize];
-        stateHistory = new byte[stateSize * 100]; // Max 100 moves
-        InitializeGame();
-        SaveStateToHistory(); // Initial state = history[0]
+        // One initial entry plus MaxMoves subsequent move entries.
+        stateHistory = new byte[stateSize * (MaxMoves + 1)];
+        _InitializeGame();
+        _SaveStateToHistory(); // Initial state = history[0]
+        _ApplyDisplayLocally();
+    }
+
+    // --- Owner-only input ---
+    // Non-owners do nothing; input does not transfer ownership. This preserves
+    // centralized authority and avoids conflicting state writes.
+    public void _RequestMove(int from, int to)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        SendCustomNetworkEvent(
+            NetworkEventTarget.Owner,
+            nameof(_OwnerProcessMove),
+            from,
+            to
+        );
     }
 
     // --- Owner only: process operations ---
     [NetworkCallable]
-    public void OwnerProcessMove(int from, int to, int playerId)
+    public void _OwnerProcessMove(int from, int to)
     {
-        // Validation: check ownership, game phase, turn, etc.
-        if (!Networking.IsOwner(gameObject)) return;
+        if (!_IsAuthorizedNetworkCaller()) return;
 
-        ExecuteMove(from, to);
-        SaveStateToHistory(); // Save once after the operation
+        // Ownership authorizes where synced mutation happens. Caller
+        // authorization is handled separately above.
+        if (!Networking.IsOwner(gameObject)) return;
+        if (!_IsValidMove(from, to)) return;
+        // Reject before mutating currentState when all move slots are used.
+        if (historyCount >= MaxMoves + 1) return;
+
+        _ExecuteMove(from, to);
+        _SaveStateToHistory(); // Save once after the operation
+        _ApplyDisplayLocally();
         RequestSerialization();
     }
 
     // --- History management ---
-    private void SaveStateToHistory()
+    private void _SaveStateToHistory()
     {
         int offset = historyCount * stateSize;
         System.Array.Copy(currentState, 0, stateHistory, offset, stateSize);
         historyCount++;
     }
 
-    public void OnUndoClicked()
+    public void _OnUndoClicked()
     {
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerUndo));
+        if (!Networking.IsOwner(gameObject)) return;
+
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerUndo));
     }
 
     [NetworkCallable]
-    public void OwnerUndo()
+    public void _OwnerUndo()
     {
+        if (!_IsAuthorizedNetworkCaller()) return;
         if (!Networking.IsOwner(gameObject)) return;
         if (historyCount <= 1) return; // Cannot go before initial state
         historyCount--;
         int offset = (historyCount - 1) * stateSize;
         System.Array.Copy(stateHistory, offset, currentState, 0, stateSize);
+        _ApplyDisplayLocally();
         RequestSerialization();
     }
 
-    public void OnResetClicked()
+    public void _OnResetClicked()
     {
-        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(OwnerReset));
+        if (!Networking.IsOwner(gameObject)) return;
+
+        SendCustomNetworkEvent(NetworkEventTarget.Owner, nameof(_OwnerReset));
     }
 
     [NetworkCallable]
-    public void OwnerReset()
+    public void _OwnerReset()
     {
+        if (!_IsAuthorizedNetworkCaller()) return;
         if (!Networking.IsOwner(gameObject)) return;
         // Return to history[0] = initial state (no separate variable for initial state)
         System.Array.Copy(stateHistory, 0, currentState, 0, stateSize);
         historyCount = 1;
+        _ApplyDisplayLocally();
         RequestSerialization();
     }
 
@@ -90,14 +124,28 @@ public class UndoableGameManager : UdonSharpBehaviour
     public override void OnDeserialization()
     {
         // Do NOT add to history in OnDeserialization! (causes double-saving)
-        UpdateDisplay();
+        _ApplyDisplayLocally();
+    }
+
+    // Owner-only session policy: the sender must be the current object owner.
+    private bool _IsAuthorizedNetworkCaller()
+    {
+        if (!NetworkCalling.InNetworkCall) return false;
+
+        VRCPlayerApi caller = NetworkCalling.CallingPlayer;
+        if (caller == null || !caller.IsValid()) return false;
+
+        VRCPlayerApi owner = Networking.GetOwner(gameObject);
+        if (owner == null || !owner.IsValid()) return false;
+
+        return caller.playerId == owner.playerId;
     }
 
     // =========================================================================
     // Override these methods for your specific game logic
     // =========================================================================
 
-    private void InitializeGame()
+    private void _InitializeGame()
     {
         // Initialize currentState to the starting game state
         // Example: fill with zeros or a specific starting arrangement
@@ -107,20 +155,22 @@ public class UndoableGameManager : UdonSharpBehaviour
         }
     }
 
-    private void ExecuteMove(int from, int to)
+    private bool _IsValidMove(int from, int to)
+    {
+        return from >= 0 && from < currentState.Length &&
+               to >= 0 && to < currentState.Length;
+    }
+
+    private void _ExecuteMove(int from, int to)
     {
         // Apply the move to currentState
         // Example: move an element from index 'from' to index 'to'
-        if (from >= 0 && from < currentState.Length &&
-            to >= 0 && to < currentState.Length)
-        {
-            byte temp = currentState[from];
-            currentState[from] = currentState[to];
-            currentState[to] = temp;
-        }
+        byte temp = currentState[from];
+        currentState[from] = currentState[to];
+        currentState[to] = temp;
     }
 
-    private void UpdateDisplay()
+    private void _ApplyDisplayLocally()
     {
         // Reflect currentState in UI/visuals
         // Override this method to update your specific game's display
