@@ -26,6 +26,12 @@ same-line-lambda-lf	runtime-lambda-same-line.cs	LF	LAMBDA
 same-line-lambda-crlf	runtime-lambda-same-line.cs	CRLF	LAMBDA
 expression-body-decoys-lf	runtime-expression-body-decoys.cs	LF	-
 expression-body-decoys-crlf	runtime-expression-body-decoys.cs	CRLF	-
+method-overload-modifiers-lf	runtime-method-overload-modifiers.cs	LF	METHOD_OVERLOAD
+method-overload-modifiers-crlf	runtime-method-overload-modifiers.cs	CRLF	METHOD_OVERLOAD
+sync-declarators-lf	runtime-sync-declarators.cs	LF	SYNC_COUNT;SYNC_ARRAY
+sync-declarators-crlf	runtime-sync-declarators.cs	CRLF	SYNC_COUNT;SYNC_ARRAY
+sync-initializer-commas-lf	runtime-sync-initializer-commas.cs	LF	-
+sync-initializer-commas-crlf	runtime-sync-initializer-commas.cs	CRLF	-
 attribute-blank-trivia-lf	runtime-attribute-blank-trivia.cs	LF	SYNC_ARRAY
 attribute-blank-trivia-crlf	runtime-attribute-blank-trivia.cs	CRLF	SYNC_ARRAY
 all-rules-lf	runtime-all-rules.cs	LF	GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;REF_PARAMETER;OUT_PARAMETER;MULTIDIM_ARRAY;METHOD_OVERLOAD

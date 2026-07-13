@@ -108,8 +108,17 @@ for path in "$WORLD_SKILL" "$PERFORMANCE_REF"; do
     forbid_text "$path" "$OLD_UDON_PERFORMANCE_GUIDE"
 done
 for obsolete_claim in '10-30 FPS' '3-5× draw call overhead' \
-    'typically run at 90+ FPS on PC'; do
+    'typically run at 90+ FPS on PC' 'Build for Quest and get PC for free' \
+    '~2× slower than PC VR' 'Realtime is only viable on PC-only worlds' \
+    'Fully baked (no realtime shadows)'; do
     forbid_text "$WORLD_SKILL" "$obsolete_claim"
 done
+for obsolete_claim in '| Real-time shadows | Not supported |' \
+    '❌ Real-time shadow casting and receiving' \
+    '□ No real-time shadow settings on any light'; do
+    forbid_text "$PERFORMANCE_REF" "$obsolete_claim"
+done
+require_text "$WORLD_SKILL" 'profile each target device before keeping realtime lighting or shadows'
+require_text "$PERFORMANCE_REF" 'keep only after profiling on the target Android device'
 
 echo "PASS: build-validation reference coverage smoke test"

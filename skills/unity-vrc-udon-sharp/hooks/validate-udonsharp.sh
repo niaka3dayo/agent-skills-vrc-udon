@@ -491,10 +491,22 @@ fi
 # follows. The scanner handles multiline sections and declarations, and only
 # splits attribute lists on top-level commas.
 if ! sync_stats=$(awk '
+    function clear_declaration(    chunk_index) {
+        for (chunk_index = 1; chunk_index <= declaration_chunk_count; chunk_index++) {
+            delete declaration_chunks[chunk_index]
+        }
+        declaration_chunk_count = 0
+        declaration_size = 0
+        declaration_parens = 0
+        declaration_brackets = 0
+        declaration_braces = 0
+        declaration_has_assignment = 0
+    }
+
     function reset_pending() {
         pending_synced = 0
         pending_no_variable_sync = 0
-        declaration_buffer = ""
+        clear_declaration()
     }
 
     function normalize_space(text) {
@@ -572,47 +584,135 @@ if ! sync_stats=$(awk '
     }
 
     function is_class(declaration) {
-        return declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial|new)[ ]+)*class[ ]+[A-Za-z_][A-Za-z0-9_]*/
+        return declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial|new)[ ]+)*class([ ]|$)/
     }
 
-    function is_field(declaration) {
-        if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*(class|struct|interface|enum|delegate|event|record)[ ]+/) return 0
-        if (declaration ~ /[)][ ]*(\{|=>)/) return 0
-        return declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*([A-Za-z_][A-Za-z0-9_.:<>,?]*[ ]*(\[[ ]*\])?[ ]+)+[A-Za-z_][A-Za-z0-9_]*[ ]*(=|,|;)/
+    function field_declarator_count(declaration,    position, character, next_character, parens, brackets, braces, angles, delimiter_position, delimiter, header, identifier, bare_identifier, type_name, count) {
+        field_is_large_array = 0
+        if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*(class|struct|interface|enum|delegate|event|record)([ ]|$)/) return 0
+
+        parens = brackets = braces = angles = 0
+        delimiter_position = 0
+        delimiter = ""
+        for (position = 1; position <= length(declaration); position++) {
+            character = substr(declaration, position, 1)
+            next_character = substr(declaration, position + 1, 1)
+            if (character == "(") parens++
+            else if (character == ")" && parens > 0) parens--
+            else if (character == "[") brackets++
+            else if (character == "]" && brackets > 0) brackets--
+            else if (character == "{") braces++
+            else if (character == "}" && braces > 0) braces--
+            else if (character == "<" && parens == 0 && brackets == 0 && braces == 0) angles++
+            else if (character == ">" && angles > 0 && parens == 0 && brackets == 0 && braces == 0) angles--
+            else if (parens == 0 && brackets == 0 && braces == 0 && angles == 0 &&
+                     (character == "=" || character == "," || character == ";")) {
+                if (character == "=" && next_character == ">") return 0
+                delimiter_position = position
+                delimiter = character
+                break
+            }
+        }
+        if (delimiter_position == 0) return 0
+
+        header = normalize_space(substr(declaration, 1, delimiter_position - 1))
+        while (sub(/^(public|private|protected|internal|static|readonly|const|volatile|new)[ ]+/, "", header)) { }
+        if (header !~ / /) return 0
+        identifier = header
+        sub(/^.* /, "", identifier)
+        bare_identifier = identifier
+        sub(/^@/, "", bare_identifier)
+        if (bare_identifier == "" || bare_identifier ~ /^[0-9]/ ||
+            bare_identifier ~ /[][(){}.,:;=+*\/%!?&|^~<>-]/) return 0
+        type_name = header
+        sub(/[ ][^ ]*$/, "", type_name)
+        type_name = normalize_space(type_name)
+        if (type_name == "") return 0
+        if (type_name ~ /^(int|float)[ ]*\[[ ]*\]$/) field_is_large_array = 1
+
+        count = (delimiter == "," ? 2 : 1)
+        if (delimiter == ";") return count
+        parens = brackets = braces = 0
+        for (position = delimiter_position + 1; position <= length(declaration); position++) {
+            character = substr(declaration, position, 1)
+            if (character == "(") parens++
+            else if (character == ")" && parens > 0) parens--
+            else if (character == "[") brackets++
+            else if (character == "]" && brackets > 0) brackets--
+            else if (character == "{") braces++
+            else if (character == "}" && braces > 0) braces--
+            else if (character == "," && parens == 0 && brackets == 0 && braces == 0) count++
+            else if (character == ";" && parens == 0 && brackets == 0 && braces == 0) return count
+        }
+        return 0
     }
 
-    function is_other_declaration(declaration) {
-        if (declaration ~ /^((public|private|protected|internal|abstract|sealed|static|partial|readonly|new)[ ]+)*(class|struct|interface|enum|delegate|event|record|namespace)([ ]|$)/) return 1
-        return declaration ~ /[({;]|=>/
-    }
-
-    function process_declaration(fragment,    declaration) {
-        if (!(pending_synced || pending_no_variable_sync)) return
-        fragment = normalize_space(fragment)
+    function append_declaration(fragment) {
         if (fragment == "") return
-        if (declaration_buffer != "") declaration_buffer = declaration_buffer " " fragment
-        else declaration_buffer = fragment
-        declaration = normalize_space(declaration_buffer)
+        declaration_chunks[++declaration_chunk_count] = fragment
+        declaration_size += length(fragment) + 1
+        if (declaration_size > max_declaration_size) {
+            scan_failed = 1
+            exit 2
+        }
+    }
+
+    function complete_declaration(    declaration, chunk_index, declarator_count) {
+        declaration = ""
+        for (chunk_index = 1; chunk_index <= declaration_chunk_count; chunk_index++) {
+            if (declaration != "") declaration = declaration " "
+            declaration = declaration declaration_chunks[chunk_index]
+        }
+        declaration = normalize_space(declaration)
 
         if (pending_no_variable_sync && is_class(declaration)) {
             has_no_variable_sync = 1
             reset_pending()
             return
         }
-        if (pending_synced && is_field(declaration)) {
-            synced_count++
-            if (declaration ~ /^((public|private|protected|internal|static|readonly|const|volatile|new)[ ]+)*(int|float)[ ]*\[[ ]*\][ ]+/) {
-                has_large_synced_array = 1
-            }
+        declarator_count = pending_synced ? field_declarator_count(declaration) : 0
+        if (declarator_count > 0) {
+            synced_count += declarator_count
+            if (field_is_large_array) has_large_synced_array = 1
             reset_pending()
             return
         }
-        if (is_other_declaration(declaration)) reset_pending()
+        reset_pending()
+    }
+
+    function declaration_boundary(fragment,    position, character, next_character) {
+        for (position = 1; position <= length(fragment); position++) {
+            character = substr(fragment, position, 1)
+            next_character = substr(fragment, position + 1, 1)
+            if (character == "(") declaration_parens++
+            else if (character == ")" && declaration_parens > 0) declaration_parens--
+            else if (character == "[") declaration_brackets++
+            else if (character == "]" && declaration_brackets > 0) declaration_brackets--
+            else if (character == "{") {
+                if (declaration_parens == 0 && declaration_brackets == 0 &&
+                    declaration_braces == 0 && !declaration_has_assignment) return position
+                declaration_braces++
+            } else if (character == "}" && declaration_braces > 0) declaration_braces--
+            else if (character == "=" && next_character != ">" &&
+                     declaration_parens == 0 && declaration_brackets == 0 && declaration_braces == 0) {
+                declaration_has_assignment = 1
+            } else if (character == ";" && declaration_parens == 0 &&
+                       declaration_brackets == 0 && declaration_braces == 0) return position
+        }
+        return 0
+    }
+
+    function consume_declaration_fragment(fragment,    boundary) {
+        if (!(pending_synced || pending_no_variable_sync)) return
+        boundary = declaration_boundary(fragment)
+        if (boundary > 0) append_declaration(substr(fragment, 1, boundary))
+        else append_declaration(fragment)
+        if (boundary > 0) complete_declaration()
     }
 
     function consume_line(text,    position, character, remainder) {
-        if (declaration_buffer != "") {
-            process_declaration(text)
+        if (declaration_chunk_count > 0) {
+            consume_declaration_fragment(text)
             return
         }
 
@@ -649,7 +749,7 @@ if ! sync_stats=$(awk '
             }
 
             remainder = substr(text, position)
-            process_declaration(remainder)
+            consume_declaration_fragment(remainder)
             return
         }
     }
@@ -657,6 +757,7 @@ if ! sync_stats=$(awk '
     BEGIN {
         reset_pending()
         collecting_attribute = 0
+        max_declaration_size = 262144
     }
 
     {
@@ -668,6 +769,7 @@ if ! sync_stats=$(awk '
     }
 
     END {
+        if (scan_failed) exit 2
         printf "%d|%d|%d\n", synced_count, has_no_variable_sync, has_large_synced_array
     }
 ' "$masked_file"); then
@@ -738,7 +840,7 @@ if grep -qE '\w+\s*\[,' "$masked_file"; then
 fi
 
 # Method overloading (same name, different signatures)
-overloaded=$(grep -oE '^\s*(public|private|protected|internal|override|virtual|static|public\s+override|private\s+static|public\s+static)(\s+(public|private|protected|internal|override|virtual|static))?\s+(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(' "$masked_file" \
+overloaded=$(grep -oE '^[[:blank:]]*((public|private|protected|internal|override|virtual|static)[[:blank:]]+)*(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[[:blank:]]+([A-Za-z_][A-Za-z0-9_]*)[[:blank:]]*\(' "$masked_file" \
     | grep -oE '[A-Za-z_][A-Za-z0-9_]*\s*\($' \
     | sed 's/[[:space:]]*($//' \
     | sort | uniq -d)

@@ -535,41 +535,135 @@ function Get-SyncStats([string]$Source) {
     function Reset-PendingDeclaration {
         $State.PendingSynced = $false
         $State.PendingNoVariableSync = $false
-        $State.DeclarationBuffer = ''
+        [void]$State.DeclarationBuilder.Clear()
+        $State.DeclarationParens = 0
+        $State.DeclarationBrackets = 0
+        $State.DeclarationBraces = 0
+        $State.DeclarationHasAssignment = $false
     }
 
-    function Add-DeclarationFragment([string]$Fragment) {
-        if (-not ($State.PendingSynced -or $State.PendingNoVariableSync)) { return }
-        $Fragment = ($Fragment -replace '[ \t\r\n]+', ' ').Trim()
-        if (-not $Fragment) { return }
-        if ($State.DeclarationBuffer) {
-            $State.DeclarationBuffer += ' ' + $Fragment
-        } else {
-            $State.DeclarationBuffer = $Fragment
+    function Get-FieldInfo([string]$Declaration) {
+        if ($Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*(class|struct|interface|enum|delegate|event|record)( |$)') {
+            return $null
         }
-        $Declaration = ($State.DeclarationBuffer -replace '[ \t\r\n]+', ' ').Trim()
-        $IsClass = $Declaration -match '^((public|private|protected|internal|abstract|sealed|static|partial|new) +)*class +[A-Za-z_][A-Za-z0-9_]*'
-        $IsField = $Declaration -notmatch '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*(class|struct|interface|enum|delegate|event|record) +' -and
-            $Declaration -notmatch '[)] *(\{|=>)' -and
-            $Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*([A-Za-z_][A-Za-z0-9_.:<>,?]* *(\[ *\])? +)+[A-Za-z_][A-Za-z0-9_]* *(=|,|;)'
+
+        $Parens = 0
+        $Brackets = 0
+        $Braces = 0
+        $Angles = 0
+        $DelimiterPosition = -1
+        $Delimiter = [char]0
+        for ($Position = 0; $Position -lt $Declaration.Length; $Position++) {
+            $Character = $Declaration[$Position]
+            $NextCharacter = if ($Position + 1 -lt $Declaration.Length) { $Declaration[$Position + 1] } else { [char]0 }
+            if ($Character -eq '(') { $Parens++ }
+            elseif ($Character -eq ')' -and $Parens -gt 0) { $Parens-- }
+            elseif ($Character -eq '[') { $Brackets++ }
+            elseif ($Character -eq ']' -and $Brackets -gt 0) { $Brackets-- }
+            elseif ($Character -eq '{') { $Braces++ }
+            elseif ($Character -eq '}' -and $Braces -gt 0) { $Braces-- }
+            elseif ($Character -eq '<' -and $Parens -eq 0 -and $Brackets -eq 0 -and $Braces -eq 0) { $Angles++ }
+            elseif ($Character -eq '>' -and $Angles -gt 0 -and $Parens -eq 0 -and $Brackets -eq 0 -and $Braces -eq 0) { $Angles-- }
+            elseif ($Parens -eq 0 -and $Brackets -eq 0 -and $Braces -eq 0 -and $Angles -eq 0 -and
+                    ($Character -eq '=' -or $Character -eq ',' -or $Character -eq ';')) {
+                if ($Character -eq '=' -and $NextCharacter -eq '>') { return $null }
+                $DelimiterPosition = $Position
+                $Delimiter = $Character
+                break
+            }
+        }
+        if ($DelimiterPosition -lt 0) { return $null }
+
+        $Header = (($Declaration.Substring(0, $DelimiterPosition)) -replace '[ \t\r\n]+', ' ').Trim()
+        while ($Header -match '^(public|private|protected|internal|static|readonly|const|volatile|new) +') {
+            $Header = $Header.Substring($Matches[0].Length)
+        }
+        $LastSpace = $Header.LastIndexOf(' ')
+        if ($LastSpace -lt 1) { return $null }
+        $Identifier = $Header.Substring($LastSpace + 1)
+        if ($Identifier -notmatch '^@?[_\p{L}\p{Nl}][_\p{L}\p{Nl}\p{Nd}\p{Pc}\p{Mn}\p{Mc}\p{Cf}]*$') {
+            return $null
+        }
+        $TypeName = $Header.Substring(0, $LastSpace).Trim()
+        if (-not $TypeName) { return $null }
+        $LargeArray = $TypeName -match '^(int|float) *\[ *\]$'
+
+        $Count = if ($Delimiter -eq ',') { 2 } else { 1 }
+        if ($Delimiter -eq ';') {
+            return [pscustomobject]@{ Count = $Count; LargeArray = $LargeArray }
+        }
+        $Parens = 0
+        $Brackets = 0
+        $Braces = 0
+        for ($Position = $DelimiterPosition + 1; $Position -lt $Declaration.Length; $Position++) {
+            $Character = $Declaration[$Position]
+            if ($Character -eq '(') { $Parens++ }
+            elseif ($Character -eq ')' -and $Parens -gt 0) { $Parens-- }
+            elseif ($Character -eq '[') { $Brackets++ }
+            elseif ($Character -eq ']' -and $Brackets -gt 0) { $Brackets-- }
+            elseif ($Character -eq '{') { $Braces++ }
+            elseif ($Character -eq '}' -and $Braces -gt 0) { $Braces-- }
+            elseif ($Character -eq ',' -and $Parens -eq 0 -and $Brackets -eq 0 -and $Braces -eq 0) { $Count++ }
+            elseif ($Character -eq ';' -and $Parens -eq 0 -and $Brackets -eq 0 -and $Braces -eq 0) {
+                return [pscustomobject]@{ Count = $Count; LargeArray = $LargeArray }
+            }
+        }
+        return $null
+    }
+
+    function Complete-Declaration {
+        $Declaration = ($State.DeclarationBuilder.ToString() -replace '[ \t\r\n]+', ' ').Trim()
+        $IsClass = $Declaration -match '^((public|private|protected|internal|abstract|sealed|static|partial|new) +)*class( |$)'
 
         if ($State.PendingNoVariableSync -and $IsClass) {
             $State.HasNoVariableSync = $true
             Reset-PendingDeclaration
             return
         }
-        if ($State.PendingSynced -and $IsField) {
-            $State.SyncedCount++
-            if ($Declaration -match '^((public|private|protected|internal|static|readonly|const|volatile|new) +)*(int|float) *\[ *\] +') {
-                $State.HasLargeSyncedArray = $true
-            }
+        $FieldInfo = if ($State.PendingSynced) { Get-FieldInfo $Declaration } else { $null }
+        if ($null -ne $FieldInfo) {
+            $State.SyncedCount += $FieldInfo.Count
+            if ($FieldInfo.LargeArray) { $State.HasLargeSyncedArray = $true }
             Reset-PendingDeclaration
             return
         }
+        Reset-PendingDeclaration
+    }
 
-        $IsOther = $Declaration -match '^((public|private|protected|internal|abstract|sealed|static|partial|readonly|new) +)*(class|struct|interface|enum|delegate|event|record|namespace)( |$)' -or
-            $Declaration -match '[({;]|=>'
-        if ($IsOther) { Reset-PendingDeclaration }
+    function Add-DeclarationFragment([string]$Fragment) {
+        if (-not ($State.PendingSynced -or $State.PendingNoVariableSync) -or -not $Fragment) { return }
+        $Boundary = -1
+        for ($Position = 0; $Position -lt $Fragment.Length; $Position++) {
+            $Character = $Fragment[$Position]
+            $NextCharacter = if ($Position + 1 -lt $Fragment.Length) { $Fragment[$Position + 1] } else { [char]0 }
+            if ($Character -eq '(') { $State.DeclarationParens++ }
+            elseif ($Character -eq ')' -and $State.DeclarationParens -gt 0) { $State.DeclarationParens-- }
+            elseif ($Character -eq '[') { $State.DeclarationBrackets++ }
+            elseif ($Character -eq ']' -and $State.DeclarationBrackets -gt 0) { $State.DeclarationBrackets-- }
+            elseif ($Character -eq '{') {
+                if ($State.DeclarationParens -eq 0 -and $State.DeclarationBrackets -eq 0 -and
+                    $State.DeclarationBraces -eq 0 -and -not $State.DeclarationHasAssignment) {
+                    $Boundary = $Position
+                    break
+                }
+                $State.DeclarationBraces++
+            } elseif ($Character -eq '}' -and $State.DeclarationBraces -gt 0) {
+                $State.DeclarationBraces--
+            } elseif ($Character -eq '=' -and $NextCharacter -ne '>' -and
+                      $State.DeclarationParens -eq 0 -and $State.DeclarationBrackets -eq 0 -and $State.DeclarationBraces -eq 0) {
+                $State.DeclarationHasAssignment = $true
+            } elseif ($Character -eq ';' -and $State.DeclarationParens -eq 0 -and
+                      $State.DeclarationBrackets -eq 0 -and $State.DeclarationBraces -eq 0) {
+                $Boundary = $Position
+                break
+            }
+        }
+
+        $Piece = if ($Boundary -ge 0) { $Fragment.Substring(0, $Boundary + 1) } else { $Fragment }
+        if ($State.DeclarationBuilder.Length -gt 0) { [void]$State.DeclarationBuilder.Append(' ') }
+        [void]$State.DeclarationBuilder.Append($Piece)
+        if ($State.DeclarationBuilder.Length -gt 262144) { throw 'ATTRIBUTE_SCAN_FAILED' }
+        if ($Boundary -ge 0) { Complete-Declaration }
     }
 
     function Start-Attribute {
@@ -581,7 +675,7 @@ function Get-SyncStats([string]$Source) {
     }
 
     function Read-SourceLine([string]$Line) {
-        if ($State.DeclarationBuffer) {
+        if ($State.DeclarationBuilder.Length -gt 0) {
             Add-DeclarationFragment $Line
             return
         }
@@ -630,7 +724,11 @@ function Get-SyncStats([string]$Source) {
     $State = @{
         PendingSynced = $false
         PendingNoVariableSync = $false
-        DeclarationBuffer = ''
+        DeclarationBuilder = [System.Text.StringBuilder]::new()
+        DeclarationParens = 0
+        DeclarationBrackets = 0
+        DeclarationBraces = 0
+        DeclarationHasAssignment = $false
         CollectingAttribute = $false
         AttributeContent = [System.Text.StringBuilder]::new()
         AttributeParens = 0
@@ -653,7 +751,11 @@ function Get-SyncStats([string]$Source) {
     }
 }
 
-$SyncStats = Get-SyncStats $MaskedSource
+try {
+    $SyncStats = Get-SyncStats $MaskedSource
+} catch {
+    Stop-Validation 'ATTRIBUTE_SCAN_FAILED'
+}
 $SyncedCount = $SyncStats.SyncedCount
 $HasNoVariableSync = $SyncStats.HasNoVariableSync
 $HasLargeSyncedArray = $SyncStats.HasLargeSyncedArray

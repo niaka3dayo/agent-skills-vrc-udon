@@ -56,7 +56,14 @@ UDON_DESCRIPTION="$(frontmatter_description "$UDON_SKILL")"
 WORLD_DESCRIPTION="$(frontmatter_description "$WORLD_SKILL")"
 
 for skill in "$UDON_SKILL" "$WORLD_SKILL"; do
-    length="$(folded_description_length "$skill")"
+    if ! length="$(folded_description_length "$skill")"; then
+        echo "ERROR: folded Skill description not found: $skill" >&2
+        exit 1
+    fi
+    if [[ ! "$length" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: invalid folded Skill description length: $skill ($length)" >&2
+        exit 1
+    fi
     if [ "$length" -gt 1024 ]; then
         echo "ERROR: Skill description exceeds 1024 characters: $skill ($length)" >&2
         exit 1

@@ -60,9 +60,9 @@ assert_not_contains() {
 
 run_hook() {
     local file_path="$1" stderr_path="$2"
-    local hook_input
-    hook_input="{\"tool_input\":{\"file_path\":\"$file_path\"}}"
-    printf '%s' "$hook_input" | "$HOOK" 2>"$stderr_path" >/dev/null
+    RUN_HOOK_INPUT="{\"tool_input\":{\"file_path\":\"$file_path\"}}"
+    RUN_HOOK_STDOUT=$(printf '%s' "$RUN_HOOK_INPUT" | "$HOOK" 2>"$stderr_path")
+    RUN_HOOK_STATUS=$?
 }
 
 materialize_fixture() {
@@ -257,6 +257,16 @@ run_shared_parity_matrix() {
 
         local stderr_path="$TMPROOT/shared-$case_id.err"
         run_hook "$materialized" "$stderr_path"
+        if [ "$RUN_HOOK_STATUS" -ne 0 ]; then
+            echo "FAIL [shared case $case_id] hook exit: $RUN_HOOK_STATUS"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        if [ "$RUN_HOOK_STDOUT" != "$RUN_HOOK_INPUT" ]; then
+            echo "FAIL [shared case $case_id] stdout did not preserve hook input"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
         if grep -Fq 'validator internal error' "$stderr_path"; then
             echo "FAIL [shared case $case_id] lexical mask invariant failed"
             FAIL=$((FAIL + 1))
@@ -299,6 +309,16 @@ run_shared_parity_matrix() {
         fi
         template_stderr="$TMPROOT/template-$template_count.err"
         run_hook "$template_path" "$template_stderr"
+        if [ "$RUN_HOOK_STATUS" -ne 0 ]; then
+            echo "FAIL [template case $template_name] hook exit: $RUN_HOOK_STATUS"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
+        if [ "$RUN_HOOK_STDOUT" != "$RUN_HOOK_INPUT" ]; then
+            echo "FAIL [template case $template_name] stdout did not preserve hook input"
+            FAIL=$((FAIL + 1))
+            continue
+        fi
         map_warning_file "$template_stderr"
         if [ "$mapping_failed" -ne 0 ]; then
             echo "FAIL [template case $template_name] warning mapping failed"
@@ -702,6 +722,89 @@ else
 fi
 assert_exit "raw string linear scan" 0 "$RAW_PERF_RC"
 assert_not_contains "raw string scan has no internal failure" "$(cat "$TMPROOT/raw-performance.err")" 'VALIDATOR-WARNING'
+
+DECLARATION_CAP_FILE="$TMPROOT/declaration-cap.cs"
+{
+    printf 'using UdonSharp;\npublic class DeclarationCap : UdonSharpBehaviour\n{\n    [UdonSynced]\n    '
+    head -c 270000 /dev/zero | tr '\0' 'A'
+    printf '\n'
+} > "$DECLARATION_CAP_FILE"
+run_hook "$DECLARATION_CAP_FILE" "$TMPROOT/declaration-cap.err"
+assert_exit "declaration cap fails open" 0 "$RUN_HOOK_STATUS"
+if [ "$RUN_HOOK_STDOUT" = "$RUN_HOOK_INPUT" ]; then
+    echo "PASS [declaration cap] stdout preserves hook input"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [declaration cap] stdout did not preserve hook input"
+    FAIL=$((FAIL + 1))
+fi
+if grep -Fxq '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)' "$TMPROOT/declaration-cap.err" &&
+    [ "$(wc -l < "$TMPROOT/declaration-cap.err" | tr -d '[:space:]')" = "1" ]; then
+    echo "PASS [declaration cap] exactly one operational warning"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [declaration cap] expected exactly one ATTRIBUTE_SCAN_FAILED warning"
+    FAIL=$((FAIL + 1))
+fi
+
+DECLARATION_PERF_LOG="$TMPROOT/declaration-performance.log"
+if python3 - "$HOOK" "$TMPROOT" >"$DECLARATION_PERF_LOG" 2>&1 <<'PY'
+import json
+import pathlib
+import subprocess
+import sys
+import time
+
+hook = pathlib.Path(sys.argv[1])
+root = pathlib.Path(sys.argv[2])
+
+
+def measure(line_count: int) -> float:
+    source = root / f"pending-declaration-{line_count}.cs"
+    source.write_text(
+        "using UdonSharp;\n"
+        "public class PendingDeclaration : UdonSharpBehaviour\n"
+        "{\n"
+        "    [UdonSynced]\n"
+        + "    Identifier\n" * line_count,
+        encoding="utf-8",
+    )
+    payload = json.dumps({"tool_input": {"file_path": str(source)}}, separators=(",", ":"))
+    started = time.monotonic()
+    result = subprocess.run(
+        [str(hook)],
+        input=payload,
+        text=True,
+        capture_output=True,
+        timeout=15,
+        check=False,
+    )
+    elapsed = time.monotonic() - started
+    if result.returncode != 0:
+        raise RuntimeError(f"{line_count} lines exited {result.returncode}")
+    if result.stdout.strip() != payload:
+        raise RuntimeError(f"{line_count} lines did not preserve stdout")
+    if "VALIDATOR-WARNING" in result.stderr:
+        raise RuntimeError(f"{line_count} lines triggered an internal failure")
+    return elapsed
+
+
+measure(100)
+small = measure(2000)
+large = measure(8000)
+limit = min(3.5, small * 8 + 0.5)
+print(f"pending declaration: 2000={small:.3f}s 8000={large:.3f}s limit={limit:.3f}s")
+if large > limit:
+    raise SystemExit(1)
+PY
+then
+    echo "PASS [pending declaration scan] $(cat "$DECLARATION_PERF_LOG")"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [pending declaration scan]"
+    sed 's/^/  /' "$DECLARATION_PERF_LOG"
+    FAIL=$((FAIL + 1))
+fi
 
 # ------------------------------------------------------------
 # Shared Bash/PowerShell rule inventory and lexical-mask matrix

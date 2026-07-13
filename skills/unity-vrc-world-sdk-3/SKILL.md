@@ -104,19 +104,20 @@ These decisions shape every downstream choice. Make them first, before placing a
 | **Quest required?** | Yes / No | Yes → Quest First philosophy applies from day 0, not as a retrofit |
 | **Expected player count?** | 1–8 / 9–40 / 40+ | Affects spawn count, mirror policy, max video players |
 | **Primary interaction?** | Grab (Pickup) / Sit (Station) / Watch (Video) / Explore | Determines which SDK components are mandatory |
-| **Lighting approach?** | Baked / Mixed / Realtime | Realtime is only viable on PC-only worlds; all lights must be baked before upload |
+| **Lighting approach?** | Baked / Mixed / Realtime | Prefer baked lighting on Android; profile each target device before keeping realtime lighting or shadows |
 | **Networked objects?** | None / Physics (Pickup+ObjectSync) / State (UdonSynced) | Determines sync architecture before Udon scripting begins |
 
 ---
 
 ## Design Philosophy: Quest First
 
-**Build for Quest and get PC for free. Build for PC and Quest becomes a separate project.**
+**If the world must run on Android, decide those constraints before tuning the PC build. Test each target separately.**
 
-Quest (Meta Quest 2/3/Pro) defines the performance budget:
-- **CPU/GPU**: ~2× slower than PC VR; tile-based GPU with no hardware shadow maps
-- **VRAM**: ~4 GB shared with OS (vs 6–12 GB on PC); no HDR framebuffer
-- **Thermal throttling**: Sustained 100% GPU load causes clock reduction within minutes
+Android headsets have mobile CPU, GPU, memory, and thermal budgets that differ
+from PC and vary by device:
+- **GPU**: Realtime lights, shadows, overdraw, and complex shaders can dominate frame time
+- **Memory**: Textures and lightmaps share limited system memory with the client
+- **Thermals**: Sustained load can reduce available performance during a session
 
 Measure each target device independently; PC results do not establish Android
 performance, and a single-client Quest result does not predict a particular PC
@@ -131,7 +132,7 @@ before publishing.
 ```text
 Quest required? → Yes
   ├── Shaders: Mobile-only (Standard Lite, Toon Lit)
-  ├── Lighting: Fully baked (no realtime shadows)
+  ├── Lighting: Baked by default; retain realtime effects only after target-device profiling
   ├── Geometry: 50K-100K triangles (target range)
   ├── Materials: < 25 unique materials
   ├── Audio: Mono, compressed, limited concurrent sources

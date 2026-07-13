@@ -247,7 +247,18 @@ function Invoke-SharedParityMatrix {
         $Materialized = Join-Path $TempRoot ("shared-" + $CaseId + ".cs")
         [System.IO.File]::WriteAllText($Materialized, $Source, (New-Object System.Text.UTF8Encoding($false)))
         $Payload = @{ tool_input = @{ file_path = $Materialized } } | ConvertTo-Json -Compress
-        $ActualOutput = $Payload | & $Hook 2>&1 | Out-String
+        $HookResult = Invoke-HookProcess $Payload
+        if ($HookResult.ExitCode -ne 0) {
+            Write-Output "FAIL [shared case $CaseId] hook exit: $($HookResult.ExitCode)"
+            $script:Failed++
+            continue
+        }
+        if ($HookResult.Stdout.TrimEnd("`r", "`n") -ne $Payload) {
+            Write-Output "FAIL [shared case $CaseId] stdout did not preserve hook input"
+            $script:Failed++
+            continue
+        }
+        $ActualOutput = $HookResult.Stderr
 
         try {
             $ActualIds = @(Convert-WarningLinesToRuleIds ([regex]::Split($ActualOutput, '\r?\n')))
@@ -292,7 +303,18 @@ function Invoke-SharedParityMatrix {
             continue
         }
         $Payload = @{ tool_input = @{ file_path = $TemplatePath } } | ConvertTo-Json -Compress
-        $TemplateOutput = $Payload | & $Hook 2>&1 | Out-String
+        $HookResult = Invoke-HookProcess $Payload
+        if ($HookResult.ExitCode -ne 0) {
+            Write-Output "FAIL [template case $TemplateName] hook exit: $($HookResult.ExitCode)"
+            $script:Failed++
+            continue
+        }
+        if ($HookResult.Stdout.TrimEnd("`r", "`n") -ne $Payload) {
+            Write-Output "FAIL [template case $TemplateName] stdout did not preserve hook input"
+            $script:Failed++
+            continue
+        }
+        $TemplateOutput = $HookResult.Stderr
         try {
             $TemplateActual = @(Convert-WarningLinesToRuleIds ([regex]::Split($TemplateOutput, '\r?\n'))) -join ';'
         } catch {
@@ -506,6 +528,54 @@ public class Sample : UdonSharpBehaviour
         $script:Passed++
     } else {
         Write-Output ("FAIL [dollar probe linear scan] elapsed={0:N3}s" -f $DollarStopwatch.Elapsed.TotalSeconds)
+        $script:Failed++
+    }
+
+    function New-PendingDeclarationSource([int]$LineCount) {
+        $Builder = [System.Text.StringBuilder]::new()
+        [void]$Builder.AppendLine('using UdonSharp;')
+        [void]$Builder.AppendLine('public class PendingDeclaration : UdonSharpBehaviour')
+        [void]$Builder.AppendLine('{')
+        [void]$Builder.AppendLine('    [UdonSynced]')
+        for ($Index = 0; $Index -lt $LineCount; $Index++) {
+            [void]$Builder.AppendLine('    Identifier')
+        }
+        return $Builder.ToString()
+    }
+
+    [void](Invoke-Hook (New-PendingDeclarationSource 100) 'pending-declaration-warmup.cs')
+    $PendingSmallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $PendingSmallOutput = Invoke-Hook (New-PendingDeclarationSource 1000) 'pending-declaration-1000.cs'
+    $PendingSmallStopwatch.Stop()
+    $PendingLargeStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $PendingLargeOutput = Invoke-Hook (New-PendingDeclarationSource 4000) 'pending-declaration-4000.cs'
+    $PendingLargeStopwatch.Stop()
+    Assert-NotContains 'pending declaration scan has no internal failure' ($PendingSmallOutput + $PendingLargeOutput) 'VALIDATOR-WARNING'
+    $PendingLimit = [Math]::Min(4.5, $PendingSmallStopwatch.Elapsed.TotalSeconds * 8 + 0.75)
+    if ($PendingLargeStopwatch.Elapsed.TotalSeconds -le $PendingLimit) {
+        Write-Output ("PASS [pending declaration scan] 1000={0:N3}s 4000={1:N3}s limit={2:N3}s" -f $PendingSmallStopwatch.Elapsed.TotalSeconds, $PendingLargeStopwatch.Elapsed.TotalSeconds, $PendingLimit)
+        $script:Passed++
+    } else {
+        Write-Output ("FAIL [pending declaration scan] 1000={0:N3}s 4000={1:N3}s limit={2:N3}s" -f $PendingSmallStopwatch.Elapsed.TotalSeconds, $PendingLargeStopwatch.Elapsed.TotalSeconds, $PendingLimit)
+        $script:Failed++
+    }
+
+    $DeclarationCapPath = Join-Path $TempRoot 'declaration-cap.cs'
+    $DeclarationCapSource = 'using UdonSharp;' + [char]10 +
+        'public class DeclarationCap : UdonSharpBehaviour' + [char]10 +
+        '{' + [char]10 + '    [UdonSynced]' + [char]10 + '    ' + ('A' * 270000) + [char]10
+    [System.IO.File]::WriteAllText($DeclarationCapPath, $DeclarationCapSource, (New-Object System.Text.UTF8Encoding($false)))
+    $DeclarationCapPayload = @{ tool_input = @{ file_path = $DeclarationCapPath } } | ConvertTo-Json -Compress
+    $DeclarationCapResult = Invoke-HookProcess $DeclarationCapPayload
+    $DeclarationCapWarning = '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)'
+    if ($DeclarationCapResult.ExitCode -eq 0 -and
+        $DeclarationCapResult.Stdout.TrimEnd("`r", "`n") -eq $DeclarationCapPayload -and
+        $DeclarationCapResult.Stderr.TrimEnd("`r", "`n") -eq $DeclarationCapWarning) {
+        Write-Output 'PASS [declaration cap] fails open with input preserved and one operational warning'
+        $script:Passed++
+    } else {
+        Write-Output 'FAIL [declaration cap] fail-open contract mismatch'
+        Write-Output $DeclarationCapResult
         $script:Failed++
     }
 

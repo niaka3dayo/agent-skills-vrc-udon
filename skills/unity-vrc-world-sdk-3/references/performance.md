@@ -445,7 +445,7 @@ These limits apply to the Android build target and are enforced at upload time o
 
 Reference: https://creators.vrchat.com/platforms/android/quest-content-optimization
 
-### Hard Limits
+### Android Limits and High-Cost Features
 
 | Constraint | Limit | Notes |
 |-----------|-------|-------|
@@ -453,16 +453,16 @@ Reference: https://creators.vrchat.com/platforms/android/quest-content-optimizat
 | Texture resolution | 1024×1024 recommended max | Higher resolutions increase memory and load time |
 | Custom shaders | Supported with caution | Custom shaders are allowed for worlds; use mobile-compatible shaders to avoid GPU overload. Avatars are restricted to VRChat Mobile shaders. |
 | Post-processing effects | Not supported | Bloom, depth of field, color grading unavailable |
-| Real-time shadows | Not supported | Baked lighting only |
+| Real-time shadows | Very high cost | Prefer baked lighting; keep only after profiling on the target Android device |
 | Video players | Work with some limitations | See audio-video.md (some URLs unsupported on Quest) |
 | Particle systems | Limited | Reduce count and complexity |
 
-### Features Not Available on Quest
+### Features to Remove or Treat with Caution on Quest
 
 ```text
 ⚠️ Custom shaders (worlds only: allowed with caution; avoid complex HLSL/ShaderLab features that stress the mobile GPU. Avatar shaders are restricted to VRChat Mobile shaders.)
 ❌ Post-processing stack (any effect)
-❌ Real-time shadow casting and receiving
+⚠️ Real-time shadow casting and receiving (avoid by default; retain only with target-device evidence)
 ❌ Screen-space ambient occlusion (SSAO)
 ❌ Screen-space reflections (SSR)
 ❌ Tessellation and geometry shaders
@@ -670,7 +670,7 @@ Verify all items below before uploading a Quest-compatible world build.
 ```text
 □ Video players configured for Quest (see audio-video.md)
 □ No post-processing components (Post Process Volume, etc.)
-□ No real-time shadow settings on any light
+□ Realtime lights and shadows removed unless target-device profiling justifies them
 □ No screen-space effects in any material or renderer
 □ Audio sources: compressed formats, streaming for BGM
 ```
