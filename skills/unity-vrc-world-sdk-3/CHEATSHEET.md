@@ -28,7 +28,7 @@
 □ Respawn Height set (below the floor)
 □ "Setup Layers for VRChat" executed
 □ Light baking complete
-□ 45+ FPS (VR)
+□ Project-defined performance target met on each supported device
 ```
 
 ### VRC_SceneDescriptor
@@ -202,17 +202,17 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 
 ## Performance
 
-### Limits
+### Starting Budgets
 
 | Item | PC | Quest |
 |------|-----|-------|
-| FPS Target | 45+ VR, 60+ Desktop | 72 |
+| Performance criteria | Project-defined | Project-defined |
 | Mirrors | 1 (default OFF) | 0-1 |
 | Video Players | 1-2 recommended | 1 recommended |
-| Realtime Lights | 0-1 | 0 |
-| Polygons | 500K-1M | 50K-100K |
-| Materials | No limit | 25 or less |
-| Texture Size | No limit | 1024 or less |
+| Realtime Lighting | Profile | Baked by default; profile on the target Android device before keeping realtime lights or shadows |
+| World triangles | Set from project needs | Approximately 250,000 total recommended; not an upload limit |
+| Materials | Minimize draw calls | Minimize draw calls; no fixed world material limit is documented |
+| Texture Size | Set from memory profile | 1024×1024 or smaller is the official rule of thumb |
 
 ### Quest Restrictions
 
@@ -221,14 +221,14 @@ Physics.Raycast(origin, dir, out hit, distance, playerMask);
 | Dynamic Bones | ✅ | ❌ |
 | Cloth | ✅ | ❌ |
 | Post-Processing | ✅ | ❌ |
-| Unity Constraints | ✅ | ❌ |
-| Realtime Shadows | ✅ | ⚠️ |
+| Unity Constraints | ✅ | ✅ Worlds only; profile cost |
+| Realtime Shadows | ✅ | ⚠️ Keep only with target-device evidence |
 
 ### Optimization Checklist
 
 ```text
 □ Light baking complete
-□ Realtime lights ≤ 1
+□ Realtime lighting and shadows profiled on every target device
 □ Mirror default OFF
 □ Video players kept to 1-2 (recommended)
 □ Static Batching enabled
@@ -334,7 +334,7 @@ OnVideoReady()
 □ Layer/Collision verified
 □ Lights baked
 □ Mirror OFF default
-□ 45+ FPS (VR)
+□ Project-defined performance target met on each supported device
 □ No Validation errors
 ```
 
@@ -367,12 +367,11 @@ OnVideoReady()
 ### Content Warnings
 
 ```text
-□ Adult Language
-□ Blood/Gore
-□ Fear/Horror
-□ Nudity/Suggestive
-□ Substance Use
-□ Violence
+□ Sexually Suggestive
+□ Adult Language and Themes
+□ Graphic Violence
+□ Excessive Gore
+□ Extreme Horror
 ```
 
 ---

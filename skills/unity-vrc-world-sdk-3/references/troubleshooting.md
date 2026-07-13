@@ -451,11 +451,11 @@ public override void OnDeserialization()
 ```text
 
 1. Verify with Android build target
-2. Change shaders to Mobile-compatible
+2. Check Android shader compile/runtime errors; substitute a mobile-compatible shader or profile and fix the custom world shader
 3. Remove Dynamic Bones (disabled on Quest)
 4. Remove Cloth (disabled on Quest)
 5. Remove Post Processing (disabled on Quest)
-6. Reduce polygon count (recommended under 100K)
+6. Compare total geometry with the approximately 250,000-triangle world recommendation, then reduce it if profiling requires
 
 ```
 
@@ -467,13 +467,14 @@ public override void OnDeserialization()
 
 ```text
 
-1. Polygon count: Under 100K
-2. Material count: Under 25
-3. Textures: 1024x1024 or less
-4. Lights: Fully baked
-5. Shaders: Mobile/VRChat/Lightmapped
-6. Minimize transparency
-7. Remove or minimize mirrors
+1. Profile CPU, GPU, render thread, and memory on the target Android device
+2. Compare total geometry with the approximately 250,000-triangle world recommendation
+3. Minimize materials and draw calls; there is no fixed world material upload limit
+4. Keep textures at 1024x1024 or less as a rule of thumb, then verify memory
+5. Bake environment lighting; retain realtime lighting only with target-device evidence
+6. Prefer Mobile/VRChat/Lightmapped when it fits; profile every custom world shader
+7. Minimize transparency
+8. Remove or minimize mirrors
 
 ```
 

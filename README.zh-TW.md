@@ -202,6 +202,9 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 同時支援 **Bash**（`validate-udonsharp.sh`）與 **PowerShell**（`validate-udonsharp.ps1`）。
 
+Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入，並輸出
+`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，不會將其視為驗證成功。
+
 ---
 
 ## SDK 版本
@@ -220,7 +223,7 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（頭像）、Mirror 渲染順序修正 | 已支援 |
 | **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 存取、DataList/DataDictionary 容量 API | 最新穩定版 |
 
-> **注意**：SDK 3.9.0 以下版本已於 2025 年 12 月 2 日棄用。新的世界上傳需使用 3.9.0 以上版本。
+> **注意**：發佈前，請確認專案使用的是 VRChat 目前支援的 SDK 版本。
 
 ---
 

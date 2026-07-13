@@ -4,9 +4,8 @@ Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
 **Applies to**: SDK 3.7.x through 3.10.4
 
-> **Deprecation Notice**: SDK versions below 3.9.0 were deprecated on **December 2, 2025**.
-> New world uploads are no longer possible with those versions.
-> Worlds that have not yet migrated past 3.9.0 must update to continue publishing.
+Use the current supported SDK when publishing. The version markers below describe
+feature availability; they do not claim an upload cutoff for older SDK versions.
 
 ## Version markers
 
@@ -266,7 +265,7 @@ public class ContactButton : UdonSharpBehaviour
 }
 ```
 
-**VRC Constraints** — cross-platform replacements for Unity's built-in constraint components. Unity Constraints are disabled on Quest/Android; VRC Constraints work on all platforms.
+**VRC Constraints** — VRChat's alternative to Unity's built-in constraint components. Worlds may use either system on Android, but VRC Constraints are preferred for new work and expose the documented VRChat/Udon APIs.
 
 ```csharp
 using VRC.SDK3.Dynamics.Constraint.Components;
@@ -361,9 +360,12 @@ Runtime shape/configuration edits on `VRCContactSender` or `VRCContactReceiver` 
 
 Contact event examples should use the proxy payload fields: `contactSender`, `contactReceiver`, `contactPoint`, `enterVelocity`, and `matchingTags`, with proxy `isValid`, `player`, and `usage` checks.
 
-#### Unity Constraints — Quest Impact
+#### Unity Constraints — World Performance
 
-Unity's built-in constraint components (`PositionConstraint`, `ParentConstraint`, etc.) are **disabled on Quest/Android**. Worlds that previously worked PC-only may discover Quest visitors see no constraint behavior. Replace all Unity Constraints with their VRC Constraint equivalents before uploading a cross-platform world.
+Unity's built-in constraint components (`PositionConstraint`, `ParentConstraint`, etc.)
+are permitted in worlds on Android. They can cause significant performance problems
+when overused, so prefer VRC Constraints for new work and profile existing constraint
+chains on each target device before deciding whether to migrate them.
 
 | Unity Constraint | VRC Replacement |
 |-----------------|----------------|
@@ -378,7 +380,7 @@ Namespace for all VRC Constraints: `VRC.SDK3.Dynamics.Constraint.Components`.
 
 ### Migration Checklist: 3.9.x to 3.10.x
 
-- [ ] Replace all Unity Constraint components with VRC Constraint equivalents (mandatory for Quest support)
+- [ ] Inventory Unity Constraint components; replace them with VRC equivalents when Udon access, consistent authoring, or target-device profiling justifies the migration
 - [ ] Add `using VRC.SDK3.Dynamics.Constraint.Components;` to any script that references VRC Constraints
 - [ ] Verify contact receivers use `UpdateContentTypes(DynamicsUsageFlags)` for content categories and `UpdateCollisionTags(string[])` for matching tags
 - [ ] Implement `OnPersistenceUsageUpdated` if your world writes PlayerData and you want to warn players of storage limits

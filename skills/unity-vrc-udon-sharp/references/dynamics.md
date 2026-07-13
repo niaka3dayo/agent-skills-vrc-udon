@@ -439,13 +439,13 @@ public class ConstraintController : UdonSharpBehaviour
 
 ### VRC Constraints vs Unity Constraints
 
-VRChat provides its own constraint components that replace Unity's built-in constraints. **Unity Constraints are disabled on Quest/Android**, making VRC Constraints the only cross-platform option.
+VRChat provides its own constraint components as an alternative to Unity's built-in constraints. Worlds may use either system on Android. Prefer VRC Constraints for new work, and profile Unity Constraint-heavy scenes because overuse can significantly affect performance.
 
 #### Comparison Table
 
 | Feature | VRC Constraints | Unity Constraints |
 |---------|----------------|-------------------|
-| **Quest/Android** | Supported | Disabled |
+| **Quest/Android worlds** | Supported | Permitted; profile performance |
 | **PC** | Supported | Supported |
 | **Network sync** | Compatible with VRChat networking (sync via UdonSynced/VRC_ObjectSync) | No VRChat network integration |
 | **Performance** | Optimized for VRChat | Standard Unity performance |
@@ -473,7 +473,7 @@ public VRCParentConstraint parentConstraint;
 public VRCPositionConstraint positionConstraint;
 public VRCRotationConstraint rotationConstraint;
 
-// Wrong: Unity constraints are disabled on Quest
+// Also permitted in worlds, but profile the cost on every target device:
 // public UnityEngine.Animations.ParentConstraint parentConstraint;
 ```
 
@@ -481,10 +481,10 @@ public VRCRotationConstraint rotationConstraint;
 
 | Scenario | Recommendation |
 |----------|---------------|
-| World targets PC + Quest | **VRC Constraints** (mandatory) |
-| World targets PC only | VRC Constraints preferred (future-proof) |
+| World targets PC + Quest | VRC Constraints preferred; profile either system on target hardware |
+| World targets PC only | VRC Constraints preferred for new work |
 | Need Udon API control | **VRC Constraints** (better API) |
-| Migrating from Unity Constraints | Replace with VRC equivalents |
+| Migrating from Unity Constraints | Replace when API needs or profiling results justify it |
 | Avatar constraints | Follow VRChat avatar documentation |
 
 ## VRC Constraints Udon API

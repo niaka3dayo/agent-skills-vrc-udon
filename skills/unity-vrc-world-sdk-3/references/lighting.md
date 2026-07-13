@@ -81,7 +81,7 @@ Dynamic objects:
 
 ```text
 
-1. Set all lights to Baked/Mixed
+1. Bake environment lighting; identify any effect that truly needs Mixed/Realtime
 2. Mark static objects as Static
 3. Place Light Probes
 4. Click "Generate Lighting" in the Lighting window
@@ -197,16 +197,16 @@ Notes:
 
 ## Quest Optimization
 
-### Quest-Specific Settings
+### Android Starting Settings
 
 ```text
 
-Required:
-├── All lights set to Baked
-├── Directional Mode: Non-Directional
+Recommended baseline:
+├── Environment lights baked
+├── Directional Mode: start with Non-Directional and compare quality/memory
 ├── Lightmap Size: 512-1024
 ├── Compress Lightmaps: ✅
-└── Realtime lights: 0
+└── Realtime or Mixed lighting: retain only after target-device profiling
 
 Recommended shaders:
 ├── Mobile/VRChat/Lightmapped
@@ -220,8 +220,8 @@ Recommended shaders:
 ```text
 
 1. Switch Platform to Android
-2. Remove all Realtime lights
-3. Change Mixed → Baked
+2. Bake environment lighting as the default
+3. Keep only necessary Mixed or Realtime effects and measure them on target hardware
 4. Lower lightmap resolution
 5. Place Light Probes
 6. Generate Lighting
@@ -308,13 +308,13 @@ Recommended shaders:
 
 ```text
 
-□ All lights are Baked/Mixed
+□ Environment lighting baked; any Mixed/Realtime exception profiled on target hardware
 □ Static objects are marked Static
 □ Light Probes placed
 □ Reflection Probes placed
 □ Lightmaps baked
-□ Quest: Realtime lights = 0
-□ Quest: Directional Mode = Non-Directional
+□ Android: realtime or Mixed lighting justified by target-device profiling
+□ Android: Directional Mode selected after comparing memory and visual quality
 
 ```
 
@@ -325,7 +325,7 @@ Recommended shaders:
 | Lightmap Resolution | 20 | 10 |
 | Lightmap Size | 2048 | 1024 |
 | Reflection Probe Res | 256 | 128 |
-| Realtime Lights | 0-1 | 0 |
+| Realtime Lighting | Profile | Baked default; retain only with target-device profiling |
 
 ---
 
@@ -339,8 +339,8 @@ Detailed recommended parameters for baking lightmaps targeting Quest/Android. Th
 |---|---|---|---|
 | Lightmap Resolution | 10–20 texels/unit | **5–10 texels/unit** | Lower resolution keeps lightmap textures within 1024×1024 and reduces build size |
 | Max Lightmap Size | 2048×2048 | **1024×1024** | Quest GPU memory is limited; oversized lightmaps cause stuttering and load failures |
-| Directional Mode | Directional or Non-Directional | **Non-Directional (required)** | Directional mode stores an extra texture per lightmap; not worth the cost on Quest |
-| Compress Lightmaps | Optional | **Required** | Uncompressed lightmaps can exceed the 100 MB Android build limit |
+| Directional Mode | Directional or Non-Directional | **Start with Non-Directional** | Directional mode stores extra lightmap data; keep it only when measured memory cost and visual quality justify it |
+| Compress Lightmaps | Optional | **Recommended baseline** | Compare memory and visual artifacts; the final compressed world must remain under the 100 MB Android limit |
 
 > If your world still looks dark or blurry at 5 texels/unit, increase to 10 before raising Max Size.
 > Raising resolution is cheaper in quality terms; raising size increases memory consumption more.
@@ -371,7 +371,7 @@ On Quest, **Baked lighting is strongly preferred over Mixed**. Use this decision
 
 Does the world have any moving lights or real-time shadows?
 ├── Yes → Is this required? (gameplay mechanic, not just aesthetics)
-│   ├── Yes → Use Mixed (PC only); remove or replace with Baked on Android build
+│   ├── Yes → Prototype Mixed or Realtime, then keep it only if target-device profiling passes
 │   └── No  → Switch to Baked and use light probes for dynamics
 └── No  → Use Baked for everything
 
@@ -379,16 +379,17 @@ Does the world have any moving lights or real-time shadows?
 
 | Mode | Quest Support | Notes |
 |---|---|---|
-| **Baked** | Full support | Required for Quest builds; zero runtime cost |
-| **Mixed (Subtractive)** | Partial support | Shadowmask not fully supported; avoid |
-| **Mixed (Shadowmask)** | Not recommended | Extra memory, inconsistent shadow behaviour |
-| **Realtime** | Avoid | No shadow support on Quest; significant GPU cost even without shadows |
+| **Baked** | Supported | Recommended default for environment lighting |
+| **Mixed** | Supported in worlds | Measure shadow, memory, and GPU cost on the target device |
+| **Realtime** | Supported in worlds | Very expensive; keep only with a demonstrated need and target-device evidence |
 
-Practical rule: **convert all Mixed lights to Baked before the Android build**. Use the Platform Override workflow (Unity Build Settings → Android) to maintain separate PC and Quest lighting if needed.
+Practical rule: bake the default Android lighting first. Use platform-specific
+content when necessary, and document target-device measurements for any Mixed or
+Realtime lighting that remains.
 
 ### Baked Ambient Occlusion
 
-Baked AO adds depth cues where surfaces meet, at zero runtime cost. Screen-space AO (SSAO) is unavailable on Quest.
+Baked AO stores the effect in the lightmap rather than evaluating screen-space AO at runtime. Post-processing, including SSAO, is disabled on Android.
 
 ```text
 
@@ -404,8 +405,8 @@ PC can use higher Max Distance (2–3 m) for richer results.
 
 ```
 
-> Baked AO is included in the base lightmap texture — no extra textures or memory.
-> Enable it for all Quest builds without hesitation.
+> Baked AO is stored in the lightmap. Check bake time, texture memory, and the
+> result in headset before keeping it.
 
 ### Light Probe Density (Quest)
 
@@ -426,7 +427,7 @@ Vertical placement: place probes at multiple heights (floor level ~0.5 m, mid-bo
 |---|---|---|
 | Type | **Baked** | Realtime probes re-render every frame — avoid on Quest |
 | Resolution | **128** | 256 is acceptable for hero areas only |
-| HDR | Disabled | Saves ~50% reflection texture memory; enable only for hero areas with highly reflective metallic or glossy surfaces that require HDR reflections |
+| HDR | Start disabled | Compare reflection texture memory and visual range; enable only where the measured result justifies it |
 | Box Projection | Only when needed | Adds overdraw; use only in box-shaped rooms |
 
 Aim for one probe per enclosed room and one large probe outdoors. Avoid overlapping more than 2–3 probes in any one area.
@@ -442,11 +443,11 @@ PC Build                           Quest/Android Build
 Resolution: 10–20 texels/unit      Resolution: 5–10 texels/unit
 Max Size:   2048×2048              Max Size:   1024×1024
 Bounces:    3–4                    Bounces:    2–3
-Direction:  Directional (opt.)     Direction:  Non-Directional (required)
-Compress:   Optional               Compress:   Required
-AO:         Optional (baked)       AO:         Baked only (no SSAO)
+Direction:  Directional (opt.)     Direction:  Start Non-Directional; measure alternatives
+Compress:   Optional               Compress:   Recommended baseline; verify artifacts
+AO:         Optional (baked)       AO:         Baked baseline; post-processing disables SSAO
 Refl. res:  256                    Refl. res:  128
-Lights:     Mixed or Baked         Lights:     Baked only
+Lights:     Mixed or Baked         Lights:     Baked default; profile exceptions
 
 ```
 
