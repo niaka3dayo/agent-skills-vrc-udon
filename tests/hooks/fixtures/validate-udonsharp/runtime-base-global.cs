@@ -1,4 +1,4 @@
-public class RuntimeGlobalBase : global::UdonSharp.UdonSharpBehaviour
+public class RuntimeGlobalBase:global::UdonSharp.UdonSharpBehaviour
 {
     private void Run()
     {

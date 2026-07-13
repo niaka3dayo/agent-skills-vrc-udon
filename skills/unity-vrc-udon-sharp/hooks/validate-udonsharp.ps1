@@ -11,12 +11,17 @@
 
 $ErrorActionPreference = "Stop"
 
-# Read JSON input from stdin
-$HookInput = $input | Out-String
+# Read and write the hook payload without PowerShell pipeline newline
+# normalization. This keeps the documented passthrough contract byte-exact.
+$HookInput = [Console]::In.ReadToEnd()
+
+function Write-HookInput {
+    [Console]::Out.Write($HookInput)
+}
 
 function Stop-Validation([string]$Code) {
     [Console]::Error.WriteLine("[UdonSharp] VALIDATOR-WARNING: validation skipped ($Code)")
-    Write-Output $HookInput
+    Write-HookInput
     exit 0
 }
 
@@ -36,13 +41,13 @@ try {
 
 # Only process .cs files
 if ($FilePath -notmatch '\.cs$') {
-    Write-Output $HookInput
+    Write-HookInput
     exit 0
 }
 
 # Check if file exists
 if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
-    Write-Output $HookInput
+    Write-HookInput
     exit 0
 }
 
@@ -381,7 +386,7 @@ function Test-UdonSharpBehaviourSource([string]$MaskedSource) {
     }
 
     foreach ($BaseName in $BaseNames) {
-        $ClassPattern = '(?s)\bclass\s+' + $IdentifierPattern + '\s*:[^{};]*[,:\s]' + $BaseName + '(?=$|[,<{\s])'
+        $ClassPattern = '\bclass\s+' + $IdentifierPattern + '\s*:\s*' + $BaseName + '(?=$|[,<{\s])'
         if ($MaskedSource -match $ClassPattern) {
             return $true
         }
@@ -397,11 +402,12 @@ try {
     }
     Stop-Validation 'LEXER_FAILED'
 }
+$FlatSource = $MaskedSource -replace '[\r\n]', ' '
 
 # Check if this is structurally an UdonSharp behaviour. External project base
 # types are intentionally not resolved by this per-file hook.
-if (-not (Test-UdonSharpBehaviourSource $MaskedSource)) {
-    Write-Output $HookInput
+if (-not (Test-UdonSharpBehaviourSource $FlatSource)) {
+    Write-HookInput
     exit 0
 }
 
@@ -409,7 +415,7 @@ if (-not (Test-UdonSharpBehaviourSource $MaskedSource)) {
 $Warnings = @()
 
 # Check for blocked generics
-if ($MaskedSource -match 'List<|Dictionary<|HashSet<|Queue<|Stack<') {
+if ($FlatSource -match 'List\s*<|Dictionary\s*<|HashSet\s*<|Queue\s*<|Stack\s*<') {
     $Warnings += "[UdonSharp] BLOCKED: Generic collections (List<T>, Dictionary<K,V>) not supported. Use arrays or DataList/DataDictionary."
 }
 
@@ -448,43 +454,107 @@ if ($MaskedSource -match '\.AddListener\s*\(') {
     $Warnings += "[UdonSharp] BLOCKED: AddListener() not supported. Use Inspector OnClick -> SendCustomEvent instead."
 }
 
-# Lambda expressions on one physical line. Simple and parenthesized forms use
-# the same ASCII space/tab contract as the Bash hook.
+# Lambda expressions across logical lines. Mask every declaration expression
+# body before looking for lambda arrows, including multiple members on one line.
 $IdentifierPattern = '@?[_\p{L}\p{Nl}][_\p{L}\p{Nl}\p{Nd}\p{Pc}\p{Mn}\p{Mc}\p{Cf}]*'
 $ModifierPattern = '^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+'
-function Remove-DeclarationExpressionBodyPrefix([string]$Text) {
-    $Arrow = $Text.IndexOf('=>')
-    if ($Arrow -lt 0) { return $Text }
+function Remove-LeadingAttributeSections([string]$Text) {
+    $Text = $Text.Trim()
+    while ($Text.StartsWith('[')) {
+        $Depth = 0
+        $End = -1
+        for ($Position = 0; $Position -lt $Text.Length; $Position++) {
+            if ($Text[$Position] -eq '[') { $Depth++ }
+            elseif ($Text[$Position] -eq ']') {
+                $Depth--
+                if ($Depth -eq 0) {
+                    $End = $Position
+                    break
+                }
+            }
+        }
+        if ($End -lt 0) { return $Text }
+        $Text = $Text.Substring($End + 1).Trim()
+    }
+    return $Text
+}
 
-    $Left = $Text.Substring(0, $Arrow).Trim()
-    while ($Left -match $ModifierPattern) {
-        $Left = $Left.Substring($Matches[0].Length)
+function Get-MemberSegment([string]$Text, [int]$Arrow) {
+    for ($Position = $Arrow - 1; $Position -ge 0; $Position--) {
+        if ($Text[$Position] -eq ';' -or $Text[$Position] -eq '{' -or $Text[$Position] -eq '}') {
+            return $Text.Substring($Position + 1, $Arrow - $Position - 1).Trim()
+        }
+    }
+    return $Text.Substring(0, $Arrow).Trim()
+}
+
+function Find-MatchingOpenParen([string]$Text) {
+    $Depth = 0
+    for ($Position = $Text.Length - 1; $Position -ge 0; $Position--) {
+        if ($Text[$Position] -eq ')') { $Depth++ }
+        elseif ($Text[$Position] -eq '(') {
+            $Depth--
+            if ($Depth -eq 0) { return $Position }
+        }
+    }
+    return -1
+}
+
+function Test-DeclarationArrow([string]$Text, [int]$Arrow) {
+    $Segment = Remove-LeadingAttributeSections (Get-MemberSegment $Text $Arrow)
+    if ($Segment -match '^(get|set|init)[ \t]*$') { return $true }
+
+    $HadModifier = $false
+    while ($Segment -match $ModifierPattern) {
+        $Segment = $Segment.Substring($Matches[0].Length).Trim()
+        $HadModifier = $true
+    }
+    if (-not $Segment -or $Segment -match '[=;]' -or
+        $Segment -match '^(return|throw|yield|case|goto|new)([ \t]|$)') {
+        return $false
     }
 
-    if ($Left.EndsWith(')')) {
-        $Open = $Left.IndexOf('(')
-        if ($Open -lt 0) { return $Text }
-        $Prefix = $Left.Substring(0, $Open).Trim()
-        if ($Prefix -match '[=;{}]') { return $Text }
+    if ($Segment.EndsWith(')')) {
+        $Open = Find-MatchingOpenParen $Segment
+        if ($Open -lt 0) { return $false }
+        $Prefix = $Segment.Substring(0, $Open).Trim()
     } else {
-        if ($Left -match '[=;{}()]') { return $Text }
-        $Prefix = $Left
+        if ($Segment -match '[()]') { return $false }
+        $Prefix = $Segment
     }
 
-    if ($Prefix -notmatch '^(?<Return>.+?)[ \t]+(?<Name>' + $IdentifierPattern + ')$') { return $Text }
-    return $Text.Substring($Arrow + 2)
+    if ($Prefix -match ('^(?<Return>.+?)[ \t]+(?<Name>' + $IdentifierPattern + ')$')) {
+        return $true
+    }
+    return $HadModifier -and $Prefix -match ('^' + $IdentifierPattern + '$')
 }
 
-$HasLambda = $false
-foreach ($Line in [regex]::Split($MaskedSource, '\r?\n')) {
-    $Candidate = Remove-DeclarationExpressionBodyPrefix $Line
-    $Candidate = [regex]::Replace($Candidate, '(^|[;{ \t])(get|set|init)[ \t]*=>', ' ')
-    if ($Candidate -match '\)[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)' -or
-        $Candidate -match ('(^|[=(, \t])' + $IdentifierPattern + '[ \t]*=>[ \t]*(?:\{|[^;{\r\n]+;)')) {
-        $HasLambda = $true
-        break
+function Remove-DeclarationExpressionBodies([string]$Text) {
+    $SearchFrom = 0
+    $DeclarationMasked = $false
+    while (($Arrow = $Text.IndexOf('=>', $SearchFrom, [System.StringComparison]::Ordinal)) -ge 0) {
+        if ($DeclarationMasked) {
+            $HasBoundary = $false
+            for ($Position = $SearchFrom; $Position -lt $Arrow; $Position++) {
+                if ($Text[$Position] -eq ';' -or $Text[$Position] -eq '{' -or $Text[$Position] -eq '}') {
+                    $HasBoundary = $true
+                    break
+                }
+            }
+            if ($HasBoundary) { $DeclarationMasked = $false }
+        }
+        if (-not $DeclarationMasked -and (Test-DeclarationArrow $Text $Arrow)) {
+            $Text = $Text.Remove($Arrow, 2).Insert($Arrow, '  ')
+            $DeclarationMasked = $true
+        }
+        $SearchFrom = $Arrow + 2
     }
+    return $Text
 }
+
+$LambdaCandidate = Remove-DeclarationExpressionBodies $FlatSource
+$HasLambda = $LambdaCandidate -match '\)\s*=>\s*(?:\{|[^;{]+;)' -or
+    $LambdaCandidate -match ('(^|[=(,\s])' + $IdentifierPattern + '\s*=>\s*(?:\{|[^;{]+;)')
 if ($HasLambda) {
     $Warnings += "[UdonSharp] WARNING: Lambda expression detected. Use named methods instead."
 }
@@ -859,44 +929,85 @@ if ($HasNoVariableSync -and $SyncedCount -gt 0) {
     $Warnings += "[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode."
 }
 
-# Check for ref parameter in method declaration
-if ($MaskedSource -match '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bref\s+\w') {
-    $Warnings += "[UdonSharp] BLOCKED: ref parameters not supported in UdonSharp. Use return values or synced fields instead."
-}
-
-# Check for out parameter in method declaration
-if ($MaskedSource -match '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bout\s+\w') {
-    $Warnings += "[UdonSharp] BLOCKED: out parameters not supported in UdonSharp. Use return values instead."
-}
-
 # Check for multi-dimensional arrays (T[,])
 if ($MaskedSource -match '\w+\s*\[,') {
     $Warnings += "[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead."
 }
 
-# Check for method overloading (same name, different signatures). Parse the
-# declaration prefix so valid modifier combinations and Unicode identifiers are
-# not skipped by a fixed return-type pattern.
-$MethodNames = foreach ($Line in [regex]::Split($MaskedSource, '\r?\n')) {
-    $Declaration = $Line.Trim()
-    if ($Declaration -match '^(return|throw|yield|case|goto)([ \t]|$)') { continue }
+# Check for method overloading (same name, different signatures). Scan logical
+# member segments so a line break before '(' cannot hide an overload.
+function Get-DeclarationMethodName([string]$Text) {
+    $Declaration = Remove-LeadingAttributeSections $Text
+    if ($Declaration -match '^(return|throw|yield|case|goto|new)([ \t]|$)') { return $null }
     while ($Declaration -match '^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+') {
         $Declaration = $Declaration.Substring($Matches[0].Length)
     }
-    $Open = $Declaration.IndexOf('(')
-    if ($Open -lt 0) { continue }
-    $Prefix = $Declaration.Substring(0, $Open).Trim()
-    if (-not $Prefix -or $Prefix -match '[=;{}]') { continue }
-    $IdentifierPattern = '@?[_\p{L}\p{Nl}][_\p{L}\p{Nl}\p{Nd}\p{Pc}\p{Mn}\p{Mc}\p{Cf}]*'
-    if ($Prefix -notmatch '^(?<Return>.+?)[ \t]+(?<Name>' + $IdentifierPattern + ')$') { continue }
-    if ($Matches['Return'].Trim() -match '^(return|throw|yield|case|goto)$') { continue }
+    $Prefix = $Declaration.Trim()
+    if (-not $Prefix -or $Prefix -match '[=;{}()]') { return $null }
+    if ($Prefix -notmatch '^(?<Return>.+?)[ \t]+(?<Name>' + $IdentifierPattern + ')$') { return $null }
+    if ($Matches['Return'].Trim() -match '^(return|throw|yield|case|goto|new)$') { return $null }
     $Name = $Matches['Name']
     if ($Name[0] -ne '@' -and $Name -match '^(if|for|foreach|while|switch|catch|using|lock|fixed|nameof|typeof|sizeof|checked|unchecked|delegate)$') {
-        continue
+        return $null
     }
-    if ($Name[0] -eq '@') { $Name.Substring(1) } else { $Name }
+    if ($Name[0] -eq '@') { return $Name.Substring(1) }
+    return $Name
 }
-$OverloadedNames = $MethodNames | Group-Object | Where-Object { $_.Count -gt 1 } | Select-Object -ExpandProperty Name
+
+function Get-MethodNames([string]$Source) {
+    $Names = [System.Collections.Generic.List[string]]::new()
+    $Segment = [System.Text.StringBuilder]::new()
+    $Parens = 0
+    $Brackets = 0
+    $SegmentInvalid = $false
+    for ($Position = 0; $Position -lt $Source.Length; $Position++) {
+        $Character = $Source[$Position]
+        if ($Character -eq '[' -and $Parens -eq 0) { $Brackets++ }
+        elseif ($Character -eq ']' -and $Parens -eq 0 -and $Brackets -gt 0) { $Brackets-- }
+
+        if ($Character -eq '(' -and $Parens -eq 0 -and $Brackets -eq 0) {
+            $Name = $null
+            if (-not $SegmentInvalid) {
+                $Name = Get-DeclarationMethodName $Segment.ToString()
+            }
+            if ($Name) { $Names.Add($Name) }
+            [void]$Segment.Clear()
+            $SegmentInvalid = $false
+            $Parens = 1
+            continue
+        }
+        if ($Character -eq '(' -and $Brackets -eq 0) {
+            $Parens++
+            continue
+        }
+        if ($Character -eq ')' -and $Brackets -eq 0 -and $Parens -gt 0) {
+            $Parens--
+            continue
+        }
+
+        if ($Parens -eq 0 -and $Brackets -eq 0 -and
+            ($Character -eq ';' -or $Character -eq '{' -or $Character -eq '}')) {
+            [void]$Segment.Clear()
+            $SegmentInvalid = $false
+            continue
+        }
+        if ($Parens -eq 0) {
+            if ($Character -eq '=' -and $Brackets -eq 0) { $SegmentInvalid = $true }
+            [void]$Segment.Append($Character)
+            if ($Segment.Length -gt 1024) {
+                [void]$Segment.Remove(0, $Segment.Length - 512)
+            }
+        }
+    }
+    return $Names.ToArray()
+}
+
+try {
+    $MethodNames = @(Get-MethodNames $FlatSource)
+} catch {
+    Stop-Validation 'METHOD_SCAN_FAILED'
+}
+$OverloadedNames = @($MethodNames | Group-Object | Where-Object { $_.Count -gt 1 } | Select-Object -ExpandProperty Name)
 if ($OverloadedNames.Count -gt 0) {
     $OverloadList = $OverloadedNames -join ', '
     $Warnings += "[UdonSharp] WARNING: Method overloading detected for: $OverloadList. Only simple overloads may work; prefer unique method names."
@@ -917,4 +1028,4 @@ if ($Warnings.Count -gt 0) {
 }
 
 # Always output original input to allow the edit to proceed
-Write-Output $HookInput
+Write-HookInput

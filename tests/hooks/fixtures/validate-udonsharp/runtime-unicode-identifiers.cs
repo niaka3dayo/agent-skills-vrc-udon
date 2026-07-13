@@ -1,6 +1,6 @@
 using @日本語 = UdonSharp.UdonSharpBehaviour;
 
-public class @class : 日本語
+public class @class:日本語
 {
     private List<int> values;
 

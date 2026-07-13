@@ -15,6 +15,7 @@ MIGRATION_REF="$UDON_DIR/references/sdk-migration.md"
 TROUBLESHOOTING_REF="$UDON_DIR/references/troubleshooting.md"
 SYNC_EXAMPLES="$UDON_DIR/references/sync-examples.md"
 DYNAMICS_REF="$UDON_DIR/references/dynamics.md"
+ADVANCED_WEB_REF="$UDON_DIR/references/web-loading-advanced.md"
 CHEATSHEET="$UDON_DIR/CHEATSHEET.md"
 UNDO_TEMPLATE="$UDON_DIR/assets/templates/UndoableGameManager.cs"
 POOL_TEMPLATE="$UDON_DIR/assets/templates/MasterManagedPlayerPool.cs"
@@ -183,6 +184,7 @@ done
 for path in "$UDON_DIR/SKILL.md" "$NETWORKING_REF" "$MIGRATION_REF"; do
     require_text "$path" "$PRE_381_SENTENCE"
 done
+forbid_text "$ADVANCED_WEB_REF" 'UdonSharp blocks out parameters in user-defined methods; use fields instead.'
 forbid_regex "$UDON_DIR" 'NetworkCallable.*compiles but.*ignored|compiles but.*NetworkCallable.*ignored'
 
 # Prove the exact-sentence gate rejects an inverted contract.

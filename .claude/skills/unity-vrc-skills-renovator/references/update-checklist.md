@@ -15,6 +15,47 @@
   Glob: skills/unity-vrc-world-sdk-3/**/*
   ```
 
+## Evidence Gate Before Revising Existing Claims
+
+Use this gate whenever a change would alter a verified runtime observation,
+observed behavior, or official difference. Do not restore official wording
+from a history-free review.
+
+- [ ] Inspect `git blame` and `git log` for the claim and surrounding edits.
+- [ ] Read every related Issue/PR and read the two evidence histories separately.
+- [ ] For user-layer names, read Issue #286, PR #287, the maintainer follow-up,
+      and the unresolved upstream report `vrchat-community/creator-docs#303`.
+      Issue #286 and PR #287 record collision retention, but the attached
+      layer-dump directly observes names only: its `LayerMask.LayerToName(0..31)`
+      output does not measure collision pairs or the matrix.
+      Use a separate collision reproduction for collision claims.
+- [ ] For built-in collision behavior, read Issue [#288](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/288)
+      and PR [#294](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/294).
+      #288 records that the then-current `layers.md` intentionally preserved
+      VRChat-specific collision-matrix behavior without factual errors; #294
+      records that the Environment/Pickup/PickupNoEnvironment facts and the
+      default matrix were intentionally retained.
+- [ ] Check the reproduction evidence for the same target version.
+- [ ] Rank evidence as reproducible runtime observation, shipped SDK/source,
+      then official docs.
+- [ ] Preserve an intentional official difference when official docs alone
+      conflict with reproducible runtime evidence.
+- [ ] Do not generalize beyond the verified observation.
+- [ ] Keep the #286 user-layer verification separate from any built-in layer
+      collision claim; do not alter built-in layer collision descriptions from
+      this evidence.
+- [ ] Do not replace the current VRChat-specific behavior table or default
+      collision matrix from official docs alone; changes require independent runtime/SDK evidence
+      for that target and a recorded observation scope.
+
+For the current user-layer exception, #286 and #287 record custom layer names
+being overwritten by the live client to `user0`-`user9`, while the collision
+matrix is retained. The layer-dump is name evidence only; before changing a
+collision boundary, run a separate collision reproduction for the same target.
+
+See [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md) for the reviewer-facing
+evidence policy.
+
 ## Phase 2: Information Gathering
 
 ### Required Searches (Parallel Execution)

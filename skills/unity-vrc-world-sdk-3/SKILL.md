@@ -175,7 +175,7 @@ Exactly **one** is required in every VRChat world.
 └── AvatarScalingSettings (Optional - avatar scale limits)
 ```
 
-#### All Properties
+#### Key Properties
 
 | Property                        | Type        | Description                     | Default           |
 | ------------------------------- | ----------- | ------------------------------- | ------------------ |

@@ -1,6 +1,6 @@
 using BehaviourAlias = global::UdonSharp.UdonSharpBehaviour;
 
-public class RuntimeAliasedTypeBase : BehaviourAlias
+public class RuntimeAliasedTypeBase:BehaviourAlias
 {
     private void Run()
     {

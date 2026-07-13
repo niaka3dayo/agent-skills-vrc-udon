@@ -89,7 +89,7 @@ materialize_fixture() {
 }
 
 run_shared_parity_matrix() {
-    local expected_inventory='GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;REF_PARAMETER;OUT_PARAMETER;MULTIDIM_ARRAY;METHOD_OVERLOAD'
+    local expected_inventory='GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY;METHOD_OVERLOAD'
     local rule_ids=()
     local rule_substrings=()
     local seen_rule_ids=';'
@@ -121,13 +121,13 @@ run_shared_parity_matrix() {
     local actual_inventory
     actual_inventory="$(IFS=';'; echo "${rule_ids[*]}")"
     if [ "$actual_inventory" != "$expected_inventory" ]; then
-        echo "FAIL [shared rules] 22-rule inventory mismatch"
+        echo "FAIL [shared rules] 20-rule inventory mismatch"
         echo "  expected: $expected_inventory"
         echo "  actual:   $actual_inventory"
         FAIL=$((FAIL + 1))
         return
     fi
-    echo "PASS [shared rules] 22-rule inventory is exact"
+    echo "PASS [shared rules] 20-rule inventory is exact"
     PASS=$((PASS + 1))
 
     map_warning_file() {
@@ -896,6 +896,84 @@ then
 else
     echo "FAIL [pending declaration scan]"
     sed 's/^/  /' "$DECLARATION_PERF_LOG"
+    FAIL=$((FAIL + 1))
+fi
+
+# ------------------------------------------------------------
+# Process contracts: exact passthrough bytes and explicit lambda-scan failure
+# ------------------------------------------------------------
+BYTE_PASSTHROUGH_LOG="$TMPROOT/byte-passthrough.log"
+if python3 - "$HOOK" >"$BYTE_PASSTHROUGH_LOG" 2>&1 <<'PY'
+import subprocess
+import sys
+
+hook = sys.argv[1]
+base = b'{"tool_input":{}}'
+for label, payload in (
+    ("no-final-newline", base),
+    ("one-lf", base + b"\n"),
+    ("two-lf", base + b"\n\n"),
+    ("crlf", base + b"\r\n"),
+):
+    result = subprocess.run([hook], input=payload, capture_output=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"{label}: exit={result.returncode}")
+    if result.stdout != payload:
+        raise RuntimeError(
+            f"{label}: stdout mismatch input={payload!r} output={result.stdout!r}"
+        )
+print("exact passthrough bytes: 4/4")
+PY
+then
+    echo "PASS [byte passthrough] $(cat "$BYTE_PASSTHROUGH_LOG")"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [byte passthrough]"
+    sed 's/^/  /' "$BYTE_PASSTHROUGH_LOG"
+    FAIL=$((FAIL + 1))
+fi
+
+REAL_AWK=$(command -v awk)
+AWK_FAILURE_DIR="$TMPROOT/awk-lambda-failure"
+mkdir -p "$AWK_FAILURE_DIR"
+cat > "$AWK_FAILURE_DIR/awk" <<EOF
+#!/bin/sh
+count_file='$AWK_FAILURE_DIR/count'
+count=0
+if [ -f "\$count_file" ]; then count=\$(cat "\$count_file"); fi
+count=\$((count + 1))
+printf '%s' "\$count" > "\$count_file"
+if [ "\$count" -eq 3 ]; then exit 42; fi
+exec '$REAL_AWK' "\$@"
+EOF
+chmod +x "$AWK_FAILURE_DIR/awk"
+LAMBDA_FAILURE_FILE="$TMPROOT/lambda-scan-failure.cs"
+cat > "$LAMBDA_FAILURE_FILE" <<'CSEOF'
+using UdonSharp;
+public class LambdaScanFailure : UdonSharpBehaviour
+{
+    private void Run() { Example.Apply(value => value + 1); }
+}
+CSEOF
+LAMBDA_FAILURE_INPUT="{\"tool_input\":{\"file_path\":\"$LAMBDA_FAILURE_FILE\"}}"
+printf '%s' "$LAMBDA_FAILURE_INPUT" | PATH="$AWK_FAILURE_DIR:$PATH" "$HOOK" \
+    >"$TMPROOT/lambda-scan-failure.out" 2>"$TMPROOT/lambda-scan-failure.err"
+LAMBDA_FAILURE_RC=$?
+assert_exit "lambda scanner failure fails open" 0 "$LAMBDA_FAILURE_RC"
+if cmp -s <(printf '%s' "$LAMBDA_FAILURE_INPUT") "$TMPROOT/lambda-scan-failure.out"; then
+    echo "PASS [lambda scanner failure] stdout is byte-exact"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [lambda scanner failure] stdout changed"
+    FAIL=$((FAIL + 1))
+fi
+if [ "$(cat "$TMPROOT/lambda-scan-failure.err")" = \
+    '[UdonSharp] VALIDATOR-WARNING: validation skipped (LAMBDA_SCAN_FAILED)' ]; then
+    echo "PASS [lambda scanner failure] exactly one operational warning"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [lambda scanner failure] expected exactly one LAMBDA_SCAN_FAILED warning"
+    sed 's/^/  /' "$TMPROOT/lambda-scan-failure.err"
     FAIL=$((FAIL + 1))
 fi
 

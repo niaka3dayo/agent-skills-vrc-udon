@@ -367,12 +367,11 @@ OnVideoReady()
 ### Content Warnings
 
 ```text
-□ Adult Language
-□ Blood/Gore
-□ Fear/Horror
-□ Nudity/Suggestive
-□ Substance Use
-□ Violence
+□ Sexually Suggestive
+□ Adult Language and Themes
+□ Graphic Violence
+□ Excessive Gore
+□ Extreme Horror
 ```
 
 ---

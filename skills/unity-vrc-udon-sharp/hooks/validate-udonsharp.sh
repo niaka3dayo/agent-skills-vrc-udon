@@ -8,7 +8,10 @@
 
 set -e
 
-input=$(cat)
+# JSON cannot contain a raw NUL byte. Reading to a NUL delimiter therefore
+# preserves every valid input byte, including any trailing LF/CRLF sequence.
+input=''
+IFS= read -r -d '' input || true
 
 # Require jq for JSON parsing. Without this guard, jq absence under set -e
 # aborts every PostToolUse hook invocation on .cs edits with a "command not
@@ -17,30 +20,30 @@ input=$(cat)
 # through so the original edit still propagates downstream.
 if ! command -v jq &>/dev/null; then
     printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)\n' >&2
-    printf '%s\n' "$input"
+    printf '%s' "$input"
     exit 0
 fi
 
 if ! file_path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""' 2>/dev/null); then
     printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)\n' >&2
-    printf '%s\n' "$input"
+    printf '%s' "$input"
     exit 0
 fi
 
 # Only process .cs files
 if [[ ! "$file_path" =~ \.cs$ ]]; then
-    echo "$input"
+    printf '%s' "$input"
     exit 0
 fi
 
 # Check if file exists
 if [[ ! -f "$file_path" ]]; then
-    echo "$input"
+    printf '%s' "$input"
     exit 0
 fi
 if [[ ! -r "$file_path" ]]; then
     printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (SOURCE_READ_FAILED)\n' >&2
-    printf '%s\n' "$input"
+    printf '%s' "$input"
     exit 0
 fi
 
@@ -48,17 +51,18 @@ fi
 # while executable code inside interpolation holes stays visible to every rule.
 # CR/LF positions and byte length are preserved.
 masked_file=""
+flat_file=""
 skip_validation() {
     local code="$1"
     printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (%s)\n' "$code" >&2
-    printf '%s\n' "$input"
+    printf '%s' "$input"
     exit 0
 }
 
 if ! masked_file=$(mktemp 2>/dev/null); then
     skip_validation "TEMP_CREATE_FAILED"
 fi
-trap 'rm -f "$masked_file"' EXIT
+trap 'rm -f "$masked_file" "$flat_file"' EXIT
 
 ends_with_lf=0
 if [[ -s "$file_path" ]] && [[ "$(tail -c 1 "$file_path" | wc -l | tr -d '[:space:]')" -eq 1 ]]; then
@@ -386,12 +390,22 @@ if [[ "$source_length" != "$masked_length" ]]; then
     skip_validation "MASK_LENGTH_MISMATCH"
 fi
 
+# Rules that span physical lines consume one fixed-size flattened copy instead
+# of repeatedly concatenating the source inside awk. Replacing CR/LF bytes with
+# spaces preserves token boundaries and keeps BusyBox awk scans linear.
+if ! flat_file=$(mktemp 2>/dev/null); then
+    skip_validation "TEMP_CREATE_FAILED"
+fi
+if ! LC_ALL=C tr '\r\n' '  ' < "$masked_file" > "$flat_file"; then
+    skip_validation "FLATTEN_FAILED"
+fi
+
 # Require a concrete UdonSharpBehaviour base, including qualified and using-
 # alias forms. External project types are intentionally not resolved here.
 base_scan_status=0
 LC_ALL=C awk '
     function has_base(source, base,    pattern) {
-        pattern = "class[[:space:]]+" identifier_pattern "[[:space:]]*:[^{;]*[,:[:space:]]" base "([,<{[:space:]]|$)"
+        pattern = "class[[:space:]]+" identifier_pattern "[[:space:]]*:[[:space:]]*" base "([,<{[:space:]]|$)"
         return source ~ pattern
     }
 
@@ -402,10 +416,7 @@ LC_ALL=C awk '
         identifier_pattern = "@?(_|[^[:space:][:punct:][:digit:]])(_|[^[:space:][:punct:]])*"
     }
 
-    {
-        separator = (NR == 1 ? "" : " ")
-        source = source separator $0
-    }
+    { source = $0 }
 
     END {
         if (has_base(source, "UdonSharpBehaviour") ||
@@ -432,9 +443,9 @@ LC_ALL=C awk '
         }
         exit 1
     }
-' "$masked_file" || base_scan_status=$?
+' "$flat_file" || base_scan_status=$?
 if [[ "$base_scan_status" -eq 1 ]]; then
-    echo "$input"
+    printf '%s' "$input"
     exit 0
 fi
 if [[ "$base_scan_status" -ne 0 ]]; then
@@ -445,7 +456,7 @@ fi
 warnings=()
 
 # Blocked generics
-if grep -qE "List<|Dictionary<|HashSet<|Queue<|Stack<" "$masked_file"; then
+if grep -qE "List[[:space:]]*<|Dictionary[[:space:]]*<|HashSet[[:space:]]*<|Queue[[:space:]]*<|Stack[[:space:]]*<" "$flat_file"; then
     warnings+=("[UdonSharp] BLOCKED: Generic collections (List<T>, Dictionary<K,V>) not supported. Use arrays or DataList/DataDictionary.")
 fi
 
@@ -484,9 +495,10 @@ if grep -qE '[.]AddListener[[:space:]]*[(]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: AddListener() not supported. Use Inspector OnClick -> SendCustomEvent instead.")
 fi
 
-# Lambda expressions on one physical line. Keep Bash and PowerShell on the
-# same ASCII space/tab contract and exclude declaration/property expression bodies.
-if awk '
+# Lambda expressions across logical lines. Every declaration expression body is
+# masked before looking for lambda arrows, including multiple members on one line.
+lambda_scan_status=0
+LC_ALL=C awk '
     function trim(text) {
         sub(/^[ \t]+/, "", text)
         sub(/[ \t]+$/, "", text)
@@ -497,31 +509,102 @@ if awk '
         return name ~ identifier_pattern
     }
 
-    function strip_declaration_arrow(text,    arrow, left, open, prefix, name, return_type) {
-        arrow = index(text, "=>")
-        if (arrow == 0) return text
-
-        left = trim(substr(text, 1, arrow - 1))
-        while (match(left, /^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+/)) {
-            left = substr(left, RLENGTH + 1)
+    function strip_leading_attributes(text,    depth, position, character) {
+        text = trim(text)
+        while (substr(text, 1, 1) == "[") {
+            depth = 0
+            for (position = 1; position <= length(text); position++) {
+                character = substr(text, position, 1)
+                if (character == "[") depth++
+                else if (character == "]") {
+                    depth--
+                    if (depth == 0) break
+                }
+            }
+            if (depth != 0) return text
+            text = trim(substr(text, position + 1))
         }
+        return text
+    }
 
-        if (substr(left, length(left), 1) == ")") {
-            open = index(left, "(")
-            if (open == 0) return text
-            prefix = trim(substr(left, 1, open - 1))
-            if (prefix ~ /[=;{}]/) return text
+    function member_segment(text, arrow,    position, character) {
+        for (position = arrow - 1; position >= 1; position--) {
+            character = substr(text, position, 1)
+            if (character == ";" || character == "{" || character == "}") {
+                return trim(substr(text, position + 1, arrow - position - 1))
+            }
+        }
+        return trim(substr(text, 1, arrow - 1))
+    }
+
+    function matching_open_paren(text,    depth, position, character) {
+        depth = 0
+        for (position = length(text); position >= 1; position--) {
+            character = substr(text, position, 1)
+            if (character == ")") depth++
+            else if (character == "(") {
+                depth--
+                if (depth == 0) return position
+            }
+        }
+        return 0
+    }
+
+    function is_declaration_arrow(text, arrow,    segment, had_modifier, open, prefix, name, return_type) {
+        segment = strip_leading_attributes(member_segment(text, arrow))
+        if (segment ~ /^(get|set|init)[ \t]*$/) return 1
+
+        had_modifier = 0
+        while (match(segment, /^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+/)) {
+            segment = trim(substr(segment, RLENGTH + 1))
+            had_modifier = 1
+        }
+        if (segment == "" || segment ~ /[=;]/ || segment ~ /^(return|throw|yield|case|goto|new)([ \t]|$)/) return 0
+
+        if (substr(segment, length(segment), 1) == ")") {
+            open = matching_open_paren(segment)
+            if (open == 0) return 0
+            prefix = trim(substr(segment, 1, open - 1))
         } else {
-            if (left ~ /[=;{}()]/) return text
-            prefix = left
+            if (segment ~ /[()]/) return 0
+            prefix = segment
         }
 
         name = prefix
         sub(/^.*[ \t]/, "", name)
+        if (!is_identifier(name)) return 0
         return_type = prefix
         sub(/[ \t][^ \t]*$/, "", return_type)
-        if (return_type == prefix || trim(return_type) == "" || !is_identifier(name)) return text
-        return substr(text, arrow + 2)
+        if (return_type != prefix && trim(return_type) != "") return 1
+
+        # A modifier plus one identifier is a constructor declaration. Without
+        # the modifier it is a call or another expression, not a member.
+        return had_modifier
+    }
+
+    function mask_declaration_arrows(text,    search_from, relative, arrow, position, character, has_boundary, declaration_masked) {
+        search_from = 1
+        declaration_masked = 0
+        while ((relative = index(substr(text, search_from), "=>")) > 0) {
+            arrow = search_from + relative - 1
+            has_boundary = 0
+            if (declaration_masked) {
+                for (position = search_from; position < arrow; position++) {
+                    character = substr(text, position, 1)
+                    if (character == ";" || character == "{" || character == "}") {
+                        has_boundary = 1
+                        break
+                    }
+                }
+                if (has_boundary) declaration_masked = 0
+            }
+            if (!declaration_masked && is_declaration_arrow(text, arrow)) {
+                text = substr(text, 1, arrow - 1) "  " substr(text, arrow + 2)
+                declaration_masked = 1
+            }
+            search_from = arrow + 2
+        }
+        return text
     }
 
     BEGIN {
@@ -530,9 +613,7 @@ if awk '
     }
 
     {
-        line = $0
-        candidate = strip_declaration_arrow(line)
-        gsub(/(^|[;{[:blank:]])(get|set|init)[[:blank:]]*=>/, " ", candidate)
+        candidate = mask_declaration_arrows($0)
         if (candidate ~ /\)[[:blank:]]*=>[[:blank:]]*(\{|[^;{]+;)/ ||
             candidate ~ simple_lambda_pattern) {
             found = 1
@@ -540,8 +621,11 @@ if awk '
         }
     }
     END { exit found ? 0 : 1 }
-' "$masked_file"; then
+' "$flat_file" || lambda_scan_status=$?
+if [[ "$lambda_scan_status" -eq 0 ]]; then
     warnings+=("[UdonSharp] WARNING: Lambda expression detected. Use named methods instead.")
+elif [[ "$lambda_scan_status" -ne 1 ]]; then
+    skip_validation "LAMBDA_SCAN_FAILED"
 fi
 
 # Parse leading attribute sections and attach them to the declaration that
@@ -902,24 +986,15 @@ if [[ "$has_no_variable_sync" -eq 1 && "$synced_count" -gt 0 ]]; then
     warnings+=("[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode.")
 fi
 
-# ref parameter in method declaration
-if grep -qE '(^|[^[:alnum:]_])(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[[:space:]]+[_[:alpha:]][_[:alnum:]]*[[:space:]]*[(]([^)]*[^[:alnum:]_])?ref[[:space:]]+[_[:alpha:]]' "$masked_file"; then
-    warnings+=("[UdonSharp] BLOCKED: ref parameters not supported in UdonSharp. Use return values or synced fields instead.")
-fi
-
-# out parameter in method declaration
-if grep -qE '(^|[^[:alnum:]_])(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[[:space:]]+[_[:alpha:]][_[:alnum:]]*[[:space:]]*[(]([^)]*[^[:alnum:]_])?out[[:space:]]+[_[:alpha:]]' "$masked_file"; then
-    warnings+=("[UdonSharp] BLOCKED: out parameters not supported in UdonSharp. Use return values instead.")
-fi
-
 # Multi-dimensional arrays (T[,])
 if grep -qE '[_[:alnum:]]+[[:space:]]*\[,' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead.")
 fi
 
-# Method overloading (same name, different signatures). Parse the declaration
-# prefix so valid modifier combinations and Unicode identifiers are not skipped.
-overloaded=$(LC_ALL=C awk '
+# Method overloading (same name, different signatures). Scan logical member
+# segments so line breaks before the parameter list do not hide declarations.
+method_scan_status=0
+method_names=$(LC_ALL=C awk '
     function trim(text) {
         sub(/^[ \t]+/, "", text)
         sub(/[ \t]+$/, "", text)
@@ -930,32 +1005,93 @@ overloaded=$(LC_ALL=C awk '
         return name ~ /^@?(_|[^[:space:][:punct:][:digit:]])(_|[^[:space:][:punct:]])*$/
     }
 
-    {
-        declaration = trim($0)
-        if (declaration ~ /^(return|throw|yield|case|goto)([ \t]|$)/) next
+    function strip_leading_attributes(text,    depth, position, character) {
+        text = trim(text)
+        while (substr(text, 1, 1) == "[") {
+            depth = 0
+            for (position = 1; position <= length(text); position++) {
+                character = substr(text, position, 1)
+                if (character == "[") depth++
+                else if (character == "]") {
+                    depth--
+                    if (depth == 0) break
+                }
+            }
+            if (depth != 0) return text
+            text = trim(substr(text, position + 1))
+        }
+        return text
+    }
+
+    function declaration_name(text,    declaration, open, prefix, name, return_type) {
+        declaration = strip_leading_attributes(trim(text))
+        if (declaration ~ /^(return|throw|yield|case|goto|new)([ \t]|$)/) return ""
         while (match(declaration, /^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+/)) {
             declaration = substr(declaration, RLENGTH + 1)
         }
-
-        open = index(declaration, "(")
-        if (open == 0) next
-        prefix = trim(substr(declaration, 1, open - 1))
-        if (prefix == "" || prefix ~ /[=;{}]/) next
+        prefix = trim(declaration)
+        if (prefix == "" || prefix ~ /[=;{}()]/) return ""
         name = prefix
         sub(/^.*[ \t]/, "", name)
         return_type = prefix
         sub(/[ \t][^ \t]*$/, "", return_type)
-        if (return_type == prefix || trim(return_type) == "" || !is_identifier(name)) next
-        if (trim(return_type) ~ /^(return|throw|yield|case|goto)$/) next
-
-        if (substr(name, 1, 1) == "@") {
-            print substr(name, 2)
-            next
-        }
-        if (name ~ /^(if|for|foreach|while|switch|catch|using|lock|fixed|nameof|typeof|sizeof|checked|unchecked|delegate)$/) next
-        print name
+        if (return_type == prefix || trim(return_type) == "" || !is_identifier(name)) return ""
+        if (trim(return_type) ~ /^(return|throw|yield|case|goto|new)$/) return ""
+        if (name ~ /^(if|for|foreach|while|switch|catch|using|lock|fixed|nameof|typeof|sizeof|checked|unchecked|delegate)$/) return ""
+        sub(/^@/, "", name)
+        return name
     }
-' "$masked_file" | sort | uniq -d)
+
+    {
+        source = $0
+        segment = ""
+        parens = 0
+        brackets = 0
+        for (position = 1; position <= length(source); position++) {
+            character = substr(source, position, 1)
+            if (character == "[" && parens == 0) brackets++
+            else if (character == "]" && parens == 0 && brackets > 0) brackets--
+
+            if (character == "(" && parens == 0 && brackets == 0) {
+                name = (segment_invalid ? "" : declaration_name(segment))
+                if (name != "") print name
+                segment = ""
+                segment_invalid = 0
+                parens = 1
+                continue
+            }
+            if (character == "(" && brackets == 0) {
+                parens++
+                continue
+            }
+            if (character == ")" && brackets == 0 && parens > 0) {
+                parens--
+                continue
+            }
+
+            if (parens == 0 && brackets == 0 &&
+                (character == ";" || character == "{" || character == "}")) {
+                segment = ""
+                segment_invalid = 0
+                continue
+            }
+            if (parens == 0) {
+                if (character == "=" && brackets == 0) segment_invalid = 1
+                segment = segment character
+                # Keep bounded suffix state. A declaration name and its return
+                # type are adjacent to the opening parenthesis, while assignment state is tracked
+                # separately, so old prefix bytes are not needed.
+                if (length(segment) > 1024) {
+                    segment = substr(segment, length(segment) - 511)
+                }
+            }
+        }
+    }
+' "$flat_file") || method_scan_status=$?
+if [[ "$method_scan_status" -ne 0 ]]; then
+    skip_validation "METHOD_SCAN_FAILED"
+fi
+overloaded=$(printf '%s\n' "$method_names" | LC_ALL=C sort | uniq -d)
 if [[ -n "$overloaded" ]]; then
     warnings+=("[UdonSharp] WARNING: Method overloading detected for: $(echo "$overloaded" | tr '\n' ' '). Only simple overloads may work; prefer unique method names.")
 fi
@@ -972,4 +1108,4 @@ if [[ ${#warnings[@]} -gt 0 ]]; then
 fi
 
 # Always output original input to allow the edit to proceed
-echo "$input"
+printf '%s' "$input"

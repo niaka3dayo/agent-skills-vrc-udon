@@ -1,6 +1,6 @@
 using UdonAlias = global::UdonSharp;
 
-public class RuntimeAliasedNamespaceBase : UdonAlias.UdonSharpBehaviour
+public class RuntimeAliasedNamespaceBase:UdonAlias.UdonSharpBehaviour
 {
     private ExampleEnumerable Run()
     {

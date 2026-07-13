@@ -118,7 +118,6 @@ public class PackFormatParser : UdonSharpBehaviour
      * Parses the version header and JSON length prefix.
      * Returns the JSON start index on success, or -1 on parse failure.
      * Also stores the JSON length in _parsedJsonLength for use by the caller.
-     * UdonSharp blocks out parameters in user-defined methods; use fields instead.
      */
     private int FindJsonStart(string raw)
     {
@@ -383,7 +382,6 @@ public class ResourceIndex : UdonSharpBehaviour
     }
 
     // Result fields written by GetUrlIndex / GetInnerIndex — read immediately after the call
-    // UdonSharp blocks out parameters in user-defined methods; use fields instead.
     [HideInInspector] public int LastUrlIndex   = -1;
     [HideInInspector] public int LastInnerIndex = -1;
 

@@ -23,7 +23,8 @@ function Invoke-Hook([string]$Source, [string]$LeafName = $null) {
     $FilePath = Join-Path $TempRoot $LeafName
     Set-Content -LiteralPath $FilePath -Value $Source
     $Payload = @{ tool_input = @{ file_path = $FilePath } } | ConvertTo-Json -Compress
-    return $Payload | & $Hook 2>&1 | Out-String
+    $Result = Invoke-HookProcess $Payload
+    return $Result.Stdout + $Result.Stderr
 }
 
 function Invoke-HookProcess([string]$Payload) {
@@ -74,7 +75,7 @@ function Assert-NotContains([string]$Label, [string]$Actual, [string]$Unexpected
 }
 
 function Invoke-SharedParityMatrix {
-    $ExpectedInventory = 'GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;REF_PARAMETER;OUT_PARAMETER;MULTIDIM_ARRAY;METHOD_OVERLOAD'
+    $ExpectedInventory = 'GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY;METHOD_OVERLOAD'
     $RuleIds = New-Object System.Collections.Generic.List[string]
     $RuleSubstrings = New-Object System.Collections.Generic.List[string]
     $SeenRuleIds = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -105,13 +106,13 @@ function Invoke-SharedParityMatrix {
 
     $ActualInventory = $RuleIds -join ';'
     if ($ActualInventory -ne $ExpectedInventory) {
-        Write-Output 'FAIL [shared rules] 22-rule inventory mismatch'
+        Write-Output 'FAIL [shared rules] 20-rule inventory mismatch'
         Write-Output "  expected: $ExpectedInventory"
         Write-Output "  actual:   $ActualInventory"
         $script:Failed++
         return
     }
-    Write-Output 'PASS [shared rules] 22-rule inventory is exact'
+    Write-Output 'PASS [shared rules] 20-rule inventory is exact'
     $script:Passed++
 
     function Convert-WarningLinesToRuleIds([string[]]$Lines) {
@@ -253,7 +254,7 @@ function Invoke-SharedParityMatrix {
             $script:Failed++
             continue
         }
-        if ($HookResult.Stdout.TrimEnd("`r", "`n") -ne $Payload) {
+        if ($HookResult.Stdout -cne $Payload) {
             Write-Output "FAIL [shared case $CaseId] stdout did not preserve hook input"
             $script:Failed++
             continue
@@ -309,7 +310,7 @@ function Invoke-SharedParityMatrix {
             $script:Failed++
             continue
         }
-        if ($HookResult.Stdout.TrimEnd("`r", "`n") -ne $Payload) {
+        if ($HookResult.Stdout -cne $Payload) {
             Write-Output "FAIL [template case $TemplateName] stdout did not preserve hook input"
             $script:Failed++
             continue
@@ -352,6 +353,23 @@ function Invoke-SharedParityMatrix {
 }
 
 try {
+    $BytePayloads = @(
+        @{ Label = 'no final newline'; Value = '{"tool_input":{}}' },
+        @{ Label = 'one LF'; Value = '{"tool_input":{}}' + "`n" },
+        @{ Label = 'two LF'; Value = '{"tool_input":{}}' + "`n`n" },
+        @{ Label = 'CRLF'; Value = '{"tool_input":{}}' + "`r`n" }
+    )
+    foreach ($BytePayload in $BytePayloads) {
+        $ByteResult = Invoke-HookProcess $BytePayload.Value
+        if ($ByteResult.ExitCode -eq 0 -and $ByteResult.Stdout -ceq $BytePayload.Value) {
+            Write-Output "PASS [byte passthrough $($BytePayload.Label)] stdout is exact"
+            $script:Passed++
+        } else {
+            Write-Output "FAIL [byte passthrough $($BytePayload.Label)] stdout changed"
+            $script:Failed++
+        }
+    }
+
     $Cases = @(
         @{ Label = 'same-line int[]'; Declaration = '[UdonSynced] private int[] values;'; NewLine = "`n" },
         @{ Label = 'preceding-line int[]'; Declaration = "[UdonSynced]`n    private int[] values;"; NewLine = "`n" },
@@ -380,7 +398,8 @@ try {
     }
 
     $MissingPathPayload = '{"tool_input":{}}'
-    $MissingPathOutput = $MissingPathPayload | & $Hook 2>&1 | Out-String
+    $MissingPathResult = Invoke-HookProcess $MissingPathPayload
+    $MissingPathOutput = $MissingPathResult.Stdout + $MissingPathResult.Stderr
     Assert-Contains 'missing path input JSON passthrough' $MissingPathOutput '"tool_input":{}'
 
     $MalformedPayload = '{"tool_input":'
@@ -392,7 +411,7 @@ try {
         Write-Output "FAIL [malformed input JSON] exit=$($MalformedResult.ExitCode)"
         $script:Failed++
     }
-    if ($MalformedResult.Stdout.Trim() -eq $MalformedPayload) {
+    if ($MalformedResult.Stdout -ceq $MalformedPayload) {
         Write-Output 'PASS [malformed input JSON] stdout passes input through'
         $script:Passed++
     } else {
@@ -596,7 +615,7 @@ public class Sample : UdonSharpBehaviour
     $DeclarationCapResult = Invoke-HookProcess $DeclarationCapPayload
     $DeclarationCapWarning = '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)'
     if ($DeclarationCapResult.ExitCode -eq 0 -and
-        $DeclarationCapResult.Stdout.TrimEnd("`r", "`n") -eq $DeclarationCapPayload -and
+        $DeclarationCapResult.Stdout -ceq $DeclarationCapPayload -and
         $DeclarationCapResult.Stderr.TrimEnd("`r", "`n") -eq $DeclarationCapWarning) {
         Write-Output 'PASS [declaration cap] fails open with input preserved and one operational warning'
         $script:Passed++
@@ -614,7 +633,7 @@ public class Sample : UdonSharpBehaviour
     $UnicodeDeclarationCapPayload = @{ tool_input = @{ file_path = $UnicodeDeclarationCapPath } } | ConvertTo-Json -Compress
     $UnicodeDeclarationCapResult = Invoke-HookProcess $UnicodeDeclarationCapPayload
     if ($UnicodeDeclarationCapResult.ExitCode -eq 0 -and
-        $UnicodeDeclarationCapResult.Stdout.TrimEnd("`r", "`n") -eq $UnicodeDeclarationCapPayload -and
+        $UnicodeDeclarationCapResult.Stdout -ceq $UnicodeDeclarationCapPayload -and
         $UnicodeDeclarationCapResult.Stderr.TrimEnd("`r", "`n") -eq $DeclarationCapWarning) {
         Write-Output 'PASS [unicode declaration cap] UTF-8 byte limit matches Bash contract'
         $script:Passed++

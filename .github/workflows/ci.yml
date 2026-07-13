@@ -75,6 +75,9 @@ jobs:
       - name: Check Skill metadata routing contract
         run: bash tests/docs/skill-routing-contract.test.sh
 
+      - name: Check layers runtime exception and evidence boundary
+        run: bash tests/docs/layers-reference-contract.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest

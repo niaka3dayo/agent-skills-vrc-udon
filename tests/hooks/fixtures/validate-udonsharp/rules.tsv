@@ -16,7 +16,5 @@ SYSTEM_IO_NET	System.Net/System.IO not available
 SYNC_COUNT	synced variables detected (target: <5
 SYNC_ARRAY	Synced int[]/float[] detected
 SYNC_MODE_CONFLICT	NoVariableSync mode but [UdonSynced] variables found
-REF_PARAMETER	ref parameters not supported
-OUT_PARAMETER	out parameters not supported
 MULTIDIM_ARRAY	Multi-dimensional arrays (T[,]) not supported
 METHOD_OVERLOAD	Method overloading detected
