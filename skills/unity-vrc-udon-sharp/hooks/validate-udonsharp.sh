@@ -314,6 +314,9 @@ if ! LC_ALL=C awk -v ends_with_lf="$ends_with_lf" '
                     position += 2
                     continue
                 }
+                printf "%s", substr(line, position, dollar_count)
+                position += dollar_count
+                continue
             }
 
             if (character == "@" && substr(line, position + 1, 2) == "$\"") {
@@ -385,10 +388,17 @@ fi
 
 # Require a concrete UdonSharpBehaviour base, including qualified and using-
 # alias forms. External project types are intentionally not resolved here.
-if ! awk '
+if ! LC_ALL=C awk '
     function has_base(source, base,    pattern) {
-        pattern = "class[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*:[^{;]*[,:[:space:]]" base "([,<{[:space:]]|$)"
+        pattern = "class[[:space:]]+" identifier_pattern "[[:space:]]*:[^{;]*[,:[:space:]]" base "([,<{[:space:]]|$)"
         return source ~ pattern
+    }
+
+    BEGIN {
+        # In the C locale, non-ASCII UTF-8 bytes are neither punctuation nor
+        # whitespace. This accepts Unicode and verbatim (@) identifiers without
+        # relying on GNU-specific regular-expression features.
+        identifier_pattern = "@?(_|[^[:space:][:punct:][:digit:]])(_|[^[:space:][:punct:]])*"
     }
 
     {
@@ -401,7 +411,7 @@ if ! awk '
             has_base(source, "global::UdonSharp\\.UdonSharpBehaviour")) exit 0
 
         remainder = source
-        alias_pattern = "using[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(global::)?UdonSharp(\\.UdonSharpBehaviour)?[[:space:]]*;"
+        alias_pattern = "using[[:space:]]+" identifier_pattern "[[:space:]]*=[[:space:]]*(global::)?UdonSharp(\\.UdonSharpBehaviour)?[[:space:]]*;"
         while (match(remainder, alias_pattern)) {
             declaration = substr(remainder, RSTART, RLENGTH)
             sub(/^using[[:space:]]+/, "", declaration)
@@ -409,10 +419,11 @@ if ! awk '
             alias = parts[1]
             target = parts[2]
             gsub(/[[:space:]]/, "", alias)
+            sub(/^@/, "", alias)
             gsub(/[[:space:];]/, "", target)
             if (target ~ /UdonSharpBehaviour$/) {
-                if (has_base(source, alias)) exit 0
-            } else if (has_base(source, alias "\\.UdonSharpBehaviour")) {
+                if (has_base(source, "@?" alias)) exit 0
+            } else if (has_base(source, "@?" alias "\\.UdonSharpBehaviour")) {
                 exit 0
             }
             remainder = substr(remainder, RSTART + RLENGTH)
@@ -433,12 +444,12 @@ if grep -qE "List<|Dictionary<|HashSet<|Queue<|Stack<" "$masked_file"; then
 fi
 
 # async/await
-if grep -qE "\basync\b|\bawait\b" "$masked_file"; then
+if grep -qE '(^|[^[:alnum:]_])(async|await)([^[:alnum:]_]|$)' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: async/await not supported. Use SendCustomEventDelayedSeconds() instead.")
 fi
 
 # try/catch
-if grep -qE "\btry\s*\{|\bcatch\s*\(|\bfinally\s*\{" "$masked_file"; then
+if grep -qE '(^|[^[:alnum:]_])try[[:space:]]*[{]|(^|[^[:alnum:]_])catch[[:space:]]*[(]|(^|[^[:alnum:]_])finally[[:space:]]*[{]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: try/catch/finally not supported. Use defensive null checks and validation.")
 fi
 
@@ -448,22 +459,22 @@ if grep -qE "\.Where\(|\.Select\(|\.OrderBy\(|\.FirstOrDefault\(|\.Any\(|\.All\(
 fi
 
 # yield return (coroutines)
-if grep -qE "\byield\s+return\b" "$masked_file"; then
+if grep -qE '(^|[^[:alnum:]_])yield[[:space:]]+return([^[:alnum:]_]|$)' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Coroutines (yield return) not supported. Use SendCustomEventDelayedSeconds().")
 fi
 
 # interface declaration
-if grep -qE "^\s*(public\s+)?interface\s+" "$masked_file"; then
+if grep -qE '^[[:space:]]*(public[[:space:]]+)?interface[[:space:]]+' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Interfaces not supported. Use base class inheritance or SendCustomEvent pattern.")
 fi
 
 # StartCoroutine
-if grep -qE "StartCoroutine\s*\(" "$masked_file"; then
+if grep -qE 'StartCoroutine[[:space:]]*[(]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: StartCoroutine not available. Use SendCustomEventDelayedSeconds() instead.")
 fi
 
 # Check for AddListener (not supported - delegates blocked)
-if grep -qE "\.AddListener\s*\(" "$masked_file"; then
+if grep -qE '[.]AddListener[[:space:]]*[(]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: AddListener() not supported. Use Inspector OnClick -> SendCustomEvent instead.")
 fi
 
@@ -490,7 +501,7 @@ fi
 # Parse leading attribute sections and attach them to the declaration that
 # follows. The scanner handles multiline sections and declarations, and only
 # splits attribute lists on top-level commas.
-if ! sync_stats=$(awk '
+if ! sync_stats=$(LC_ALL=C awk '
     function clear_declaration(    chunk_index) {
         for (chunk_index = 1; chunk_index <= declaration_chunk_count; chunk_index++) {
             delete declaration_chunks[chunk_index]
@@ -649,8 +660,9 @@ if ! sync_stats=$(awk '
 
     function append_declaration(fragment) {
         if (fragment == "") return
+        if (declaration_chunk_count > 0) declaration_size++
         declaration_chunks[++declaration_chunk_count] = fragment
-        declaration_size += length(fragment) + 1
+        declaration_size += length(fragment)
         if (declaration_size > max_declaration_size) {
             scan_failed = 1
             exit 2
@@ -680,10 +692,10 @@ if ! sync_stats=$(awk '
         reset_pending()
     }
 
-    function declaration_boundary(fragment,    position, character, next_character) {
-        for (position = 1; position <= length(fragment); position++) {
-            character = substr(fragment, position, 1)
-            next_character = substr(fragment, position + 1, 1)
+    function declaration_boundary(text, start,    position, character, next_character) {
+        for (position = start; position <= length(text); position++) {
+            character = substr(text, position, 1)
+            next_character = substr(text, position + 1, 1)
             if (character == "(") declaration_parens++
             else if (character == ")" && declaration_parens > 0) declaration_parens--
             else if (character == "[") declaration_brackets++
@@ -702,20 +714,19 @@ if ! sync_stats=$(awk '
         return 0
     }
 
-    function consume_declaration_fragment(fragment,    boundary) {
-        if (!(pending_synced || pending_no_variable_sync)) return
-        boundary = declaration_boundary(fragment)
-        if (boundary > 0) append_declaration(substr(fragment, 1, boundary))
-        else append_declaration(fragment)
-        if (boundary > 0) complete_declaration()
+    function consume_declaration_fragment(text, start,    boundary) {
+        if (!(pending_synced || pending_no_variable_sync)) return start
+        boundary = declaration_boundary(text, start)
+        if (boundary > 0) append_declaration(substr(text, start, boundary - start + 1))
+        else append_declaration(substr(text, start))
+        if (boundary > 0) {
+            complete_declaration()
+            return boundary + 1
+        }
+        return length(text) + 1
     }
 
-    function consume_line(text,    position, character, remainder) {
-        if (declaration_chunk_count > 0) {
-            consume_declaration_fragment(text)
-            return
-        }
-
+    function consume_line(text,    position, character) {
         position = 1
         while (position <= length(text)) {
             if (collecting_attribute) {
@@ -742,14 +753,19 @@ if ! sync_stats=$(awk '
 
             while (position <= length(text) && substr(text, position, 1) ~ /[ \t]/) position++
             if (position > length(text)) return
+            if ((pending_synced || pending_no_variable_sync) && declaration_chunk_count > 0) {
+                position = consume_declaration_fragment(text, position)
+                continue
+            }
             if (substr(text, position, 1) == "[") {
                 begin_attribute()
                 position++
                 continue
             }
-
-            remainder = substr(text, position)
-            consume_declaration_fragment(remainder)
+            if (pending_synced || pending_no_variable_sync) {
+                position = consume_declaration_fragment(text, position)
+                continue
+            }
             return
         }
     }
@@ -779,23 +795,23 @@ IFS='|' read -r synced_count has_no_variable_sync has_large_synced_array <<< "$s
 
 # Networking issues
 if [[ "$synced_count" -gt 0 ]]; then
-    if ! grep -qE "RequestSerialization\s*\(" "$masked_file"; then
+    if ! grep -qE 'RequestSerialization[[:space:]]*[(]' "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no RequestSerialization(). Required for Manual sync mode.")
     fi
-    if ! grep -qE "Networking\.(SetOwner|IsOwner)\s*\(|(^|[^.[:alnum:]_])IsOwner\s*\(" "$masked_file"; then
+    if ! grep -qE 'Networking[.](SetOwner|IsOwner)[[:space:]]*[(]|(^|[^.[:alnum:]_])IsOwner[[:space:]]*[(]' "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: [UdonSynced] found but no Networking.SetOwner() or Networking.IsOwner() guard. Confirm ownership before writes.")
     fi
 fi
 
 # VRCPlayerApi without validity check
-if grep -qE "VRCPlayerApi\s+\w+\s*=" "$masked_file"; then
-    if ! grep -qE "\.IsValid\s*\(\)|Utilities\.IsValid\s*\(|player\s*!=\s*null" "$masked_file"; then
+if grep -qE 'VRCPlayerApi[[:space:]]+@?[_[:alpha:]][_[:alnum:]]*[[:space:]]*=' "$masked_file"; then
+    if ! grep -qE '[.]IsValid[[:space:]]*[(][[:space:]]*[)]|Utilities[.]IsValid[[:space:]]*[(]|player[[:space:]]*!=[[:space:]]*null' "$masked_file"; then
         warnings+=("[UdonSharp] WARNING: VRCPlayerApi used. Always check player != null && player.IsValid() before use.")
     fi
 fi
 
 # Check for override on Unity standard callbacks (should NOT have override)
-if grep -qE "override\s+void\s+(OnTriggerEnter|OnTriggerStay|OnTriggerExit|OnCollisionEnter|OnCollisionStay|OnCollisionExit|OnAnimatorMove|OnAnimatorIK)" "$masked_file"; then
+if grep -qE 'override[[:space:]]+void[[:space:]]+(OnTriggerEnter|OnTriggerStay|OnTriggerExit|OnCollisionEnter|OnCollisionStay|OnCollisionExit|OnAnimatorMove|OnAnimatorIK)' "$masked_file"; then
     warnings+=("[UdonSharp] WARNING: Unity callbacks (OnTriggerEnter etc.) should NOT use 'override'. Only VRChat events need override.")
 fi
 
@@ -805,7 +821,7 @@ if grep -qE "GetComponent<UdonBehaviour>" "$masked_file"; then
 fi
 
 # System.Net / System.IO (blocked - use VRC downloaders)
-if grep -qE "using\s+System\.(Net|IO)\b|System\.Net\.|System\.IO\." "$masked_file"; then
+if grep -qE 'using[[:space:]]+System[.](Net|IO)([^[:alnum:]_]|$)|System[.]Net[.]|System[.]IO[.]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: System.Net/System.IO not available. Use VRCStringDownloader or VRCImageDownloader instead. See references/web-loading.md.")
 fi
 
@@ -825,25 +841,58 @@ if [[ "$has_no_variable_sync" -eq 1 && "$synced_count" -gt 0 ]]; then
 fi
 
 # ref parameter in method declaration
-if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bref\s+\w' "$masked_file"; then
+if grep -qE '(^|[^[:alnum:]_])(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[[:space:]]+[_[:alpha:]][_[:alnum:]]*[[:space:]]*[(]([^)]*[^[:alnum:]_])?ref[[:space:]]+[_[:alpha:]]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: ref parameters not supported in UdonSharp. Use return values or synced fields instead.")
 fi
 
 # out parameter in method declaration
-if grep -qE '\b(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)\s+\w+\s*\(.*\bout\s+\w' "$masked_file"; then
+if grep -qE '(^|[^[:alnum:]_])(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[[:space:]]+[_[:alpha:]][_[:alnum:]]*[[:space:]]*[(]([^)]*[^[:alnum:]_])?out[[:space:]]+[_[:alpha:]]' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: out parameters not supported in UdonSharp. Use return values instead.")
 fi
 
 # Multi-dimensional arrays (T[,])
-if grep -qE '\w+\s*\[,' "$masked_file"; then
+if grep -qE '[_[:alnum:]]+[[:space:]]*\[,' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead.")
 fi
 
-# Method overloading (same name, different signatures)
-overloaded=$(grep -oE '^[[:blank:]]*((public|private|protected|internal|override|virtual|static)[[:blank:]]+)*(void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[[:blank:]]+([A-Za-z_][A-Za-z0-9_]*)[[:blank:]]*\(' "$masked_file" \
-    | grep -oE '[A-Za-z_][A-Za-z0-9_]*\s*\($' \
-    | sed 's/[[:space:]]*($//' \
-    | sort | uniq -d)
+# Method overloading (same name, different signatures). Parse the declaration
+# prefix so valid modifier combinations and Unicode identifiers are not skipped.
+overloaded=$(LC_ALL=C awk '
+    function trim(text) {
+        sub(/^[ \t]+/, "", text)
+        sub(/[ \t]+$/, "", text)
+        return text
+    }
+
+    function is_identifier(name) {
+        return name ~ /^@?(_|[^[:space:][:punct:][:digit:]])(_|[^[:space:][:punct:]])*$/
+    }
+
+    {
+        declaration = trim($0)
+        while (match(declaration, /^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+/)) {
+            declaration = substr(declaration, RLENGTH + 1)
+        }
+
+        open = index(declaration, "(")
+        if (open == 0) next
+        prefix = trim(substr(declaration, 1, open - 1))
+        if (prefix == "" || prefix ~ /[=;{}]/) next
+        name = prefix
+        sub(/^.*[ \t]/, "", name)
+        return_type = prefix
+        sub(/[ \t][^ \t]*$/, "", return_type)
+        if (return_type == prefix || trim(return_type) == "" || !is_identifier(name)) next
+        if (trim(return_type) ~ /^(return|throw|yield|case|goto)$/) next
+
+        if (substr(name, 1, 1) == "@") {
+            print substr(name, 2)
+            next
+        }
+        if (name ~ /^(if|for|foreach|while|switch|catch|using|lock|fixed|nameof|typeof|sizeof|checked|unchecked|delegate)$/) next
+        print name
+    }
+' "$masked_file" | sort | uniq -d)
 if [[ -n "$overloaded" ]]; then
     warnings+=("[UdonSharp] WARNING: Method overloading detected for: $(echo "$overloaded" | tr '\n' ' '). Only simple overloads may work; prefer unique method names.")
 fi

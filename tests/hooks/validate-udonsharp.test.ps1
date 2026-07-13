@@ -531,6 +531,33 @@ public class Sample : UdonSharpBehaviour
         $script:Failed++
     }
 
+    function New-ContiguousDollarSource([int]$RunLength) {
+        return @(
+            'using UdonSharp;'
+            'public class ContiguousDollar : UdonSharpBehaviour'
+            '{'
+            ('    private int value = ' + ('$' * $RunLength) + ';')
+            '}'
+        ) -join [char]10
+    }
+
+    [void](Invoke-Hook (New-ContiguousDollarSource 100) 'contiguous-dollar-warmup.cs')
+    $ContiguousSmallStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $ContiguousSmallOutput = Invoke-Hook (New-ContiguousDollarSource 1000) 'contiguous-dollar-1000.cs'
+    $ContiguousSmallStopwatch.Stop()
+    $ContiguousLargeStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    $ContiguousLargeOutput = Invoke-Hook (New-ContiguousDollarSource 4000) 'contiguous-dollar-4000.cs'
+    $ContiguousLargeStopwatch.Stop()
+    Assert-NotContains 'contiguous dollar scan has no internal failure' ($ContiguousSmallOutput + $ContiguousLargeOutput) 'VALIDATOR-WARNING'
+    $ContiguousLimit = [Math]::Min(4.5, $ContiguousSmallStopwatch.Elapsed.TotalSeconds * 8 + 0.75)
+    if ($ContiguousLargeStopwatch.Elapsed.TotalSeconds -le $ContiguousLimit) {
+        Write-Output ("PASS [contiguous dollar scan] 1000={0:N3}s 4000={1:N3}s limit={2:N3}s" -f $ContiguousSmallStopwatch.Elapsed.TotalSeconds, $ContiguousLargeStopwatch.Elapsed.TotalSeconds, $ContiguousLimit)
+        $script:Passed++
+    } else {
+        Write-Output ("FAIL [contiguous dollar scan] 1000={0:N3}s 4000={1:N3}s limit={2:N3}s" -f $ContiguousSmallStopwatch.Elapsed.TotalSeconds, $ContiguousLargeStopwatch.Elapsed.TotalSeconds, $ContiguousLimit)
+        $script:Failed++
+    }
+
     function New-PendingDeclarationSource([int]$LineCount) {
         $Builder = [System.Text.StringBuilder]::new()
         [void]$Builder.AppendLine('using UdonSharp;')
@@ -576,6 +603,24 @@ public class Sample : UdonSharpBehaviour
     } else {
         Write-Output 'FAIL [declaration cap] fail-open contract mismatch'
         Write-Output $DeclarationCapResult
+        $script:Failed++
+    }
+
+    $UnicodeDeclarationCapPath = Join-Path $TempRoot 'declaration-cap-unicode.cs'
+    $UnicodeDeclarationCapSource = 'using UdonSharp;' + [char]10 +
+        'public class DeclarationCapUnicode : UdonSharpBehaviour' + [char]10 +
+        '{' + [char]10 + '    [UdonSynced]' + [char]10 + '    ' + ('界' * 88000) + [char]10
+    [System.IO.File]::WriteAllText($UnicodeDeclarationCapPath, $UnicodeDeclarationCapSource, (New-Object System.Text.UTF8Encoding($false)))
+    $UnicodeDeclarationCapPayload = @{ tool_input = @{ file_path = $UnicodeDeclarationCapPath } } | ConvertTo-Json -Compress
+    $UnicodeDeclarationCapResult = Invoke-HookProcess $UnicodeDeclarationCapPayload
+    if ($UnicodeDeclarationCapResult.ExitCode -eq 0 -and
+        $UnicodeDeclarationCapResult.Stdout.TrimEnd("`r", "`n") -eq $UnicodeDeclarationCapPayload -and
+        $UnicodeDeclarationCapResult.Stderr.TrimEnd("`r", "`n") -eq $DeclarationCapWarning) {
+        Write-Output 'PASS [unicode declaration cap] UTF-8 byte limit matches Bash contract'
+        $script:Passed++
+    } else {
+        Write-Output 'FAIL [unicode declaration cap] UTF-8 byte-limit contract mismatch'
+        Write-Output $UnicodeDeclarationCapResult
         $script:Failed++
     }
 

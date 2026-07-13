@@ -2,6 +2,10 @@
 
 ## Performance Targets
 
+The frame-rate values in this section are project validation targets, not VRChat
+upload limits. Choose targets for the devices you support, then test representative
+scenes and player counts on those devices.
+
 ### Minimum Requirements
 
 | Platform | FPS Target | Measurement Point |
@@ -35,15 +39,14 @@ If FPS is below target, follow this workflow — measure before guessing:
    ├── CPU-bound (high Draw Calls): → Batching / LOD / Culling / Static flags
    ├── GPU-bound (shader cost): → Mirror / Realtime lights / Post-Processing
    ├── Memory (VRAM spikes): → Reduce texture resolution / video players
-   └── Physics: → Disable Rigidbodies / Cloth / Constraints on Quest
+   └── Physics: → Remove Cloth on Android; profile Rigidbodies and Constraints
 
-3. Fix largest impact first, re-measure after each change
-   (estimates below are typical ranges; actual gains vary by world complexity)
-   Mirror ON by default    → Disable by default               (often -40-50% render cost)
-   Realtime shadows        → Bake all lights                  (often -30-50% GPU cost)
-   High lightmap resolution → Reduce and re-profile           (often -30-70% VRAM)
-   Unbatched static objects → Mark as Static + enable batching (often -30-60% draw calls)
-   Many active particles   → Pool; disable off-screen          (often -10-20% CPU)
+3. Fix the largest measured cost first, then re-measure
+   Mirror ON by default     → Disable by default; measure the changed render time
+   Realtime shadows         → Bake the default lighting; profile any required exception
+   High lightmap resolution → Reduce it and compare memory on the target device
+   Unbatched static objects → Test Static Batching or instancing and compare draw calls
+   Many active particles    → Pool or disable off-screen systems and compare CPU/GPU time
 ```
 
 **Never stack multiple changes before re-measuring** — you'll lose the ability to identify which change helped.
@@ -60,7 +63,7 @@ Impact: ⚠️ Very high
 Problem:
 - Renders the entire scene twice
 - In VR: 4 times (both eyes × 2)
-- Multiple mirrors increase load exponentially
+- Each additional active mirror adds another expensive render workload
 
 Countermeasures:
 □ Maximum 1 per world
@@ -95,8 +98,8 @@ Problem:
 - Each light recalculates objects
 
 Countermeasures:
-□ 0-1 realtime lights
-□ Bake lights
+□ Start with baked lighting
+□ Keep realtime lights or shadows only when the effect is required and target-device profiling supports it
 □ Use Light Probes for dynamic objects
 □ If absolutely necessary, limit range
 ```
@@ -121,7 +124,7 @@ Countermeasures:
 
 ## Lighting Optimization
 
-### Baked Lighting (Required)
+### Baked Lighting (Default)
 
 ```text
 ✅ Recommended settings:
@@ -184,13 +187,15 @@ Settings:
 - Excessive pass count
 ```
 
-### Quest/Android Shaders
+### Quest/Android World Shaders
 
 ```text
-✅ Required:
-- Use Mobile shaders
-- Mobile/VRChat/Lightmapped (recommended)
-- Mobile/Particles series
+Shaders are not restricted for worlds in VRChat on Android.
+
+✅ Recommended starting points:
+- Mobile/VRChat/Lightmapped for an optimized basic lightmapped world shader
+- Mobile-compatible particle shaders
+- Custom shaders only after profiling them on the target Android device
 
 ❌ Absolutely avoid:
 - Heavy use of transparency (Alpha)
@@ -219,10 +224,10 @@ Countermeasures:
 
 ### Polygon Guidelines
 
-| Platform | Recommended | Maximum |
-|----------|-------------|---------|
-| PC | 500K - 1M | 2M |
-| Quest | 50K - 100K | 200K |
+| Platform | Guidance | Upload limit |
+|----------|----------|--------------|
+| PC | Derive a project budget from profiling | No polygon-count upload limit documented here |
+| Quest/Android | Budget approximately 250,000 triangles for the whole world | The recommendation is not an upload limit |
 
 ### Optimization Techniques
 
@@ -349,12 +354,11 @@ public void _SlowUpdate()
 ### Quest Optimization Checklist
 
 ```text
-□ Polygon count < 100K
-□ Material count < 25
+□ Total world geometry starts within the approximately 250,000-triangle recommendation
+□ Material count and draw calls minimized, then verified with profiling
 □ Texture resolution ≤ 1024x1024
-□ Mobile shaders used
-□ Lights fully baked
-□ Realtime lights = 0
+□ World shaders tested on the target Android device
+□ Lighting baked by default; any realtime exception profiled on-device
 □ No mirrors or minimal
 □ Video players kept to 1 (recommended)
 □ No Post Processing
@@ -426,7 +430,7 @@ In-game checks:
 ```text
 □ 45+ FPS (VR) achieved
 □ Light baking complete
-□ Realtime lights ≤ 1
+□ Realtime lighting and shadows justified by profiling
 □ Mirror default OFF
 □ Video players kept to 1-2 (recommended)
 □ Static Batching enabled
@@ -440,45 +444,42 @@ In-game checks:
 
 ## Quest/Android Content Limitations
 
-Cross-platform worlds (PC + Quest) require stricter constraints on the Quest/Android build.
-These limits apply to the Android build target and are enforced at upload time or at runtime.
+Cross-platform worlds (PC + Android) need an Android-specific performance budget.
+The table distinguishes the enforced world-size limit from optimization guidance;
+recommendations are not upload limits.
 
 Reference: https://creators.vrchat.com/platforms/android/quest-content-optimization
 
 ### Android Limits and High-Cost Features
 
-| Constraint | Limit | Notes |
-|-----------|-------|-------|
-| World build size (compressed) | 100 MB max | Aim for 5–8 MB in practice |
-| Texture resolution | 1024×1024 recommended max | Higher resolutions increase memory and load time |
-| Custom shaders | Supported with caution | Custom shaders are allowed for worlds; use mobile-compatible shaders to avoid GPU overload. Avatars are restricted to VRChat Mobile shaders. |
-| Post-processing effects | Not supported | Bloom, depth of field, color grading unavailable |
-| Real-time shadows | Very high cost | Prefer baked lighting; keep only after profiling on the target Android device |
+| Constraint | Status | Notes |
+|-----------|--------|-------|
+| World build size after build-time compression | **100 MB hard limit** | Worlds above this size cannot be uploaded or accessed on Android |
+| Texture resolution | 1024×1024 rule of thumb | Higher resolutions increase memory and load time |
+| World shaders | Unrestricted | Prefer mobile-compatible shaders; profile every custom shader on the target device |
+| Post-processing effects | Disabled | Bloom, depth of field, color grading are unavailable |
+| Real-time shadows | High-cost guidance | Prefer baked lighting; keep only after profiling on the target Android device |
 | Video players | Work with some limitations | See audio-video.md (some URLs unsupported on Quest) |
-| Particle systems | Limited | Reduce count and complexity |
+| Particle systems | Profile complexity | The cited guide documents avatar limits, not a fixed world particle cap |
 
 ### Features to Remove or Treat with Caution on Quest
 
 ```text
-⚠️ Custom shaders (worlds only: allowed with caution; avoid complex HLSL/ShaderLab features that stress the mobile GPU. Avatar shaders are restricted to VRChat Mobile shaders.)
+⚠️ Custom world shaders: permitted, but profile their passes, overdraw, and target-device GPU time
 ❌ Post-processing stack (any effect)
 ⚠️ Real-time shadow casting and receiving (avoid by default; retain only with target-device evidence)
 ❌ Screen-space ambient occlusion (SSAO)
 ❌ Screen-space reflections (SSR)
-❌ Tessellation and geometry shaders
-❌ Compute shaders (limited/unavailable)
+⚠️ Tessellation, geometry, and compute features: verify build-target support and profile the actual shader on-device
 ❌ Some particle system modules (trails, sub-emitters in complex setups)
 ```
 
 ### World Build Size Management
 
 ```text
-Target size breakdown (5–8 MB goal):
-
-Textures:       2–4 MB  (largest contributor — compress aggressively)
-Meshes:         1–2 MB
-Audio:          0.5–1 MB
-Other assets:   0.5 MB
+The enforced Android world limit is 100 MB after build-time compression. Set a
+smaller project budget from load-time and memory testing. The much smaller size
+target in the avatar section of the official guide does not apply to worlds.
 
 Reduction strategies:
 □ Use ASTC compression for all textures (Quest-native format)
@@ -519,7 +520,8 @@ Steps:
 ### Material Merging and Texture Atlasing
 
 ```text
-Goal: minimize unique material count (target < 25)
+Goal: minimize unique material count and measured draw-call cost. The official
+guide does not define a fixed world material limit.
 
 Draw call reduction math:
 - 100 objects × 3 materials each = 300 draw calls
@@ -548,7 +550,7 @@ Decimation targets for Quest:
 □ Hero/focal objects:   ≤ 5K triangles
 □ Background objects:   ≤ 1K triangles
 □ Ground/floor planes:  minimize subdivision
-□ Total scene:          50K–100K triangles (hard cap 200K)
+□ Total scene:          budget approximately 250,000 triangles; reduce further when profiling calls for it
 
 Additional steps:
 □ Remove interior faces never visible to players
@@ -556,22 +558,23 @@ Additional steps:
 □ Apply mesh compression in import settings (Medium or High)
 ```
 
-### Baked Lighting Workflow for Quest
+### Android Lighting Workflow
 
 ```text
-Mandatory: all lighting must be baked before uploading the Quest build.
+Baking lighting is the default Android path. Keep Mixed or Realtime lighting only
+when it is required by the experience and survives target-device profiling.
 
 Recommended settings for Quest:
 ├── Lightmapper:           Progressive GPU (fast; fall back to CPU if GPU memory is insufficient)
 ├── Lightmap Resolution:   5–10 texels/unit (lower = smaller textures)
 ├── Lightmap Size:         1024×1024 max per map
-├── Directional Mode:      Non-Directional  ← required for Quest
-├── Ambient Occlusion:     Baked only (no SSAO)
+├── Directional Mode:      Start with Non-Directional; compare quality/memory before changing it
+├── Ambient Occlusion:     Baked baseline (Android post-processing disables SSAO)
 └── Compress Lightmaps:    ✓ (reduces build size significantly)
 
 Checklist:
-□ All lights set to Baked or Mixed mode
-□ Realtime lights = 0 in Quest build
+□ Environment lighting baked
+□ Mixed or Realtime lights retained only with documented target-device profiling
 □ Light Probes placed for dynamic objects (players, pickups)
 □ Reflection Probes set to Baked, resolution 128
 □ Window > Rendering > Lighting > Generate Lighting → complete without errors
@@ -624,7 +627,7 @@ Verify all items below before uploading a Quest-compatible world build.
 
 ```text
 □ Android build size after compression < 100 MB
-□ Targeting 5–8 MB for typical worlds
+□ A smaller project budget chosen from measured load time and memory use
 □ No uncompressed or oversized textures (check via Project > Stats)
 □ No duplicate assets left in the project
 ```
@@ -632,24 +635,23 @@ Verify all items below before uploading a Quest-compatible world build.
 ### Shaders and Materials
 
 ```text
-□ All materials use Mobile-compatible shaders:
+□ Prefer Mobile-compatible shaders where they meet the visual requirements:
     - Mobile/Diffuse
     - Mobile/Bumped Diffuse
     - Mobile/Particles/Alpha Blended
     - VRChat/Mobile/Toon Lit (if using VRChat shaders)
-□ No custom HLSL shaders or unsupported ShaderLab features
+□ Every custom world shader profiled on the target Android device
 □ GPU Instancing enabled on all materials applied to repeated objects
-□ Material count < 25 unique materials per world
+□ A project material/draw-call budget chosen from profiling (no fixed world material upload limit)
 □ No post-processing volumes or components in the scene
 ```
 
 ### Lighting
 
 ```text
-□ Lighting fully baked (Window > Rendering > Lighting shows no pending bake)
-□ Realtime lights = 0 (or removed entirely)
-□ No Mixed lights with Shadowmask (baked-only mode required)
-□ Directional Mode set to Non-Directional in Lighting Settings
+□ Default environment lighting baked (Window > Rendering > Lighting shows no pending bake)
+□ Realtime or Mixed lights retained only when required and supported by target-device measurements
+□ Directional Mode selected from measured memory cost and required visual quality
 □ Light Probes cover all player-accessible areas
 □ Reflection Probes baked, resolution ≤ 128
 □ Lightmap textures compressed
@@ -658,9 +660,9 @@ Verify all items below before uploading a Quest-compatible world build.
 ### Geometry
 
 ```text
-□ Total triangle count < 200K (target 50K–100K)
+□ Total triangle count compared with the approximately 250,000-triangle recommendation and reduced when profiling requires it
 □ LOD groups configured for all objects > 1K triangles
-□ No excessive particle systems (count ≤ 10, particles/system ≤ 100)
+□ Particle systems measured for CPU, GPU, overdraw, and memory cost on the target device
 □ Occlusion Culling baked and verified
 □ Static Batching enabled for all non-moving objects
 ```
@@ -692,7 +694,9 @@ Verify all items below before uploading a Quest-compatible world build.
 
 VRChat does **not** have a formal in-client performance ranking system for worlds (unlike avatars which display Excellent/Good/Medium/Poor badges). There is no SDK-enforced ranking threshold that blocks world uploads based on polygon count or draw calls.
 
-In practice, use the **FPS tiers** at the top of this document as the pass/fail criteria, and apply the Quest/Android hard limits below as mandatory constraints.
+Use the **FPS targets** at the top as project criteria. The 100 MB compressed
+world-size rule is a hard Android limit; triangle, material, and rendering values
+are budgets to validate through profiling, not upload gates.
 
 ### Official World Triangle Budget (Quest)
 
@@ -700,12 +704,12 @@ From the official Android Content Optimization documentation:
 <https://creators.vrchat.com/platforms/android/quest-content-optimization/>
 
 ```text
-Total world triangle budget (Quest/Android): ~250,000 triangles
+VRChat recommends budgeting approximately 250,000 triangles for the whole world.
 ```
 
-> This is the official guideline figure. The 200K hard cap listed in the Mesh Optimization
-> section above is a conservative community target; 250K is the documented upper boundary.
-> Staying within 50K–100K provides the best frame rate headroom for worlds with many players.
+> This is an optimization recommendation, not an upload limit. A lower budget can
+> leave more room for avatars and effects, but it must be chosen from the needs and
+> measurements of the world rather than presented as an official hard boundary.
 
 ### Per-Object Polygon Guidelines (Quest)
 
@@ -717,8 +721,7 @@ These are approximate guidelines based on community practice and the official op
 | Hero / focal interactive objects | ≤ 5,000 | Pickups, NPCs, key props |
 | Background / decorative objects | ≤ 1,000 | Furniture, environmental details |
 | Ground / floor planes | Minimal subdivision | Avoid dense meshes; bake detail into textures |
-| Total scene (ideal) | 50K–100K | Leaves headroom for players and avatars |
-| Total scene (upper limit) | ~250K | Official documented budget |
+| Total scene | Approximately 250K | Official world budget recommendation; not an upload limit |
 
 ### Draw Call Targets (Quest)
 
@@ -730,9 +733,9 @@ official documentation: <https://creators.vrchat.com/platforms/android/quest-con
 
 | Tier | Draw Calls | Expected Result |
 |---|---|---|
-| Excellent | < 50 | Stable 72 FPS with multiple players |
-| Acceptable | 50–100 | Achievable with batching and instancing |
-| Problematic | > 100 | Frame rate drops; optimization required |
+| Initial low-cost target | < 50 | Investigate whether batching and culling remain effective |
+| Review range | 50–100 | Measure render-thread and GPU cost on the target device |
+| Investigation priority | > 100 | Inspect materials, passes, batching, and visible geometry; the count alone does not predict FPS |
 
 Reduce draw calls with Static Batching, GPU Instancing, and texture atlasing (see Draw Call Reduction section above).
 
@@ -753,7 +756,7 @@ ETC2 is the fallback when ASTC is unavailable. Prefer ASTC for all new content.
 
 For detailed lightmap resolution and size recommendations (texels/unit, max size, directional mode, compression, AO settings), see:
 
-- **[Baked Lighting Workflow for Quest](#baked-lighting-workflow-for-quest)** — full settings table in this file
+- **[Android Lighting Workflow](#android-lighting-workflow)** — full settings table in this file
 - **[references/lighting.md — Quest Bake Parameter Reference](lighting.md#quest-bake-parameter-reference)** — rationale, acceptable ranges, and Baked vs Mixed decision guide
 
 ## See Also

@@ -224,7 +224,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
 | 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary custom capacity, `DataDictionary.EnsureCapacity` |
 
-> **Note**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible.
+Use the current supported SDK for publishing. Check the matching release notes before relying on a version-specific API or migration step.
 
 ## Official Resources
 

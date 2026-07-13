@@ -40,7 +40,7 @@ metadata:
 
 ---
 
-## v2.6.0 Method Migration
+## Method Migration
 
 The following public methods were renamed because an unprefixed, parameterless
 public UdonSharp method remains callable through legacy network dispatch:
@@ -65,13 +65,13 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 
 | # | NEVER do this | Why it hurts | Use instead |
 |---|---------------|-------------|-------------|
-| 1 | Enable Mirror by default (active on world join) | Renders the entire scene twice — immediate FPS halving, catastrophic on Quest | Default Mirror OFF; add UdonSharp toggle or player-triggered activation |
+| 1 | Enable Mirror by default (active on world join) | A mirror adds another costly scene render; the impact depends on view, scene, resolution, and device | Default Mirror OFF; add a player-controlled toggle and profile each target device |
 | 2 | Use realtime directional lights with real-time shadows without profiling | Realtime shadow cost varies with scene geometry, view, and target device and can dominate frame time on Android | Prefer baked lightmaps + light probes; profile the target device before keeping any realtime shadows |
 | 3 | Set Respawn Height at or above the world floor | Player respawns → falls → respawns again → infinite loop; players cannot recover | Set to an unreachable depth (e.g., floor at Y=0 → Respawn at Y=-100) |
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
-| 5 | Enable Post-Processing without Quest build profile | Post-Processing is silently disabled at runtime on Quest but VRAM is still allocated | Use separate Android build profile with post-processing disabled |
+| 5 | Enable Post-Processing without an Android build profile | Post-processing is disabled at runtime on Android, so the authored effect will not appear and unnecessary resources can still enlarge the build | Use a separate Android build profile with post-processing removed |
 | 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
-| 7 | Use Unity Constraints or Cloth on Quest | Both are disabled silently at runtime on Quest — animations freeze, cloth hangs in place | Use VRC Constraints (SDK 3.10.0+, world-supported) or Animator-driven transforms, and remove cloth from Quest meshes |
+| 7 | Use Cloth on Android, or add many Unity Constraints without profiling | Cloth is disabled on Android. Unity Constraints are permitted in worlds, but overuse can significantly affect performance | Remove Cloth from the Android build; prefer VRC Constraints for new work and profile any constraint-heavy setup |
 | 8 | Upload without completing a lightmap bake | Realtime GI adds substantial scene-dependent render cost and is unsuitable as an unmeasured fallback on Android | Bake lights before upload, then verify the result on the target device |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
 | 10 | Use very high lightmap resolution for large areas without profiling | Texture memory can spike significantly at high resolutions; a common cause of OOM crashes on mobile headsets | Start at 10-20 texels/unit (PC) / 5-10 (Quest) as a practical guideline; profile VRAM and adjust — official guidance says "keep lightmap resolution low" for Quest |
@@ -131,17 +131,17 @@ before publishing.
 
 ```text
 Quest required? → Yes
-  ├── Shaders: Mobile-only (Standard Lite, Toon Lit)
+  ├── Shaders: World shaders are unrestricted; prefer mobile-compatible shaders and profile custom ones
   ├── Lighting: Baked by default; retain realtime effects only after target-device profiling
-  ├── Geometry: 50K-100K triangles (target range)
-  ├── Materials: < 25 unique materials
+  ├── Geometry: Budget approximately 250,000 triangles for the whole world; reduce further when profiling calls for it
+  ├── Materials: Minimize unique materials and draw calls; no fixed world upload limit is documented
   ├── Audio: Mono, compressed, limited concurrent sources
   └── Physics: Simplified colliders, minimal Rigidbodies
 ```
 
 ## SDK Versions
 
-**Supported versions**: SDK 3.7.1 - 3.10.4
+**Covered versions**: SDK 3.7.1 - 3.10.4 (last verified: 3.10.4)
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |
@@ -155,9 +155,9 @@ Quest required? → Yes
 | 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅             |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | ✅             |
-| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | ✅ Latest stable |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | ✅ Last verified |
 
-> **Important**: SDK versions below 3.9.0 are **deprecated as of December 2, 2025**. New world uploads are no longer possible with these versions.
+Use the current supported SDK for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
 
 ---
 
@@ -300,14 +300,14 @@ Exactly **one** is required in every VRChat world.
 | PC Desktop | 60+ FPS    | Spawn point, 1 player  |
 | Quest      | 72 FPS     | Spawn point, 1 player  |
 
-### Critical Limits
+### Starting Budgets
 
 | Item                | Recommended           | Reason                        |
 | ------------------- | --------------------- | ----------------------------- |
 | Mirrors             | 1, default OFF        | Renders the entire scene 2x   |
 | Video players       | 1-2 recommended       | Decoding overhead; no documented hard limit |
-| Realtime lights     | 0-1                   | Dynamic shadows are expensive  |
-| Lightmaps           | **Required**          | Performance foundation         |
+| Realtime lighting   | Baked by default      | Keep realtime lights or shadows only after target-device profiling |
+| Lightmaps           | Bake and verify       | Primary Android lighting path  |
 
 ### Quest/Android Restrictions
 
@@ -316,8 +316,8 @@ Exactly **one** is required in every VRChat world.
 | Dynamic Bones      | ✅  | ❌ Disabled   |
 | Cloth              | ✅  | ❌ Disabled   |
 | Post-Processing    | ✅  | ❌ Disabled   |
-| Unity Constraints  | ✅  | ❌ Disabled   |
-| Realtime lights    | ✅  | ⚠️ Avoid     |
+| Unity Constraints  | ✅  | ✅ Permitted in worlds; profile cost |
+| Realtime lights    | ✅  | ⚠️ Expensive; keep only with device evidence |
 
 ### Performance Optimization Workflow
 
@@ -334,13 +334,13 @@ Exactly **one** is required in every VRChat world.
 
 ## Lighting
 
-### Baked Lighting (Required)
+### Baked Lighting (Default)
 
 ```text
 ✅ Recommended settings:
 ├── Lightmapper: Progressive GPU
 ├── Lightmap Resolution: 10-20 texels/unit (PC) / 5-10 (Quest)
-├── Light Mode: Baked or Mixed
+├── Light Mode: Baked by default; use Mixed/Realtime only when the effect is necessary and measured
 └── Light Probes: Place along player paths
 
 ❌ Avoid:
@@ -457,7 +457,7 @@ For C# scripting, network sync, and UdonSharp event implementation, use the `uni
 
 ## Templates (`assets/templates/`)
 
-Starter templates for common SDK component patterns. Each template compiles without modification; adjust Inspector fields and extend the event stubs for your world.
+Starter templates for common SDK component patterns. Repository checks cover static checks; import them into the target SDK project, compile, and run Build & Test before use. Adjust Inspector fields and extend the event stubs for your world.
 
 | Template | Purpose |
 |---|---|

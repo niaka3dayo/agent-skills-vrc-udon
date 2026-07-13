@@ -820,7 +820,7 @@ Entries marked "on Avatar" come from avatar-side limitations and are listed here
 ❌ Cameras on Avatar
 ❌ Lights on Avatar
 ❌ Audio Sources on Avatar
-❌ Unity Constraints (use VRC equivalents: VRCPositionConstraint, VRCRotationConstraint, VRCScaleConstraint, VRCParentConstraint, VRCAimConstraint, VRCLookAtConstraint)
+⚠️ Unity Constraints are permitted in worlds; avoid overuse and profile them on Android. Prefer VRC equivalents for new work.
 ```
 
 ### Editor-Only Objects and Components

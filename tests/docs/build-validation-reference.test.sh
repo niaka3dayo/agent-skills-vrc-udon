@@ -8,6 +8,9 @@ REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/build-validation.md"
 COMPONENTS_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/components.md"
 UDON_API_REF="$ROOT_DIR/skills/unity-vrc-udon-sharp/references/api.md"
 PERFORMANCE_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/performance.md"
+LIGHTING_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/lighting.md"
+WORLD_CHEATSHEET="$ROOT_DIR/skills/unity-vrc-world-sdk-3/CHEATSHEET.md"
+UDON_MIGRATION_REF="$ROOT_DIR/skills/unity-vrc-udon-sharp/references/sdk-migration.md"
 
 require_file() {
     local path="$1"
@@ -110,15 +113,45 @@ done
 for obsolete_claim in '10-30 FPS' '3-5× draw call overhead' \
     'typically run at 90+ FPS on PC' 'Build for Quest and get PC for free' \
     '~2× slower than PC VR' 'Realtime is only viable on PC-only worlds' \
-    'Fully baked (no realtime shadows)'; do
+    'Fully baked (no realtime shadows)' 'immediate FPS halving' \
+    'Shaders: Mobile-only (Standard Lite, Toon Lit)' \
+    'SDK versions below 3.9.0 are **deprecated' \
+    'Each template compiles without modification'; do
     forbid_text "$WORLD_SKILL" "$obsolete_claim"
+done
+for path in "$UDON_SKILL" "$UDON_MIGRATION_REF"; do
+    forbid_text "$path" 'SDK versions below 3.9.0'
+    forbid_text "$path" 'New world uploads are no longer possible'
 done
 for obsolete_claim in '| Real-time shadows | Not supported |' \
     '❌ Real-time shadow casting and receiving' \
-    '□ No real-time shadow settings on any light'; do
+    '□ No real-time shadow settings on any light' \
+    '5–8 MB' '5-8 MB' '200K' 'hard cap' \
+    'Mandatory: all lighting must be baked' 'Realtime lights = 0' \
+    'No Mixed lights with Shadowmask' 'No custom HLSL shaders' \
+    '(often -40-50% render cost)' '(often -30-50% GPU cost)' \
+    '(often -30-70% VRAM)' '(often -30-60% draw calls)' \
+    '(often -10-20% CPU)'; do
     forbid_text "$PERFORMANCE_REF" "$obsolete_claim"
+done
+for obsolete_claim in 'Non-Directional (required)' 'No shadow support on Quest' \
+    'Lights:     Baked only' 'Quest: Realtime lights = 0'; do
+    forbid_text "$LIGHTING_REF" "$obsolete_claim"
+done
+for obsolete_claim in '| Realtime Lights | 0-1 | 0 |' \
+    '| Unity Constraints | ✅ | ❌ |' \
+    '| Polygons | 500K-1M | 50K-100K |' \
+    '| Materials | No limit | 25 or less |'; do
+    forbid_text "$WORLD_CHEATSHEET" "$obsolete_claim"
 done
 require_text "$WORLD_SKILL" 'profile each target device before keeping realtime lighting or shadows'
 require_text "$PERFORMANCE_REF" 'keep only after profiling on the target Android device'
+require_text "$PERFORMANCE_REF" '100 MB'
+require_text "$PERFORMANCE_REF" 'approximately 250,000 triangles'
+require_text "$PERFORMANCE_REF" 'Shaders are not restricted for worlds'
+require_text "$PERFORMANCE_REF" 'not an upload limit'
+require_text "$LIGHTING_REF" 'target-device profiling'
+require_text "$WORLD_CHEATSHEET" 'profile on the target Android device'
+require_text "$WORLD_SKILL" 'static checks; import them into the target SDK project'
 
 echo "PASS: build-validation reference coverage smoke test"

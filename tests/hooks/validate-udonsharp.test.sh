@@ -723,6 +723,65 @@ fi
 assert_exit "raw string linear scan" 0 "$RAW_PERF_RC"
 assert_not_contains "raw string scan has no internal failure" "$(cat "$TMPROOT/raw-performance.err")" 'VALIDATOR-WARNING'
 
+DOLLAR_RUN_PERF_LOG="$TMPROOT/dollar-run-performance.log"
+if python3 - "$HOOK" "$TMPROOT" >"$DOLLAR_RUN_PERF_LOG" 2>&1 <<'PY'
+import json
+import pathlib
+import subprocess
+import sys
+import time
+
+hook = pathlib.Path(sys.argv[1])
+root = pathlib.Path(sys.argv[2])
+
+
+def measure(run_length: int) -> float:
+    source = root / f"dollar-run-{run_length}.cs"
+    source.write_text(
+        "using UdonSharp;\n"
+        "public class DollarRun : UdonSharpBehaviour\n"
+        "{\n"
+        "    private int value = " + "$" * run_length + ";\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    payload = json.dumps({"tool_input": {"file_path": str(source)}}, separators=(",", ":"))
+    started = time.monotonic()
+    result = subprocess.run(
+        [str(hook)],
+        input=payload,
+        text=True,
+        capture_output=True,
+        timeout=15,
+        check=False,
+    )
+    elapsed = time.monotonic() - started
+    if result.returncode != 0:
+        raise RuntimeError(f"{run_length} dollars exited {result.returncode}")
+    if result.stdout.strip() != payload:
+        raise RuntimeError(f"{run_length} dollars did not preserve stdout")
+    if "VALIDATOR-WARNING" in result.stderr:
+        raise RuntimeError(f"{run_length} dollars triggered an internal failure")
+    return elapsed
+
+
+measure(100)
+small = measure(2000)
+large = measure(8000)
+limit = min(2.5, small * 8 + 0.5)
+print(f"contiguous dollars: 2000={small:.3f}s 8000={large:.3f}s limit={limit:.3f}s")
+if large > limit:
+    raise SystemExit(1)
+PY
+then
+    echo "PASS [contiguous dollar scan] $(cat "$DOLLAR_RUN_PERF_LOG")"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [contiguous dollar scan]"
+    sed 's/^/  /' "$DOLLAR_RUN_PERF_LOG"
+    FAIL=$((FAIL + 1))
+fi
+
 DECLARATION_CAP_FILE="$TMPROOT/declaration-cap.cs"
 {
     printf 'using UdonSharp;\npublic class DeclarationCap : UdonSharpBehaviour\n{\n    [UdonSynced]\n    '
@@ -746,6 +805,40 @@ else
     echo "FAIL [declaration cap] expected exactly one ATTRIBUTE_SCAN_FAILED warning"
     FAIL=$((FAIL + 1))
 fi
+
+UNICODE_DECLARATION_CAP_FILE="$TMPROOT/declaration-cap-unicode.cs"
+python3 - "$UNICODE_DECLARATION_CAP_FILE" <<'PY'
+from pathlib import Path
+import sys
+
+Path(sys.argv[1]).write_text(
+    "using UdonSharp;\n"
+    "public class DeclarationCapUnicode : UdonSharpBehaviour\n"
+    "{\n"
+    "    [UdonSynced]\n"
+    "    " + "界" * 88000 + "\n",
+    encoding="utf-8",
+)
+PY
+UNICODE_CAP_INPUT="{\"tool_input\":{\"file_path\":\"$UNICODE_DECLARATION_CAP_FILE\"}}"
+for cap_locale in C C.UTF-8; do
+    if ! locale -a 2>/dev/null | tr '[:upper:]' '[:lower:]' | grep -Fxq "$(printf '%s' "$cap_locale" | tr '[:upper:]' '[:lower:]' | tr -d '-')" &&
+        [ "$cap_locale" != C ]; then
+        continue
+    fi
+    cap_stderr="$TMPROOT/declaration-cap-unicode-${cap_locale//[^A-Za-z0-9]/_}.err"
+    cap_stdout=$(printf '%s' "$UNICODE_CAP_INPUT" | LC_ALL="$cap_locale" "$HOOK" 2>"$cap_stderr")
+    cap_status=$?
+    assert_exit "unicode declaration cap ($cap_locale) fails open" 0 "$cap_status"
+    if [ "$cap_stdout" = "$UNICODE_CAP_INPUT" ] &&
+        [ "$(cat "$cap_stderr")" = '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)' ]; then
+        echo "PASS [unicode declaration cap $cap_locale] UTF-8 byte limit is stable"
+        PASS=$((PASS + 1))
+    else
+        echo "FAIL [unicode declaration cap $cap_locale] byte-limit contract mismatch"
+        FAIL=$((FAIL + 1))
+    fi
+done
 
 DECLARATION_PERF_LOG="$TMPROOT/declaration-performance.log"
 if python3 - "$HOOK" "$TMPROOT" >"$DECLARATION_PERF_LOG" 2>&1 <<'PY'
@@ -809,6 +902,15 @@ fi
 # ------------------------------------------------------------
 # Shared Bash/PowerShell rule inventory and lexical-mask matrix
 # ------------------------------------------------------------
+if grep -nF -e '\s' -e '\w' -e '\b' "$HOOK" >"$TMPROOT/non-posix-regex.log"; then
+    echo "FAIL [portable grep regex] GNU-only shorthand remains"
+    sed 's/^/  /' "$TMPROOT/non-posix-regex.log"
+    FAIL=$((FAIL + 1))
+else
+    echo "PASS [portable grep regex] POSIX ERE uses no \\s/\\w/\\b shorthand"
+    PASS=$((PASS + 1))
+fi
+
 run_shared_parity_matrix
 
 echo ""

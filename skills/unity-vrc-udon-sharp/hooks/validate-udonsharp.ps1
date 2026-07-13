@@ -47,7 +47,7 @@ if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
 }
 
 try {
-    $FileContent = Get-Content -LiteralPath $FilePath -Raw -ErrorAction Stop
+    $FileContent = Get-Content -LiteralPath $FilePath -Raw -Encoding UTF8 -ErrorAction Stop
 } catch {
     Stop-Validation 'SOURCE_READ_FAILED'
 }
@@ -300,6 +300,9 @@ function Get-CSharpCodeSource([string]$Source) {
                 $Index += 2
                 continue
             }
+            [void]$Builder.Append('$', $DollarCount)
+            $Index += $DollarCount
+            continue
         }
 
         if ($Current -eq '@' -and $Index + 2 -lt $Source.Length -and
@@ -360,14 +363,16 @@ function Get-CSharpCodeSource([string]$Source) {
 
 
 function Test-UdonSharpBehaviourSource([string]$MaskedSource) {
+    $IdentifierPattern = '@?[_\p{L}\p{Nl}][_\p{L}\p{Nl}\p{Nd}\p{Pc}\p{Mn}\p{Mc}\p{Cf}]*'
     $BaseNames = New-Object System.Collections.Generic.List[string]
     $BaseNames.Add('UdonSharpBehaviour')
     $BaseNames.Add('UdonSharp\.UdonSharpBehaviour')
     $BaseNames.Add('global::UdonSharp\.UdonSharpBehaviour')
 
-    $AliasPattern = 'using\s+(?<Alias>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?<Target>(?:global::)?UdonSharp(?:\.UdonSharpBehaviour)?)\s*;'
+    $AliasPattern = 'using\s+(?<Alias>' + $IdentifierPattern + ')\s*=\s*(?<Target>(?:global::)?UdonSharp(?:\.UdonSharpBehaviour)?)\s*;'
     foreach ($AliasMatch in [regex]::Matches($MaskedSource, $AliasPattern)) {
-        $AliasName = [regex]::Escape($AliasMatch.Groups['Alias'].Value)
+        $AliasValue = $AliasMatch.Groups['Alias'].Value.TrimStart('@')
+        $AliasName = '@?' + [regex]::Escape($AliasValue)
         if ($AliasMatch.Groups['Target'].Value.EndsWith('UdonSharpBehaviour')) {
             $BaseNames.Add($AliasName)
         } else {
@@ -376,7 +381,7 @@ function Test-UdonSharpBehaviourSource([string]$MaskedSource) {
     }
 
     foreach ($BaseName in $BaseNames) {
-        $ClassPattern = '(?s)\bclass\s+[A-Za-z_][A-Za-z0-9_]*\s*:[^{};]*[,:\s]' + $BaseName + '(?=$|[,<{\s])'
+        $ClassPattern = '(?s)\bclass\s+' + $IdentifierPattern + '\s*:[^{};]*[,:\s]' + $BaseName + '(?=$|[,<{\s])'
         if ($MaskedSource -match $ClassPattern) {
             return $true
         }
@@ -540,6 +545,7 @@ function Get-SyncStats([string]$Source) {
         $State.DeclarationBrackets = 0
         $State.DeclarationBraces = 0
         $State.DeclarationHasAssignment = $false
+        $State.DeclarationUtf8Bytes = 0
     }
 
     function Get-FieldInfo([string]$Declaration) {
@@ -630,12 +636,14 @@ function Get-SyncStats([string]$Source) {
         Reset-PendingDeclaration
     }
 
-    function Add-DeclarationFragment([string]$Fragment) {
-        if (-not ($State.PendingSynced -or $State.PendingNoVariableSync) -or -not $Fragment) { return }
+    function Add-DeclarationFragment([string]$Text, [int]$Start) {
+        if (-not ($State.PendingSynced -or $State.PendingNoVariableSync) -or $Start -ge $Text.Length) {
+            return $Start
+        }
         $Boundary = -1
-        for ($Position = 0; $Position -lt $Fragment.Length; $Position++) {
-            $Character = $Fragment[$Position]
-            $NextCharacter = if ($Position + 1 -lt $Fragment.Length) { $Fragment[$Position + 1] } else { [char]0 }
+        for ($Position = $Start; $Position -lt $Text.Length; $Position++) {
+            $Character = $Text[$Position]
+            $NextCharacter = if ($Position + 1 -lt $Text.Length) { $Text[$Position + 1] } else { [char]0 }
             if ($Character -eq '(') { $State.DeclarationParens++ }
             elseif ($Character -eq ')' -and $State.DeclarationParens -gt 0) { $State.DeclarationParens-- }
             elseif ($Character -eq '[') { $State.DeclarationBrackets++ }
@@ -659,11 +667,21 @@ function Get-SyncStats([string]$Source) {
             }
         }
 
-        $Piece = if ($Boundary -ge 0) { $Fragment.Substring(0, $Boundary + 1) } else { $Fragment }
-        if ($State.DeclarationBuilder.Length -gt 0) { [void]$State.DeclarationBuilder.Append(' ') }
+        $Piece = if ($Boundary -ge 0) {
+            $Text.Substring($Start, $Boundary - $Start + 1)
+        } else {
+            $Text.Substring($Start)
+        }
+        if ($State.DeclarationBuilder.Length -gt 0) {
+            [void]$State.DeclarationBuilder.Append(' ')
+            $State.DeclarationUtf8Bytes++
+        }
         [void]$State.DeclarationBuilder.Append($Piece)
-        if ($State.DeclarationBuilder.Length -gt 262144) { throw 'ATTRIBUTE_SCAN_FAILED' }
+        $State.DeclarationUtf8Bytes += [System.Text.Encoding]::UTF8.GetByteCount($Piece)
+        if ($State.DeclarationUtf8Bytes -gt 262144) { throw 'ATTRIBUTE_SCAN_FAILED' }
         if ($Boundary -ge 0) { Complete-Declaration }
+        if ($Boundary -ge 0) { return $Boundary + 1 }
+        return $Text.Length
     }
 
     function Start-Attribute {
@@ -675,11 +693,6 @@ function Get-SyncStats([string]$Source) {
     }
 
     function Read-SourceLine([string]$Line) {
-        if ($State.DeclarationBuilder.Length -gt 0) {
-            Add-DeclarationFragment $Line
-            return
-        }
-
         $Position = 0
         while ($Position -lt $Line.Length) {
             if ($State.CollectingAttribute) {
@@ -710,13 +723,19 @@ function Get-SyncStats([string]$Source) {
                 $Position++
             }
             if ($Position -ge $Line.Length) { return }
+            if (($State.PendingSynced -or $State.PendingNoVariableSync) -and $State.DeclarationBuilder.Length -gt 0) {
+                $Position = Add-DeclarationFragment $Line $Position
+                continue
+            }
             if ($Line[$Position] -eq '[') {
                 Start-Attribute
                 $Position++
                 continue
             }
-
-            Add-DeclarationFragment $Line.Substring($Position)
+            if ($State.PendingSynced -or $State.PendingNoVariableSync) {
+                $Position = Add-DeclarationFragment $Line $Position
+                continue
+            }
             return
         }
     }
@@ -729,6 +748,7 @@ function Get-SyncStats([string]$Source) {
         DeclarationBrackets = 0
         DeclarationBraces = 0
         DeclarationHasAssignment = $false
+        DeclarationUtf8Bytes = 0
         CollectingAttribute = $false
         AttributeContent = [System.Text.StringBuilder]::new()
         AttributeParens = 0
@@ -824,12 +844,27 @@ if ($MaskedSource -match '\w+\s*\[,') {
     $Warnings += "[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead."
 }
 
-# Check for method overloading (same name, different signatures)
-$MethodMatches = [regex]::Matches(
-    $MaskedSource,
-    '(?m)^[ \t]*(?:(?:public|private|protected|internal|override|virtual|static)[ \t]+)*(?:void|int|float|bool|string|[A-Z][A-Za-z0-9_]*)[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*\('
-)
-$MethodNames = $MethodMatches | ForEach-Object { $_.Groups[1].Value }
+# Check for method overloading (same name, different signatures). Parse the
+# declaration prefix so valid modifier combinations and Unicode identifiers are
+# not skipped by a fixed return-type pattern.
+$MethodNames = foreach ($Line in [regex]::Split($MaskedSource, '\r?\n')) {
+    $Declaration = $Line.Trim()
+    while ($Declaration -match '^(public|private|protected|internal|static|abstract|virtual|sealed|new|override|extern|partial|async|unsafe|readonly)[ \t]+') {
+        $Declaration = $Declaration.Substring($Matches[0].Length)
+    }
+    $Open = $Declaration.IndexOf('(')
+    if ($Open -lt 0) { continue }
+    $Prefix = $Declaration.Substring(0, $Open).Trim()
+    if (-not $Prefix -or $Prefix -match '[=;{}]') { continue }
+    $IdentifierPattern = '@?[_\p{L}\p{Nl}][_\p{L}\p{Nl}\p{Nd}\p{Pc}\p{Mn}\p{Mc}\p{Cf}]*'
+    if ($Prefix -notmatch '^(?<Return>.+?)[ \t]+(?<Name>' + $IdentifierPattern + ')$') { continue }
+    if ($Matches['Return'].Trim() -match '^(return|throw|yield|case|goto)$') { continue }
+    $Name = $Matches['Name']
+    if ($Name[0] -ne '@' -and $Name -match '^(if|for|foreach|while|switch|catch|using|lock|fixed|nameof|typeof|sizeof|checked|unchecked|delegate)$') {
+        continue
+    }
+    if ($Name[0] -eq '@') { $Name.Substring(1) } else { $Name }
+}
 $OverloadedNames = $MethodNames | Group-Object | Where-Object { $_.Count -gt 1 } | Select-Object -ExpandProperty Name
 if ($OverloadedNames.Count -gt 0) {
     $OverloadList = $OverloadedNames -join ', '

@@ -7,4 +7,10 @@ public class RuntimeMethodOverloadModifiers : UdonSharpBehaviour
 
     protected internal virtual void Layered(int value) { }
     protected internal virtual void Layered(float value) { }
+
+    private new void Hidden(int value) { }
+    private new void Hidden(float value) { }
+
+    public sealed override void SealedLayer(int value) { }
+    public sealed override void SealedLayer(float value) { }
 }
