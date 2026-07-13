@@ -930,7 +930,7 @@ if ($HasNoVariableSync -and $SyncedCount -gt 0) {
 }
 
 # Check for multi-dimensional arrays (T[,])
-if ($MaskedSource -match '\w+\s*\[,') {
+if ($MaskedSource -match '\w+\s*\[\s*,') {
     $Warnings += "[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead."
 }
 

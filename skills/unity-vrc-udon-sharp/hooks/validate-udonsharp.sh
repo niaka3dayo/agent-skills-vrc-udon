@@ -987,7 +987,7 @@ if [[ "$has_no_variable_sync" -eq 1 && "$synced_count" -gt 0 ]]; then
 fi
 
 # Multi-dimensional arrays (T[,])
-if grep -qE '[_[:alnum:]]+[[:space:]]*\[,' "$masked_file"; then
+if grep -qE '[_[:alnum:]]+[[:space:]]*\[[[:space:]]*,' "$masked_file"; then
     warnings+=("[UdonSharp] BLOCKED: Multi-dimensional arrays (T[,]) not supported. Use jagged arrays (T[][]) or flatten to 1D instead.")
 fi
 

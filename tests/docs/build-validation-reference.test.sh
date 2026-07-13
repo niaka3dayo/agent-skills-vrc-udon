@@ -265,12 +265,19 @@ def units(text, split_semicolons=True):
                     and len(marker) >= fenced_with[1]
                     and not remainder.strip()
                 ):
+                    if fenced_with[2]:
+                        yield from flush()
                     fenced_with = None
-            continue
+                    continue
+            if not fenced_with[2]:
+                continue
+            fence = None
         if fence:
             marker_kind = fence.group(1)[0]
             yield from flush()
-            fenced_with = (marker_kind, len(fence.group(1)))
+            info_string = fence.group(2).strip()
+            semantic = info_string in {"", "text", "markdown", "md"}
+            fenced_with = (marker_kind, len(fence.group(1)), semantic)
             continue
         if indented_code:
             if not line.strip() or re.match(r"^(?: {4}|\t)", line):
@@ -673,6 +680,12 @@ PY
         'README.md|English lazy-blockquote SDK requirement|> Publishing requires\nSDK 3.9.0 or newer.|SDK cutoff'
         'README.md|English indented pseudo-fence SDK requirement|    ```text\nPublishing requires SDK 3.9.0 or newer.\n    ```|SDK cutoff'
         'README.md|English coreferenced SDK requirement|VRChat SDK 3.9.0 or newer; it is mandatory for publishing.|SDK cutoff'
+        'README.md|English text-fenced SDK cutoff|```text\nPublishing requires SDK 3.9.0 or newer.\n```|SDK cutoff'
+        'README.md|English markdown-fenced SDK cutoff|```markdown\nPublishing requires SDK 3.9.0 or newer.\n```|SDK cutoff'
+        'README.md|English md-fenced SDK cutoff|```md\nPublishing requires SDK 3.9.0 or newer.\n```|SDK cutoff'
+        'README.md|English unspecified-fenced SDK cutoff|```\nPublishing requires SDK 3.9.0 or newer.\n```|SDK cutoff'
+        'README.md|English blockquote text-fenced SDK cutoff|> ```text\n> Publishing requires SDK 3.9.0 or newer.\n> ```|SDK cutoff'
+        'README.md|English long text-fenced SDK cutoff|````text\n```text\nPublishing requires SDK 3.9.0 or newer.\n```\n````|SDK cutoff'
     )
     for spec in "${sdk_cases[@]}"; do
         IFS='|' read -r relative label text diagnostic <<< "$spec"
@@ -696,20 +709,27 @@ PY
         'Upload only allowed at numeric FPS|Uploads are only allowed at 45 FPS.'
         'Upload cannot proceed below numeric FPS|Uploads cannot proceed below 45 FPS.'
         'Mixed local FPS obligation|The FPS Target is not mandatory for profiling but is mandatory for uploading.'
+        'Text-fenced numeric FPS upload gate|```text\n45+ FPS is mandatory for uploading.\n```'
     )
     for spec in "${fps_reject_cases[@]}"; do
         IFS='|' read -r label text <<< "$spec"
+        printf -v text '%b' "$text"
         run_case reject "$label" "$fixture_root/skills/unity-vrc-world-sdk-3/references/performance.md" \
             "$text" 'FPS upload obligation'
     done
     accept_cases=(
         'FPS guidance is not an upload gate|skills/unity-vrc-world-sdk-3/references/performance.md|45+ FPS is guidance; the upload gate does not apply.'
         'Local negation exempts an upload gate|skills/unity-vrc-world-sdk-3/references/performance.md|45+ FPS is guidance, not an upload gate.'
-        'Fenced FPS guidance is ignored|skills/unity-vrc-world-sdk-3/references/performance.md|```text\n45+ FPS is guidance; the upload gate does not apply.\n```'
+        'Negated FPS guidance in text fence remains accepted|skills/unity-vrc-world-sdk-3/references/performance.md|```text\n45+ FPS is guidance; the upload gate does not apply.\n```'
         'Current SDK deprecated API limitation|README.md|VRChat SDK 3.10.4 does not support a deprecated API.'
         'Current SDK support plus legacy upload note|README.md|SDK 3.10.4 is currently supported for publishing; legacy SDK upload restrictions are deprecated.'
         'SDK and publishing split across paragraphs|README.md|VRChat SDK 3.10.4 or newer adds the current API.\n\nPublishing requires a separate checklist.'
-        'Fenced SDK cutoff is ignored|README.md|```text\nPublishing requires SDK 3.9.0 or newer.\n```'
+        'Bash code-fenced SDK cutoff remains ignored|README.md|```bash\nPublishing requires SDK 3.9.0 or newer.\n```'
+        'Shell code-fenced SDK cutoff remains ignored|README.md|```sh\nPublishing requires SDK 3.9.0 or newer.\n```'
+        'CSharp code-fenced SDK cutoff remains ignored|README.md|```csharp\nPublishing requires SDK 3.9.0 or newer.\n```'
+        'CSharp alias code-fenced SDK cutoff remains ignored|README.md|```cs\nPublishing requires SDK 3.9.0 or newer.\n```'
+        'PowerShell code-fenced SDK cutoff remains ignored|README.md|```powershell\nPublishing requires SDK 3.9.0 or newer.\n```'
+        'Other code-fenced SDK cutoff remains ignored|README.md|```python\nPublishing requires SDK 3.9.0 or newer.\n```'
         'SDK label and publishing before unrelated checklist requirement|README.md|VRChat SDK 3.9.0 or newer publishing requires a separate checklist.'
         'SDK checklist requirement before unrelated upload mention|README.md|VRChat SDK 3.9.0 or newer publishing requires a separate checklist before uploading.'
         'Current SDK publishing support plus versioned legacy API|README.md|VRChat SDK 3.10.4 is currently supported for publishing, while version 3.9.0 or earlier uses a deprecated API.'
@@ -720,7 +740,7 @@ PY
         'Setext heading separates SDK and publishing|README.md|VRChat SDK 3.9.0 or newer\n===\nPublishing requires a separate checklist.'
         'Pipe-less GFM table rows remain separate|README.md|SDK guidance | Status\n--- | ---\nVRChat SDK 3.9.0 or newer | Reference only\nPublishing requires a separate checklist | Current process'
         'Blockquote blank paragraph separates SDK and publishing|README.md|> VRChat SDK 3.9.0 or newer\n>\n> Publishing requires a separate checklist.'
-        'Blockquote fenced SDK cutoff is ignored|README.md|> ```text\n> Publishing requires SDK 3.9.0 or newer.\n> ```'
+        'PowerShell code-fenced FPS gate remains ignored|skills/unity-vrc-world-sdk-3/references/performance.md|```powershell\n45+ FPS is mandatory for uploading.\n```'
         'Numeric 45 FPS guidance|skills/unity-vrc-world-sdk-3/references/performance.md|45+ FPS is guidance, not an upload limit.'
         'Numeric 60 FPS guidance|skills/unity-vrc-world-sdk-3/references/performance.md|60+ FPS is a profiling example, not an upload requirement.'
         'Numeric 72 FPS guidance|skills/unity-vrc-world-sdk-3/references/performance.md|72 FPS may be a project target, not an upload gate.'
@@ -732,7 +752,7 @@ PY
         'FPS validation is not upload prohibition|skills/unity-vrc-world-sdk-3/references/performance.md|The 45 FPS target cannot be validated before uploading.'
         'FPS guidance with unrelated validation|skills/unity-vrc-world-sdk-3/references/performance.md|45 FPS is guidance and SDK validation is required for uploading.'
         'FPS guidance with unrelated validation after semicolon|skills/unity-vrc-world-sdk-3/references/performance.md|45 FPS is guidance; this SDK validation is required for uploading.'
-        'Long outer Markdown fence|README.md|````text\n```text\nPublishing requires SDK 3.9.0 or newer.\n```\n````'
+        'Long outer code fence remains ignored|README.md|````bash\n```text\nPublishing requires SDK 3.9.0 or newer.\n```\n````'
         'Indented code block is ignored|README.md|    Publishing requires SDK 3.9.0 or newer.'
     )
     for spec in "${accept_cases[@]}"; do

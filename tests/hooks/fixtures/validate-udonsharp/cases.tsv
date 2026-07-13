@@ -52,6 +52,8 @@ unicode-expression-body-decoys-lf	runtime-unicode-expression-body-decoys.cs	LF	-
 unicode-expression-body-decoys-crlf	runtime-unicode-expression-body-decoys.cs	CRLF	-
 attribute-blank-trivia-lf	runtime-attribute-blank-trivia.cs	LF	SYNC_ARRAY
 attribute-blank-trivia-crlf	runtime-attribute-blank-trivia.cs	CRLF	SYNC_ARRAY
+multidim-whitespace-lf	runtime-multidim-whitespace.cs	LF	MULTIDIM_ARRAY
+multidim-whitespace-crlf	runtime-multidim-whitespace.cs	CRLF	MULTIDIM_ARRAY
 all-rules-lf	runtime-all-rules.cs	LF	GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY;METHOD_OVERLOAD
 all-rules-crlf	runtime-all-rules.cs	CRLF	GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY;METHOD_OVERLOAD
 direct-base	runtime-base-direct.cs	LF	GENERIC
