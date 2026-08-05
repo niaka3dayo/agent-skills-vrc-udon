@@ -226,14 +226,17 @@ is always active, on PC and Android alike.
 |--------|------------------|
 | Spatializer | Steam Audio, all platforms |
 | Creator opt-in / opt-out | None; always active |
-| `VRC_SpatialAudioSource` semantics | Unchanged (Gain / Near / Far / Volumetric Radius) |
+| `VRC_SpatialAudioSource` authoring | Unchanged; VRChat converts the component to Steam Audio at load time |
+| Player voice | Deliberately **not** a 1:1 conversion — see [Player Voice Changed Audibly](#player-voice-changed-audibly) |
 | Room reverb | Not exposed to world creators |
 | Physics-based occlusion | Not exposed to world creators |
 | Legacy `ONSPAudioSource` components | Deprecated; the Build Panel converts them to `VRC_SpatialAudioSource` |
 
-The switch was engineered to match ONSP behavior rather than change it, so **no world required migration work**.
-VRChat does caution that things "sound a little different" than under ONSP — the two backends are not
-sample-identical, so a world tuned by ear under ONSP is worth a listening pass.
+A runtime conversion layer keeps existing content working: author with `VRC_SpatialAudioSource` exactly as before
+and VRChat converts it under the hood when the world loads. **Most worlds need no changes, but the conversion is not
+guaranteed to be inaudible.** VRChat names three symptoms worth checking: audio levels changing drastically, falloff
+curves not being respected, and ranges not applying the same
+([Developer Update, December 4, 2025](https://ask.vrchat.com/t/developer-update-4-december-2025/47243)).
 
 Advanced Steam Audio capabilities such as room acoustics and physics-based occlusion are **not available to world
 creators**. VRChat describes them as options the switch makes possible in the future, not shipped features.
@@ -242,17 +245,18 @@ creators**. VRChat describes them as options the switch makes possible in the fu
 
 ```text
 Since client 2025.4.2:
-├── Same VRC_SpatialAudioSource property semantics
-├── Same Gain / Near / Far / Volumetric Radius behavior
-├── No new required configuration
-└── No spatializer choice to make — Steam Audio is the only backend
+├── Author with VRC_SpatialAudioSource exactly as before — same properties, same Inspector
+├── VRChat converts the component to Steam Audio when the world loads
+├── No new required configuration and no spatializer to choose
+└── Verify by ear: levels, falloff, and range can land differently than under ONSP
 ```
 
-Worlds built and tuned under ONSP continue to work without modification.
+Most worlds built under ONSP work without modification. Worlds that were tuned tightly by ear are the ones most
+likely to need a pass.
 
 ### Current Udon Audio APIs
 
-All player voice APIs are unchanged under Steam Audio. These are the APIs to use for dynamic voice zone control:
+The `VRCPlayerApi` voice setters are unchanged and remain the way to implement voice zones:
 
 ```csharp
 // VRCPlayerApi voice control
@@ -263,13 +267,29 @@ player.SetVoiceVolumetricRadius(float radius); // Default: 0
 player.SetVoiceLowpass(bool enabled);         // Default: true
 ```
 
-These APIs control per-player voice spatialization and remain the correct way to implement voice zones.
+### Player Voice Changed Audibly
+
+The API surface is unchanged, but what it sounds like is not. Voice is the one area where VRChat **deliberately did
+not aim for a 1:1 conversion** from ONSP:
+
+- Falloff curves differ slightly
+- EQ and compressor tuning changed
+- Source-directionality was added — a speaker's orientation relative to the listener now affects what you hear
+- Client 2025.4.2p1 applied further tuning to voice falloff and compression
+
+Treat voice-zone values tuned before 2025.4.2 as a starting point to re-verify by ear, not as settings that reproduce
+the old result.
 
 ### Audio Audit Checklist
 
-Steam Audio needs no migration work. These are the checks worth running when auditing a world's audio:
+Most worlds need no changes. Run these checks to catch the ones that do:
 
 ```text
+Symptoms VRChat named as needing adjustment:
+□ Audio levels changed drastically compared to how the world sounded under ONSP
+□ Falloff curves are not being respected
+□ Ranges are not applying the same
+
 VRC_SpatialAudioSource components:
 □ Every AudioSource has a companion VRC_SpatialAudioSource, so the SDK Build Panel has no bare-AudioSource warning
 □ Existing VRC_SpatialAudioSource values were preserved unless the design required a change
@@ -277,6 +297,10 @@ VRC_SpatialAudioSource components:
 □ Verify Near/Far values still achieve the intended effect
 □ Check Gain values — especially sources touched by SDK Auto Fix
 □ Volumetric Radius sources (waterfalls, crowds) behave as intended
+
+Voice zones:
+□ Re-verify SetVoiceGain / SetVoiceDistanceNear / SetVoiceDistanceFar values by ear
+□ Account for source-directionality — a speaker facing away now sounds different
 
 Reverb zones:
 □ Unity Reverb Zones are unaffected (they are separate from the spatializer)
