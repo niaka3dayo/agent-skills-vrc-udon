@@ -219,27 +219,45 @@ public class VoiceZone : UdonSharpBehaviour
 ### Steam Audio Replaced ONSP
 
 VRChat's spatial audio backend is **Steam Audio** (Valve). It replaced **ONSP (Oculus Native Spatializer Plugin)**,
-ending the open beta that ran from March 2025. There is no client toggle and no world descriptor setting: Steam Audio
-is always active, on every platform.
+ending the open beta. There is no world descriptor setting for the spatializer and the release notes describe no
+opt-out: Steam Audio is shipped to all players on every platform.
 
 | Aspect | Current behavior |
 |--------|------------------|
-| Spatializer | Steam Audio, all platforms |
+| Spatializer (in VRChat) | Steam Audio, all platforms |
+| Spatializer (Unity Play Mode) | ClientSim still emulates through ONSP as of SDK 3.10.4 |
 | Creator opt-in / opt-out | None; always active |
 | `VRC_SpatialAudioSource` authoring | Unchanged; VRChat converts the component to Steam Audio at load time |
 | Player voice | Deliberately **not** a 1:1 conversion — see [Player Voice Changed Audibly](#player-voice-changed-audibly) |
-| Room reverb | Not exposed to world creators |
-| Physics-based occlusion | Not exposed to world creators |
-| Legacy `ONSPAudioSource` components | Deprecated; the Build Panel flags them and Auto Fix converts them (see [build-validation.md](build-validation.md#audiosource-and-vrc_spatialaudiosource)) |
+| Room reverb, occlusion, reflections | Not available; gated behind a future world SDK update |
+| Legacy `ONSPAudioSource` components | Deprecated; Build Panel flags, Auto Fix converts — see below |
 
 A runtime conversion layer keeps existing content working: author with `VRC_SpatialAudioSource` exactly as before
-and VRChat converts it under the hood when the world loads. **Most worlds need no changes, but the conversion is not
-guaranteed to be inaudible.** VRChat names three symptoms worth checking: audio levels changing drastically, falloff
-curves not being respected, and ranges not applying the same
+and VRChat converts it under the hood when the world loads. Most content came through unchanged — VRChat reported
+that "almost all content will work without any adjustments" after two months of open beta — but the conversion is
+not guaranteed to be inaudible
 ([Developer Update, December 4, 2025](https://ask.vrchat.com/t/developer-update-4-december-2025/47243)).
 
-Advanced Steam Audio capabilities such as room reverb and physics-based occlusion are **not available to world
-creators**. VRChat describes them as options the switch makes possible in the future, not shipped features.
+That update also draws a line that matters when triaging a complaint. Three symptoms are **functional bugs VRChat
+wants reported**, not things to tune around: audio levels changing drastically, falloff curves not being respected,
+and ranges not applying the same. Separately, some differences are expected and are the creator's to absorb:
+direction and audible distance cues, and minor shifts in tonality, EQ, or mixing.
+
+VRChat also added a server-side tuning path in
+[2025.4.2p1](https://docs.vrchat.com/docs/vrchat-202542p1), so parts of the audio experience can change without a
+client update. A world tuned by ear is worth re-checking occasionally rather than treated as settled.
+
+Advanced Steam Audio capabilities are **not available to world creators**: "Certain aspects of Steam Audio will
+require an update to our world SDK ... Until then, features like occlusion, reflections, audio raytracing, etc. will
+not be available." No timeline has been announced.
+
+Do not install the Steam Audio Unity package into a world project to reach those features. No Steam Audio component
+appears on the [allowlisted world components](https://creators.vrchat.com/worlds/whitelisted-world-components/) list,
+and components outside that list do not work in uploaded worlds. VRChat staff have stated that no Steam Audio
+components are supported and that the package should not be installed into world SDK projects.
+
+For the `ONSPAudioSource` Build Panel warning, what Auto Fix copies, and the listening check it calls for, see
+[build-validation.md](build-validation.md#audiosource-and-vrc_spatialaudiosource).
 
 ### What This Means for World Creators
 
@@ -248,11 +266,12 @@ Since client 2025.4.2:
 ├── Author with VRC_SpatialAudioSource exactly as before — same properties, same Inspector
 ├── VRChat converts the component to Steam Audio when the world loads
 ├── No new required configuration and no spatializer to choose
-└── Verify by ear: levels, falloff, and range can land differently than under ONSP
+└── Judge the result in-client (Build & Test or an uploaded instance), not in Unity Play Mode
 ```
 
-Most worlds built under ONSP work without modification. Worlds that were tuned tightly by ear are the ones most
-likely to need a pass.
+**Unity Play Mode is not a valid place to judge Steam Audio behavior.** ClientSim emulates `VRC_SpatialAudioSource`
+through ONSP — `ClientSimSpatialAudioHelper` derives from `ONSPAudioSource` in SDK 3.10.4, and the SDK still ships
+the Oculus spatializer plugins. What you hear in the editor is the old backend.
 
 ### Current Udon Audio APIs
 
@@ -283,13 +302,17 @@ the old result.
 
 ### Audio Audit Checklist
 
-Run these checks to find the sources that need adjustment:
+Run these checks if the world sounds different after the switch:
 
 ```text
-Symptoms VRChat named as needing adjustment:
+Report to VRChat as bugs — do not tune around these:
 □ Audio levels changed drastically compared to how the world sounded under ONSP
 □ Falloff curves are not being respected
 □ Ranges are not applying the same
+
+Expected differences — absorb these in your own tuning:
+□ Direction and audible distance cues differ
+□ Minor shifts in tonality, EQ, or mixing
 
 VRC_SpatialAudioSource components:
 □ Every AudioSource has a companion VRC_SpatialAudioSource, so the SDK Build Panel has no bare-AudioSource warning
@@ -310,15 +333,18 @@ In-client listening pass:
 □ Use the Audio Sources debug page (next section) to spot sources without a spatial audio component
 ```
 
-Reverb and occlusion need no checks: Unity Reverb Zones and Audio Mixer effects are separate from the spatializer and
-are unaffected, the spatializer applies no occlusion of its own, manual occlusion such as volume scripting continues
-to work, and Steam Audio's own reverb and occlusion are not exposed to creators.
+Reverb and occlusion need no checks of their own:
+
+- Unity Reverb Zones and Audio Mixer effects are not part of the spatializer swap
+- The spatializer applies no occlusion of its own
+- Manual occlusion, such as volume scripting, continues to work
+- Steam Audio's own reverb and occlusion are not exposed to creators
 
 ### Inspecting Audio In-Client
 
-The in-client **Audio Sources** debug page lists every active `AudioSource` in the world. Its `VRC/SAS` column shows
-whether a source has a `VRC_SpatialAudioSource` and whether it was converted to Steam Audio — use it to catch sources
-that never received a spatial audio component.
+The in-client **Audio Sources** debug page (added in client 2026.1.2) lists every active `AudioSource` in the world.
+Its `VRC/SAS` column shows whether a source has a `VRC_SpatialAudioSource` and whether it was converted to Steam
+Audio — use it to catch sources that never received a spatial audio component.
 
 Open it with the **Toggle Debug UI** button at the bottom of the Quick Menu Settings page. By default only the world
 author can open the Audio Sources page; enable **World Debugging** in the world's settings on the VRChat website to
