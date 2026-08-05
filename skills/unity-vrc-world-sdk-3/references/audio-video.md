@@ -275,7 +275,8 @@ not aim for a 1:1 conversion** from ONSP:
 - Falloff curves differ slightly
 - EQ and compressor tuning changed
 - Source-directionality was added — a speaker's orientation relative to the listener now affects what you hear
-- Client 2025.4.2p1 applied further tuning to voice falloff and compression
+- Client [2025.4.2p1](https://docs.vrchat.com/docs/vrchat-202542p1) applied further tuning to voice falloff and
+  compression
 
 Treat voice-zone values tuned before 2025.4.2 as a starting point to re-verify by ear, not as settings that reproduce
 the old result.
@@ -299,7 +300,8 @@ VRC_SpatialAudioSource components:
 □ Volumetric Radius sources (waterfalls, crowds) behave as intended
 
 Voice zones:
-□ Re-verify SetVoiceGain / SetVoiceDistanceNear / SetVoiceDistanceFar values by ear
+□ Re-verify every VRCPlayerApi voice setter the world calls by ear — SetVoiceGain, SetVoiceDistanceNear,
+  SetVoiceDistanceFar, SetVoiceVolumetricRadius, SetVoiceLowpass
 □ Account for source-directionality — a speaker facing away now sounds different
 
 In-client listening pass:
