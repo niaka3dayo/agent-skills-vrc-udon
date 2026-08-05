@@ -220,7 +220,7 @@ public class VoiceZone : UdonSharpBehaviour
 
 VRChat's spatial audio backend is **Steam Audio** (Valve). It replaced **ONSP (Oculus Native Spatializer Plugin)**,
 ending the open beta that ran from March 2025. There is no client toggle and no world descriptor setting: Steam Audio
-is always active, on PC and Android alike.
+is always active, on every platform.
 
 | Aspect | Current behavior |
 |--------|------------------|
@@ -230,7 +230,7 @@ is always active, on PC and Android alike.
 | Player voice | Deliberately **not** a 1:1 conversion — see [Player Voice Changed Audibly](#player-voice-changed-audibly) |
 | Room reverb | Not exposed to world creators |
 | Physics-based occlusion | Not exposed to world creators |
-| Legacy `ONSPAudioSource` components | Deprecated; the Build Panel converts them to `VRC_SpatialAudioSource` |
+| Legacy `ONSPAudioSource` components | Deprecated; the Build Panel flags them and Auto Fix converts them (see [build-validation.md](build-validation.md#audiosource-and-vrc_spatialaudiosource)) |
 
 A runtime conversion layer keeps existing content working: author with `VRC_SpatialAudioSource` exactly as before
 and VRChat converts it under the hood when the world loads. **Most worlds need no changes, but the conversion is not
@@ -238,7 +238,7 @@ guaranteed to be inaudible.** VRChat names three symptoms worth checking: audio 
 curves not being respected, and ranges not applying the same
 ([Developer Update, December 4, 2025](https://ask.vrchat.com/t/developer-update-4-december-2025/47243)).
 
-Advanced Steam Audio capabilities such as room acoustics and physics-based occlusion are **not available to world
+Advanced Steam Audio capabilities such as room reverb and physics-based occlusion are **not available to world
 creators**. VRChat describes them as options the switch makes possible in the future, not shipped features.
 
 ### What This Means for World Creators
@@ -282,7 +282,7 @@ the old result.
 
 ### Audio Audit Checklist
 
-Most worlds need no changes. Run these checks to catch the ones that do:
+Run these checks to find the sources that need adjustment:
 
 ```text
 Symptoms VRChat named as needing adjustment:
@@ -302,16 +302,15 @@ Voice zones:
 □ Re-verify SetVoiceGain / SetVoiceDistanceNear / SetVoiceDistanceFar values by ear
 □ Account for source-directionality — a speaker facing away now sounds different
 
-Reverb zones:
-□ Unity Reverb Zones are unaffected (they are separate from the spatializer)
-□ Audio Mixer reverb effects are unaffected
-□ Steam Audio room reverb is not exposed to creators — there is nothing to configure
-
-Audio occlusion:
-□ The spatializer applies no occlusion
-□ Manual occlusion (for example, volume scripting) continues to work
-□ Physics-based occlusion via Steam Audio is not exposed to creators
+In-client listening pass:
+□ Walk the world in-client and confirm sources match their intended tuning
+□ Pay attention to wide Volumetric Radius sources and 2D/BGM loudness
+□ Use the Audio Sources debug page (next section) to spot sources without a spatial audio component
 ```
+
+Reverb and occlusion need no checks: Unity Reverb Zones and Audio Mixer effects are separate from the spatializer and
+are unaffected, the spatializer applies no occlusion of its own, manual occlusion such as volume scripting continues
+to work, and Steam Audio's own reverb and occlusion are not exposed to creators.
 
 ### Inspecting Audio In-Client
 
@@ -319,10 +318,11 @@ The in-client **Audio Sources** debug page lists every active `AudioSource` in t
 whether a source has a `VRC_SpatialAudioSource` and whether it was converted to Steam Audio — use it to catch sources
 that never received a spatial audio component.
 
-Open the debug menu from the button at the bottom of the Quick Menu Settings page. By default only the world author
-can open the Audio Sources page; enable **World Debugging** in the world's settings on the VRChat website to let
-others see it. See the official
-[World Debug Views](https://creators.vrchat.com/worlds/udon/world-debug-views/) documentation for the full column list.
+Open it with the **Toggle Debug UI** button at the bottom of the Quick Menu Settings page. By default only the world
+author can open the Audio Sources page; enable **World Debugging** in the world's settings on the VRChat website to
+let others see it — users already in the instance must rejoin before the page becomes available to them. See the
+official [World Debug Views](https://creators.vrchat.com/worlds/udon/world-debug-views/) documentation for the full
+column list.
 
 ---
 
