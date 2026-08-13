@@ -73,6 +73,17 @@
   color: "cfd3d7"
   description: "Duplicate of another issue"
 
+# --- Pull Request ---
+- name: "PR: Release"
+  color: "ededed"
+
+- name: "PR: Skills"
+  color: "ededed"
+
+- name: "Status: In Progress"
+  color: "FBCA04"
+  description: "Work in progress - do not start"
+
 # --- Release Drafter ---
 - name: "release: breaking"
   color: "b60205"

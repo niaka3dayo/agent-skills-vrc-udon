@@ -25,7 +25,7 @@ Any change to these paths requires a documentation sync check:
 
 ## What NOT to Update
 
-- `CHANGELOG.md` — managed by Release Drafter, not manual edits
+- `CHANGELOG.md` — GitHub Releases are the canonical release history. Keep this file as a historical archive through v1.2.0; later releases are not backfilled.
 
 ## What to Update Together (Release Flow)
 
