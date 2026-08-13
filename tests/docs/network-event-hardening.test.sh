@@ -462,6 +462,7 @@ require_text "$README_ZH_CN" '不要将实例 Master 作为安全或访问控制
 require_text "$README_ZH_TW" '不要將執行個體 Master 當成安全或存取控制邊界。'
 for path in "$AGENTS_TEMPLATE" "$CLAUDE_TEMPLATE" "$GEMINI_TEMPLATE"; do
     require_text "$path" 'never use instance master as a security or access-control boundary.'
+    require_text "$path" 'confirm `NetworkCalling.InNetworkCall` before reading `NetworkCalling.CallingPlayer`'
 done
 
 # Do not make stronger sender-security claims than the official documentation.
