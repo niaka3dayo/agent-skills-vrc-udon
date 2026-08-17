@@ -101,7 +101,7 @@ main ──sync PR──> dev (when the ancestry check fails)
 dev ──version-bump PR──> dev ──release PR──> main ──Release Drafter draft──> publish ──> npm
 ```
 
-Changelogs are automated by Release Drafter. **Version numbers must be bumped manually on `dev` before opening the release PR** (see Step 2 below). `publish.yml` does run `npm version "$VERSION" --no-git-tag-version` in the CI runner as a safety net, but those edits are not committed back, so the git tree's source-of-truth must be kept current by hand.
+GitHub Release notes are drafted by Release Drafter, and GitHub Releases are the canonical release history. `CHANGELOG.md` is a historical archive through v1.2.0; later releases are not backfilled. **Version numbers must be bumped manually on `dev` before opening the release PR** (see Step 2 below). `publish.yml` does run `npm version "$VERSION" --no-git-tag-version` in the CI runner as a safety net, but those edits are not committed back, so the git tree's source-of-truth must be kept current by hand.
 
 ### Step-by-step
 

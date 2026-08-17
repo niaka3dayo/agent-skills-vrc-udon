@@ -72,6 +72,9 @@ jobs:
       - name: Check network event hardening and SDK coverage
         run: bash tests/docs/network-event-hardening.test.sh
 
+      - name: Check repository governance contracts
+        run: bash tests/docs/repository-governance-contract.test.sh
+
       - name: Check Skill metadata routing contract
         run: bash tests/docs/skill-routing-contract.test.sh
 
