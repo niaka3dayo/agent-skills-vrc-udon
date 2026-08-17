@@ -151,6 +151,9 @@ require_text "$RULE" "**SDK Coverage**: 3.7.1 - 3.10.4"
 # Historical, version-specific evidence must not be rewritten as current coverage.
 require_text "$API_REF" "observed in the SDK 3.10.3 Udon wrapper symbols"
 
+# Deprecated UdonSharp API names must not remain in the packaged skill.
+forbid_text "$UDON_DIR" 'VRCInstantiate'
+
 # Exact normative contracts: replacing any sentence with its inverse must fail.
 LEGACY_SENTENCE='A parameterless public UdonSharp method whose name does not start with `_` remains exposed to legacy `SendCustomNetworkEvent` calls even without `[NetworkCallable]`.'
 UNDERSCORE_SENTENCE='A leading underscore blocks legacy network calls to a public method.'

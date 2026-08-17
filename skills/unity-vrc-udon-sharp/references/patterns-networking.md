@@ -21,7 +21,7 @@ public class SimplePool : UdonSharpBehaviour
         pool = new GameObject[poolSize];
         for (int i = 0; i < poolSize; i++)
         {
-            pool[i] = VRCInstantiate(prefab);
+            pool[i] = Object.Instantiate(prefab);
             pool[i].transform.SetParent(poolParent);
             pool[i].SetActive(false);
         }
