@@ -667,9 +667,9 @@ public class PoolInteractTakeOwnership : UdonSharpBehaviour
 
 Use Tier 1 by default. Use Tier 2 when the interaction conceptually transfers ownership of the pool to the interacting player — for example, per-player ammo pools or individual draw-card decks. Mixing both patterns in one world is fine when each pool's role is different; Tier framing applies per-pool, not globally.
 
-### VRCObjectPool vs VRCInstantiate
+### VRCObjectPool vs runtime Object.Instantiate
 
-| | VRCObjectPool | VRCInstantiate |
+| | VRCObjectPool | runtime Object.Instantiate |
 |---|---|---|
 | **Sync** | Network-synchronized across all players | Local only — not synced |
 | **Ownership** | Managed by pool owner; spawned object ownership must be set manually | No ownership concept |
@@ -681,11 +681,11 @@ Use Tier 1 by default. Use Tier 2 when the interaction conceptually transfers ow
 
 ```text
 Does every player need to see the spawned object?
-├── No  --> VRCInstantiate (local, no sync overhead)
+├── No  --> runtime Object.Instantiate (local, no sync overhead)
 └── Yes --> VRCObjectPool (synchronized, ownership-aware)
          Does the object need to be reused frequently?
          ├── Yes --> VRCObjectPool (pooling avoids repeated allocation)
-         └── No  --> VRCObjectPool still preferred over VRCInstantiate for synced objects
+         └── No  --> VRCObjectPool still preferred over runtime Object.Instantiate for synced objects
 ```
 
 ## VRCObjectSync

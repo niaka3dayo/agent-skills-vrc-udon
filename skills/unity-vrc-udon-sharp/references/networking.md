@@ -1192,7 +1192,7 @@ void Update()
 
 ## Object Pooling
 
-Runtime-instantiated objects are never network-synced (`VRCInstantiate` results are local-only). Use object pooling — pre-placed GameObjects for synced objects, or a pool built once in `Start()` for local-only objects (see patterns-networking.md).
+Runtime-instantiated objects are never network-synced (`Object.Instantiate` results are local-only). Use object pooling — pre-placed GameObjects for synced objects, or a pool built once in `Start()` for local-only objects (see patterns-networking.md).
 
 For full implementations, see:
 - Simple pool: [patterns-networking.md](patterns-networking.md#object-pooling)
