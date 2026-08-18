@@ -2,6 +2,9 @@
 
 Array helpers, array utility helpers (List&lt;T&gt; alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, and abstract class callback patterns.
 
+**Active support / last verified**: SDK 3.10.4
+**Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
+
 ## Array Helpers
 
 ```csharp

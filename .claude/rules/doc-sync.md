@@ -21,7 +21,7 @@ Any change to these paths requires a documentation sync check:
 2. **Rule paths**: Do `templates/*.md` reference valid rule file paths under `skills/*/rules/`?
 3. **Hook references**: If hooks were added/removed/renamed, are they listed in README.md Hooks section?
 4. **SDK support policy**: If the active target changes, synchronize the stable-only verification gate, historical boundary, and SDK Versions section across all five READMEs.
-5. **Community contributors**: Keep the contributor handles, Issue links, and descriptions synchronized across all five READMEs; only include accepted, confirmed, or implemented Issue-originated contributions. When the census changes, refresh `tests/docs/fixtures/community-contributor-census.json` and the contract-test expectations from a new all-Issue query.
+5. **Community contributors**: Keep the contributor handles, Issue links, and descriptions synchronized across all five READMEs; include only external GitHub Issue reporters whose contributions were accepted, confirmed, or implemented. Exclude maintainer and bot accounts, invalid/duplicate/wontfix/spam Issues, and PR-only contributors. When the census changes, refresh `tests/docs/fixtures/community-contributor-census.json` and the contract-test expectations from a new all-Issue query.
 6. **Structure tree**: If directories were added/removed, update the Structure section in README.md and CLAUDE.md
 
 ## What NOT to Update

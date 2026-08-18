@@ -174,7 +174,7 @@ When reporting issues, please specify the SDK version.
 
 **Active and verified target**: SDK 3.10.4.
 
-References to SDK 3.7.1-3.10.3 are historical migration information only; they are not supported or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
+References to SDK 3.7.1-3.10.3 are historical migration information only; they are not supported or validation targets for either distributed Skill. This support boundary applies to both distributed Skills and is not a statement about VRChat's own SDK policy.
 
 From v4.0.0 onward, the policy is latest stable SDK only. Support moves to a new stable release only after this repository verifies it; a new stable release is not supported automatically.
 

@@ -165,6 +165,8 @@ for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/events.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/image-loading-vram.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/networking.md" \
+    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" \
+    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/persistence.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/testing.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/troubleshooting.md" \
@@ -173,6 +175,12 @@ for path in \
     "$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/components.md"; do
     require_text "$path" 'Active support / last verified'
     require_text "$path" '3.10.4'
+done
+
+for path in \
+    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" \
+    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md"; do
+    require_text "$path" '**Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.'
 done
 
 for path in \
@@ -202,8 +210,12 @@ require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween 
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween \(SDK 3\.10\.4\+\)|on SDK 3\.10\.4\+'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'Solution on the active SDK target (3.10.4)'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'routeable SDK 3\.10\.4\+|on SDK 3\.10\.4\+'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'historical migration guidance for unsupported older projects'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading-advanced.md" 'Historical migration guidance only: SDK 3.7.1 introduced the available surface'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'remains the recommended choice on the active SDK target, SDK 3.10.4'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'valid alternative for small, capacity-limited worlds'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'valid for single-player preview or debugging'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'historical migration context, not an active-support cutoff'
+forbid_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'not as active support routes'
 
 # This contract must be part of the required Documentation Smoke Tests job.
 CI="$ROOT_DIR/.github/workflows/ci.yml"
