@@ -20,7 +20,13 @@ Networking rule: a parameterless `public` method without a leading `_` is a lega
 | `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
 | `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
 
-## SDK (3.7.1 - 3.10.4)
+## SDK (active: 3.10.4)
+
+**Active support / last verified**: SDK 3.10.4
+
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.4.
+
+The table below keeps historical feature-introduction notes for migration. SDK 3.7.1-3.10.3 entries are not supported or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
 
 | Version | Key Features |
 |---------|--------------|

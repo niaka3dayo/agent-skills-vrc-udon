@@ -1,6 +1,8 @@
 # UdonSharp Cheatsheet
 
-**SDK 3.7.1 - 3.10.4 Coverage**
+**Active support / last verified**: SDK 3.10.4
+
+SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
 
 ## Features Blocked in Udon Runtime
 
@@ -16,7 +18,7 @@ These alternatives apply to code that executes in Udon. Editor-evaluated field i
 | LINQ | `for` loops |
 | `interface` | Base class / `SendCustomEvent` |
 
-## Available Features (SDK 3.7.1+)
+## Available Features (historical baseline: SDK 3.7.1)
 
 | Feature | SDK | Notes |
 |---------|-----|-------|
@@ -210,7 +212,7 @@ public void _DoLoop() {
 }
 ```
 
-For cancelable timers on SDK 3.10.4+, use `VRCTween.DelayedCall`; keep helper-`GameObject` cancellation workarounds only for older SDK projects.
+For cancelable timers on the active SDK target (3.10.4), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
 
 ---
 

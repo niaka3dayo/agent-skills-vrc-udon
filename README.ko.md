@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | **한국어**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="에이전트 스킬" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="라이선스" />
@@ -132,9 +132,9 @@ UdonSharp 스크립팅 핵심 스킬. 컴파일 제약, 네트워킹, 이벤트,
 |------|------|
 | **제약** | Udon runtime에서 차단된 C# 기능과 대안 (`List<T>` → `DataList`, `async` → `SendCustomEventDelayedSeconds`), Editor 필드 초기화 경계 |
 | **네트워킹** | Ownership 모델, Manual/Continuous 동기화, FieldChangeCallback, 안티패턴 |
-| **NetworkCallable** | SDK 3.8.1+ 매개변수화된 네트워크 이벤트 (최대 8개 인수) |
-| **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
-| **Dynamics** | SDK 3.10.0+ PhysBones, Contacts, VRC Constraints for Worlds |
+| **NetworkCallable** | SDK 3.8.1에서 도입된 매개변수화된 네트워크 이벤트 (최대 8개 인수) |
+| **Persistence** | SDK 3.7.4에서 도입된 PlayerData/PlayerObject API |
+| **Dynamics** | SDK 3.10.0에서 도입된 PhysBones, Contacts, VRC Constraints for Worlds |
 | **웹 로딩** | String/Image 다운로드, VRCJson, VRCUrl 제약 |
 | **템플릿** | 17개 템플릿 (인터랙션, 동기화 패턴, 지속성, 에디터 유틸리티 등) |
 
@@ -211,19 +211,25 @@ validation skipped (JQ_UNAVAILABLE)`을 출력합니다.
 
 ## SDK 버전
 
+**현재 지원 / 마지막 검증**: VRChat SDK 3.10.4
+
+v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 지원 전환은 이 저장소에서 검증한 뒤에만 진행합니다. 안정 버전이 되었다는 이유만으로 자동 지원하지 않습니다. 현재 마지막으로 검증한 대상은 3.10.4입니다.
+
+아래 표에는 마이그레이션에 참고할 수 있는 기능 도입 이력을 남겨 두었습니다. SDK 3.7.1-3.10.3 항목은 과거 기록일 뿐이며, 이 Skill의 지원 또는 검증 대상이 아닙니다. 이는 이 Skill의 지원 범위이며 VRChat 자체의 SDK 정책을 뜻하지 않습니다.
+
 | SDK 버전 | 주요 기능 | 상태 |
 |:--------:|:----------|:----:|
-| **3.7.1** | `StringBuilder`, `Regex`, `System.Random` | 지원 |
-| **3.7.4** | Persistence API (PlayerData / PlayerObject) | 지원 |
-| **3.7.6** | 멀티 플랫폼 빌드 & 퍼블리시 (PC + Android) | 지원 |
-| **3.8.0** | PhysBone 종속성 정렬, Force Kinematic On Remote | 지원 |
-| **3.8.1** | `[NetworkCallable]` 매개변수화된 이벤트, `Others`/`Self` 타겟 | 지원 |
-| **3.9.0** | Camera Dolly API, Auto Hold pickup | 지원 |
-| **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | 지원 |
-| **3.10.1** | 버그 수정, 안정성 개선 | 지원 |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones 수정, 셰이더 시간 글로벌 변수 | 지원 |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (아바타), Mirror 렌더 순서 수정 | 지원 |
-| **3.10.4** | VRCTween, Box형 Contacts, Global Avatar PhysBone Colliders, 월드 `VRCPhysBoneCollider` Udon 접근, DataList/DataDictionary 용량 API | 최신 안정 버전 |
+| **3.7.1** | `StringBuilder`, `Regex`, `System.Random` | 과거 기록 |
+| **3.7.4** | Persistence API (PlayerData / PlayerObject) | 과거 기록 |
+| **3.7.6** | 멀티 플랫폼 빌드 & 퍼블리시 (PC + Android) | 과거 기록 |
+| **3.8.0** | PhysBone 종속성 정렬, Force Kinematic On Remote | 과거 기록 |
+| **3.8.1** | `[NetworkCallable]` 매개변수화된 이벤트, `Others`/`Self` 타겟 | 과거 기록 |
+| **3.9.0** | Camera Dolly API, Auto Hold pickup | 과거 기록 |
+| **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | 과거 기록 |
+| **3.10.1** | 버그 수정, 안정성 개선 | 과거 기록 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones 수정, 셰이더 시간 글로벌 변수 | 과거 기록 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (아바타), Mirror 렌더 순서 수정 | 과거 기록 |
+| **3.10.4** | VRCTween, Box형 Contacts, Global Avatar PhysBone Colliders, 월드 `VRCPhysBoneCollider` Udon 접근, DataList/DataDictionary 용량 API | 현재 지원 / 마지막 검증 |
 
 > **참고**: 게시하기 전에 프로젝트에서 VRChat이 현재 지원하는 SDK 버전을 사용하고 있는지 확인하세요.
 
@@ -238,6 +244,21 @@ validation skipped (JQ_UNAVAILABLE)`을 출력합니다.
 | VRChat Forums (Q&A) | https://ask.vrchat.com/ |
 | VRChat Canny (버그/기능 요청) | https://feedback.vrchat.com/ |
 | VRChat Community GitHub | https://github.com/vrchat-community |
+
+---
+
+<h2 id="community-contributors">커뮤니티 기여자</h2>
+
+구체적인 Issue를 제보하고 검증과 수정 방향을 함께 다듬어 주신 분들께 감사드립니다.
+
+- [@KatanoShingo](https://github.com/KatanoShingo) — GameObject 조회 대안, 성능 선택지, 재사용 가능한 방 패턴, 이벤트 문서 보완과 네트워크 이벤트 권한 부여 ([#181](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/181), [#182](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/182), [#189](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/189), [#199](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/199), [#213](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/213), [#302](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/302))
+- [@Guribo](https://github.com/Guribo) — 소유권 이전 시점과 네트워크 안티패턴 검증 ([#171](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/171))
+- [@haru0416-dev](https://github.com/haru0416-dev) — 설치 프로그램 업그레이드 일관성과 jq가 없는 환경의 안전한 검증 ([#164](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/164), [#165](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/165))
+- [@Yodokoro](https://github.com/Yodokoro) — 레이어 동작, NetworkCallable 안내, 공간 음향 설정 ([#267](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/267), [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286), [#297](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/297))
+- [@tetradice](https://github.com/tetradice) — Agent Skill 메타데이터 호환성 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
+- [@owlboy](https://github.com/owlboy) — Steam Audio 문서 수정 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
+- [@nomlasvrc](https://github.com/nomlasvrc) — 더 이상 권장되지 않는 VRCInstantiate 정리 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
+- [@ureishi](https://github.com/ureishi) — UdonSharp 필드와 직렬화 동작, 그리고 SDK 3.10.4 지식 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342))
 
 ---
 
@@ -264,7 +285,7 @@ validation skipped (JQ_UNAVAILABLE)`을 출력합니다.
 - 콘텐츠는 어떠한 보증 없이 **"있는 그대로"** 제공됩니다. [LICENSE](LICENSE)를 참조하세요.
 - 이것은 개인 프로젝트입니다. **오류, 오래된 정보, 불완전한 내용이 있을 수 있습니다.** 반드시 [공식 VRChat 문서](https://creators.vrchat.com/)와 대조하여 확인하세요.
 - 이 리포지토리로 인해 발생하는 문제(빌드 오류, 업로드 거부, 예상치 못한 월드 동작 등)에 대해 저자는 어떠한 책임도 지지 않습니다.
-- SDK 지원 범위(3.7.1 - 3.10.4)는 마지막 업데이트 시점을 반영합니다. 새로운 VRChat 릴리스에 따라 동작이 변경될 수 있습니다.
+- 현재 지원하는 SDK는 마지막으로 검증한 3.10.4뿐입니다. 이전 버전 항목은 마이그레이션을 위한 역사적 정보이며, 해당 SDK를 검증하거나 수정한다는 약속이 아닙니다. 새로운 VRChat 릴리스에 따라 동작이 변경될 수 있습니다.
 
 ### AI 지원 제작
 

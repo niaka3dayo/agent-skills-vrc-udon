@@ -71,10 +71,10 @@ minor: Bug fixes, small changes
 
 ### Checkpoints for Next Update
 
-1. **Check the last supported version for each skill**
+1. **Check the active and verified target for each skill**
    ```
-   unity-vrc-udon-sharp/SKILL.md "Supported SDK version" line
-   unity-vrc-world-sdk-3/SKILL.md "Supported SDK version" line
+   unity-vrc-udon-sharp/SKILL.md "Active support / last verified" line
+   unity-vrc-world-sdk-3/SKILL.md "Active support / last verified" line
    ```
 
 2. **Check for new versions on the official releases page**

@@ -529,11 +529,11 @@ public void _CancelPendingRetry()
 }
 ```
 
-### Fallback for Older SDKs
+### Historical fallback for unsupported SDKs
 
-For projects pinned below SDK 3.10.4, instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
+For historical migration only, projects pinned below SDK 3.10.4 can instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
 
-**Trade-off:** Allocates a `GameObject` per timer instance. Use `VRCTween.DelayedCall` on SDK 3.10.4+; use the pending-callback-counter pattern for high-frequency debounce; use this fallback only when an older SDK project needs a callback that truly must not fire.
+**Trade-off:** Allocates a `GameObject` per timer instance. Use `VRCTween.DelayedCall` on SDK 3.10.4+; use the pending-callback-counter pattern for high-frequency debounce; use this historical fallback only when documenting an unsupported older project that truly must not fire the callback.
 
 **When to use:**
 - SDK < 3.10.4 projects where `VRCTween.DelayedCall` is unavailable

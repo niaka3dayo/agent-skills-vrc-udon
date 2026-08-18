@@ -2,10 +2,13 @@
 
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
-**Applies to**: SDK 3.7.x through 3.10.4
+**Historical migration coverage**: SDK 3.7.x through 3.10.4
+**Active support / last verified**: SDK 3.10.4
 
-Use the current supported SDK when publishing. The version markers below describe
-feature availability; they do not claim an upload cutoff for older SDK versions.
+Use SDK 3.10.4 when publishing. The version markers below preserve feature
+availability and migration facts; SDK 3.7.1-3.10.3 are not support or validation
+targets for this Skill. This is the Skill's boundary, not a claim about VRChat's
+own SDK policy.
 
 ## Version markers
 

@@ -1,8 +1,11 @@
 # VRChat Dynamics for Worlds Reference
 
-Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds (SDK 3.10.0 - 3.10.4).
+Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0; the active verified target is SDK 3.10.4.
 
-**Supported SDK Versions**: 3.10.0 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+**Historical feature introduction**: SDK 3.10.0
+
+SDK 3.10.0-3.10.3 entries are historical feature context only, not active support or validation targets for this Skill.
 
 ## Overview
 
