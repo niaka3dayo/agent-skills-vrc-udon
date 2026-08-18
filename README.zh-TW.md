@@ -257,7 +257,7 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 - [@tetradice](https://github.com/tetradice) — Agent Skill 中繼資料相容性 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
 - [@owlboy](https://github.com/owlboy) — Steam Audio 文件修正 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
 - [@nomlasvrc](https://github.com/nomlasvrc) — 移除已棄用的 VRCInstantiate 用法 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
-- [@ureishi](https://github.com/ureishi) — UdonSharp 欄位與序列化行為，以及 SDK 3.10.4 知識 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342))
+- [@ureishi](https://github.com/ureishi) — UdonSharp 欄位與序列化行為、SDK 3.10.4 知識，以及陣列回呼的注意事項 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 

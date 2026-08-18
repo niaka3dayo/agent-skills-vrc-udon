@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-08-18",
   "repository": "niaka3dayo/agent-skills-vrc-udon",
-  "scope": "Tracked Markdown corpus at the Issue #343 implementation HEAD. This is an evidence snapshot, not a generated API mirror. The fixture itself is excluded from the scan.",
+  "scope": "Tracked Markdown corpus at the Issue #343 implementation HEAD; the fixture itself is excluded from the scan.",
   "scan": {
     "command": "git grep -n -F '3.7.1' -- '*.md' ':!tests/docs/fixtures/sdk-support-policy-corpus.json'",
     "tracked_markdown_files_scanned": 81,
@@ -9,506 +9,90 @@
     "occurrences": 61,
     "files_with_literal": 28,
     "files": [
-      {
-        "path": ".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_release_record": 1
-        },
-        "lines": [
-          61
-        ]
-      },
-      {
-        "path": "CHANGELOG.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_release_record": 1
-        },
-        "lines": [
-          46
-        ]
-      },
-      {
-        "path": "CONTRIBUTING.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          177
-        ]
-      },
-      {
-        "path": "README.ja.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          218,
-          222
-        ]
-      },
-      {
-        "path": "README.ko.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          218,
-          222
-        ]
-      },
-      {
-        "path": "README.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          218,
-          222
-        ]
-      },
-      {
-        "path": "README.zh-CN.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          217,
-          221
-        ]
-      },
-      {
-        "path": "README.zh-TW.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          217,
-          221
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/CHEATSHEET.md",
-        "occurrences": 5,
-        "categories": {
-          "historical_support_boundary": 2,
-          "historical_feature_introduction_or_availability": 3
-        },
-        "lines": [
-          5,
-          21,
-          25,
-          26,
-          27
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/SKILL.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          225,
-          229
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/api.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          7
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/constraints.md",
-        "occurrences": 14,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 13
-        },
-        "lines": [
-          8,
-          101,
-          102,
-          107,
-          222,
-          223,
-          224,
-          225,
-          227,
-          257,
-          273,
-          533,
-          534,
-          535
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/events.md",
-        "occurrences": 3,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 2
-        },
-        "lines": [
-          7,
-          64,
-          65
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/image-loading-vram.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          5
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/networking.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          7
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/patterns-performance.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_feature_introduction_or_availability": 1
-        },
-        "lines": [
-          637
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/sdk-migration.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 1
-        },
-        "lines": [
-          9,
-          332
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/testing.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          7
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/troubleshooting.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          7
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/web-loading-advanced.md",
-        "occurrences": 3,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 2
-        },
-        "lines": [
-          5,
-          172,
-          878
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/web-loading.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          5
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          7,
-          38
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          7
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-world-sdk-3/CHEATSHEET.md",
-        "occurrences": 1,
-        "categories": {
-          "historical_support_boundary": 1
-        },
-        "lines": [
-          5
-        ]
-      },
-      {
-        "path": "skills/unity-vrc-world-sdk-3/SKILL.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 2
-        },
-        "lines": [
-          148,
-          152
-        ]
-      },
-      {
-        "path": "templates/AGENTS.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 1
-        },
-        "lines": [
-          29,
-          33
-        ]
-      },
-      {
-        "path": "templates/CLAUDE.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 1
-        },
-        "lines": [
-          29,
-          33
-        ]
-      },
-      {
-        "path": "templates/GEMINI.md",
-        "occurrences": 2,
-        "categories": {
-          "historical_support_boundary": 1,
-          "historical_feature_introduction_or_availability": 1
-        },
-        "lines": [
-          29,
-          33
-        ]
-      }
+      {"path":".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md","occurrences":1,"categories":{"historical_release_record":1},"lines":[61]},
+      {"path":"CHANGELOG.md","occurrences":1,"categories":{"historical_release_record":1},"lines":[46]},
+      {"path":"CONTRIBUTING.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[177]},
+      {"path":"README.ja.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[218,222]},
+      {"path":"README.ko.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[218,222]},
+      {"path":"README.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[218,222]},
+      {"path":"README.zh-CN.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[217,221]},
+      {"path":"README.zh-TW.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[217,221]},
+      {"path":"skills/unity-vrc-udon-sharp/CHEATSHEET.md","occurrences":5,"categories":{"historical_support_boundary":2,"historical_feature_introduction_or_availability":3},"lines":[5,21,25,26,27]},
+      {"path":"skills/unity-vrc-udon-sharp/SKILL.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[225,229]},
+      {"path":"skills/unity-vrc-udon-sharp/references/api.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[7]},
+      {"path":"skills/unity-vrc-udon-sharp/references/constraints.md","occurrences":14,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":13},"lines":[8,101,102,107,222,223,224,225,227,257,273,533,534,535]},
+      {"path":"skills/unity-vrc-udon-sharp/references/events.md","occurrences":3,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":2},"lines":[7,64,65]},
+      {"path":"skills/unity-vrc-udon-sharp/references/image-loading-vram.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[5]},
+      {"path":"skills/unity-vrc-udon-sharp/references/networking.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[7]},
+      {"path":"skills/unity-vrc-udon-sharp/references/patterns-performance.md","occurrences":1,"categories":{"historical_feature_introduction_or_availability":1},"lines":[637]},
+      {"path":"skills/unity-vrc-udon-sharp/references/sdk-migration.md","occurrences":2,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":1},"lines":[9,332]},
+      {"path":"skills/unity-vrc-udon-sharp/references/testing.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[7]},
+      {"path":"skills/unity-vrc-udon-sharp/references/troubleshooting.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[7]},
+      {"path":"skills/unity-vrc-udon-sharp/references/web-loading-advanced.md","occurrences":3,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":2},"lines":[5,172,878]},
+      {"path":"skills/unity-vrc-udon-sharp/references/web-loading.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[5]},
+      {"path":"skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[7,38]},
+      {"path":"skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[7]},
+      {"path":"skills/unity-vrc-world-sdk-3/CHEATSHEET.md","occurrences":1,"categories":{"historical_support_boundary":1},"lines":[5]},
+      {"path":"skills/unity-vrc-world-sdk-3/SKILL.md","occurrences":2,"categories":{"historical_support_boundary":2},"lines":[148,152]},
+      {"path":"templates/AGENTS.md","occurrences":2,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":1},"lines":[29,33]},
+      {"path":"templates/CLAUDE.md","occurrences":2,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":1},"lines":[29,33]},
+      {"path":"templates/GEMINI.md","occurrences":2,"categories":{"historical_support_boundary":1,"historical_feature_introduction_or_availability":1},"lines":[29,33]}
     ]
   },
-  "classification_counts": {
-    "historical_release_record": 2,
-    "historical_support_boundary": 34,
-    "historical_feature_introduction_or_availability": 25
-  },
+  "classification_counts": {"historical_release_record":2,"historical_support_boundary":34,"historical_feature_introduction_or_availability":25},
   "active_support_declarations": {
     "stale_active_declaration_scan": {
-      "patterns": "(?:Supported SDK Versions|SDK Coverage|Covered versions)\\s*[:(][^\\n]{0,40}3\\.7\\.1|(?:this skill(?:\\'s)? coverage range|this skill targets SDK\\s+3\\.7\\.1\\+|VRChat_SDK-3\\.7\\.1--3\\.10\\.4|SDK\\s+3\\.7\\.1\\s*(?:-|–)\\s*3\\.10\\.4)",
-      "excluded_historical_records": [
-        "CHANGELOG.md"
-      ],
-      "excluded_test_contracts": [
-        "tests/docs/sdk-support-policy.test.sh"
-      ],
+      "patterns": "(?:Supported SDK Versions|SDK Coverage|Covered versions)\\s*[:(][^\\n]{0,40}3\\.7\\.1|(?:this skill(?:'s)? coverage range|this skill targets SDK\\s+3\\.7\\.1\\+|VRChat_SDK-3\\.7\\.1--3\\.10\\.4|SDK\\s+3\\.7\\.1\\s*(?:-|–)\\s*3\\.10\\.4)",
+      "excluded_historical_records": ["CHANGELOG.md"],
+      "excluded_test_contracts": ["tests/docs/sdk-support-policy.test.sh"],
       "matches": [],
       "result": "no stale active-support declarations"
     },
     "positive_declaration_count": 34,
     "positive_declarations": [
-      {
-        "path": ".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md",
-        "line": 74
-      },
-      {
-        "path": ".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md",
-        "line": 76
-      },
-      {
-        "path": ".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md",
-        "line": 77
-      },
-      {
-        "path": ".claude/skills/unity-vrc-skills-renovator/references/skill-structure.md",
-        "line": 124
-      },
-      {
-        "path": ".claude/skills/unity-vrc-skills-renovator/references/update-checklist.md",
-        "line": 7
-      },
-      {
-        "path": "CONTRIBUTING.md",
-        "line": 175
-      },
-      {
-        "path": "README.md",
-        "line": 214
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/CHEATSHEET.md",
-        "line": 3
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/SKILL.md",
-        "line": 4
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/SKILL.md",
-        "line": 221
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/api.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/constraints.md",
-        "line": 6
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/dynamics.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/events.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/image-loading-vram.md",
-        "line": 3
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/networking.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/persistence.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/sdk-migration.md",
-        "line": 6
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/testing.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/troubleshooting.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/web-loading-advanced.md",
-        "line": 3
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/references/web-loading.md",
-        "line": 3
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md",
-        "line": 5
-      },
-      {
-        "path": "skills/unity-vrc-world-sdk-3/CHEATSHEET.md",
-        "line": 3
-      },
-      {
-        "path": "skills/unity-vrc-world-sdk-3/SKILL.md",
-        "line": 12
-      },
-      {
-        "path": "skills/unity-vrc-world-sdk-3/SKILL.md",
-        "line": 144
-      },
-      {
-        "path": "skills/unity-vrc-world-sdk-3/references/components.md",
-        "line": 5
-      },
-      {
-        "path": "templates/AGENTS.md",
-        "line": 23
-      },
-      {
-        "path": "templates/AGENTS.md",
-        "line": 25
-      },
-      {
-        "path": "templates/CLAUDE.md",
-        "line": 23
-      },
-      {
-        "path": "templates/CLAUDE.md",
-        "line": 25
-      },
-      {
-        "path": "templates/GEMINI.md",
-        "line": 23
-      },
-      {
-        "path": "templates/GEMINI.md",
-        "line": 25
-      }
+      {"path":".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md","line":74},
+      {"path":".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md","line":76},
+      {"path":".claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md","line":77},
+      {"path":".claude/skills/unity-vrc-skills-renovator/references/skill-structure.md","line":124},
+      {"path":".claude/skills/unity-vrc-skills-renovator/references/update-checklist.md","line":7},
+      {"path":"CONTRIBUTING.md","line":175},
+      {"path":"README.md","line":214},
+      {"path":"skills/unity-vrc-udon-sharp/CHEATSHEET.md","line":3},
+      {"path":"skills/unity-vrc-udon-sharp/SKILL.md","line":4},
+      {"path":"skills/unity-vrc-udon-sharp/SKILL.md","line":221},
+      {"path":"skills/unity-vrc-udon-sharp/references/api.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/constraints.md","line":6},
+      {"path":"skills/unity-vrc-udon-sharp/references/dynamics.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/events.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/image-loading-vram.md","line":3},
+      {"path":"skills/unity-vrc-udon-sharp/references/networking.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/persistence.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/sdk-migration.md","line":6},
+      {"path":"skills/unity-vrc-udon-sharp/references/testing.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/troubleshooting.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/references/web-loading-advanced.md","line":3},
+      {"path":"skills/unity-vrc-udon-sharp/references/web-loading.md","line":3},
+      {"path":"skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md","line":5},
+      {"path":"skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md","line":5},
+      {"path":"skills/unity-vrc-world-sdk-3/CHEATSHEET.md","line":3},
+      {"path":"skills/unity-vrc-world-sdk-3/SKILL.md","line":12},
+      {"path":"skills/unity-vrc-world-sdk-3/SKILL.md","line":144},
+      {"path":"skills/unity-vrc-world-sdk-3/references/components.md","line":5},
+      {"path":"templates/AGENTS.md","line":23},
+      {"path":"templates/AGENTS.md","line":25},
+      {"path":"templates/CLAUDE.md","line":23},
+      {"path":"templates/CLAUDE.md","line":25},
+      {"path":"templates/GEMINI.md","line":23},
+      {"path":"templates/GEMINI.md","line":25}
     ]
   },
   "historical_introduction_facts": {
-    "categories": [
-      "historical_release_record",
-      "historical_support_boundary",
-      "historical_feature_introduction_or_availability"
-    ],
+    "categories": ["historical_release_record","historical_support_boundary","historical_feature_introduction_or_availability"],
     "policy": "Preserve accurate feature-introduction and migration facts; do not present them as active support or validation promises."
   },
   "test_contracts": [
-    {
-      "path": "tests/docs/sdk-support-policy.test.sh",
-      "role": "RED/GREEN active-support and stale-range contract"
-    },
-    {
-      "path": "tests/docs/community-contributors.test.sh",
-      "role": "RED/GREEN five-README contributor parity contract"
-    },
-    {
-      "path": "tests/docs/network-event-hardening.test.sh",
-      "role": "updated positive active-target assertion"
-    }
+    {"path":"tests/docs/sdk-support-policy.test.sh","role":"RED/GREEN active-support and stale-range contract"},
+    {"path":"tests/docs/community-contributors.test.sh","role":"RED/GREEN five-README contributor parity contract"},
+    {"path":"tests/docs/network-event-hardening.test.sh","role":"updated positive active-target assertion"}
   ]
 }

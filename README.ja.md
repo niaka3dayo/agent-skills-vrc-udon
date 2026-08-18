@@ -258,7 +258,7 @@ v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定�
 - [@tetradice](https://github.com/tetradice) — Agent Skillのメタデータ互換性 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
 - [@owlboy](https://github.com/owlboy) — Steam Audioのドキュメント修正 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
 - [@nomlasvrc](https://github.com/nomlasvrc) — 非推奨のVRCInstantiateの整理 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
-- [@ureishi](https://github.com/ureishi) — UdonSharpのフィールド・シリアライズ挙動とSDK 3.10.4の知識 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342))
+- [@ureishi](https://github.com/ureishi) — UdonSharpのフィールド・シリアライズ挙動、SDK 3.10.4の知識、配列コールバックの注意点 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 

@@ -258,7 +258,7 @@ This project has benefited from people who took the time to file concrete Issues
 - [@tetradice](https://github.com/tetradice) — Agent Skill metadata compatibility ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
 - [@owlboy](https://github.com/owlboy) — Steam Audio documentation correction ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
 - [@nomlasvrc](https://github.com/nomlasvrc) — deprecated VRCInstantiate cleanup ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
-- [@ureishi](https://github.com/ureishi) — UdonSharp field and serialization behavior, plus SDK 3.10.4 knowledge ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342))
+- [@ureishi](https://github.com/ureishi) — UdonSharp field and serialization behavior, SDK 3.10.4 knowledge, and array callback caveats ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 

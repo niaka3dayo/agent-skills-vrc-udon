@@ -258,7 +258,7 @@ v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 �
 - [@tetradice](https://github.com/tetradice) — Agent Skill 메타데이터 호환성 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
 - [@owlboy](https://github.com/owlboy) — Steam Audio 문서 수정 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
 - [@nomlasvrc](https://github.com/nomlasvrc) — 더 이상 권장되지 않는 VRCInstantiate 정리 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
-- [@ureishi](https://github.com/ureishi) — UdonSharp 필드와 직렬화 동작, 그리고 SDK 3.10.4 지식 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342))
+- [@ureishi](https://github.com/ureishi) — UdonSharp 필드와 직렬화 동작, SDK 3.10.4 지식, 배열 콜백의 주의점 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 

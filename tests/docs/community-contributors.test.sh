@@ -27,7 +27,7 @@ EXPECTED_HANDLES=(
 )
 EXPECTED_ISSUES=(
     164 165 171 181 182 189 199 213 267 281
-    286 297 302 324 333 337 338 341 342
+    286 297 302 324 333 337 338 341 342 344
 )
 
 CENSUS="$ROOT_DIR/tests/docs/fixtures/community-contributor-census.json"
@@ -43,8 +43,8 @@ contributors = data["contributors"]
 issues = sorted(issue for contributor in contributors for issue in contributor["issues"])
 assert classification["issues_scanned"] >= 1
 assert classification["selected_reporters"] == len(contributors) == 8
-assert classification["selected_issues"] == len(issues) == 19
-assert len(set(issues)) == 19
+assert classification["selected_issues"] == len(issues) == 20
+assert len(set(issues)) == 20
 assert classification["duplicate_invalid_wontfix_spam_issues_selected"] == 0
 PY
 
