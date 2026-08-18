@@ -35,10 +35,14 @@ require_regex_count() {
 # reference explains the aliasing boundary and the fresh-instance alternative.
 require_text "$SKILL" 'VRCUrl.Empty'
 require_text "$SKILL" 'new VRCUrl("")'
+require_text "$SKILL" 'any UdonSharp `VRCUrl` field that needs an independent initial value'
+require_text "$SKILL" '`[SerializeField]`, `[UdonSynced]`, and ordinary private fields'
 require_text "$CONSTRAINTS" '`VRCUrl.Empty` returns a shared instance'
-require_text "$CONSTRAINTS" 'serialized or synced field'
+require_text "$CONSTRAINTS" 'any UdonSharp field that needs an independent initial value'
+require_text "$CONSTRAINTS" '`[SerializeField]`, `[UdonSynced]`, and ordinary private fields'
 require_text "$CONSTRAINTS" 'each array element'
 require_text "$CONSTRAINTS" '[SerializeField] private VRCUrl[] _urls = new VRCUrl[]'
+require_regex_count "$CONSTRAINTS" '^private VRCUrl _localUrl = new VRCUrl\(""\);$' 1
 
 # Every affected independent field initializer uses a fresh empty VRCUrl.
 require_regex_count "$CONSTRAINTS" '^    \[UdonSynced\] private VRCUrl SyncedUrl_[0-7] = new VRCUrl\(""\);$' 8

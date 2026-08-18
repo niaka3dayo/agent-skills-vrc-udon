@@ -798,12 +798,14 @@ public class InputManager : UdonSharpBehaviour
 ### Independent VRCUrl Initial Values
 
 `VRCUrl.Empty` returns a shared instance; it does not create a fresh empty URL on each access.
-Do not use it to initialize a serialized or synced field that needs an independent initial value.
-With SDK 3.10.4, Inspector overrides backed by this shared value can appear in another field,
-array element, or GameObject that uses the same UdonSharp program. Create a separate
-`new VRCUrl("")` for each field and each array element instead:
+Do not use it to initialize any UdonSharp field that needs an independent initial value. This
+includes `[SerializeField]`, `[UdonSynced]`, and ordinary private fields. With SDK 3.10.4,
+Inspector overrides backed by this shared value can appear in another field, array element, or
+GameObject that uses the same UdonSharp program. Create a separate `new VRCUrl("")` for each
+field and each array element instead:
 
 ```csharp
+private VRCUrl _localUrl = new VRCUrl("");
 [SerializeField] private VRCUrl _primaryUrl = new VRCUrl("");
 [UdonSynced] private VRCUrl _syncedUrl = new VRCUrl("");
 [SerializeField] private VRCUrl[] _urls = new VRCUrl[]
@@ -813,8 +815,8 @@ array element, or GameObject that uses the same UdonSharp program. Create a sepa
 };
 ```
 
-This rule is specific to independent initial values that Unity or UdonSharp serializes. Runtime
-returns, resets, and assignments that only need an empty sentinel may still use `VRCUrl.Empty`.
+This rule is specific to independent initial values on UdonSharp fields. Runtime returns, resets,
+and assignments that only need an empty sentinel may still use `VRCUrl.Empty`.
 
 ---
 
