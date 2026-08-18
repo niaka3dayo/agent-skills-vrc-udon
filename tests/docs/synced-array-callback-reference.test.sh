@@ -279,6 +279,9 @@ for path in skill_root.rglob("*.md"):
     for block in csharp_blocks(path):
         if forbidden_array_declarations(block):
             fail(f"FieldChangeCallback is attached to a synced array declaration in {path}")
+for path in skill_root.rglob("*.cs"):
+    if forbidden_array_declarations(path.read_text()):
+        fail(f"FieldChangeCallback is attached to a synced array declaration in {path}")
 
 print("PASS: canonical, vote, playlist, null-guard, and multiline-array structural contracts")
 PY
