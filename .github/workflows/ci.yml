@@ -87,6 +87,9 @@ jobs:
       - name: Check Editor-evaluated field initializer boundary
         run: bash tests/docs/field-initializer-context-reference.test.sh
 
+      - name: Check VRCUrl.Empty field initializer boundary
+        run: bash tests/docs/vrcurl-empty-initializer-reference.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest
