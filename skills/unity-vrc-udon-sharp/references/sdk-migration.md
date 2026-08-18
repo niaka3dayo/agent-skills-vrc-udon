@@ -20,6 +20,20 @@ Version-specific notes in this skill use three marker forms. Match them verbatim
 
 ---
 
+## SDK 3.10.4 receiver migration
+
+`UdonSharpBehaviour` directly implements `IUdonEventReceiver` starting with SDK 3.10.4. The active Skill examples therefore pass `this` directly and keep the receiver argument.
+The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.4 example.
+
+```csharp
+using VRC.SDK3.StringLoading;
+using VRC.Udon.Common.Interfaces;
+
+VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
+```
+
+When a project moves to the active SDK target, remove the cast and remove the interface using when that block no longer refers to `IUdonEventReceiver` or another type from that namespace.
+
 ## SDK 3.7.x to 3.8.x
 
 ### New Features

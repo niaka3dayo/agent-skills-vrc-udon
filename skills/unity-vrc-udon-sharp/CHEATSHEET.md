@@ -438,16 +438,16 @@ See `references/web-loading.md` for details.
 
 ```csharp
 using VRC.SDK3.StringLoading;  // String Loading
-using VRC.SDK3.ImageLoading;   // Image Loading
+using VRC.SDK3.Image;           // Image Loading
 using VRC.SDK3.Data;           // VRCJson
 
 // String download
-VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
+VRCStringDownloader.LoadUrl(url, this);
 // -> OnStringLoadSuccess(IVRCStringDownload) / OnStringLoadError
 
 // Image download (Dispose the wrapper + Destroy the assigned Texture2D — see image-loading-vram.md)
 var dl = new VRCImageDownloader();
-dl.DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo);
+dl.DownloadImage(url, material, this, textureInfo);
 // -> OnImageLoadSuccess(IVRCImageDownload) / OnImageLoadError
 
 // JSON parse (after string download)

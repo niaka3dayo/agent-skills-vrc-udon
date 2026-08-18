@@ -251,7 +251,7 @@ if (NetworkCalling.InNetworkCall && caller != null && caller.IsValid())
 
 // Get queued events for a specific method on this behaviour
 int queuedCount = NetworkCalling.GetQueuedEvents(
-    (IUdonEventReceiver)this,
+    this,
     nameof(_MyNetworkMethod)
 );
 
@@ -293,7 +293,7 @@ public class NetworkMonitor : UdonSharpBehaviour
     void Update()
     {
         int myEventQueue = NetworkCalling.GetQueuedEvents(
-            (IUdonEventReceiver)this,
+            this,
             nameof(_OnNetworkEvent)
         );
         int totalQueue = NetworkCalling.GetAllQueuedEvents();
@@ -306,7 +306,7 @@ public class NetworkMonitor : UdonSharpBehaviour
     public void _SendEvent()
     {
         // Check before sending to avoid queue buildup
-        if (NetworkCalling.GetQueuedEvents((IUdonEventReceiver)this, nameof(_OnNetworkEvent)) < 10)
+        if (NetworkCalling.GetQueuedEvents(this, nameof(_OnNetworkEvent)) < 10)
         {
             SendCustomNetworkEvent(NetworkEventTarget.All, nameof(_OnNetworkEvent));
         }
@@ -469,7 +469,6 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class PoolManager : UdonSharpBehaviour
@@ -718,8 +717,8 @@ sync.FlagDiscontinuity();
 For details on the Web Loading API, see `references/web-loading.md`.
 
 **Key Points:**
-- `VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this)` -- Text/JSON download
-- `new VRCImageDownloader().DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo)` -- Image download
+- `VRCStringDownloader.LoadUrl(url, this)` -- Text/JSON download
+- `new VRCImageDownloader().DownloadImage(url, material, this, textureInfo)` -- Image download
 - Rate limit: **Once every 5 seconds** (for String/Image each)
 - Max image resolution: **2048 x 2048**
 - Trusted URLs: Domain allowlist restrictions apply
@@ -727,12 +726,12 @@ For details on the Web Loading API, see `references/web-loading.md`.
 
 ```csharp
 // String Loading (VRC.SDK3.StringLoading)
-VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
+VRCStringDownloader.LoadUrl(dataUrl, this);
 // -> OnStringLoadSuccess / OnStringLoadError
 
-// Image Loading (VRC.SDK3.ImageLoading)
+// Image Loading (VRC.SDK3.Image)
 var downloader = new VRCImageDownloader();
-downloader.DownloadImage(imageUrl, material, (IUdonEventReceiver)this);
+downloader.DownloadImage(imageUrl, material, this);
 // -> OnImageLoadSuccess / OnImageLoadError
 ```
 
@@ -1262,7 +1261,6 @@ VRCPlayerApi pilot = drone.GetPlayer();
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon.Common.Interfaces;
 
 public class DroneCheckpoint : UdonSharpBehaviour
 {

@@ -39,7 +39,6 @@ using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class VideoPlayerStateMachine : UdonSharpBehaviour

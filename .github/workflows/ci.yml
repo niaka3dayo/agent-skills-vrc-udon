@@ -75,6 +75,9 @@ jobs:
       - name: Check SDK active support policy
         run: bash tests/docs/sdk-support-policy.test.sh
 
+      - name: Check Udon event receiver reference
+        run: bash tests/docs/udon-event-receiver-reference.test.sh
+
       - name: Check community contributor acknowledgements
         run: bash tests/docs/community-contributors.test.sh
 

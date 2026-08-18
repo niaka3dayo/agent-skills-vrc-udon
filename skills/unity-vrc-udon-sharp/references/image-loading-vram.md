@@ -99,8 +99,7 @@ does not free a texture you have applied to a material. You must call
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.SDK3.ImageLoading;
-using VRC.Udon.Common.Interfaces;
+using VRC.SDK3.Image;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class SafeImageLoader : UdonSharpBehaviour
@@ -135,7 +134,7 @@ public class SafeImageLoader : UdonSharpBehaviour
         _currentDownload = _downloader.DownloadImage(
             imageUrl,
             null,                       // pass null — we apply the texture manually
-            (IUdonEventReceiver)this,
+            this,
             info
         );
     }
@@ -222,8 +221,7 @@ time-delayed operations, use `SendCustomEventDelayedSeconds(nameof(_MethodName),
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.SDK3.ImageLoading;
-using VRC.Udon.Common.Interfaces;
+using VRC.SDK3.Image;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class DoubleBufferImageDisplay : UdonSharpBehaviour
@@ -294,7 +292,7 @@ public class DoubleBufferImageDisplay : UdonSharpBehaviour
         _pendingDownload = _downloader.DownloadImage(
             imageUrls[_nextUrlIndex],
             null,
-            (IUdonEventReceiver)this,
+            this,
             info
         );
 
@@ -467,8 +465,7 @@ Runtime: Cycle through cached textures  → no further downloads
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.SDK3.ImageLoading;
-using VRC.Udon.Common.Interfaces;
+using VRC.SDK3.Image;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class StockModeGallery : UdonSharpBehaviour
@@ -527,7 +524,7 @@ public class StockModeGallery : UdonSharpBehaviour
         _downloader.DownloadImage(
             imageUrls[idx],
             galleryMaterials[idx],      // downloader applies texture to this material
-            (IUdonEventReceiver)this,
+            this,
             info
         );
 
@@ -790,8 +787,7 @@ by a base delay to stagger when it first downloads.
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.SDK3.ImageLoading;
-using VRC.Udon.Common.Interfaces;
+using VRC.SDK3.Image;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class StaggeredImageLoader : UdonSharpBehaviour
@@ -840,7 +836,7 @@ public class StaggeredImageLoader : UdonSharpBehaviour
         _currentDownload = _downloader.DownloadImage(
             imageUrl,
             null,
-            (IUdonEventReceiver)this,
+            this,
             info
         );
     }
