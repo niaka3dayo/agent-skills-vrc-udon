@@ -105,7 +105,6 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PackFormatParser : UdonSharpBehaviour
@@ -532,7 +531,6 @@ using System;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PackedResourceLoader : UdonSharpBehaviour
@@ -605,7 +603,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
         _hasRuntimeSprite = new bool[_uiSlots.Length];
 
         // Download resource index first
-        VRCStringDownloader.LoadUrl(_indexUrl, (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(_indexUrl, this);
     }
 
     // ── Download callbacks ───────────────────────────────────────────────────
@@ -712,7 +710,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
         if (urlIdx >= _packUrls.Length) return;
         _pendingUrlIndex  = urlIdx;
         _pendingSlotIndex = slotIdx;
-        VRCStringDownloader.LoadUrl(_packUrls[urlIdx], (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(_packUrls[urlIdx], this);
         // Rate limit: next slot after 5.5 s
         SendCustomEventDelayedSeconds(nameof(_LoadNextSlot), 5.5f);
     }
