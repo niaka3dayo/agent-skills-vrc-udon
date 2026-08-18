@@ -372,6 +372,22 @@ array when the world capacity is lower.
 
 ---
 
+### Array values: use OnDeserialization, not FieldChangeCallback
+
+`FieldChangeCallback` is appropriate for the scalar counters below, but do not
+use it as the receive hook for a `[UdonSynced]` array. Array contents can change
+without the array variable itself changing, so the callback is not a contract
+for same length, reassigning the array, or changing its length. Apply the array
+from `OnDeserialization()` instead. The owner should call the same idempotent
+apply method immediately after its mutation and then call
+`RequestSerialization()` once for the completed update.
+
+The fixed `SyncedVoterPlayerIds` array in Pattern 3c follows this rule: the
+owner updates the accepted snapshot and `RefreshCount()` locally, while every
+receiver calls `RefreshCount()` from `OnDeserialization()`.
+
+---
+
 ## Pattern 4: Managing Multiple Values with FieldChangeCallback
 
 ```csharp
@@ -421,7 +437,7 @@ public class DualCounterSync : UdonSharpBehaviour
 | Approach | Pros | Cons |
 |------|------|------|
 | `OnDeserialization()` | Simple, full update | Cannot tell which variable changed |
-| `FieldChangeCallback` | Detects individual variable changes | Requires property definitions |
+| `FieldChangeCallback` | Detects individual scalar variable changes | Requires property definitions; not a synced-array receive hook |
 
 **When to use**: 1-2 variables -> OnDeserialization is sufficient. 3+ variables needing individual responses -> FieldChangeCallback.
 

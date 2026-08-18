@@ -55,6 +55,12 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
 5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()` **for state-change reactions; for hot-path or periodic work, see [Event Dispatch & Cross-Behaviour Call Cost Tiers](references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers)**.
 
+**Synced arrays: always apply them from `OnDeserialization()`**. Array element
+changes do not provide a reliable `FieldChangeCallback` signal, and the same
+guidance applies to same-length changes, array reassignments, and length
+changes. Have the owner call the same idempotent apply method immediately after
+mutation, then request Manual serialization once.
+
 ## SDK 3.10.4 event receiver arguments
 
 SDK 3.10.4 is the active and verified target for this Skill.

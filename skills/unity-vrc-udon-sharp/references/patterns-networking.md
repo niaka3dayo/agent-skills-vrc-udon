@@ -816,7 +816,10 @@ public class DebouncedSearch : UdonSharpBehaviour
 
 ### Problem
 
-Syncing `string[]` via `[UdonSynced]` serialises each element individually with per-element overhead. For arrays that change together as a logical unit — playlist titles, display names, ordered slot labels — this wastes bandwidth and produces multiple `OnDeserialization` callbacks if the array is written element-by-element in a loop.
+For arrays that change together as a logical unit — playlist titles, display
+names, ordered slot labels — build the complete value first and serialize the
+batch once. Write every element (or build the joined string), then make one `RequestSerialization()` after all elements are updated. OnDeserialization runs after the serialized snapshot is applied, so it is not a per-element
+callback and should rebuild the local projection from that complete snapshot.
 
 ### Solution
 
@@ -916,7 +919,7 @@ public class SyncedPlaylist : UdonSharpBehaviour
     // ── Owner-side write ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Sets the playlist titles (owner only) and serializes.
+    /// Sets the playlist titles (owner only) and serializes once.
     /// </summary>
     public void SetTitles(string[] titles)
     {
@@ -924,6 +927,8 @@ public class SyncedPlaylist : UdonSharpBehaviour
 
         _titles       = titles ?? new string[0];
         _syncedTitles = JoinForSync(_titles);
+        OnPlaylistUpdated();
+        // One request covers the complete batch; do not request inside a loop.
         RequestSerialization();
     }
 

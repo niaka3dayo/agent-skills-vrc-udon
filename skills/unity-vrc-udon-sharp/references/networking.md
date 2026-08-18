@@ -684,7 +684,7 @@ public void _IncrementScore()
 
 ### Detecting Changes
 
-Use `OnDeserialization` or `FieldChangeCallback`:
+For scalar synced values, use `OnDeserialization` or `FieldChangeCallback`:
 
 ```csharp
 // Method 1: OnDeserialization
@@ -715,6 +715,86 @@ private void OnHealthChanged()
     healthBar.value = _health;
 }
 ```
+
+### Synced Arrays: Apply Them After Deserialization
+
+`FieldChangeCallback` is useful for scalar synced fields, but it is not a
+receiver contract for arrays. The official [`OnVariableChanged` guidance](https://creators.vrchat.com/worlds/udon/networking/network-components/#onvariablechanged)
+states that changing an array's contents does not trigger the event because the
+array itself is unchanged. The official [Udon Example Scene](https://creators.vrchat.com/worlds/examples/udon-example-scene/)
+uses `OnDeserialization()` for its array example for the same reason.
+
+Do not depend on `FieldChangeCallback` for same-length element changes, array reassignments, or array length changes. Reassignment and length changes are not special exceptions to this guidance; use one receiver path for every synced array shape. The owner applies the same idempotent method immediately after the mutation, and remote clients apply it from `OnDeserialization()` after the serialized snapshot is complete. For Manual sync, make all element writes (or a single array reassignment) first, then make one `RequestSerialization()` after the complete array update.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SyncedArrayReceiver : UdonSharpBehaviour
+{
+    [UdonSynced] private int[] _syncedValues = new int[4];
+
+    public void _SetValues(int[] values)
+    {
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+        _syncedValues = values;
+        ApplyValues();
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        ApplyValues();
+    }
+
+    private void ApplyValues()
+    {
+        if (_syncedValues == null) return;
+
+        // Idempotent projection: derive the local display from the snapshot.
+        UpdateDisplay(_syncedValues);
+    }
+
+    private void UpdateDisplay(int[] values)
+    {
+        // Update UI or other derived state from values.
+    }
+}
+```
+
+The basic pattern intentionally has no revision counter: `ApplyValues()` is
+safe to run again for the same state. Add a revision only when the apply step
+has a non-idempotent side effect, such as playing a sound or writing a one-time
+record. A revision does not establish ordering or stale-packet rejection; it is
+only a duplicate-side-effect guard shared by the owner and `OnDeserialization`
+paths.
+
+```csharp
+// Optional guard for a non-idempotent effect; keep the basic path revision-free.
+[SerializeField] private AudioSource _sound;
+[UdonSynced] private int _revision;
+private int _appliedRevision;
+private bool _hasAppliedRevision;
+
+private void ApplyOneShotIfNeeded()
+{
+    if (_hasAppliedRevision && _appliedRevision == _revision) return;
+
+    _hasAppliedRevision = true;
+    _appliedRevision = _revision;
+    if (_sound != null) _sound.Play();
+}
+```
+
+Increment `_revision` with the array mutation, then call
+`ApplyOneShotIfNeeded()` immediately on the owner and again from
+`OnDeserialization()` on receivers. Use this only for the non-idempotent effect;
+keep ordinary UI or derived-state updates on the revision-free `ApplyValues()`
+path above.
 
 ## Network Events
 
