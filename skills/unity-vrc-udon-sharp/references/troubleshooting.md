@@ -32,6 +32,7 @@ UdonSharpException: UdonSharp does not currently support [feature]
 ```
 
 **Common features unsupported in Udon runtime code:**
+
 | Feature | Alternative |
 |---------|-------------|
 | `async/await` | `SendCustomEventDelayedSeconds()` |

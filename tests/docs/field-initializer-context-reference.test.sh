@@ -16,7 +16,7 @@ assert_contains() {
 
 assert_runtime_warning_row() {
     local file="$1"
-    awk '/List<T>/ && /LINQ/ && /Udon runtime/ && /WARNING/ { found = 1 } END { exit !found }' "$file" ||
+    awk '/List<T>/ && /LINQ/ && /(lambda|ラムダ|람다)/ && /Editor/ && /Udon runtime/ && /WARNING/ { found = 1 } END { exit !found }' "$file" ||
         fail "$file does not classify List<T>/LINQ/lambdas as context-sensitive WARNINGs"
     awk '/async\/await/ && /try\/catch/ && /ERROR/ { found = 1 } END { exit !found }' "$file" ||
         fail "$file no longer keeps unrelated runtime blockers at ERROR"
