@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | **繁體中文** | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="授權條款" />
@@ -132,9 +132,9 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 |------|------|
 | **限制** | Udon runtime 中被禁止的 C# 功能與替代方案（`List<T>` → `DataList`、`async` → `SendCustomEventDelayedSeconds`），以及 Editor 欄位初始設定式的邊界 |
 | **網路** | 所有權模型、Manual/Continuous 同步、FieldChangeCallback、反模式 |
-| **NetworkCallable** | SDK 3.8.1+ 參數化網路事件（最多 8 個參數） |
-| **持久化** | SDK 3.7.4+ PlayerData/PlayerObject API |
-| **動態元件** | SDK 3.10.0+ PhysBones、Contacts、VRC Constraints for Worlds |
+| **NetworkCallable** | SDK 3.8.1 導入的參數化網路事件（最多 8 個參數） |
+| **持久化** | SDK 3.7.4 導入的 PlayerData/PlayerObject API |
+| **動態元件** | SDK 3.10.0 導入的 PhysBones、Contacts、VRC Constraints for Worlds |
 | **網頁載入** | String/Image 下載、VRCJson、VRCUrl 限制 |
 | **範本** | 17 個範本（互動、同步模式、持久化、編輯器工具等） |
 
@@ -210,19 +210,25 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 
 ## SDK 版本
 
+**目前支援 / 最後驗證**：VRChat SDK 3.10.4
+
+從 v4.0.0 起，本專案只支援最新的穩定版 SDK；只有在本儲存庫完成驗證後，支援目標才會切換到新的穩定版本。目前最後驗證的目標是 3.10.4。
+
+下表保留了方便移轉參考的功能導入歷史。SDK 3.7.1-3.10.3的項目僅供歷史參考，不是本 Skill 的支援或驗證目標。這是本 Skill 的支援界線，不代表 VRChat 自身的 SDK 政策。
+
 | SDK 版本 | 主要功能 | 狀態 |
 |:--------:|:---------|:----:|
-| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | 已支援 |
-| **3.7.4** | Persistence API（PlayerData / PlayerObject） | 已支援 |
-| **3.7.6** | 多平台建置與發布（PC + Android） | 已支援 |
-| **3.8.0** | PhysBone 依賴排序、Force Kinematic On Remote | 已支援 |
-| **3.8.1** | `[NetworkCallable]` 參數化事件、`Others`/`Self` 目標 | 已支援 |
-| **3.9.0** | Camera Dolly API、Auto Hold pickup | 已支援 |
-| **3.10.0** | VRChat Dynamics for Worlds（PhysBones、Contacts、VRC Constraints） | 已支援 |
-| **3.10.1** | 錯誤修正、穩定性改善 | 已支援 |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修正、shader 時間全域變數 | 已支援 |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（頭像）、Mirror 渲染順序修正 | 已支援 |
-| **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 存取、DataList/DataDictionary 容量 API | 最新穩定版 |
+| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | 歷史 |
+| **3.7.4** | Persistence API（PlayerData / PlayerObject） | 歷史 |
+| **3.7.6** | 多平台建置與發布（PC + Android） | 歷史 |
+| **3.8.0** | PhysBone 依賴排序、Force Kinematic On Remote | 歷史 |
+| **3.8.1** | `[NetworkCallable]` 參數化事件、`Others`/`Self` 目標 | 歷史 |
+| **3.9.0** | Camera Dolly API、Auto Hold pickup | 歷史 |
+| **3.10.0** | VRChat Dynamics for Worlds（PhysBones、Contacts、VRC Constraints） | 歷史 |
+| **3.10.1** | 錯誤修正、穩定性改善 | 歷史 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修正、shader 時間全域變數 | 歷史 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（頭像）、Mirror 渲染順序修正 | 歷史 |
+| **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 存取、DataList/DataDictionary 容量 API | 目前支援 / 最後驗證 |
 
 > **注意**：發佈前，請確認專案使用的是 VRChat 目前支援的 SDK 版本。
 
@@ -237,6 +243,21 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 | VRChat 論壇（問答） | https://ask.vrchat.com/ |
 | VRChat Canny（錯誤/功能建議） | https://feedback.vrchat.com/ |
 | VRChat 社群 GitHub | https://github.com/vrchat-community |
+
+---
+
+<h2 id="community-contributors">社群貢獻者</h2>
+
+感謝這些提出具體 Issue、參與驗證並協助完善修正方案的貢獻者。
+
+- [@KatanoShingo](https://github.com/KatanoShingo) — GameObject 搜尋替代方案、效能取捨、可重複使用的房間模式、事件文件涵蓋與網路事件授權 ([#181](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/181), [#182](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/182), [#189](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/189), [#199](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/199), [#213](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/213), [#302](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/302))
+- [@Guribo](https://github.com/Guribo) — 所有權轉移時機與網路反模式驗證 ([#171](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/171))
+- [@haru0416-dev](https://github.com/haru0416-dev) — 安裝器升級一致性與無 jq 環境的安全驗證 ([#164](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/164), [#165](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/165))
+- [@Yodokoro](https://github.com/Yodokoro) — 圖層行為、NetworkCallable 指引與空間音訊設定 ([#267](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/267), [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286), [#297](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/297))
+- [@tetradice](https://github.com/tetradice) — Agent Skill 中繼資料相容性 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
+- [@owlboy](https://github.com/owlboy) — Steam Audio 文件修正 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
+- [@nomlasvrc](https://github.com/nomlasvrc) — 移除已棄用的 VRCInstantiate 用法 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
+- [@ureishi](https://github.com/ureishi) — UdonSharp 欄位與序列化行為、SDK 3.10.4 知識，以及陣列回呼的注意事項 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 
@@ -263,7 +284,7 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 - 內容以**「現狀」**提供，不附帶任何保證。請參閱 [LICENSE](LICENSE)。
 - 這是一個個人專案。**可能存在錯誤、過時資訊或不完整的內容。** 請務必與 [VRChat 官方文件](https://creators.vrchat.com/) 進行核對。
 - 作者不對本儲存庫造成的問題承擔任何責任（建置錯誤、上傳被拒絕、非預期的世界行為等）。
-- SDK 涵蓋範圍（3.7.1 - 3.10.4）反映的是最後更新時的狀態。VRChat 發布新版本時，行為可能會有所變更。
+- 目前支援的 SDK 僅限最後驗證過的 3.10.4。較舊版本的項目只是移轉歷史資訊，不承諾對這些 SDK 進行驗證或修正。VRChat 發布新版本時，行為可能會有所變更。
 
 ### AI 輔助建立
 

@@ -1,6 +1,8 @@
 # Web Loading — Advanced Packed Resource Patterns
 
-**Supported SDK Versions**: 3.7.1 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
 
 Advanced techniques for embedding multiple textures in a single `VRCStringDownloader` response
 to work around `VRCImageDownloader` limitations. For the base API reference see
@@ -873,7 +875,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
 
 | Symptom | Likely Cause | Solution |
 |---|---|---|
-| `Convert.FromBase64String` throws at runtime | `System.Convert` unavailable in older SDK | Requires SDK 3.7.1+; check SDK version in `ProjectSettings` |
+| `Convert.FromBase64String` throws at runtime | `System.Convert` unavailable in an older SDK | Historical migration guidance only: SDK 3.7.1 introduced the available surface; unsupported older projects should verify their project version in `ProjectSettings` rather than treating this as an active support route |
 | Decoded texture is entirely black or garbled | Texture format mismatch (DXT on Quest, or ETC2 on PC) | Verify `#if UNITY_ANDROID` selects the correct `TextureFormat`; confirm server served the right platform file |
 | `LoadRawTextureData` produces corrupt image | Wrong byte count — `dataLength` in JSON does not match actual encoded data | Re-validate the server pack builder; log `rawBytes.Length` vs the expected `width * height * bpp` |
 | VRAM grows after repeated resource loads | `Destroy()` not called on old textures before creating new ones | In `ApplyTextureFromCache`, call `Destroy(oldSprite.texture)` before assigning the new sprite |

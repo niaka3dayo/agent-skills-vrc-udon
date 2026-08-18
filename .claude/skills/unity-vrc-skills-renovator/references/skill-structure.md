@@ -34,8 +34,8 @@ unity-vrc-udon-sharp/
     ├── troubleshooting.md      # Troubleshooting
     ├── web-loading.md          # String/Image download, VRCJson
     ├── editor-scripting.md     # Editor scripting
-    ├── persistence.md          # Persistence guide (SDK 3.7.4+)
-    └── dynamics.md             # Dynamics guide (SDK 3.10.0+)
+    ├── persistence.md          # Persistence guide (introduced in SDK 3.7.4)
+    └── dynamics.md             # Dynamics guide (introduced in SDK 3.10.0)
 ```
 
 ### Role of Each File
@@ -118,11 +118,15 @@ Knowledge / Rules / Enforcement must always reflect the same facts:
 
 ### Unified Version Notation
 
-At the beginning of each file:
+At the beginning of each active reference file:
 
 ```markdown
-**Supported SDK versions**: 3.7.1 - 3.X.X (as of XXXX-XX)
+**Active support / last verified**: SDK 3.10.4
+**Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
 ```
+
+Keep accurate feature-introduction versions in the body, but never present the historical range as an active support promise. This boundary describes the Skill, not VRChat's own SDK policy.
+From v4.0.0 onward, select the latest stable SDK only after this repository verifies it; a new stable release does not change the active target automatically.
 
 For SDK-specific features:
 

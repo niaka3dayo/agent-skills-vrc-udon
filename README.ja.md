@@ -1,7 +1,7 @@
 [English](README.md) | **日本語** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
@@ -132,9 +132,9 @@ UdonSharpスクリプティングのコアスキルです。コンパイル制�
 |------|---------|
 | **制約** | Udon runtimeで使用不可なC#機能と代替手段（`List<T>` &rarr; `DataList`、`async` &rarr; `SendCustomEventDelayedSeconds`）、Editorで評価される初期化子との境界 |
 | **ネットワーキング** | オーナーシップモデル、Manual/Continuousシンク、FieldChangeCallback、アンチパターン |
-| **NetworkCallable** | SDK 3.8.1以降のパラメータ付きネットワークイベント（最大8引数） |
-| **パーシスタンス** | SDK 3.7.4以降のPlayerData/PlayerObject API |
-| **ダイナミクス** | SDK 3.10.0以降のPhysBones、Contacts、ワールド向けVRC Constraints |
+| **NetworkCallable** | SDK 3.8.1で導入されたパラメータ付きネットワークイベント（最大8引数） |
+| **パーシスタンス** | SDK 3.7.4で導入されたPlayerData/PlayerObject API |
+| **ダイナミクス** | SDK 3.10.0で導入されたPhysBones、Contacts、ワールド向けVRC Constraints |
 | **Webローディング** | 文字列・画像ダウンロード、VRCJson、VRCUrlの制約 |
 | **テンプレート** | 17種のテンプレート（インタラクション、同期パターン、永続化、エディタユーティリティなど） |
 
@@ -211,19 +211,25 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 
 ## SDKバージョン
 
+**現在のサポート対象 / 最終検証済み**: VRChat SDK 3.10.4
+
+v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定版への切り替えはこのリポジトリで検証してから行います。安定版になっただけで自動的にサポート対象へ追加することはありません。現在の最終検証済みは3.10.4です。
+
+以下の表には、移行時の参考になる機能追加の履歴を残しています。SDK 3.7.1〜3.10.3は履歴情報のみで、このSkillのサポート対象・検証対象ではありません。これはSkill自身のサポート範囲であり、VRChatのSDK方針を示すものではありません。
+
 | SDKバージョン | 主な機能 | ステータス |
 |:-----------:|:-------------|:------:|
-| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | サポート済み |
-| **3.7.4** | Persistence API（PlayerData / PlayerObject） | サポート済み |
-| **3.7.6** | マルチプラットフォームビルド＆パブリッシュ（PC + Android） | サポート済み |
-| **3.8.0** | PhysBone依存関係ソート、Force Kinematic On Remote | サポート済み |
-| **3.8.1** | `[NetworkCallable]` パラメータ付きイベント、`Others`/`Self` ターゲット | サポート済み |
-| **3.9.0** | Camera Dolly API、Auto Hold Pickup | サポート済み |
-| **3.10.0** | ワールド向けVRChat Dynamics（PhysBones、Contacts、VRC Constraints） | サポート済み |
-| **3.10.1** | バグ修正、安定性の向上 | サポート済み |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones修正、シェーダー時間グローバル | サポート済み |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（アバター）、Mirror 描画タイミング修正 | サポート済み |
-| **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 最新安定版 |
+| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | 履歴 |
+| **3.7.4** | Persistence API（PlayerData / PlayerObject） | 履歴 |
+| **3.7.6** | マルチプラットフォームビルド＆パブリッシュ（PC + Android） | 履歴 |
+| **3.8.0** | PhysBone依存関係ソート、Force Kinematic On Remote | 履歴 |
+| **3.8.1** | `[NetworkCallable]` パラメータ付きイベント、`Others`/`Self` ターゲット | 履歴 |
+| **3.9.0** | Camera Dolly API、Auto Hold Pickup | 履歴 |
+| **3.10.0** | ワールド向けVRChat Dynamics（PhysBones、Contacts、VRC Constraints） | 履歴 |
+| **3.10.1** | バグ修正、安定性の向上 | 履歴 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones修正、シェーダー時間グローバル | 履歴 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（アバター）、Mirror 描画タイミング修正 | 履歴 |
+| **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 現行サポート / 最終検証済み |
 
 > **注意**: 公開前に、VRChatが現在サポートしているSDKバージョンをプロジェクトで使用していることを確認してください。
 
@@ -238,6 +244,21 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 | VRChatフォーラム（Q&A） | https://ask.vrchat.com/ |
 | VRChat Canny（バグ・機能要望） | https://feedback.vrchat.com/ |
 | VRChat コミュニティGitHub | https://github.com/vrchat-community |
+
+---
+
+<h2 id="community-contributors">コミュニティからの貢献</h2>
+
+具体的なIssueを立て、検証や修正方針まで一緒に詰めてくださった皆さんに感謝します。
+
+- [@KatanoShingo](https://github.com/KatanoShingo) — GameObject検索の代替、パフォーマンスの使い分け、疑似複数部屋のパターン、イベントの記載、ネットワークイベントの認可 ([#181](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/181), [#182](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/182), [#189](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/189), [#199](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/199), [#213](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/213), [#302](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/302))
+- [@Guribo](https://github.com/Guribo) — オーナーシップ移譲のタイミングとネットワークのアンチパターン検証 ([#171](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/171))
+- [@haru0416-dev](https://github.com/haru0416-dev) — インストーラーの更新整合性とjqなし環境での検証 ([#164](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/164), [#165](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/165))
+- [@Yodokoro](https://github.com/Yodokoro) — レイヤーの挙動、NetworkCallableの案内、空間音声の設定 ([#267](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/267), [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286), [#297](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/297))
+- [@tetradice](https://github.com/tetradice) — Agent Skillのメタデータ互換性 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
+- [@owlboy](https://github.com/owlboy) — Steam Audioのドキュメント修正 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
+- [@nomlasvrc](https://github.com/nomlasvrc) — 非推奨のVRCInstantiateの整理 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
+- [@ureishi](https://github.com/ureishi) — UdonSharpのフィールド・シリアライズ挙動、SDK 3.10.4の知識、配列コールバックの注意点 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 
@@ -264,7 +285,7 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 - コンテンツは**「現状のまま」**提供されており、いかなる保証もありません。[LICENSE](LICENSE) をご確認ください。
 - これは個人プロジェクトです。**誤り、古くなった情報、または不完全な内容が含まれる可能性があります。** 常に[VRChat公式ドキュメント](https://creators.vrchat.com/)で確認してください。
 - このリポジトリが原因で生じた問題（ビルドエラー、アップロード拒否、予期しないワールドの動作など）について、作者は一切責任を負いません。
-- SDKカバレッジ（3.7.1〜3.10.4）は最終更新時点のものです。新しいVRChatリリースで動作が変わる可能性があります。
+- 現在のSDKサポート対象は、最終検証済みの3.10.4のみです。古いバージョンの行は移行時の履歴情報であり、そのSDKの検証や修正を約束するものではありません。新しいVRChatリリースで動作が変わる可能性があります。
 
 ### AI支援による作成
 

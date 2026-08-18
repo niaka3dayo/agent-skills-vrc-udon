@@ -1,7 +1,7 @@
 **English** | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
@@ -132,9 +132,9 @@ UdonSharp scripting core skill. Covers compile constraints, networking, events, 
 |------|---------|
 | **Constraints** | C# features blocked in Udon runtime, their alternatives (`List<T>` &rarr; `DataList`, `async` &rarr; `SendCustomEventDelayedSeconds`), and the Editor-evaluated initializer boundary |
 | **Networking** | Ownership model, Manual/Continuous sync, FieldChangeCallback, anti-patterns |
-| **NetworkCallable** | SDK 3.8.1+ parameterized network events (up to 8 args) |
-| **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
-| **Dynamics** | SDK 3.10.0+ PhysBones, Contacts, VRC Constraints for Worlds |
+| **NetworkCallable** | Introduced in SDK 3.8.1: parameterized network events (up to 8 args) |
+| **Persistence** | Introduced in SDK 3.7.4: PlayerData/PlayerObject API |
+| **Dynamics** | Introduced in SDK 3.10.0: PhysBones, Contacts, VRC Constraints for Worlds |
 | **Web Loading** | String/Image download, VRCJson, VRCUrl constraints |
 | **Templates** | 17 templates (interactions, sync patterns, persistence, editor utilities, and more) |
 
@@ -211,19 +211,25 @@ through unchanged and emits `VALIDATOR-WARNING: validation skipped
 
 ## SDK Versions
 
+**Active support / last verified**: VRChat SDK 3.10.4
+
+From v4.0.0 onward, the support policy is latest stable SDK only; the support target moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.4.
+
+The table below keeps historical feature-introduction notes for migration reference. SDK 3.7.1-3.10.3 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
+
 | SDK Version | Key Features | Status |
 |:-----------:|:-------------|:------:|
-| **3.7.1** | `StringBuilder`, `Regex`, `System.Random` | Supported |
-| **3.7.4** | Persistence API (PlayerData / PlayerObject) | Supported |
-| **3.7.6** | Multi-platform Build & Publish (PC + Android) | Supported |
-| **3.8.0** | PhysBone dependency sorting, Force Kinematic On Remote | Supported |
-| **3.8.1** | `[NetworkCallable]` parameterized events, `Others`/`Self` targets | Supported |
-| **3.9.0** | Camera Dolly API, Auto Hold pickup | Supported |
-| **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | Supported |
-| **3.10.1** | Bug fixes, stability improvements | Supported |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones fixes, shader time globals | Supported |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Supported |
-| **3.10.4** | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary capacity APIs | Latest Stable |
+| **3.7.1** | `StringBuilder`, `Regex`, `System.Random` | Historical |
+| **3.7.4** | Persistence API (PlayerData / PlayerObject) | Historical |
+| **3.7.6** | Multi-platform Build & Publish (PC + Android) | Historical |
+| **3.8.0** | PhysBone dependency sorting, Force Kinematic On Remote | Historical |
+| **3.8.1** | `[NetworkCallable]` parameterized events, `Others`/`Self` targets | Historical |
+| **3.9.0** | Camera Dolly API, Auto Hold pickup | Historical |
+| **3.10.0** | VRChat Dynamics for Worlds (PhysBones, Contacts, VRC Constraints) | Historical |
+| **3.10.1** | Bug fixes, stability improvements | Historical |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones fixes, shader time globals | Historical |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Historical |
+| **3.10.4** | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary capacity APIs | Active / Last verified |
 
 > **Note**: Before publishing, confirm that the project uses an SDK version currently supported by VRChat.
 
@@ -238,6 +244,21 @@ through unchanged and emits `VALIDATOR-WARNING: validation skipped
 | VRChat Forums (Q&A) | https://ask.vrchat.com/ |
 | VRChat Canny (Bugs/Features) | https://feedback.vrchat.com/ |
 | VRChat Community GitHub | https://github.com/vrchat-community |
+
+---
+
+<h2 id="community-contributors">Community Contributors</h2>
+
+This project has benefited from people who took the time to file concrete Issues and help verify the fixes. Thank you to:
+
+- [@KatanoShingo](https://github.com/KatanoShingo) — GameObject lookup alternatives, performance trade-offs, reusable-room patterns, event coverage, and network-event authorization ([#181](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/181), [#182](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/182), [#189](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/189), [#199](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/199), [#213](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/213), [#302](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/302))
+- [@Guribo](https://github.com/Guribo) — ownership-transfer timing and networking anti-pattern verification ([#171](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/171))
+- [@haru0416-dev](https://github.com/haru0416-dev) — installer upgrade consistency and jq-safe validation ([#164](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/164), [#165](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/165))
+- [@Yodokoro](https://github.com/Yodokoro) — layer behavior, NetworkCallable guidance, and spatial-audio setup ([#267](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/267), [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286), [#297](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/297))
+- [@tetradice](https://github.com/tetradice) — Agent Skill metadata compatibility ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
+- [@owlboy](https://github.com/owlboy) — Steam Audio documentation correction ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
+- [@nomlasvrc](https://github.com/nomlasvrc) — deprecated VRCInstantiate cleanup ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
+- [@ureishi](https://github.com/ureishi) — UdonSharp field and serialization behavior, SDK 3.10.4 knowledge, and array callback caveats ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
 
 ---
 
@@ -264,7 +285,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 - Content is provided **"AS IS"** without warranty. See [LICENSE](LICENSE).
 - This is a personal project. **Errors, outdated information, or incomplete content may exist.** Always verify against [official VRChat documentation](https://creators.vrchat.com/).
 - The author assumes no liability for issues caused by this repository (build errors, upload rejections, unexpected world behavior, etc.).
-- SDK coverage (3.7.1 - 3.10.4) reflects the last update. Behavior may change with new VRChat releases.
+- Active SDK support is limited to 3.10.4, the last verified target. Older version entries are historical migration information, not a promise to test or fix those SDKs. Behavior may change with new VRChat releases.
 
 ### AI-Assisted Creation
 
