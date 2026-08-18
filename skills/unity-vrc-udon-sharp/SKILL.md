@@ -65,7 +65,7 @@ Field initializers are evaluated as ordinary C# on the Unity/Editor side to prod
 
 ## Common Mistakes (NEVER List)
 
-These Udon runtime constraints cause either **compile-time failures** or **silent runtime failures**. Check this list before writing code that will run in Udon.
+These Udon runtime and Unity serialization constraints cause either **compile-time failures** or **silent data errors**. Check this list before writing UdonSharp code or serialized initial values.
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|
@@ -88,6 +88,7 @@ These Udon runtime constraints cause either **compile-time failures** or **silen
 | 17 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
 | 18 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
 | 19 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and simple arrays of these are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
+| 20 | Initialize independent serialized or synced `VRCUrl` values with `VRCUrl.Empty` | `VRCUrl.Empty` is a shared instance, so Inspector data can leak between fields, array elements, or GameObjects that use the same UdonSharp program | Give each field and array element its own `new VRCUrl("")`; reserve `VRCUrl.Empty` for runtime sentinel use |
 
 ## Sync Mode Quick Decision
 

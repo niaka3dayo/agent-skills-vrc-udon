@@ -795,6 +795,29 @@ public class InputManager : UdonSharpBehaviour
 
 ---
 
+### Independent VRCUrl Initial Values
+
+`VRCUrl.Empty` returns a shared instance; it does not create a fresh empty URL on each access.
+Do not use it to initialize a serialized or synced field that needs an independent initial value.
+With SDK 3.10.4, Inspector overrides backed by this shared value can appear in another field,
+array element, or GameObject that uses the same UdonSharp program. Create a separate
+`new VRCUrl("")` for each field and each array element instead:
+
+```csharp
+[SerializeField] private VRCUrl _primaryUrl = new VRCUrl("");
+[UdonSynced] private VRCUrl _syncedUrl = new VRCUrl("");
+[SerializeField] private VRCUrl[] _urls = new VRCUrl[]
+{
+    new VRCUrl(""),
+    new VRCUrl(""),
+};
+```
+
+This rule is specific to independent initial values that Unity or UdonSharp serializes. Runtime
+returns, resets, and assignments that only need an empty sentinel may still use `VRCUrl.Empty`.
+
+---
+
 ### Synced VRCUrl Lists
 
 `VRCUrl[]` syncs like any other supported array type. VRChat 2021.3.2's release notes state
@@ -825,14 +848,14 @@ public class SyncedUrlList : UdonSharpBehaviour
     private const int MaxUrls = 8;
 
     // Fixed slots cap the list at MaxUrls; a plain VRCUrl[] field also syncs.
-    [UdonSynced] private VRCUrl SyncedUrl_0 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_1 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_2 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_3 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_4 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_5 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_6 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_7 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_0 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_1 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_2 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_3 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_4 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_5 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_6 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_7 = new VRCUrl("");
 
     // Metadata for all URLs synced as a single JSON string.
     // Format: [[timestamp, typeId, "senderName"], ...]
