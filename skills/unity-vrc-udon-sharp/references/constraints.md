@@ -825,18 +825,19 @@ and assignments that only need an empty sentinel may still use `VRCUrl.Empty`.
 ### Synced VRCUrl Lists
 
 `VRCUrl[]` syncs like any other supported array type. VRChat 2021.3.2's release notes state
-"Udon can now sync `String` arrays and `VRCUrl` arrays", and `VRCUrl[]` is present in the SDK's
-syncable-type list (`UdonNetworkTypes.CanSync`, verified against SDK 3.10.3). Use Manual sync
-(Continuous does not support arrays) and always initialize the field -- an uninitialized synced
-array prevents the behaviour from syncing.
+"Udon can now sync `String` arrays and `VRCUrl` arrays", and `VRCUrl[]` is present in the SDK 3.10.4
+syncable-type list (`UdonNetworkTypes.CanSync`). Use Manual sync (Continuous does not support
+arrays) and always initialize the field -- an uninitialized synced array prevents the behaviour
+from syncing.
 
 ```csharp
 [UdonSynced] private VRCUrl[] _urls = new VRCUrl[0]; // Manual sync behaviour
 ```
 
-The example below uses individual fixed slots instead of an array -- a bounded-capacity variant
-that makes the maximum list size explicit. The JSON metadata pattern (sender name, timestamp,
-content type via `VRCJson`) applies equally to either layout.
+The example below uses individual fixed slots instead of an array -- a bounded-capacity variant.
+Fixed slots bound capacity and make the maximum list size explicit; they are a design choice for
+predictable limits, not a workaround for unsupported array sync. The JSON metadata pattern (sender
+name, timestamp, content type via `VRCJson`) applies equally to either layout.
 
 **Complete Example -- Fixed-Slot Synced URL List with Metadata:**
 
@@ -1090,7 +1091,7 @@ public class SyncedUrlList : UdonSharpBehaviour
 
 | Element | Purpose |
 |---------|---------|
-| Individual `[UdonSynced] VRCUrl` fields | Each URL synced as its own field (array sync not supported) |
+| Individual `[UdonSynced] VRCUrl` fields | Fixed-slot, bounded-capacity alternative when the maximum list size should be explicit; `VRCUrl[]` remains syncable |
 | `switch`-based get/set methods | Maps runtime index to the correct field |
 | `[UdonSynced] string` for metadata | JSON-encoded array of `[timestamp, type, sender]` entries |
 | `VRCJson.TrySerializeToJson` / `TryDeserializeFromJson` | Serialization of structured metadata into a single synced string |

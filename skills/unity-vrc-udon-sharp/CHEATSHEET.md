@@ -103,6 +103,13 @@ public void SetValue(int newValue) {
 }
 ```
 
+The property pattern above is for scalar values. **Synced arrays: always apply
+them from `OnDeserialization()`**. This covers same-length element changes,
+array reassignments, and array length changes; do not attach
+`FieldChangeCallback` to an array and wait for its setter. The owner should call
+the same idempotent `ApplyValues()` method immediately after the mutation, then
+call `RequestSerialization()` once for the completed update.
+
 ---
 
 ## Key Events
@@ -427,6 +434,7 @@ private void Log(string msg) {
 | NullReference on player | Check `player != null && player.IsValid()` |
 | Method not found (SendCustomEvent / network event target) | Make the target method public and parameterless (pass data via `SetProgramVariable`); plain network events are also parameterless ([NetworkCallable] allows up to 8) |
 | FieldChangeCallback not firing | Use property setter even for local changes |
+| Array contents changed: use `OnDeserialization()` | Rebuild derived state from the complete array snapshot; do not depend on `FieldChangeCallback` |
 | Cannot modify struct | `var v = struct; v.x = 1; struct = v;` |
 | Start() not called | Inactive object support: `OnEnable()` + `Initialize()` |
 

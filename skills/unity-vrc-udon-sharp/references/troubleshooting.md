@@ -454,6 +454,53 @@ MyProperty = 10;
 
 ---
 
+### Synced Array Callback Silent Failure
+
+**Symptom:** A remote client receives a new `[UdonSynced]` array, but the
+property setter and its `FieldChangeCallback` side effects do not run.
+
+`OnVariableChanged` does not fire for array-content changes. Do not rely on it
+for same-length element changes, array reassignments, and array length changes;
+the safe receive hook is `OnDeserialization()` for all three cases. This is a
+silent failure: the array can contain the new values while local UI or other
+derived state still shows the old projection.
+
+Use one idempotent `ApplyValues()` method on both paths:
+
+```csharp
+[UdonSynced] private int[] _syncedValues = new int[4];
+
+public void _SetValues(int[] values)
+{
+    if (values == null) return;
+
+    if (!Networking.IsOwner(gameObject))
+        Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+    _syncedValues = values;
+    ApplyValues();
+    RequestSerialization();
+}
+
+public override void OnDeserialization()
+{
+    ApplyValues();
+}
+
+private void ApplyValues()
+{
+    if (_syncedValues == null) return;
+    // Rebuild UI or other derived state from the current snapshot.
+}
+```
+
+The owner calls `ApplyValues()` immediately after changing the array and calls
+`RequestSerialization()` once after the complete Manual-sync update. A revision
+guard is optional for non-idempotent effects only; it does not provide packet
+ordering or stale-packet rejection.
+
+---
+
 ### Ownership Transfer Race Conditions
 
 **Problem:** Multiple players attempting to take ownership simultaneously.

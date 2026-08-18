@@ -99,6 +99,9 @@ jobs:
       - name: Check VRCUrl.Empty field initializer boundary
         run: bash tests/docs/vrcurl-empty-initializer-reference.test.sh
 
+      - name: Check synced array callback and VRCUrl[] guidance
+        run: bash tests/docs/synced-array-callback-reference.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest

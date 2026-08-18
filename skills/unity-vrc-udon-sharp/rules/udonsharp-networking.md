@@ -180,6 +180,64 @@ private void OnHealthChanged()
 }
 ```
 
+### Synced Arrays: OnDeserialization Is the Receiver Hook
+
+`OnVariableChanged` does not fire when an array's contents change because the array
+itself is still the same variable. Therefore, a `[UdonSynced]` array must not depend on `FieldChangeCallback` for its receive-side update. Do not make any of these mutation shapes an exception:
+
+- same-length element changes
+- array reassignments
+- array length changes
+
+Use `OnDeserialization()` for all three cases. The owner applies the same idempotent `ApplyValues()` method immediately after changing the array, then
+calls `RequestSerialization()` once after the complete update. Remote clients
+call that method from `OnDeserialization()` after the received snapshot has been
+applied. This keeps the owner and receivers on the same state-projection path
+without relying on a callback that is not an array contract.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SyncedArrayExample : UdonSharpBehaviour
+{
+    [SerializeField] private Text _valueText;
+    [UdonSynced] private int[] _syncedValues = new int[4];
+
+    public override void Interact()
+    {
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+        for (int i = 0; i < _syncedValues.Length; i++)
+            _syncedValues[i] = Random.Range(0, 100);
+
+        // Apply locally now; the owner does not wait for its own sync callback.
+        ApplyValues();
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        ApplyValues();
+    }
+
+    private void ApplyValues()
+    {
+        if (_syncedValues == null || _syncedValues.Length == 0) return;
+
+        // Idempotent state projection: redraw from the current array snapshot.
+        if (_valueText != null) _valueText.text = _syncedValues[0].ToString();
+    }
+}
+```
+
+Keep `ApplyValues()` idempotent when possible. A revision is only an optional guard for non-idempotent side effects such as a sound, animation, or one-time record that must not run twice when the owner and receiver paths both visit the same revision. It does not provide ordering or stale-packet rejection;
+it is only a duplicate-side-effect guard.
+
 ## Key Principles
 
 1. **"The trick to syncing is not to sync"**: Sync only the minimum data and leverage local computation
