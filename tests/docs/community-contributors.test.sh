@@ -110,9 +110,18 @@ for path in readme_paths:
         f"{path} has an invalid heading/marker order"
     )
 
+    tail_start = end + len(end_marker)
+    next_heading = re.search(r"^<h2[ >]", text[tail_start:], re.MULTILINE)
+    assert next_heading, f"{path} has no heading after community-contributors section"
+    section_end = tail_start + next_heading.start()
+    tail = text[tail_start:section_end]
+    assert tail.strip() == "---", (
+        f"{path} must contain only the separator after the contributor marker"
+    )
+
     intro = text[heading.end() : start]
     assert intro.strip(), f"{path} is missing its localized thank-you text"
-    section = text[heading.start() : end + len(end_marker)]
+    section = text[heading.start() : section_end]
     assert not issue_url_re.search(section), (
         f"{path} contains an Issue URL in the contributor section"
     )
