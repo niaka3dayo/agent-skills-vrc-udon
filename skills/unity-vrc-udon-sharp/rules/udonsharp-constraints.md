@@ -107,6 +107,10 @@ Prefer `private` methods. Public methods slow down Udon's method lookup.
 
 See [`Event Dispatch & Cross-Behaviour Call Cost Tiers`](../references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers) for the full method-visibility tier table.
 
+### Public field serialization
+
+`[HideInInspector] public` hides a field from the Inspector but keeps Unity serialization enabled. Use it when Editor-time DI, baking, or autowiring must persist the value into a Scene/Prefab. Use `[System.NonSerialized] public` for a runtime-only field that another UdonBehaviour accesses through direct access or `SetProgramVariable`. If `[HideInInspector]` is intentional, comment the persistence reason next to the declaration.
+
 ### 6. Recursive Methods
 
 The `[RecursiveMethod]` attribute is required for recursive calls.

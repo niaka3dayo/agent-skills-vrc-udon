@@ -20,6 +20,20 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 - **Checked arithmetic**: UdonVM runs with overflow checking enabled by default. Operations that would silently wrap in standard C# will behave as checked.
 - **No JIT**: There is no just-in-time compilation. All method dispatch is interpreted.
 
+### Inspector visibility vs. Unity serialization
+
+`[HideInInspector]` hides a public field from the Inspector but does not disable Unity serialization. Use `[HideInInspector] public` when Editor-time wiring produces a value that must be persisted into a Scene or Prefab. Use `[System.NonSerialized] public` when another UdonBehaviour needs runtime-only access through direct access or `SetProgramVariable`; these values should be assigned by runtime code rather than loaded from the Scene/Prefab.
+
+```csharp
+// Positive example: editor-time wiring is intentionally persisted.
+[HideInInspector] public GameObject bakedTarget; // Editor-time wiring; value must be persisted into a Scene or Prefab.
+
+// Runtime-only example: another behaviour fills this value before a callback.
+[System.NonSerialized] public int selectedIndex = -1;
+```
+
+If `[HideInInspector]` is intentional, comment the persistence reason next to the declaration. Do not use it as a substitute for `[System.NonSerialized]` on temporary runtime state.
+
 ---
 
 ## Supported Features

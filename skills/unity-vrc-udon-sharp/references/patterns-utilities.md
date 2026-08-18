@@ -402,8 +402,8 @@ public class DataProcessor : UdonSharpBehaviour
     [SerializeField] private ProcessMediator _mediator;
 
     // Public result fields — written before SendCustomEvent fires
-    [HideInInspector] public bool ResultSuccess;
-    [HideInInspector] public string[] ResultData;
+    [System.NonSerialized] public bool ResultSuccess;
+    [System.NonSerialized] public string[] ResultData;
 
     public void Process(string[] inputLines)
     {
@@ -554,8 +554,8 @@ using UnityEngine;
 public class CancellableTimer : UdonSharpBehaviour
 {
     // Written by the factory before the delay is scheduled.
-    [HideInInspector] public UdonSharpBehaviour CallbackTarget;
-    [HideInInspector] public string              CallbackMethod;
+    [System.NonSerialized] public UdonSharpBehaviour CallbackTarget;
+    [System.NonSerialized] public string              CallbackMethod;
 
     /// <summary>
     /// Called by SendCustomEventDelayedSeconds on this behaviour.

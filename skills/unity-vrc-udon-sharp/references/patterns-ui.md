@@ -320,7 +320,7 @@ public class DynamicPlayerList : UdonSharpBehaviour
     [Tooltip("Prefix for generated button names")]
     [SerializeField] private string buttonPrefix = "PlayerBtn_";
 
-    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before _OnPlayerButtonClicked
+    [System.NonSerialized] public int selectedIndex = -1; // Written by ButtonHandler before _OnPlayerButtonClicked
 
     private GameObject[] _activeButtons = new GameObject[0];
 
@@ -1134,7 +1134,7 @@ public class FingerTouchCanvas : UdonSharpBehaviour
     /// The pointer index (0 = left, 1 = right, 2 = desktop) that last triggered an event.
     /// Listeners can read this to determine which pointer fired the event.
     /// </summary>
-    [HideInInspector] public int lastPointerIndex;
+    [System.NonSerialized] public int lastPointerIndex;
 
     // Per-pointer state (index 0 = left, 1 = right, 2 = desktop)
     private bool[] _isPressed = new bool[3];
@@ -1590,7 +1590,7 @@ public class AppManager : UdonSharpBehaviour
     // ownership-transfer code path only.
     // -2 = no pending operation, -1 = pending close, >= 0 = pending open index
     private int _pendingOpenIndex = -2;
-    [HideInInspector] public int selectedIndex = -1; // Written by ButtonHandler before _OnIconButtonClicked
+    [System.NonSerialized] public int selectedIndex = -1; // Written by ButtonHandler before _OnIconButtonClicked
 
     /// <summary>
     /// Synced property: when the synced value changes, trigger a transition.

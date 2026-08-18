@@ -1250,6 +1250,20 @@ EditorUtility.SetDirty(behaviour);
 
 ```
 
+### Runtime-only public field keeps an Inspector value
+
+**Cause:** `[HideInInspector] public` hides a field but still allows Unity to serialize it. That is correct for Editor-time DI, baking, or autowiring that must persist into a Scene/Prefab, but it is the wrong declaration for temporary runtime state.
+
+**Solution:** Use `[System.NonSerialized] public` when another UdonBehaviour fills or reads the field at runtime. This is the correct declaration for runtime-only public state. If the field is set with `SetProgramVariable`, keep it public and keep the exact string name in sync; the attribute controls Unity serialization, not runtime accessibility.
+
+```csharp
+// Editor-time value: deliberately persisted while hidden from the Inspector.
+[HideInInspector] public GameObject bakedTarget; // Explain the persistence reason.
+
+// Runtime-only value: assigned by another behaviour before its callback.
+[System.NonSerialized] public int selectedIndex = -1;
+```
+
 ---
 
 ### "The associated script cannot be loaded"

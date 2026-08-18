@@ -55,6 +55,10 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
 5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()` **for state-change reactions; for hot-path or periodic work, see [Event Dispatch & Cross-Behaviour Call Cost Tiers](references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers)**.
 
+### Public fields: Inspector visibility is not persistence policy
+
+`[HideInInspector]` only hides a public field from the Inspector; Unity still serializes it. Use `[HideInInspector] public` when Editor-time DI, baking, or autowiring must persist the value into a Scene/Prefab. Use `[System.NonSerialized] public` for a runtime-only value that another UdonBehaviour must access through direct access or `SetProgramVariable`. When `[HideInInspector]` is intentional, leave a comment explaining why the value must be persisted.
+
 ## Common Mistakes (NEVER List)
 
 These constraints cause either **compile-time failures** or **silent runtime failures**. Check this list before writing any UdonSharp code.

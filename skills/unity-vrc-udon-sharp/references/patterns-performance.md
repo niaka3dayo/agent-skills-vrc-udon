@@ -1033,7 +1033,7 @@ public class ManagedVideoLoader : UdonSharpBehaviour
     // ("ScheduledUrl"). Use FIELD_SCHEDULED_URL when calling SetProgramVariable from
     // custom code to avoid silent mismatches.
     public const string FIELD_SCHEDULED_URL = "ScheduledUrl";
-    [HideInInspector] public VRCUrl ScheduledUrl;
+    [System.NonSerialized] public VRCUrl ScheduledUrl;
 
     public void RequestLoad(VRCUrl url)
     {
@@ -1047,7 +1047,7 @@ public class ManagedVideoLoader : UdonSharpBehaviour
     /// </summary>
     public void _OnScheduledLoad()
     {
-        if (ScheduledUrl == null) return;
+        if (ScheduledUrl == null || string.IsNullOrEmpty(ScheduledUrl.Get())) return;
         Debug.Log($"[ManagedVideoLoader] Loading URL: {ScheduledUrl}");
         // Perform the actual VRCUrl load here (e.g. videoPlayer.LoadURL(ScheduledUrl)).
     }
@@ -1058,7 +1058,7 @@ public class ManagedVideoLoader : UdonSharpBehaviour
 - `_intervalSeconds` defaults to 5.05 s. Do not set it below 5.0.
 - If two behaviours call `ScheduleLoad` in the same frame, only the first starts the drain loop; the second is queued and will fire after 5.05 s.
 - The queue depth is 16 by default. Increase `MaxQueueDepth` if the world can have more concurrent requesters than that.
-- `ScheduledUrl` on the consumer must be declared `public` (not `[HideInInspector]` alone) for `SetProgramVariable` to write it; the `[HideInInspector]` attribute hides it from the Inspector while keeping it accessible to the scheduler.
+- `ScheduledUrl` on the consumer must be declared `[System.NonSerialized] public`: the scheduler writes it at runtime via `SetProgramVariable`, and the value must not be persisted in a Scene/Prefab. The guard also rejects both a `null` reference and the SDK's empty `VRCUrl` value.
 - **`SetProgramVariable` field-name contract**: The scheduler writes to the field named `"ScheduledUrl"` by string at runtime. If the consumer renames that field, `SetProgramVariable` silently no-ops and the callback receives `null`. Always keep the field name in sync with the string literal in `_DrainNext`.
 
 ---
