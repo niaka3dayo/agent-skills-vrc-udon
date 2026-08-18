@@ -168,6 +168,7 @@ for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/persistence.md" \
+    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/sdk-migration.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/testing.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/troubleshooting.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading-advanced.md" \
