@@ -6,7 +6,7 @@ Older version numbers in this reference record feature introductions or migratio
 
 Since `System.Net` is unavailable in UdonSharp, VRChat-specific APIs must be used to retrieve data from the web.
 
-### SDK 3.10.4 event receiver arguments
+## SDK 3.10.4 event receiver arguments
 
 On SDK 3.10.4, pass `this` as the receiver argument; the explicit cast is no longer needed.
 The receiver argument is still required for UdonSharp callbacks, including on SDK 3.10.4.

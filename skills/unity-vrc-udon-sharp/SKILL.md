@@ -249,7 +249,7 @@ The table below keeps feature-introduction history for migration reference. SDK 
 | 3.10.1 | Bug fixes and stability improvements | Historical |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals | Historical |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Historical |
-| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary custom capacity, `DataDictionary.EnsureCapacity` | Active / Last verified |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary custom capacity, `DataDictionary.EnsureCapacity`, `UdonSharpBehaviour` implements `IUdonEventReceiver` and accepts direct receiver `this` | Active / Last verified |
 
 Use SDK 3.10.4 for publishing. Check the matching release notes before relying on a version-specific API or migration step.
 
