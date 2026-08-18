@@ -1,0 +1,2 @@
+[UdonSharp] BLOCKED: async/await not supported. Use SendCustomEventDelayedSeconds() instead.
+[UdonSharp] BLOCKED: try/catch/finally not supported. Use defensive null checks and validation.

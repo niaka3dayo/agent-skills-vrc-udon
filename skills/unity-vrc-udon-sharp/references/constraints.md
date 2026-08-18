@@ -11,10 +11,10 @@ compiler behavior details, and annotated code examples.
 
 ## Compiler Behavior Overview
 
-UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. This has several implications:
+UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. Editor-side conversion and Udon runtime execution are distinct contexts. This has several implications:
 
-- **Static analysis at compile time**: Blocked features cause compile errors, not runtime exceptions.
-- **Field initializers run at compile time**: Values are baked into the serialized asset, not evaluated at scene load.
+- **Static analysis for Udon runtime code**: Features blocked by the Udon compiler cause compile errors, not runtime exceptions.
+- **Field initializers are Editor-evaluated C#**: Their expressions generate initial data for the compiled Udon program rather than UdonVM instructions. Some ordinary C# features that are blocked in Udon runtime code are valid in this limited context.
 - **Struct semantics differ**: UdonVM passes structs by value; mutating methods on structs return new values and do not modify the original.
 - **Method lookup cost**: UdonVM performs string-based method lookup; public methods are visible to Udon's event system and incur slightly higher overhead.
 - **Checked arithmetic**: UdonVM runs with overflow checking enabled by default. Operations that would silently wrap in standard C# will behave as checked.
@@ -90,17 +90,17 @@ If `[HideInInspector]` is intentional, comment the persistence reason next to th
 
 ---
 
-## Unsupported Features
+## Features Unsupported in Udon Runtime
 
 ### Collections and Generics
 
 | Feature | Status | SDK Added | Alternative |
 |---------|--------|-----------|-------------|
-| `List<T>` | Blocked | — | Use `T[]` arrays or `DataList` (SDK 3.7.1+) |
-| `Dictionary<T,K>` | Blocked | — | Use `DataDictionary` from VRC SDK (SDK 3.7.1+) |
-| `Queue<T>`, `Stack<T>` | Blocked | — | Implement with arrays |
-| `HashSet<T>` | Blocked | — | Use arrays with manual deduplication |
-| Generic type parameters | Blocked | — | Use concrete types |
+| `List<T>` | Blocked in Udon runtime | — | Use `T[]` arrays or `DataList` (SDK 3.7.1+); Editor-evaluated initializers may use it to generate a final Udon-supported value |
+| `Dictionary<T,K>` | Blocked in Udon runtime | — | Use `DataDictionary` from VRC SDK (SDK 3.7.1+); same initializer boundary as `List<T>` |
+| `Queue<T>`, `Stack<T>` | Blocked in Udon runtime | — | Implement with arrays |
+| `HashSet<T>` | Blocked in Udon runtime | — | Use arrays with manual deduplication |
+| Generic type parameters | Blocked in Udon runtime | — | Use concrete types |
 
 **DataList / DataDictionary (SDK 3.7.1+):**
 
@@ -149,9 +149,9 @@ if (dict.ContainsKey("key1"))
 | Delegates | Blocked | — | Use `SendCustomEvent` |
 | `Button.onClick.AddListener()` | Blocked | — | Inspector OnClick -> `SendCustomEvent` |
 | Events (C# events) | Blocked | — | Use UdonSharp events |
-| LINQ | Blocked | — | Use manual loops |
+| LINQ | Blocked in Udon runtime | — | Use manual loops; Editor-evaluated initializers may use it to generate a final Udon-supported value |
 | Anonymous types | Blocked | — | Define explicit types |
-| Lambda expressions | Blocked | — | Use named methods |
+| Lambda expressions | Blocked in Udon runtime | — | Use named methods; Editor-evaluated initializers may use them during initial value generation |
 | Local functions | Blocked | — | Use private methods |
 | Pattern matching | Blocked | — | Use traditional `if`/`switch` |
 
@@ -216,7 +216,7 @@ public void _DoSomething()
 | `System.Net` | Blocked | — | Use `VRCStringDownloader`, `VRCImageDownloader` |
 | `System.Reflection` | Blocked | — | Not available |
 | `System.Threading` | Blocked | — | Not available |
-| `System.Linq` | Blocked | — | Use manual loops |
+| `System.Linq` | Blocked in Udon runtime | — | Use manual loops; Editor-evaluated initializers are the limited exception described below |
 | `System.Text.StringBuilder` | Available | **3.7.1** | Efficient string concatenation |
 | `System.Text.RegularExpressions` | Available | **3.7.1** | Pattern matching (Regex) |
 | `System.Random` | Available | **3.7.1** | Deterministic random with seed |
@@ -339,23 +339,62 @@ q.Normalize();           // WRONG - q is not normalized
 q = q.normalized;        // CORRECT
 ```
 
-### Field Initializers Are Compile-Time
+### Editor-Evaluated Field Initializers vs. Udon Runtime
 
-Field initializers are evaluated when UdonSharp compiles the script, not at scene load or instance creation. The baked value is stored in the serialized asset.
+UdonSharp evaluates field initializer expressions as ordinary C# on the Unity/Editor side. It stores the resulting value as initial data for the compiled Udon program; the initializer expression itself does not execute in Udon runtime. This allows ordinary C# features such as LINQ, lambdas, and `List<T>` to generate a final value that Udon can hold.
+
+The two supported forms below are intentionally in the same `UdonSharpBehaviour`:
 
 ```csharp
-// WRONG - Random.Range is evaluated once at compile time
-// All instances of this script get the same value
-private int randomValue = Random.Range(0, 100);
+using System.Collections.Generic;
+using System.Linq;
+using UdonSharp;
+using UnityEngine;
 
-// CORRECT - evaluate at runtime in Start()
-private int randomValue;
-
-void Start()
+public class FieldInitializerExample : UdonSharpBehaviour
 {
-    randomValue = Random.Range(0, 100); // Different each play
+    // Form 1: LINQ and a lambda directly in the initializer.
+    private readonly string[] numberLabels = Enumerable
+        .Range(0, 101)
+        .Select(value => $"No.{value:D3}")
+        .ToArray();
+
+    // Form 2: call a same-behaviour static helper that uses List<T>,
+    // then convert the helper result into the final Udon-supported array.
+    private readonly string[] squareLabels = CreateSquares(10)
+        .Select(value => value.ToString())
+        .ToArray();
+
+    public static int[] CreateSquares(int count)
+    {
+        List<int> values = new List<int>();
+
+        for (int index = 0; index < count; index++)
+        {
+            values.Add(index * index);
+        }
+
+        return values.ToArray();
+    }
+
+    public override void Interact()
+    {
+        // Udon runtime consumes only the generated arrays.
+        Debug.Log(numberLabels[0]);
+        Debug.Log(squareLabels[0]);
+    }
 }
 ```
+
+These permissions apply only while generating field initial data. Calling `CreateSquares`, LINQ, lambdas, or `List<T>` from `Start()`, `Interact()`, or any other Udon runtime path remains unsupported.
+
+Keep this boundary strict:
+
+- The final field type and value must be supported by Udon.
+- Limit the expression and any helper it calls to pure initial value generation that does not depend on scene, runtime, or player state.
+- Do not use `Networking.LocalPlayer` or scene references in an initializer.
+- Constructors and field initializers may run on a loading thread while Unity loads a scene. Do not call main-thread-only Unity APIs such as `FindObjectsByType` from them.
+- If a value needs current scene or player state, initialize it in `Start()` or through the lazy-init pattern below.
 
 **Lazy Initialization Pattern** (for objects that may be inactive at Start):
 
@@ -522,13 +561,14 @@ For Continuous sync, keep synced strings very short or switch to Manual sync.
 
 Before compiling UdonSharp code, verify:
 
-- [ ] No `List<T>` or `Dictionary<T,K>` usage
+- [ ] No `List<T>` or `Dictionary<T,K>` usage in Udon runtime code
 - [ ] No `interface` declarations
 - [ ] No method overloading (all methods have unique names)
 - [ ] No `try`/`catch` blocks
 - [ ] No `async`/`await` or `yield return`
-- [ ] No LINQ queries (`.Where()`, `.Select()`, etc.)
-- [ ] No lambda expressions (`=>` in variable context)
+- [ ] No LINQ queries (`.Where()`, `.Select()`, etc.) in Udon runtime code
+- [ ] No lambda expressions (`=>` in variable context) in Udon runtime code
+- [ ] Editor-evaluated field initializers produce a final Udon-supported value without scene/player/runtime state or main-thread-only Unity APIs
 - [ ] No `System.IO` or `System.Net` usage
 - [ ] All recursive methods have `[RecursiveMethod]` attribute
 - [ ] Struct methods: using return values, not relying on in-place mutation

@@ -84,6 +84,9 @@ jobs:
       - name: Check runtime public field serialization guidance
         run: bash tests/docs/runtime-public-field-serialization-reference.test.sh
 
+      - name: Check Editor-evaluated field initializer boundary
+        run: bash tests/docs/field-initializer-context-reference.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest

@@ -2,7 +2,9 @@
 
 **SDK 3.7.1 - 3.10.4 Coverage**
 
-## Blocked Features and Alternatives
+## Features Blocked in Udon Runtime
+
+These alternatives apply to code that executes in Udon. Editor-evaluated field initializers may use `List<T>`, LINQ, and lambdas only to generate a final field value that Udon can hold; the same code remains blocked in `Start()`, `Interact()`, and other Udon runtime methods.
 
 | Blocked | Alternative |
 |---------|------------|

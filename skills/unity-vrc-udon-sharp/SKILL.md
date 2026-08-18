@@ -22,7 +22,7 @@ metadata:
 
 ## Why This Skill Matters
 
-UdonSharp looks like regular Unity C# scripting — until you hit its hidden walls. Many standard C# features (`List<T>`, `async/await`, `try/catch`, LINQ, generics) **silently fail or refuse to compile** in Udon. Networking is even more treacherous: modifying a synced variable without ownership produces no error — it just does nothing. Forgetting `RequestSerialization` means your state changes never leave your machine. Standard single-player local testing gives zero signal about these networking bugs because there is only one player.
+UdonSharp looks like regular Unity C# scripting — until you hit its hidden walls. Many standard C# features (`List<T>`, `async/await`, `try/catch`, LINQ, generics) **silently fail or refuse to compile** in code that runs in the Udon runtime. Editor-evaluated field initializers are a separate context: they can use some ordinary C# features to generate a final value that Udon can hold. Networking is even more treacherous: modifying a synced variable without ownership produces no error — it just does nothing. Forgetting `RequestSerialization` means your state changes never leave your machine. Standard single-player local testing gives zero signal about these networking bugs because there is only one player.
 
 Every rule in this skill exists because UdonSharp's default behavior is to **fail silently**. Read the Rules before generating any code.
 
@@ -49,7 +49,7 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 
 ## Core Principles
 
-1. **Constraints First** — Assume standard C# features are blocked until verified. Check `udonsharp-constraints.md` before using any API.
+1. **Constraints First** — For Udon runtime code, assume standard C# features are blocked until verified. Treat Editor-evaluated field initializers separately and require a final Udon-supported value. Check `udonsharp-constraints.md` before using any API.
 2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. Always `SetOwner` → modify → `RequestSerialization`.
 3. **Late Joiner Correctness** — State must be correct for players who join after events have occurred. Design for re-serialization, not just live updates.
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
@@ -59,21 +59,25 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 
 `[HideInInspector]` only hides a public field from the Inspector; Unity still serializes it. Use `[HideInInspector] public` when Editor-time DI, baking, or autowiring must persist the value into a Scene/Prefab. Use `[System.NonSerialized] public` for a runtime-only value that another UdonBehaviour must access through direct access or `SetProgramVariable`. When `[HideInInspector]` is intentional, leave a comment explaining why the value must be persisted.
 
+### Editor-evaluated field initializers
+
+Field initializers are evaluated as ordinary C# on the Unity/Editor side to produce initial data for the compiled Udon program; their expressions do not run in the Udon runtime. LINQ, lambdas, or a same-behaviour static helper that uses `List<T>` can therefore generate an array initializer even though the same code is unavailable from `Start()`, `Interact()`, or another Udon runtime method. The final field type and value must be supported by Udon. Keep generation independent of scene, player, and runtime state, and do not call main-thread-only Unity APIs because field initializers and constructors can run on a loading thread. See `references/constraints.md` for both supported forms and their boundaries.
+
 ## Common Mistakes (NEVER List)
 
-These constraints cause either **compile-time failures** or **silent runtime failures**. Check this list before writing any UdonSharp code.
+These Udon runtime constraints cause either **compile-time failures** or **silent runtime failures**. Check this list before writing code that will run in Udon.
 
 | # | NEVER do this | Why it fails silently | Use instead |
 |---|---------------|----------------------|-------------|
-| 1 | Use `List<T>`, `Dictionary<T,K>`, or any generic collection | Compile error — blocked by Udon compiler | `T[]` arrays, `DataList`, `DataDictionary` (`DataDictionary.EnsureCapacity` / custom capacities require SDK 3.10.4+) |
+| 1 | Use `List<T>`, `Dictionary<T,K>`, or any generic collection in Udon runtime code | Compile error — blocked by Udon compiler | `T[]` arrays, `DataList`, `DataDictionary` (`DataDictionary.EnsureCapacity` / custom capacities require SDK 3.10.4+); Editor-evaluated field generation is the limited exception above |
 | 2 | Use `async`/`await`, `System.Threading`, or coroutines | Udon is single-threaded; these features do not exist | `SendCustomEventDelayedSeconds()` |
 | 3 | Modify `[UdonSynced]` fields without owning the object | Change appears local but is **silently reverted** on next deserialization | `Networking.SetOwner()` before modify, then `RequestSerialization()` |
 | 4 | Forget `RequestSerialization()` after modifying synced fields (Manual sync) | State changes never leave the local client — no error, no warning | Always call `RequestSerialization()` after modifying `[UdonSynced]` fields |
 | 5 | Use `try`/`catch`/`finally`/`throw` | Compile error — exception handling is blocked | Defensive null checks + early return |
-| 6 | Access `Networking.LocalPlayer` in field initializers | Field initializers run at compile time — `LocalPlayer` is null | Initialize in `Start()` or use lazy-init guard |
+| 6 | Access `Networking.LocalPlayer` in field initializers | Editor-side initial value generation has no player or Udon runtime state | Initialize in `Start()` or use lazy-init guard |
 | 7 | Use `static` fields for per-instance state | Static fields are shared across all instances on the same client and are not synced | Instance fields with `[UdonSynced]` if sync is needed |
 | 8 | Call `RequestSerialization()` every frame in Manual sync | Floods the ~11 KB/s network budget, causing congestion for the entire world | Throttle to 1-10 Hz with change detection; check `Networking.IsClogged` |
-| 9 | Use LINQ (`.Where`, `.Select`, etc.) or lambda expressions | Compile error — not supported by Udon compiler | Manual `for` loops with named methods |
+| 9 | Use LINQ (`.Where`, `.Select`, etc.) or lambda expressions in Udon runtime code | Compile error — not supported by Udon compiler | Manual `for` loops with named methods; Editor-evaluated field generation is the limited exception above |
 | 10 | Use `Button.onClick.AddListener()` | Not available in Udon — no runtime delegate support | Configure `SendCustomEvent` via Inspector OnClick |
 | 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
 | 12 | Write to `[UdonSynced]` fields without an `IsOwner` guard | Non-owner writes are purely local and silently reverted on the next deserialization from the actual owner | `Networking.SetOwner` first if needed (locally immediate), then write under `IsOwner` and call `RequestSerialization()` |

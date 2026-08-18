@@ -414,9 +414,9 @@ if (-not (Test-UdonSharpBehaviourSource $FlatSource)) {
 # === Validation Rules ===
 $Warnings = @()
 
-# Check for blocked generics
+# Check for context-sensitive generic collections
 if ($FlatSource -match 'List\s*<|Dictionary\s*<|HashSet\s*<|Queue\s*<|Stack\s*<') {
-    $Warnings += "[UdonSharp] BLOCKED: Generic collections (List<T>, Dictionary<K,V>) not supported. Use arrays or DataList/DataDictionary."
+    $Warnings += "[UdonSharp] WARNING: Generic collections (List<T>, Dictionary<K,V>) detected. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime; generic collections are not supported in Udon runtime."
 }
 
 # Check for async/await
@@ -431,7 +431,7 @@ if ($MaskedSource -match '\btry\s*\{|\bcatch\s*\(|\bfinally\s*\{') {
 
 # Check for LINQ
 if ($MaskedSource -match '\.Where\(|\.Select\(|\.OrderBy\(|\.FirstOrDefault\(|\.Any\(|\.All\(') {
-    $Warnings += "[UdonSharp] BLOCKED: LINQ not supported. Use manual for loops."
+    $Warnings += "[UdonSharp] WARNING: LINQ not supported in Udon runtime. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime."
 }
 
 # Check for yield return (coroutines)
@@ -556,7 +556,7 @@ $LambdaCandidate = Remove-DeclarationExpressionBodies $FlatSource
 $HasLambda = $LambdaCandidate -match '\)\s*=>\s*(?:\{|[^;{]+;)' -or
     $LambdaCandidate -match ('(^|[=(,\s])' + $IdentifierPattern + '\s*=>\s*(?:\{|[^;{]+;)')
 if ($HasLambda) {
-    $Warnings += "[UdonSharp] WARNING: Lambda expression detected. Use named methods instead."
+    $Warnings += "[UdonSharp] WARNING: Lambda expression detected. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime; lambda expressions are not supported in Udon runtime."
 }
 
 function Get-SyncStats([string]$Source) {

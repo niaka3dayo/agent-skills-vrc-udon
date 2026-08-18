@@ -34,13 +34,13 @@
 
 <h2 id="about">簡介</h2>
 
-使用 **UdonSharp**（C# → Udon Assembly）進行 VRChat 世界開發時，存在嚴格的編譯限制，與標準 C# 有顯著差異。`List<T>`、`async/await`、`try/catch`、LINQ、lambda 等功能會導致**編譯錯誤**。
+使用 **UdonSharp**（C# → Udon Assembly）進行 VRChat 世界開發時，存在嚴格的編譯限制，與標準 C# 有顯著差異。在 Udon runtime 中執行的程式碼裡，`List<T>`、`async/await`、`try/catch`、LINQ、lambda 等功能會導致**編譯錯誤**。由 Editor 求值的欄位初始設定式屬於獨立的 C# 執行環境，可以使用其中部分功能來產生最終由 Udon 支援的欄位值。
 
 本專案為 AI 程式碼代理提供必要知識，使其從一開始就能生成正確的 UdonSharp 程式碼。
 
 | 問題 | 解決方案 |
 |------|----------|
-| AI 生成 `List<T>`、`async/await` 等不支援的語法 | 規則 + 掛鉤自動偵測並發出警告 |
+| AI 在 Udon runtime 程式碼中生成 `List<T>`、`async/await` 等不支援的語法 | 規則 + 掛鉤自動偵測並發出警告 |
 | 同步變數過度膨脹 | 決策樹 + 資料量預算 |
 | 不正確的網路模式 | 模式庫 + 反模式集 |
 | SDK 版本間功能差異 | 版本對照表與功能對應 |
@@ -130,7 +130,7 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 
 | 領域 | 內容 |
 |------|------|
-| **限制** | 被禁止的 C# 功能與替代方案（`List<T>` → `DataList`、`async` → `SendCustomEventDelayedSeconds`） |
+| **限制** | Udon runtime 中被禁止的 C# 功能與替代方案（`List<T>` → `DataList`、`async` → `SendCustomEventDelayedSeconds`），以及 Editor 欄位初始設定式的邊界 |
 | **網路** | 所有權模型、Manual/Continuous 同步、FieldChangeCallback、反模式 |
 | **NetworkCallable** | SDK 3.8.1+ 參數化網路事件（最多 8 個參數） |
 | **持久化** | SDK 3.7.4+ PlayerData/PlayerObject API |
@@ -192,7 +192,8 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 | 類別 | 檢查項目 | 嚴重程度 |
 |------|----------|----------|
-| 禁止功能 | `List<T>`、`async/await`、`try/catch`、LINQ、Coroutine、lambda | ERROR |
+| 依賴執行環境的功能 | `List<T>`、LINQ、lambda（在 Udon runtime 中禁止；由 Editor 求值的欄位初始設定式中可能有效） | WARNING |
+| Runtime 禁止功能 | `async/await`、`try/catch`、Coroutine | ERROR |
 | 禁止模式 | `AddListener()`、`StartCoroutine()` | ERROR |
 | 網路 | `[UdonSynced]` 缺少 `RequestSerialization()` | WARNING |
 | 網路 | `[UdonSynced]` 缺少 `Networking.SetOwner()` | WARNING |
