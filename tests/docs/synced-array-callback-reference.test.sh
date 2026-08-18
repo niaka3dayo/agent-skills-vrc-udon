@@ -86,13 +86,202 @@ require_text "$PATTERNS" 'one `RequestSerialization()` after all elements are up
 require_text "$PATTERNS" 'OnDeserialization runs after the serialized snapshot is applied'
 forbid_text "$PATTERNS" 'produces multiple `OnDeserialization` callbacks'
 
-# Never reintroduce FieldChangeCallback on a synced array declaration while
-# scalar callback examples remain allowed.
-if grep -RInE '\[UdonSynced[^]]*FieldChangeCallback[^]]*\][[:space:]]*[^\n;]*\[\]' "$UDON_DIR" \
-    --include='*.md' --include='*.cs'; then
-    echo 'ERROR: FieldChangeCallback is attached to a synced array declaration' >&2
-    exit 1
-fi
+# Check the executable shape of the canonical example and the two existing
+# array examples. Presence checks alone cannot detect a callback deleted from
+# a receiver, an owner apply deleted before serialization, or a request moved
+# into the element-update loop.
+python3 - "$RULES" "$NETWORKING" "$SYNC_EXAMPLES" "$PATTERNS" "$TROUBLESHOOTING" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+
+def fail(message: str) -> None:
+    print(f"ERROR: structural contract: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def csharp_blocks(path: Path) -> list[str]:
+    return re.findall(r"```csharp\s*\n(.*?)```", path.read_text(), re.S)
+
+
+def class_block(path: Path, class_name: str) -> str:
+    for block in csharp_blocks(path):
+        if f"class {class_name}" in block:
+            return block
+    fail(f"class {class_name} not found in {path}")
+
+
+def method_block(source: str, signature: str) -> str:
+    start = source.find(signature)
+    if start < 0:
+        fail(f"method {signature} not found")
+    brace = source.find("{", start)
+    if brace < 0:
+        fail(f"method {signature} has no body")
+    depth = 0
+    for index in range(brace, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[start : index + 1]
+    fail(f"method {signature} has an unterminated body")
+
+
+def balanced_block(source: str, opening: int) -> str:
+    depth = 0
+    for index in range(opening, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[opening : index + 1]
+    fail("unterminated nested block")
+
+
+def assert_order(label: str, source: str, *needles: str) -> None:
+    positions = []
+    for needle in needles:
+        position = source.find(needle)
+        if position < 0:
+            fail(f"{label} is missing {needle!r}")
+        positions.append(position)
+    if positions != sorted(positions):
+        fail(f"{label} is not ordered as {needles!r}")
+
+
+rules = Path(sys.argv[1])
+networking = Path(sys.argv[2])
+sync_examples = Path(sys.argv[3])
+patterns = Path(sys.argv[4])
+troubleshooting = Path(sys.argv[5])
+
+canonical = class_block(rules, "SyncedArrayExample")
+canonical_owner = method_block(canonical, "public override void Interact()")
+loop_start = re.search(r"\bfor\s*\([^{}\n]*?\)[ \t]*", canonical_owner)
+if not loop_start:
+    fail("canonical owner has no element update loop")
+loop_body_start = loop_start.end()
+while loop_body_start < len(canonical_owner) and canonical_owner[loop_body_start].isspace():
+    loop_body_start += 1
+if canonical_owner.startswith("{", loop_body_start):
+    loop = balanced_block(canonical_owner, loop_body_start)
+    loop_end = loop_body_start + len(loop)
+else:
+    newline = canonical_owner.find("\n", loop_body_start)
+    if newline < 0:
+        fail("canonical owner loop has no body line")
+    loop = canonical_owner[loop_body_start:newline]
+    loop_end = newline
+if "_syncedValues[i] =" not in loop:
+    fail("canonical owner loop does not update every element")
+if "RequestSerialization();" in loop:
+    fail("canonical owner requests serialization inside the element loop")
+assert_order(
+    "canonical owner",
+    canonical_owner[loop_end:],
+    "ApplyValues();",
+    "RequestSerialization();",
+)
+if canonical_owner.count("RequestSerialization();") != 1:
+    fail("canonical owner must request serialization exactly once")
+canonical_receiver = method_block(canonical, "public override void OnDeserialization()")
+if "ApplyValues();" not in canonical_receiver:
+    fail("canonical receiver does not apply from OnDeserialization")
+
+networking_class = class_block(networking, "SyncedArrayReceiver")
+networking_setter = method_block(networking_class, "public void _SetValues(int[] values)")
+assert_order(
+    "networking _SetValues null guard",
+    networking_setter,
+    "if (values == null) return;",
+    "if (!Networking.IsOwner(gameObject))",
+    "_syncedValues = values;",
+)
+troubleshooting_source = "\n".join(csharp_blocks(troubleshooting))
+troubleshooting_setter = method_block(
+    troubleshooting_source,
+    "public void _SetValues(int[] values)",
+)
+assert_order(
+    "troubleshooting _SetValues null guard",
+    troubleshooting_setter,
+    "if (values == null) return;",
+    "if (!Networking.IsOwner(gameObject))",
+    "_syncedValues = values;",
+)
+
+vote = class_block(sync_examples, "VoteSystemCore")
+vote_owner = method_block(vote, "public void _VoteToYes()")
+assert_order(
+    "vote owner",
+    vote_owner,
+    "SyncedVoterPlayerIds[SyncedVoterCount] = caller.playerId;",
+    "SyncedVoterCount++;",
+    "++SyncedYesCount;",
+    "RequestSerialization();",
+    "RefreshCount();",
+)
+vote_receiver = method_block(vote, "public override void OnDeserialization()")
+if "RefreshCount();" not in vote_receiver:
+    fail("vote receiver no longer refreshes from OnDeserialization")
+
+playlist = class_block(patterns, "SyncedPlaylist")
+playlist_owner = method_block(playlist, "public void SetTitles(string[] titles)")
+assert_order(
+    "playlist owner",
+    playlist_owner,
+    "_syncedTitles = JoinForSync(_titles);",
+    "OnPlaylistUpdated();",
+    "RequestSerialization();",
+)
+if playlist_owner.count("RequestSerialization();") != 1:
+    fail("playlist owner must request serialization exactly once")
+playlist_receiver = method_block(playlist, "public override void OnDeserialization()")
+assert_order(
+    "playlist receiver",
+    playlist_receiver,
+    "_titles = SplitFromSync(_syncedTitles);",
+    "OnPlaylistUpdated();",
+)
+
+# This scanner deliberately spans newlines across consecutive attributes and
+# the array declaration. A one-line grep misses the mutation it is intended
+# to reject. Keep one malformed multiline fixture as a self-test of the
+# scanner itself, then scan every active Markdown C# block in the skill.
+array_declaration = re.compile(
+    r"(?P<attributes>(?:\s*\[[^\]]+\]\s*)+)"
+    r"(?P<declaration>(?:public|private|protected|internal)?\s*"
+    r"[A-Za-z_][A-Za-z0-9_<>.,?]*\s*\[\s*\]\s+"
+    r"[A-Za-z_][A-Za-z0-9_]*\s*(?:=[^;]*)?;)",
+    re.S,
+)
+
+
+def forbidden_array_declarations(source: str) -> list[str]:
+    return [
+        match.group(0)
+        for match in array_declaration.finditer(source)
+        if "UdonSynced" in match.group("attributes")
+        and "FieldChangeCallback" in match.group("attributes")
+    ]
+
+
+bad_fixture = """[UdonSynced,\n    FieldChangeCallback(nameof(Values))]\nprivate int[] _values;"""
+if not forbidden_array_declarations(bad_fixture):
+    fail("multiline array callback scanner self-test did not detect its fixture")
+
+skill_root = rules.parents[1]
+for path in skill_root.rglob("*.md"):
+    for block in csharp_blocks(path):
+        if forbidden_array_declarations(block):
+            fail(f"FieldChangeCallback is attached to a synced array declaration in {path}")
+
+print("PASS: canonical, vote, playlist, null-guard, and multiline-array structural contracts")
+PY
 
 # Regression-check the existing contributor census and all five README copies;
 # this Issue is already represented there and should not cause doc churn.

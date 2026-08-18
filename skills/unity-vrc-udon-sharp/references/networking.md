@@ -738,6 +738,8 @@ public class SyncedArrayReceiver : UdonSharpBehaviour
 
     public void _SetValues(int[] values)
     {
+        if (values == null) return;
+
         if (!Networking.IsOwner(gameObject))
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
 

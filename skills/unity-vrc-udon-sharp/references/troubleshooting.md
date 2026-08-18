@@ -472,6 +472,8 @@ Use one idempotent `ApplyValues()` method on both paths:
 
 public void _SetValues(int[] values)
 {
+    if (values == null) return;
+
     if (!Networking.IsOwner(gameObject))
         Networking.SetOwner(Networking.LocalPlayer, gameObject);
 
