@@ -34,13 +34,13 @@
 
 <h2 id="about">About</h2>
 
-VRChat world development with **UdonSharp** (C# &rarr; Udon Assembly) has strict compile constraints that differ significantly from standard C#. Features like `List<T>`, `async/await`, `try/catch`, LINQ, and lambdas cause **compile errors**.
+VRChat world development with **UdonSharp** (C# &rarr; Udon Assembly) has strict compile constraints that differ significantly from standard C#. In Udon runtime code, features like `List<T>`, `async/await`, `try/catch`, LINQ, and lambdas cause **compile errors**. Editor-evaluated field initializers are a separate C# context and may use some of these features to generate a final field value that Udon supports.
 
 This repository provides AI coding agents with the knowledge to generate correct UdonSharp code from the start.
 
 | Problem | Solution |
 |---------|----------|
-| AI generates `List<T>`, `async/await`, etc. | Rules + hooks auto-detect and warn |
+| AI generates Udon-incompatible `List<T>`, `async/await`, etc. in runtime code | Rules + hooks auto-detect and warn |
 | Sync variable bloat | Decision tree + data budget |
 | Incorrect networking patterns | Pattern library + anti-patterns |
 | SDK version feature differences | Version table with feature mapping |
@@ -130,7 +130,7 @@ UdonSharp scripting core skill. Covers compile constraints, networking, events, 
 
 | Area | Content |
 |------|---------|
-| **Constraints** | Blocked C# features and alternatives (`List<T>` &rarr; `DataList`, `async` &rarr; `SendCustomEventDelayedSeconds`) |
+| **Constraints** | C# features blocked in Udon runtime, their alternatives (`List<T>` &rarr; `DataList`, `async` &rarr; `SendCustomEventDelayedSeconds`), and the Editor-evaluated initializer boundary |
 | **Networking** | Ownership model, Manual/Continuous sync, FieldChangeCallback, anti-patterns |
 | **NetworkCallable** | SDK 3.8.1+ parameterized network events (up to 8 args) |
 | **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
@@ -192,7 +192,8 @@ PostToolUse hooks that auto-run when `.cs` files are edited.
 
 | Category | Check | Severity |
 |----------|-------|----------|
-| Blocked Features | `List<T>`, `async/await`, `try/catch`, LINQ, coroutines, lambdas | ERROR |
+| Context-sensitive Features | `List<T>`, LINQ, lambdas (blocked in Udon runtime; may be valid in Editor-evaluated field initializers) | WARNING |
+| Blocked Runtime Features | `async/await`, `try/catch`, coroutines | ERROR |
 | Blocked Patterns | `AddListener()`, `StartCoroutine()` | ERROR |
 | Networking | `[UdonSynced]` without `RequestSerialization()` | WARNING |
 | Networking | `[UdonSynced]` without `Networking.SetOwner()` | WARNING |

@@ -31,13 +31,14 @@ UdonSharpException: UdonSharp does not currently support [feature]
 
 ```
 
-**Common unsupported features:**
+**Common features unsupported in Udon runtime code:**
+
 | Feature | Alternative |
 |---------|-------------|
 | `async/await` | `SendCustomEventDelayedSeconds()` |
 | `yield return` / coroutines | `SendCustomEventDelayedSeconds()` |
-| Generics `List<T>` | Arrays `T[]` or `DataList` |
-| LINQ | Manual loops |
+| Generics `List<T>` | Arrays `T[]` or `DataList`; an Editor-evaluated field initializer may use `List<T>` only to generate a final Udon-supported value |
+| LINQ / lambdas | Manual loops / named methods; the same limited field initializer exception applies |
 | `dynamic` | Explicit types |
 | Multi-dimensional arrays `T[,]` | Jagged arrays `T[][]` |
 | Delegates / Events | `SendCustomEvent()` |
@@ -68,7 +69,7 @@ CS0246: The type or namespace name 'List' could not be found
 
 ```csharp
 
-// Wrong - List<T> not supported
+// Wrong in Udon runtime code - List<T> is not supported there
 using System.Collections.Generic;
 List<int> numbers = new List<int>();
 
@@ -1582,6 +1583,8 @@ public int maxHealth = 100; // Serialized value from Inspector wins
 
 **Solution:**
 
+An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime.
+
 ```csharp
 
 // Use Start() or explicit initialization
@@ -1596,6 +1599,10 @@ void Start()
 }
 
 ```
+
+Use an initializer for pure initial value generation when the final field type and value are supported by Udon. LINQ, lambdas, and a same-behaviour static helper using `List<T>` are allowed only in that Editor-side evaluation. If the value depends on `Networking.LocalPlayer`, a scene reference, or other runtime state, assign it in `Start()` or lazy initialization instead. Constructors and field initializers can run on a loading thread, so they must not call main-thread-only Unity APIs such as `FindObjectsByType`.
+
+The validator reports `List<T>`, LINQ, and lambdas as warnings in both initializer and Udon runtime code because it intentionally does not parse execution context or call graphs. Verify the context: the same feature or helper still fails when called from `Start()`, `Interact()`, or another Udon runtime path.
 
 ---
 

@@ -15,6 +15,8 @@ HOOK="$REPO_ROOT/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh"
 SHARED_FIXTURES="$REPO_ROOT/tests/hooks/fixtures/validate-udonsharp"
 SHARED_RULES="$SHARED_FIXTURES/rules.tsv"
 SHARED_CASES="$SHARED_FIXTURES/cases.tsv"
+CONTEXT_WARNINGS="$SHARED_FIXTURES/context-warnings.txt"
+HARD_BLOCKER_WARNINGS="$SHARED_FIXTURES/runtime-hard-blockers.txt"
 TEMPLATE_CASES="$SHARED_FIXTURES/template-cases.tsv"
 TEMPLATE_ROOT="$REPO_ROOT/skills/unity-vrc-udon-sharp/assets/templates"
 TMPROOT=$(mktemp -d)
@@ -289,6 +291,32 @@ run_shared_parity_matrix() {
             echo "  expected: ${expected:--}"
             echo "  actual:   ${actual:--}"
             FAIL=$((FAIL + 1))
+        fi
+
+        if [[ "$case_id" == context-* ]]; then
+            local context_actual="$TMPROOT/shared-$case_id-context.err"
+            grep -F '[UdonSharp]' "$stderr_path" > "$context_actual" || true
+            if cmp -s "$CONTEXT_WARNINGS" "$context_actual"; then
+                echo "PASS [shared case $case_id] severity and text are exact"
+                PASS=$((PASS + 1))
+            else
+                echo "FAIL [shared case $case_id] severity or text mismatch"
+                diff -u "$CONTEXT_WARNINGS" "$context_actual" || true
+                FAIL=$((FAIL + 1))
+            fi
+        fi
+
+        if [[ "$case_id" == runtime-hard-blockers-* ]]; then
+            local blocker_actual="$TMPROOT/shared-$case_id-blockers.err"
+            grep -F '[UdonSharp]' "$stderr_path" > "$blocker_actual" || true
+            if cmp -s "$HARD_BLOCKER_WARNINGS" "$blocker_actual"; then
+                echo "PASS [shared case $case_id] hard blockers stay exact"
+                PASS=$((PASS + 1))
+            else
+                echo "FAIL [shared case $case_id] hard blocker severity or text mismatch"
+                diff -u "$HARD_BLOCKER_WARNINGS" "$blocker_actual" || true
+                FAIL=$((FAIL + 1))
+            fi
         fi
     done < "$SHARED_CASES"
 

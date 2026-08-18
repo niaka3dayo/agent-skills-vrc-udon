@@ -34,13 +34,13 @@
 
 <h2 id="about">소개</h2>
 
-**UdonSharp**(C# → Udon Assembly)을 사용한 VRChat 월드 개발에는 일반 C#과 크게 다른 엄격한 컴파일 제약이 있습니다. `List<T>`, `async/await`, `try/catch`, LINQ, 람다 등의 기능을 사용하면 **컴파일 오류**가 발생합니다.
+**UdonSharp**(C# → Udon Assembly)을 사용한 VRChat 월드 개발에는 일반 C#과 크게 다른 엄격한 컴파일 제약이 있습니다. Udon runtime에서 실행되는 코드에서는 `List<T>`, `async/await`, `try/catch`, LINQ, 람다 등의 기능을 사용하면 **컴파일 오류**가 발생합니다. Editor에서 평가되는 필드 초기화는 별도의 C# 실행 컨텍스트이므로, 최종적으로 Udon이 보관할 수 있는 필드 값을 생성하는 데 일부 기능을 사용할 수 있습니다.
 
 이 리포지토리는 AI 코딩 에이전트가 처음부터 올바른 UdonSharp 코드를 생성할 수 있도록 필요한 지식을 제공합니다.
 
 | 문제 | 해결 방안 |
 |------|-----------|
-| AI가 `List<T>`, `async/await` 등을 생성함 | 규칙 + 훅이 자동 감지 및 경고 |
+| AI가 Udon runtime 코드에 `List<T>`, `async/await` 등을 생성함 | 규칙 + 훅이 자동 감지 및 경고 |
 | 동기화 변수 비대화 | 의사 결정 트리 + 데이터 예산 |
 | 잘못된 네트워킹 패턴 | 패턴 라이브러리 + 안티패턴 |
 | SDK 버전별 기능 차이 | 기능 매핑이 포함된 버전 테이블 |
@@ -130,7 +130,7 @@ UdonSharp 스크립팅 핵심 스킬. 컴파일 제약, 네트워킹, 이벤트,
 
 | 영역 | 내용 |
 |------|------|
-| **제약** | 차단된 C# 기능과 대안 (`List<T>` → `DataList`, `async` → `SendCustomEventDelayedSeconds`) |
+| **제약** | Udon runtime에서 차단된 C# 기능과 대안 (`List<T>` → `DataList`, `async` → `SendCustomEventDelayedSeconds`), Editor 필드 초기화 경계 |
 | **네트워킹** | Ownership 모델, Manual/Continuous 동기화, FieldChangeCallback, 안티패턴 |
 | **NetworkCallable** | SDK 3.8.1+ 매개변수화된 네트워크 이벤트 (최대 8개 인수) |
 | **Persistence** | SDK 3.7.4+ PlayerData/PlayerObject API |
@@ -192,7 +192,8 @@ Q3: 지속적으로 변하나요? (위치/회전)
 
 | 카테고리 | 검사 항목 | 심각도 |
 |----------|-----------|--------|
-| 차단된 기능 | `List<T>`, `async/await`, `try/catch`, LINQ, 코루틴, 람다 | ERROR |
+| 컨텍스트 의존 기능 | `List<T>`, LINQ, 람다 (Udon runtime에서는 차단되지만 Editor 필드 초기화에서는 유효할 수 있음) | WARNING |
+| Runtime 차단 기능 | `async/await`, `try/catch`, 코루틴 | ERROR |
 | 차단된 패턴 | `AddListener()`, `StartCoroutine()` | ERROR |
 | 네트워킹 | `[UdonSynced]` 사용 시 `RequestSerialization()` 누락 | WARNING |
 | 네트워킹 | `[UdonSynced]` 사용 시 `Networking.SetOwner()` 누락 | WARNING |

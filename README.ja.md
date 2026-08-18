@@ -34,13 +34,13 @@
 
 <h2 id="about">概要</h2>
 
-**UdonSharp**（C# &rarr; Udon Assembly）を使ったVRChatワールド開発には、通常のC#とは大きく異なる厳格なコンパイル制約があります。`List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などは**コンパイルエラー**になります。
+**UdonSharp**（C# &rarr; Udon Assembly）を使ったVRChatワールド開発には、通常のC#とは大きく異なる厳格なコンパイル制約があります。Udon runtimeで実行されるコードでは、`List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などは**コンパイルエラー**になります。一方、Editorで評価されるフィールド初期化子は別のC#実行コンテキストであり、最終的にUdonが保持できるフィールド値を生成するために一部の機能を使用できます。
 
 このリポジトリは、AIコーディングエージェントが最初から正しいUdonSharpコードを生成できるよう、必要な知識を提供します。
 
 | 問題 | 解決策 |
 |---------|----------|
-| AIが `List<T>`、`async/await` 等を生成してしまう | ルール + フックによる自動検出と警告 |
+| AIがUdon runtimeコードに `List<T>`、`async/await` 等を生成してしまう | ルール + フックによる自動検出と警告 |
 | 同期変数の肥大化 | デシジョンツリー + データバジェット |
 | 誤ったネットワーキングパターン | パターンライブラリ + アンチパターン集 |
 | SDKバージョンごとの機能差異 | バージョンテーブルと機能マッピング |
@@ -130,7 +130,7 @@ UdonSharpスクリプティングのコアスキルです。コンパイル制�
 
 | 分野 | 内容 |
 |------|---------|
-| **制約** | 使用不可なC#機能と代替手段（`List<T>` &rarr; `DataList`、`async` &rarr; `SendCustomEventDelayedSeconds`） |
+| **制約** | Udon runtimeで使用不可なC#機能と代替手段（`List<T>` &rarr; `DataList`、`async` &rarr; `SendCustomEventDelayedSeconds`）、Editorで評価される初期化子との境界 |
 | **ネットワーキング** | オーナーシップモデル、Manual/Continuousシンク、FieldChangeCallback、アンチパターン |
 | **NetworkCallable** | SDK 3.8.1以降のパラメータ付きネットワークイベント（最大8引数） |
 | **パーシスタンス** | SDK 3.7.4以降のPlayerData/PlayerObject API |
@@ -192,7 +192,8 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 | カテゴリ | チェック内容 | 重大度 |
 |----------|-------|----------|
-| 使用禁止機能 | `List<T>`、`async/await`、`try/catch`、LINQ、コルーチン、ラムダ式 | ERROR |
+| 文脈依存の機能 | `List<T>`、LINQ、ラムダ式（Udon runtimeでは使用不可。Editorで評価されるフィールド初期化子では有効な場合あり） | WARNING |
+| Runtime使用禁止機能 | `async/await`、`try/catch`、コルーチン | ERROR |
 | 使用禁止パターン | `AddListener()`、`StartCoroutine()` | ERROR |
 | ネットワーキング | `RequestSerialization()` なしの `[UdonSynced]` | WARNING |
 | ネットワーキング | `Networking.SetOwner()` なしの `[UdonSynced]` | WARNING |
