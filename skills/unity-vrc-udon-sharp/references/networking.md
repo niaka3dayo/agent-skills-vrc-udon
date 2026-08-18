@@ -530,7 +530,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 - **On remote clients:** the new ownership becomes visible after VRChat propagates the change. Each remote client's `OnOwnershipTransferred` fires when the propagation arrives.
 - **No client-side arbitration:** when two clients call `SetOwner` simultaneously, both succeed locally and may write synced variables; VRChat resolves the durable owner by network arrival order. The loser's write is overwritten when the winner's serialization arrives. This is by design — see [networking-antipatterns.md §1](networking-antipatterns.md#1-ownership-race-condition) for the recommended `IsOwner`-guarded pattern, and [§"Ownership Arbitration with OnOwnershipRequest"](#ownership-arbitration-with-onownershiprequest) below for owner-side protection during critical actions.
 
-> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; current SDKs (3.7.1+, this skill's coverage range) are locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
+> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; the active target (SDK 3.10.4) is locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
 
 ### Owner Leave and Ownership Cascade
 

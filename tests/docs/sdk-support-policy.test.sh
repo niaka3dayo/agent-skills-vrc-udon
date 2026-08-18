@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+CORPUS_FIXTURE="$ROOT_DIR/tests/docs/fixtures/sdk-support-policy-corpus.json"
 
 fail() {
     echo "ERROR: $*" >&2
@@ -37,6 +38,38 @@ README_FILES=(
     "$ROOT_DIR/README.zh-TW.md"
     "$ROOT_DIR/README.ko.md"
 )
+
+# Keep the tracked literal census and its classifications alongside the
+# contract. The fixture deliberately excludes this test file's negative
+# examples and immutable CHANGELOG entries from the stale-declaration scan.
+[ -f "$CORPUS_FIXTURE" ] || fail "missing SDK support-policy corpus census: $CORPUS_FIXTURE"
+python3 - "$CORPUS_FIXTURE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+scan = data["scan"]
+files = scan["files"]
+assert scan["literal"] == "3.7.1"
+assert scan["occurrences"] == sum(item["occurrences"] for item in files) == 61
+assert scan["files_with_literal"] == len(files) == 28
+assert sum(data["classification_counts"].values()) == scan["occurrences"]
+stale = data["active_support_declarations"]["stale_active_declaration_scan"]
+assert stale["matches"] == []
+assert stale["result"] == "no stale active-support declarations"
+assert {item["path"] for item in data["test_contracts"]} == {
+    "tests/docs/sdk-support-policy.test.sh",
+    "tests/docs/community-contributors.test.sh",
+    "tests/docs/network-event-hardening.test.sh",
+}
+PY
+
+# Re-run the stale declaration scan against the live tracked corpus. The
+# changelog and this test's negative fixtures intentionally retain old release
+# wording as historical/test evidence.
+STALE_ACTIVE_SCAN="$(git -C "$ROOT_DIR" grep -n -E '(^|[^[:alnum:]])(Supported SDK Versions|SDK Coverage|Covered versions)[[:space:]]*[:(][^[:cntrl:]]*3\.7\.1|this skill.?s coverage range|this skill targets SDK[[:space:]]+3\.7\.1\+|VRChat_SDK-3\.7\.1--3\.10\.4|SDK[[:space:]]+3\.7\.1[[:space:]]*(-|–)[[:space:]]*3\.10\.4' -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' || true)"
+[ -z "$STALE_ACTIVE_SCAN" ] || fail "stale active-support declaration found:\n$STALE_ACTIVE_SCAN"
 
 # The repository-level contract must name the one actively verified target and
 # distinguish it from historical feature-introduction entries. This wording is
