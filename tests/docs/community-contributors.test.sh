@@ -5,9 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 README_FILES=(
     "$ROOT_DIR/README.md"
     "$ROOT_DIR/README.ja.md"
+    "$ROOT_DIR/README.ko.md"
     "$ROOT_DIR/README.zh-CN.md"
     "$ROOT_DIR/README.zh-TW.md"
-    "$ROOT_DIR/README.ko.md"
 )
 
 fail() {
@@ -18,9 +18,9 @@ fail() {
 CENSUS="$ROOT_DIR/tests/docs/fixtures/community-contributor-census.json"
 [ -f "$CENSUS" ] || fail "missing contributor census evidence: $CENSUS"
 
-# The census is the sole source of truth. Each README is compared against the
-# fixture's contributor handles and per-contributor Issue set, rather than
-# keeping a second hard-coded list in this test.
+# The census is the sole source of truth. The README contract intentionally
+# contains only stable profile links and avatar attributes; Issue evidence stays
+# in the fixture for auditability rather than being duplicated in each README.
 python3 - "$CENSUS" "${README_FILES[@]}" <<'PY'
 import json
 import re
@@ -39,82 +39,139 @@ excluded_handles = {
     "dependabot",
     "renovate",
 }
-expected_by_handle = {
-    contributor["handle"]: sorted({int(issue) for issue in contributor["issues"]})
+expected_handles = [contributor["handle"] for contributor in contributors]
+assert expected_handles
+assert len(expected_handles) == len(set(expected_handles)), (
+    "the census contains duplicate contributor handles"
+)
+assert not excluded_handles.intersection(expected_handles)
+assert all(re.fullmatch(r"[A-Za-z0-9_-]+", handle) for handle in expected_handles)
+
+# Keep the census integrity checks here so the contract cannot silently become
+# detached from the evidence that selected the eight reporters.
+expected_issues = sorted(
+    {
+        int(issue)
+        for contributor in contributors
+        for issue in contributor["issues"]
+    }
+)
+all_fixture_issues = [
+    issue
     for contributor in contributors
-}
-assert len(expected_by_handle) == len(contributors)
-assert not excluded_handles.intersection(expected_by_handle)
-expected_issues = sorted({issue for issues in expected_by_handle.values() for issue in issues})
-all_fixture_issues = [issue for contributor in contributors for issue in contributor["issues"]]
+    for issue in contributor["issues"]
+]
 assert classification["issues_scanned"] >= 1
-assert classification["selected_reporters"] == len(expected_by_handle) > 0
+assert classification["selected_reporters"] == len(expected_handles)
 assert classification["selected_issues"] == len(expected_issues) > 0
 assert len(all_fixture_issues) == len(set(all_fixture_issues)) == len(expected_issues)
 assert classification["duplicate_invalid_wontfix_spam_issues_selected"] == 0
 
-profile_re = re.compile(r"https://github\.com/([A-Za-z0-9_-]+)\)")
-contributor_line_re = re.compile(
-    r"^- \[@([A-Za-z0-9_-]+)\]\(https://github\.com/([A-Za-z0-9_-]+)\)",
-    re.MULTILINE,
+start_marker = "<!-- community-contributors:start -->"
+end_marker = "<!-- community-contributors:end -->"
+heading_re = re.compile(
+    r'^<h2 id="community-contributors">[^\n]*</h2>$', re.MULTILINE
 )
-issue_re = re.compile(
-    r"https://github\.com/niaka3dayo/agent-skills-vrc-udon/issues/(\d+)"
+entry_re = re.compile(
+    r'^<a href="https://github\.com/(?P<href>[A-Za-z0-9_-]+)" '
+    r'title="@(?P<title>[A-Za-z0-9_-]+)"><img '
+    r'src="https://github\.com/(?P<src>[A-Za-z0-9_-]+)\.png\?size=64" '
+    r'width="(?P<width>64)" height="(?P<height>64)" '
+    r'alt="@(?P<alt>[A-Za-z0-9_-]+)"></a>$'
+)
+issue_url_re = re.compile(
+    r"https://github\.com/[^\s)\"]+/issues(?:[/#]|$)"
+)
+profile_href_re = re.compile(
+    r'href="https://github\.com/([A-Za-z0-9_-]+)"'
+)
+legacy_profile_list_re = re.compile(
+    r"(?m)^-\s+\["
 )
 
+canonical_block = None
 for path in readme_paths:
     text = path.read_text(encoding="utf-8")
-    heading = '<h2 id="community-contributors">'
-    start = text.find(heading)
-    assert start >= 0, f"{path} is missing the community-contributors section"
-    body_start = start + len(heading)
-    next_heading = re.search(r"^<h2[ >]", text[body_start:], re.MULTILINE)
-    assert next_heading, f"{path} has an unterminated community-contributors section"
-    body = text[body_start : body_start + next_heading.start()]
-    assert body.strip(), f"{path} has an empty community-contributors section"
+    assert text.count(start_marker) == 1, (
+        f"{path} must contain exactly one community-contributors start marker"
+    )
+    assert text.count(end_marker) == 1, (
+        f"{path} must contain exactly one community-contributors end marker"
+    )
 
-    profile_matches = profile_re.findall(body)
-    profile_handles = set(profile_matches)
-    expected_handles = set(expected_by_handle)
-    assert len(profile_matches) == len(profile_handles) == len(expected_handles), (
-        f"{path} has {len(profile_handles)} unique contributor profiles; "
+    heading_matches = list(heading_re.finditer(text))
+    assert len(heading_matches) == 1, (
+        f"{path} must contain exactly one community-contributors heading"
+    )
+    heading = heading_matches[0]
+    start = text.index(start_marker)
+    end = text.index(end_marker)
+    assert heading.end() < start < end, (
+        f"{path} has an invalid heading/marker order"
+    )
+
+    tail_start = end + len(end_marker)
+    next_heading = re.search(r"^<h2[ >]", text[tail_start:], re.MULTILINE)
+    assert next_heading, f"{path} has no heading after community-contributors section"
+    section_end = tail_start + next_heading.start()
+    tail = text[tail_start:section_end]
+    assert tail.strip() == "---", (
+        f"{path} must contain only the separator after the contributor marker"
+    )
+
+    intro = text[heading.end() : start]
+    assert intro.strip(), f"{path} is missing its localized thank-you text"
+    section = text[heading.start() : section_end]
+    assert not issue_url_re.search(section), (
+        f"{path} contains an Issue URL in the contributor section"
+    )
+    assert not legacy_profile_list_re.search(section), (
+        f"{path} contains a legacy Markdown contributor list"
+    )
+    assert profile_href_re.findall(section) == expected_handles, (
+        f"{path} has an extra, missing, or out-of-order profile href in the "
+        "contributor section"
+    )
+
+    block = text[start + len(start_marker) : end]
+    block_match = re.fullmatch(r"\n<p>\n(?P<entries>.+)\n</p>\n", block, re.DOTALL)
+    assert block_match, (
+        f"{path} must contain one newline-delimited <p> avatar block between markers"
+    )
+    entry_lines = block_match.group("entries").split("\n")
+    assert len(entry_lines) == len(expected_handles), (
+        f"{path} has {len(entry_lines)} avatar lines; "
         f"expected {len(expected_handles)}"
     )
-    assert profile_handles == expected_handles, (
-        f"{path} contributor profiles differ from the census: "
-        f"actual={sorted(profile_handles)} expected={sorted(expected_handles)}"
-    )
-    assert not excluded_handles.intersection(profile_handles), (
-        f"{path} credits a maintainer or bot in the contributor section"
-    )
 
-    actual_by_handle = {}
-    for match in contributor_line_re.finditer(body):
-        display_handle, linked_handle = match.groups()
-        assert display_handle == linked_handle, (
-            f"{path} has a contributor profile/link mismatch for @{display_handle}"
+    actual_handles = []
+    for line_number, line in enumerate(entry_lines, start=1):
+        match = entry_re.fullmatch(line)
+        assert match, (
+            f"{path} avatar line {line_number} does not use the exact "
+            "profile/avatar contract"
         )
-        assert display_handle not in actual_by_handle, (
-            f"{path} lists @{display_handle} more than once"
-        )
-        line_end = body.find("\n", match.start())
-        line = body[match.start() : line_end if line_end >= 0 else len(body)]
-        actual_by_handle[display_handle] = sorted(
-            {int(issue) for issue in issue_re.findall(line)}
-        )
-    assert actual_by_handle == expected_by_handle, (
-        f"{path} per-contributor Issue links differ from the census: "
-        f"actual={actual_by_handle} expected={expected_by_handle}"
-    )
+        attributes = match.groupdict()
+        handle = attributes["href"]
+        assert attributes["title"] == handle
+        assert attributes["src"] == handle
+        assert attributes["alt"] == handle
+        actual_handles.append(handle)
 
-    actual_issues = sorted({int(issue) for issue in issue_re.findall(body)})
-    assert actual_issues == expected_issues, (
-        f"{path} aggregate Issue links differ from the census: "
-        f"actual={actual_issues} expected={expected_issues}"
+    assert actual_handles == expected_handles, (
+        f"{path} contributor handle order differs from the census: "
+        f"actual={actual_handles} expected={expected_handles}"
     )
+    assert len(actual_handles) == len(set(actual_handles)), (
+        f"{path} contains duplicate contributor profiles"
+    )
+    assert canonical_block is None or block == canonical_block, (
+        f"{path} contributor avatar block differs from the other READMEs"
+    )
+    canonical_block = block
 
 print(
-    "PASS: community contributor profiles, per-contributor Issues, and "
-    "aggregate Issue census are exact across all five READMEs"
+    "PASS: exact fixture-ordered profile-linked avatar blocks, markers, "
+    "attributes, and contributor-section exclusions across all five READMEs"
 )
 PY

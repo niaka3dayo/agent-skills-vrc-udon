@@ -251,14 +251,18 @@ v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定�
 
 具体的なIssueを立て、検証や修正方針まで一緒に詰めてくださった皆さんに感謝します。
 
-- [@KatanoShingo](https://github.com/KatanoShingo) — GameObject検索の代替、パフォーマンスの使い分け、疑似複数部屋のパターン、イベントの記載、ネットワークイベントの認可 ([#181](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/181), [#182](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/182), [#189](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/189), [#199](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/199), [#213](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/213), [#302](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/302))
-- [@Guribo](https://github.com/Guribo) — オーナーシップ移譲のタイミングとネットワークのアンチパターン検証 ([#171](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/171))
-- [@haru0416-dev](https://github.com/haru0416-dev) — インストーラーの更新整合性とjqなし環境での検証 ([#164](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/164), [#165](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/165))
-- [@Yodokoro](https://github.com/Yodokoro) — レイヤーの挙動、NetworkCallableの案内、空間音声の設定 ([#267](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/267), [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286), [#297](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/297))
-- [@tetradice](https://github.com/tetradice) — Agent Skillのメタデータ互換性 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
-- [@owlboy](https://github.com/owlboy) — Steam Audioのドキュメント修正 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
-- [@nomlasvrc](https://github.com/nomlasvrc) — 非推奨のVRCInstantiateの整理 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
-- [@ureishi](https://github.com/ureishi) — UdonSharpのフィールド・シリアライズ挙動、SDK 3.10.4の知識、配列コールバックの注意点 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
+<!-- community-contributors:start -->
+<p>
+<a href="https://github.com/KatanoShingo" title="@KatanoShingo"><img src="https://github.com/KatanoShingo.png?size=64" width="64" height="64" alt="@KatanoShingo"></a>
+<a href="https://github.com/Guribo" title="@Guribo"><img src="https://github.com/Guribo.png?size=64" width="64" height="64" alt="@Guribo"></a>
+<a href="https://github.com/haru0416-dev" title="@haru0416-dev"><img src="https://github.com/haru0416-dev.png?size=64" width="64" height="64" alt="@haru0416-dev"></a>
+<a href="https://github.com/Yodokoro" title="@Yodokoro"><img src="https://github.com/Yodokoro.png?size=64" width="64" height="64" alt="@Yodokoro"></a>
+<a href="https://github.com/tetradice" title="@tetradice"><img src="https://github.com/tetradice.png?size=64" width="64" height="64" alt="@tetradice"></a>
+<a href="https://github.com/owlboy" title="@owlboy"><img src="https://github.com/owlboy.png?size=64" width="64" height="64" alt="@owlboy"></a>
+<a href="https://github.com/nomlasvrc" title="@nomlasvrc"><img src="https://github.com/nomlasvrc.png?size=64" width="64" height="64" alt="@nomlasvrc"></a>
+<a href="https://github.com/ureishi" title="@ureishi"><img src="https://github.com/ureishi.png?size=64" width="64" height="64" alt="@ureishi"></a>
+</p>
+<!-- community-contributors:end -->
 
 ---
 

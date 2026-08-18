@@ -250,14 +250,18 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 
 感謝這些提出具體 Issue、參與驗證並協助完善修正方案的貢獻者。
 
-- [@KatanoShingo](https://github.com/KatanoShingo) — GameObject 搜尋替代方案、效能取捨、可重複使用的房間模式、事件文件涵蓋與網路事件授權 ([#181](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/181), [#182](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/182), [#189](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/189), [#199](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/199), [#213](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/213), [#302](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/302))
-- [@Guribo](https://github.com/Guribo) — 所有權轉移時機與網路反模式驗證 ([#171](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/171))
-- [@haru0416-dev](https://github.com/haru0416-dev) — 安裝器升級一致性與無 jq 環境的安全驗證 ([#164](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/164), [#165](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/165))
-- [@Yodokoro](https://github.com/Yodokoro) — 圖層行為、NetworkCallable 指引與空間音訊設定 ([#267](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/267), [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286), [#297](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/297))
-- [@tetradice](https://github.com/tetradice) — Agent Skill 中繼資料相容性 ([#281](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/281))
-- [@owlboy](https://github.com/owlboy) — Steam Audio 文件修正 ([#324](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/324))
-- [@nomlasvrc](https://github.com/nomlasvrc) — 移除已棄用的 VRCInstantiate 用法 ([#333](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/333))
-- [@ureishi](https://github.com/ureishi) — UdonSharp 欄位與序列化行為、SDK 3.10.4 知識，以及陣列回呼的注意事項 ([#337](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/337), [#338](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/338), [#341](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/341), [#342](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/342), [#344](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/344))
+<!-- community-contributors:start -->
+<p>
+<a href="https://github.com/KatanoShingo" title="@KatanoShingo"><img src="https://github.com/KatanoShingo.png?size=64" width="64" height="64" alt="@KatanoShingo"></a>
+<a href="https://github.com/Guribo" title="@Guribo"><img src="https://github.com/Guribo.png?size=64" width="64" height="64" alt="@Guribo"></a>
+<a href="https://github.com/haru0416-dev" title="@haru0416-dev"><img src="https://github.com/haru0416-dev.png?size=64" width="64" height="64" alt="@haru0416-dev"></a>
+<a href="https://github.com/Yodokoro" title="@Yodokoro"><img src="https://github.com/Yodokoro.png?size=64" width="64" height="64" alt="@Yodokoro"></a>
+<a href="https://github.com/tetradice" title="@tetradice"><img src="https://github.com/tetradice.png?size=64" width="64" height="64" alt="@tetradice"></a>
+<a href="https://github.com/owlboy" title="@owlboy"><img src="https://github.com/owlboy.png?size=64" width="64" height="64" alt="@owlboy"></a>
+<a href="https://github.com/nomlasvrc" title="@nomlasvrc"><img src="https://github.com/nomlasvrc.png?size=64" width="64" height="64" alt="@nomlasvrc"></a>
+<a href="https://github.com/ureishi" title="@ureishi"><img src="https://github.com/ureishi.png?size=64" width="64" height="64" alt="@ureishi"></a>
+</p>
+<!-- community-contributors:end -->
 
 ---
 
