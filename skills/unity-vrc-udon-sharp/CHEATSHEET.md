@@ -271,6 +271,15 @@ SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
 public void _ApplyLocalPreview() { }
 ```
 
+### Public field serialization
+
+| Need | Declaration |
+|------|-------------|
+| Editor-time DI/bake/autowire value must persist into a Scene/Prefab | `[HideInInspector] public` — add a comment explaining the persistence reason |
+| Runtime-only value accessed by another behaviour | `[System.NonSerialized] public` — assign it at runtime |
+
+`[HideInInspector]` changes Inspector visibility only; it does not disable Unity serialization. `[System.NonSerialized]` keeps the field public for runtime access while excluding it from Scene/Prefab serialization. Use this for runtime-only state.
+
 ---
 
 ## NetworkCallable (SDK 3.8.1+)

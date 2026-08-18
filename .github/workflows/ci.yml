@@ -81,6 +81,9 @@ jobs:
       - name: Check layers runtime exception and evidence boundary
         run: bash tests/docs/layers-reference-contract.test.sh
 
+      - name: Check runtime public field serialization guidance
+        run: bash tests/docs/runtime-public-field-serialization-reference.test.sh
+
   markdown:
     name: Markdown Links
     runs-on: ubuntu-latest

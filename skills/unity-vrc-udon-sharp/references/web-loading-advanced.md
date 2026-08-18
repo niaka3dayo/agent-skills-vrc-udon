@@ -382,8 +382,8 @@ public class ResourceIndex : UdonSharpBehaviour
     }
 
     // Result fields written by GetUrlIndex / GetInnerIndex — read immediately after the call
-    [HideInInspector] public int LastUrlIndex   = -1;
-    [HideInInspector] public int LastInnerIndex = -1;
+    [System.NonSerialized] public int LastUrlIndex   = -1;
+    [System.NonSerialized] public int LastInnerIndex = -1;
 
     /**
      * Searches for resourceId and returns true if found.
