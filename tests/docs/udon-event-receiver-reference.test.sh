@@ -68,10 +68,77 @@ def csharp_blocks(path: Path):
             block.append(line)
 
 
+def code_marker_positions(source: str, marker: str):
+    """Yield marker positions outside C# comments and string/char literals."""
+    index = 0
+    state = "code"
+    quote = ""
+    verbatim = False
+    while index < len(source):
+        char = source[index]
+        next_char = source[index + 1] if index + 1 < len(source) else ""
+        if state == "line-comment":
+            if char == "\n":
+                state = "code"
+            index += 1
+            continue
+        if state == "block-comment":
+            if char == "*" and next_char == "/":
+                state = "code"
+                index += 2
+            else:
+                index += 1
+            continue
+        if state == "string":
+            if verbatim:
+                if char == quote:
+                    if next_char == quote:
+                        index += 2
+                    else:
+                        state = "code"
+                        index += 1
+                else:
+                    index += 1
+            elif char == "\\":
+                index += 2
+            elif char == quote:
+                state = "code"
+                index += 1
+            else:
+                index += 1
+            continue
+        if char == "/" and next_char == "/":
+            state = "line-comment"
+            index += 2
+            continue
+        if char == "/" and next_char == "*":
+            state = "block-comment"
+            index += 2
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            verbatim = char == '"' and (
+                (index > 0 and source[index - 1] == "@")
+                or source[max(0, index - 2):index] in {"$@", "@$"}
+            )
+            state = "string"
+            index += 1
+            continue
+        marker_end = index + len(marker)
+        if source.startswith(marker, index) and re.match(
+            r"\s*\(", source[marker_end:]
+        ):
+            yield index
+            index = marker_end
+        else:
+            index += 1
+
+
 def call_arguments(source: str, marker: str):
     """Yield balanced arguments for calls whose expression starts at marker."""
-    for match in re.finditer(re.escape(marker) + r"\s*\(", source):
-        opening = match.end() - 1
+    for marker_start in code_marker_positions(source, marker):
+        marker_end = marker_start + len(marker)
+        opening = marker_end + re.match(r"\s*\(", source[marker_end:]).end() - 1
         depth = 0
         quote = None
         escaped = False
@@ -102,9 +169,7 @@ def call_arguments(source: str, marker: str):
             elif char == ")":
                 depth -= 1
                 if depth == 0:
-                    tail = source[index + 1:]
-                    if re.match(r"\s*;", tail):
-                        yield source[opening + 1:index]
+                    yield source[opening + 1:index]
                     break
 
 active_files = [
@@ -126,9 +191,10 @@ if active_casts:
 
 migration_text = migration.read_text(encoding="utf-8")
 migration_casts = re.findall(r"\(\s*IUdonEventReceiver\s*\)\s*this", migration_text)
-if not migration_casts:
+if len(migration_casts) != 1:
     raise SystemExit(
-        "expected at least one historical IUdonEventReceiver cast in sdk-migration.md"
+        "expected exactly one historical IUdonEventReceiver cast in sdk-migration.md; "
+        f"found {len(migration_casts)}"
     )
 
 # Calls in active C# examples must pass the receiver explicitly. API
@@ -136,13 +202,16 @@ if not migration_casts:
 missing_receivers = []
 for path in active_files:
     for start, block in csharp_blocks(path):
-        for marker in ("VRCStringDownloader.LoadUrl", "DownloadImage"):
+        for marker in (
+            "VRCStringDownloader.LoadUrl",
+            "DownloadImage",
+            "NetworkCalling.GetQueuedEvents",
+        ):
             for args in call_arguments(block, marker):
-                if re.search(r"\bIUdonEventReceiver\b", args):
-                    continue
-                if re.search(r"\bVRCUrl\s+url\b", args):
-                    continue
                 args_without_comments = re.sub(r"//.*?(?=\n|$)", "", args)
+                first_argument = args_without_comments.split(",", 1)[0].strip()
+                if re.match(r"(?:IUdonEventReceiver|VRCUrl)\s+\w+\b", first_argument):
+                    continue
                 if not re.search(r"(?:^|,)\s*this\s*(?:,|$)", args_without_comments):
                     missing_receivers.append(f"{path}:{start}: {marker}({args.strip()})")
         # If a block no longer refers to the interface or NetworkEventTarget,
@@ -153,7 +222,10 @@ for path in active_files:
                     f"unused VRC.Udon.Common.Interfaces import in {path}:{start}"
                 )
 if missing_receivers:
-    raise SystemExit("receiver argument omitted in active examples:\n" + "\n".join(missing_receivers))
+    raise SystemExit(
+        "receiver argument missing or not direct this in active examples:\n"
+        + "\n".join(missing_receivers)
+    )
 
 print("PASS: active receiver examples use direct this with an explicit receiver argument")
 print("PASS: historical casts remain isolated to sdk-migration.md")
