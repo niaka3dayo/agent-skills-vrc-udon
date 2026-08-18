@@ -345,8 +345,8 @@ public class VoteSystemCore : UdonSharpBehaviour
         SyncedVoterPlayerIds[SyncedVoterCount] = caller.playerId;
         SyncedVoterCount++;
         ++SyncedYesCount;
-        RequestSerialization();
         RefreshCount();
+        RequestSerialization();
     }
 
     public override void OnDeserialization()

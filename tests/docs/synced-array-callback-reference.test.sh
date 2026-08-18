@@ -222,8 +222,8 @@ assert_order(
     "SyncedVoterPlayerIds[SyncedVoterCount] = caller.playerId;",
     "SyncedVoterCount++;",
     "++SyncedYesCount;",
-    "RequestSerialization();",
     "RefreshCount();",
+    "RequestSerialization();",
 )
 vote_receiver = method_block(vote, "public override void OnDeserialization()")
 if "RefreshCount();" not in vote_receiver:
