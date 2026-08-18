@@ -7,6 +7,14 @@ cd "$ROOT_DIR"
 SKILL="skills/unity-vrc-udon-sharp/SKILL.md"
 CONSTRAINTS="skills/unity-vrc-udon-sharp/references/constraints.md"
 VIDEO="skills/unity-vrc-udon-sharp/references/patterns-video.md"
+EXPECTED_ARRAY_EXAMPLE="$(cat <<'EOF'
+[SerializeField] private VRCUrl[] _urls = new VRCUrl[]
+{
+    new VRCUrl(""),
+    new VRCUrl(""),
+};
+EOF
+)"
 
 FAILURES=0
 
@@ -31,6 +39,19 @@ require_regex_count() {
     fi
 }
 
+require_exact_block() {
+    local path="$1" start_line="$2" end_line="$3" expected="$4"
+    local actual
+    actual="$(awk -v start="$start_line" -v end="$end_line" '
+        $0 == start { capture = 1 }
+        capture { print }
+        capture && $0 == end { capture = 0 }
+    ' "$path")"
+    if [ "$actual" != "$expected" ]; then
+        fail "$path block beginning with '$start_line' does not match the required fresh-element example"
+    fi
+}
+
 # Entry-point guidance must surface the anti-pattern, while the detailed
 # reference explains the aliasing boundary and the fresh-instance alternative.
 require_text "$SKILL" 'VRCUrl.Empty'
@@ -43,6 +64,10 @@ require_text "$CONSTRAINTS" '`[SerializeField]`, `[UdonSynced]`, and ordinary pr
 require_text "$CONSTRAINTS" 'each array element'
 require_text "$CONSTRAINTS" '[SerializeField] private VRCUrl[] _urls = new VRCUrl[]'
 require_regex_count "$CONSTRAINTS" '^private VRCUrl _localUrl = new VRCUrl\(""\);$' 1
+require_exact_block "$CONSTRAINTS" \
+    '[SerializeField] private VRCUrl[] _urls = new VRCUrl[]' \
+    '};' \
+    "$EXPECTED_ARRAY_EXAMPLE"
 
 # Every affected independent field initializer uses a fresh empty VRCUrl.
 require_regex_count "$CONSTRAINTS" '^    \[UdonSynced\] private VRCUrl SyncedUrl_[0-7] = new VRCUrl\(""\);$' 8
