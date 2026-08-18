@@ -12,7 +12,7 @@
   ```text
   Read: skills/unity-vrc-udon-sharp/SKILL.md
   Read: skills/unity-vrc-world-sdk-3/SKILL.md
-  → Find the "Supported SDK version" line
+  → Find the "Active support / last verified" line
   ```
 
 - [ ] Check the file list for update targets

@@ -610,7 +610,7 @@ Reuse a single local room model to render the illusion of multiple rooms by sepa
 - Some level of voice isolation between rooms is desired (a side effect of physical separation)
 - Players in the same room must visibly share the same space; players in different rooms must not collide
 
-Requires SDK >= 3.7.4 for the recommended `VRCPlayerObject` tier. The other tiers (fixed-size synced array, local-only) work on older SDKs.
+The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4; use the active SDK target, SDK 3.10.4. The other tiers (fixed-size synced array, local-only) are retained as historical migration guidance for unsupported older projects, not as active support routes.
 
 ### Architecture (state vs presentation split)
 

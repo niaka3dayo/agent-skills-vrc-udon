@@ -216,7 +216,7 @@ For cancelable timers on the active SDK target (3.10.4), use `VRCTween.DelayedCa
 
 ---
 
-## VRCTween (SDK 3.10.4+)
+## VRCTween (introduced in SDK 3.10.4)
 
 ```csharp
 using VRC.SDK3.Components;
@@ -241,7 +241,7 @@ void OnDestroy() {
 | Need | Use | Notes |
 |------|-----|-------|
 | Smooth transform/UI/audio changes | `TweenPosition`, `TweenScale`, `TweenFade`, `TweenPitch` | Returns `VRCTweenHandle` |
-| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on SDK 3.10.4+ |
+| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.4) |
 | Delayed active toggle | `VRCTween.DelayedSetActive(target, active, seconds)` | Use for local visibility/state toggles |
 | Cleanup | `handle.Kill()` / `gameObject.KillAllTweens()` | Kill stored handles and long/infinite tweens |
 | High-frequency retargeting | `ChangeEndValue`, `SetDuration`, `SetEase`, `Restart` | Reuse a handle instead of kill/recreate in hot paths |

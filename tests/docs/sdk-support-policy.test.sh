@@ -67,9 +67,45 @@ PY
 
 # Re-run the stale declaration scan against the live tracked corpus. The
 # changelog and this test's negative fixtures intentionally retain old release
-# wording as historical/test evidence.
-STALE_ACTIVE_SCAN="$(git -C "$ROOT_DIR" grep -n -E '(^|[^[:alnum:]])(Supported SDK Versions|SDK Coverage|Covered versions)[[:space:]]*[:(][^[:cntrl:]]*3\.7\.1|this skill.?s coverage range|this skill targets SDK[[:space:]]+3\.7\.1\+|VRChat_SDK-3\.7\.1--3\.10\.4|SDK[[:space:]]+3\.7\.1[[:space:]]*(-|–)[[:space:]]*3\.10\.4' -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' || true)"
+# wording as historical/test evidence. Match any numeric active range rather
+# than hard-coding the retired lower bound, so a future policy regression such
+# as 3.8.1 - 3.10.4 cannot silently pass.
+STALE_ACTIVE_DECLARATION_PATTERN='(^|[^[:alnum:]])(Supported SDK Versions|SDK Coverage|Covered versions)(\*\*)?[[:space:]]*[:(][^[:cntrl:]]*[0-9]+\.[0-9]+\.[0-9]+'
+STALE_ACTIVE_SCAN_PATTERN="$STALE_ACTIVE_DECLARATION_PATTERN|this skill.?s coverage range|this skill targets SDK[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+\+|VRChat_SDK-[0-9]+\.[0-9]+\.[0-9]+--[0-9]+\.[0-9]+\.[0-9]+|SDK[[:space:]]+3\.7\.1[[:space:]]*(-|–)[[:space:]]*3\.10\.4"
+STALE_ACTIVE_SCAN="$(git -C "$ROOT_DIR" grep -n -E "$STALE_ACTIVE_SCAN_PATTERN" -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' || true)"
 [ -z "$STALE_ACTIVE_SCAN" ] || fail "stale active-support declaration found:\n$STALE_ACTIVE_SCAN"
+
+# A future SDK is not an active support target until this repository verifies
+# it. Reject the easy-to-miss "3.10.4 or newer" routing form while preserving
+# historical feature-introduction notes such as "SDK 3.8.1+".
+FUTURE_AUTO_SUPPORT_PATTERN='SDK[[:space:]]+3\.10\.4[[:space:]]+or[[:space:]]+newer'
+FUTURE_AUTO_SUPPORT_SCAN="$(git -C "$ROOT_DIR" grep -n -E -i "$FUTURE_AUTO_SUPPORT_PATTERN" -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' || true)"
+[ -z "$FUTURE_AUTO_SUPPORT_SCAN" ] || fail "unverified future SDK auto-support wording found:\n$FUTURE_AUTO_SUPPORT_SCAN"
+
+# Keep the two negative cases executable. This is the mutation guard for the
+# contract itself: broad old ranges must be rejected, future auto-support must
+# be rejected, and an SDK x+ feature-introduction note must remain allowed.
+MUTATED_REFERENCE="$(mktemp)"
+trap 'rm -f "$MUTATED_REFERENCE"' EXIT
+cp "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" "$MUTATED_REFERENCE"
+cat >> "$MUTATED_REFERENCE" <<'EOF'
+
+**Supported SDK Versions**: 3.8.1 - 3.10.4
+Route this reference to projects using SDK 3.10.4 or newer.
+Historical feature introduction: SDK 3.8.1+ remains valid migration context.
+EOF
+grep -Eiq "$STALE_ACTIVE_DECLARATION_PATTERN" "$MUTATED_REFERENCE" \
+    || fail "mutation guard missed an arbitrary old active SDK range"
+grep -Eiq "$FUTURE_AUTO_SUPPORT_PATTERN" "$MUTATED_REFERENCE" \
+    || fail "mutation guard missed unverified future SDK auto-support wording"
+if grep -Eiq 'Historical feature introduction: SDK 3\.8\.1\+' "$MUTATED_REFERENCE" \
+    && ! grep -Eiq "$STALE_ACTIVE_DECLARATION_PATTERN" <(grep -E 'Historical feature introduction:' "$MUTATED_REFERENCE"); then
+    echo "PASS: historical SDK x+ introduction note remains allowed"
+else
+    fail "historical SDK x+ introduction note was treated as an active declaration"
+fi
+echo "PASS: arbitrary old active SDK range mutation rejected"
+echo "PASS: unverified future SDK auto-support mutation rejected"
 
 # The repository-level contract must name the one actively verified target and
 # distinguish it from historical feature-introduction entries. This wording is
@@ -160,6 +196,14 @@ require_text "$ROOT_DIR/CONTRIBUTING.md" 'historical migration information only'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" '**Active support / last verified**: SDK 3.10.4'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/update-checklist.md" 'active-versus-historical boundary'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md" 'active and verified target'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" '**Active support / last verified**: SDK 3.10.4'
+forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" 'SDK 3\.10\.4\+|SDK 3\.10\.4 or newer'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween (introduced in SDK 3.10.4)'
+forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween \(SDK 3\.10\.4\+\)|on SDK 3\.10\.4\+'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'Solution on the active SDK target (3.10.4)'
+forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'routeable SDK 3\.10\.4\+|on SDK 3\.10\.4\+'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'historical migration guidance for unsupported older projects'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading-advanced.md" 'Historical migration guidance only: SDK 3.7.1 introduced the available surface'
 
 # This contract must be part of the required Documentation Smoke Tests job.
 CI="$ROOT_DIR/.github/workflows/ci.yml"

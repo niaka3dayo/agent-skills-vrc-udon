@@ -1,6 +1,10 @@
-# VRCTween Patterns (SDK 3.10.4+)
+# VRCTween Patterns (introduced in SDK 3.10.4)
 
-Route animation and cancelable-delay questions here when a project can use SDK 3.10.4 or newer.
+**Active support / last verified**: SDK 3.10.4
+
+This reference describes the active SDK target. The 3.10.4 marker records when VRCTween was introduced; it is not an automatic support promise for later SDKs.
+
+Route animation and cancelable-delay questions here for the active SDK target, SDK 3.10.4.
 
 ## When to Use VRCTween
 
@@ -65,7 +69,7 @@ public class TweenedDoor : UdonSharpBehaviour
 
 ## Cancelable Delays
 
-Prefer `VRCTween.DelayedCall` over `SendCustomEventDelayedSeconds` helper-`GameObject` cancellation workarounds on SDK 3.10.4+:
+Prefer `VRCTween.DelayedCall` over `SendCustomEventDelayedSeconds` helper-`GameObject` cancellation workarounds on the active SDK target, SDK 3.10.4:
 
 ```csharp
 private VRCTweenHandle _timer;
@@ -87,7 +91,7 @@ public void _OnTimer()
 }
 ```
 
-Keep the helper-`GameObject` workaround only for projects pinned to older SDKs where `VRCTween.DelayedCall` is unavailable.
+Keep the helper-`GameObject` workaround only as historical migration guidance for unsupported older SDK projects where `VRCTween.DelayedCall` is unavailable. It is not an active support route.
 
 Use `VRCTween.DelayedSetActive(target, active, seconds)` for a simple delayed local active-state change. Store the returned `VRCTweenHandle` if the toggle may need cancellation.
 
