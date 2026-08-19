@@ -64,13 +64,16 @@ public class MyScript : UdonSharpBehaviour { }
 
 ### 2. Editor-Evaluated Field Initializers
 
-Field initializers are evaluated as ordinary C# on the Unity/Editor side, and their resulting value becomes initial data for the compiled Udon program. An initializer may directly use LINQ/lambdas or call a static helper on the same `UdonSharpBehaviour` that uses `List<T>`, provided the final field type and value are supported by Udon. This does not make those features callable from `Start()`, `Interact()`, or other Udon runtime methods.
+Field initializers are evaluated as ordinary C# on the Unity/Editor side, and their resulting value becomes initial data for the compiled Udon program. An initializer may directly use LINQ/lambdas or call a static helper on the same `UdonSharpBehaviour` that uses `List<T>`, provided the final field type and value are supported by Udon. This does not make those features callable from `Start()`, `Interact()`, or other Udon runtime methods. Nondeterministic calls such as `Random.Range` also run during Editor evaluation; their result becomes the compiled Udon program's baked default, not runtime randomness. For per-instance, per-client, or per-session randomness, generate the value in `Start()` or a lazy-init guard.
 
 Keep initializer generation pure and independent of scene, player, or runtime state. Do not use `Networking.LocalPlayer`, scene references, or main-thread-only Unity APIs such as `FindObjectsByType`; constructors and field initializers can run on a loading thread. See `references/constraints.md` for complete examples and the lazy-init pattern.
 
 ```csharp
 // OK: Editor-evaluated initial value that Udon can hold
 private int maxPlayers = 10;
+
+// NG: Random.Range is evaluated in the Editor and baked into the program
+// private int seed = Random.Range(0, 100);
 
 // NG: Player/runtime state is unavailable during initial value generation
 // private VRCPlayerApi player = Networking.LocalPlayer;

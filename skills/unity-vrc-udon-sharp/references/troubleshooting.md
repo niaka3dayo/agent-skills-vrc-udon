@@ -497,7 +497,10 @@ private void ApplyValues()
 The owner calls `ApplyValues()` immediately after changing the array and calls
 `RequestSerialization()` once after the complete Manual-sync update. A revision
 guard is optional for non-idempotent effects only; it does not provide packet
-ordering or stale-packet rejection.
+ordering or stale-packet rejection. For a late joiner, the first
+`OnDeserialization()` contains the current revision and may represent a
+historical one-shot. Run durable `ApplyValues()` first, then baseline that first
+revision without the one-shot; only later revisions should call it.
 
 ---
 
@@ -1632,7 +1635,7 @@ public int maxHealth = 100; // Serialized value from Inspector wins
 
 **Solution:**
 
-An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime.
+An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime. A nondeterministic call such as `Random.Range` is also evaluated in the Editor and becomes a baked default, so it is not per-instance, per-client, or per-session randomness.
 
 ```csharp
 
@@ -1650,6 +1653,10 @@ void Start()
 ```
 
 Use an initializer for pure initial value generation when the final field type and value are supported by Udon. LINQ, lambdas, and a same-behaviour static helper using `List<T>` are allowed only in that Editor-side evaluation. If the value depends on `Networking.LocalPlayer`, a scene reference, or other runtime state, assign it in `Start()` or lazy initialization instead. Constructors and field initializers can run on a loading thread, so they must not call main-thread-only Unity APIs such as `FindObjectsByType`.
+
+For runtime randomness, do not write `private int seed = Random.Range(0, 100);` as a
+field initializer. Generate it in `Start()` or a lazy-init guard; that is the
+runtime path that provides per-instance, per-client, or per-session randomness.
 
 The validator reports `List<T>`, LINQ, and lambdas as warnings in both initializer and Udon runtime code because it intentionally does not parse execution context or call graphs. Verify the context: the same feature or helper still fails when called from `Start()`, `Interact()`, or another Udon runtime path.
 

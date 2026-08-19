@@ -236,7 +236,10 @@ public class SyncedArrayExample : UdonSharpBehaviour
 ```
 
 Keep `ApplyValues()` idempotent when possible. A revision is only an optional guard for non-idempotent side effects such as a sound, animation, or one-time record that must not run twice when the owner and receiver paths both visit the same revision. It does not provide ordering or stale-packet rejection;
-it is only a duplicate-side-effect guard.
+it is only a duplicate-side-effect guard. A late joiner's first `OnDeserialization()`
+receives the current revision, so baseline that first revision before allowing a
+historical one-shot side effect. Run durable `ApplyValues()` before the baseline
+return; only later revisions should trigger the side effect.
 
 ## Key Principles
 

@@ -343,7 +343,7 @@ q = q.normalized;        // CORRECT
 
 ### Editor-Evaluated Field Initializers vs. Udon Runtime
 
-UdonSharp evaluates field initializer expressions as ordinary C# on the Unity/Editor side. It stores the resulting value as initial data for the compiled Udon program; the initializer expression itself does not execute in Udon runtime. This allows ordinary C# features such as LINQ, lambdas, and `List<T>` to generate a final value that Udon can hold.
+UdonSharp evaluates field initializer expressions as ordinary C# on the Unity/Editor side. It stores the resulting value as initial data for the compiled Udon program; the initializer expression itself does not execute in Udon runtime. This allows ordinary C# features such as LINQ, lambdas, and `List<T>` to generate a final value that Udon can hold. A nondeterministic expression such as `Random.Range` is evaluated at that same time and becomes a baked default, not per-instance, per-client, or per-session randomness.
 
 The two supported forms below are intentionally in the same `UdonSharpBehaviour`:
 
@@ -389,6 +389,25 @@ public class FieldInitializerExample : UdonSharpBehaviour
 ```
 
 These permissions apply only while generating field initial data. Calling `CreateSquares`, LINQ, lambdas, or `List<T>` from `Start()`, `Interact()`, or any other Udon runtime path remains unsupported.
+
+Do not use an initializer for runtime randomness:
+
+```csharp
+// NG: this value is chosen during Editor evaluation and baked into the program.
+private int seed = Random.Range(0, 100);
+
+// OK: each instance generates its own value at runtime.
+private int _seed;
+
+private void Start()
+{
+    _seed = Random.Range(0, 100);
+}
+```
+
+If per-instance, per-client, or per-session randomness is required, generate it
+in `Start()` or a lazy-init guard. Keep deterministic field initializers limited
+to values that can be stored in the compiled Udon program.
 
 Keep this boundary strict:
 

@@ -48,6 +48,9 @@ require_text "$RULES" 'public override void OnDeserialization()'
 require_text "$RULES" 'RequestSerialization();'
 require_text "$RULES" 'revision is only an optional guard for non-idempotent side effects'
 require_text "$RULES" 'does not provide ordering or stale-packet rejection'
+require_text "$RULES" "late joiner's first \`OnDeserialization()\`"
+require_text "$RULES" 'baseline'
+require_text "$RULES" 'historical one-shot side effect'
 
 # The detailed reference must point to the two official examples and preserve
 # the owner-immediate/remote-deserialization split.
@@ -62,6 +65,9 @@ require_text "$NETWORKING" 'one `RequestSerialization()` after the complete arra
 require_text "$NETWORKING" 'revision does not establish ordering'
 require_text "$NETWORKING" '[UdonSynced] private int _revision;'
 require_text "$NETWORKING" 'ApplyOneShotIfNeeded()'
+require_text "$NETWORKING" 'first received revision as a baseline'
+require_text "$NETWORKING" 'historical one-shot effects'
+require_text "$NETWORKING" 'class RevisionGuardedArray'
 
 # Every user-facing surface should route array reactions through
 # OnDeserialization, while keeping scalar FieldChangeCallback guidance intact.
@@ -70,7 +76,11 @@ require_text "$SYNC_EXAMPLES" 'same length, reassigning the array, or changing i
 require_text "$TROUBLESHOOTING" '### Synced Array Callback Silent Failure'
 require_text "$TROUBLESHOOTING" 'same-length element changes, array reassignments, and array length changes'
 require_text "$TROUBLESHOOTING" 'ApplyValues()'
+require_text "$TROUBLESHOOTING" 'late joiner'
+require_text "$TROUBLESHOOTING" 'baseline'
 require_text "$CHEATSHEET" 'Array contents changed: use `OnDeserialization()`'
+require_text "$CHEATSHEET" 'late joiner'
+require_text "$CHEATSHEET" 'baseline'
 require_text "$SKILL" 'Synced arrays: always apply them from `OnDeserialization()`'
 
 # VRCUrl[] is a supported sync type. The old workaround wording must not
@@ -228,6 +238,38 @@ assert_order(
 vote_receiver = method_block(vote, "public override void OnDeserialization()")
 if "RefreshCount();" not in vote_receiver:
     fail("vote receiver no longer refreshes from OnDeserialization")
+
+revision = class_block(networking, "RevisionGuardedArray")
+revision_owner = method_block(revision, "public void _SetValues(int[] values)")
+assert_order(
+    "revision owner",
+    revision_owner,
+    "_revision++;",
+    "ApplyValues();",
+    "ApplyOneShotIfNeeded();",
+    "RequestSerialization();",
+)
+revision_receiver = method_block(
+    revision,
+    "public override void OnDeserialization()",
+)
+assert_order(
+    "revision receiver baseline",
+    revision_receiver,
+    "ApplyValues();",
+    "ApplyOneShotIfNeeded();",
+)
+if "PlayOneShot();" in revision_receiver:
+    fail("revision receiver must delegate one-shot handling to ApplyOneShotIfNeeded()")
+revision_helper = method_block(revision, "private void ApplyOneShotIfNeeded()")
+assert_order(
+    "revision helper",
+    revision_helper,
+    "if (!_hasAppliedRevision)",
+    "_appliedRevision = _revision;",
+    "return;",
+    "PlayOneShot();",
+)
 
 playlist = class_block(patterns, "SyncedPlaylist")
 playlist_owner = method_block(playlist, "public void SetTitles(string[] titles)")

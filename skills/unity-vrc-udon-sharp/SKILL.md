@@ -59,7 +59,12 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 changes do not provide a reliable `FieldChangeCallback` signal, and the same
 guidance applies to same-length changes, array reassignments, and length
 changes. Have the owner call the same idempotent apply method immediately after
-mutation, then request Manual serialization once.
+mutation, then request Manual serialization once. If a revision guard protects a
+historical one-shot side effect, a late joiner's first `OnDeserialization()`
+receives the current revision and may otherwise replay that effect. Baseline the
+first received revision without the side effect, but run durable `ApplyValues()`
+before the baseline check; only later revisions should trigger the one-shot.
+Revision is not ordering or stale-packet protection.
 
 ## SDK 3.10.4 event receiver arguments
 
@@ -79,7 +84,7 @@ The receiver argument is still required; only the explicit `(IUdonEventReceiver)
 
 ### Editor-evaluated field initializers
 
-Field initializers are evaluated as ordinary C# on the Unity/Editor side to produce initial data for the compiled Udon program; their expressions do not run in the Udon runtime. LINQ, lambdas, or a same-behaviour static helper that uses `List<T>` can therefore generate an array initializer even though the same code is unavailable from `Start()`, `Interact()`, or another Udon runtime method. The final field type and value must be supported by Udon. Keep generation independent of scene, player, and runtime state, and do not call main-thread-only Unity APIs because field initializers and constructors can run on a loading thread. See `references/constraints.md` for both supported forms and their boundaries.
+Field initializers are evaluated as ordinary C# on the Unity/Editor side to produce initial data for the compiled Udon program; their expressions do not run in the Udon runtime. The resulting value is stored as the compiled program's baked default, so a nondeterministic call such as `Random.Range` is not per-instance, per-client, or per-session randomness. If per-instance, per-client, or per-session randomness is required, generate it in `Start()` or a lazy-init guard instead. LINQ, lambdas, or a same-behaviour static helper that uses `List<T>` can therefore generate an array initializer even though the same code is unavailable from `Start()`, `Interact()`, or another Udon runtime method. The final field type and value must be supported by Udon. Keep generation independent of scene, player, and runtime state, and do not call main-thread-only Unity APIs because field initializers and constructors can run on a loading thread. See `references/constraints.md` for both supported forms and their boundaries.
 
 ## Common Mistakes (NEVER List)
 
