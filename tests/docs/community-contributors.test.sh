@@ -37,13 +37,27 @@ classification = data["classification"]
 contributors = data["contributors"]
 
 doc_sync = doc_sync_path.read_text(encoding="utf-8")
-assert "ordered profile-linked avatar block" in doc_sync, (
+community_rule_match = re.search(
+    r"^5\. \*\*Community contributors\*\*:(.*?)(?=^6\.)",
+    doc_sync,
+    re.MULTILINE | re.DOTALL,
+)
+assert community_rule_match, "the maintainer rule has no Community contributors item"
+community_rule = community_rule_match.group(1)
+assert "ordered profile-linked avatar block" in community_rule, (
     "the maintainer rule must preserve the avatar-only README contract"
 )
-assert "tests/docs/fixtures/community-contributor-census.json" in doc_sync, (
+assert "tests/docs/fixtures/community-contributor-census.json" in community_rule, (
     "the maintainer rule must name the Issue-evidence source of truth"
 )
-assert "Issue links, and descriptions synchronized across all five READMEs" not in doc_sync, (
+assert "do not duplicate them in the README sections" in community_rule, (
+    "the maintainer rule must keep Issue evidence out of the README sections"
+)
+assert not re.search(
+    r"(?:Issue\s+links?.*descriptions?|descriptions?.*Issue\s+links?)",
+    community_rule,
+    re.IGNORECASE | re.DOTALL,
+), (
     "the maintainer rule still requires the removed contributor list format"
 )
 
@@ -66,6 +80,7 @@ ureishi = next(
 )
 assert ureishi["issues"] == [337, 338, 341, 342, 344]
 assert ureishi["evidence"]["merged_prs"] == [339, 340, 345, 347, 348]
+assert ureishi["evidence"]["classification"] == "implemented and confirmed"
 assert "open_accepted_issues" not in ureishi["evidence"], (
     "the census still records closed @ureishi reports as open work"
 )
