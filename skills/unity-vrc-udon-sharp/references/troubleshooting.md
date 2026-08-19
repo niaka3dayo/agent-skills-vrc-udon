@@ -1635,7 +1635,7 @@ public int maxHealth = 100; // Serialized value from Inspector wins
 
 **Solution:**
 
-An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime. A nondeterministic call such as `Random.Range` is also evaluated in the Editor and becomes a baked default, so it is not per-instance, per-client, or per-session randomness.
+An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime. A `Random.Range` call in an initializer is evaluated in the Editor and stored as a baked default, not runtime randomness.
 
 ```csharp
 
@@ -1655,8 +1655,12 @@ void Start()
 Use an initializer for pure initial value generation when the final field type and value are supported by Udon. LINQ, lambdas, and a same-behaviour static helper using `List<T>` are allowed only in that Editor-side evaluation. If the value depends on `Networking.LocalPlayer`, a scene reference, or other runtime state, assign it in `Start()` or lazy initialization instead. Constructors and field initializers can run on a loading thread, so they must not call main-thread-only Unity APIs such as `FindObjectsByType`.
 
 For runtime randomness, do not write `private int seed = Random.Range(0, 100);` as a
-field initializer. Generate it in `Start()` or a lazy-init guard; that is the
-runtime path that provides per-instance, per-client, or per-session randomness.
+field initializer. Use `Start()` or a lazy-init guard only for local or per-client
+randomness. For shared per-object or per-session seed/state, the owner generates
+it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership
+before writing and then call `RequestSerialization()`. Receivers may apply derived
+state in `OnDeserialization()` when needed, but that callback is not required for
+the field synchronization itself, and late joiners receive the current synced state.
 
 The validator reports `List<T>`, LINQ, and lambdas as warnings in both initializer and Udon runtime code because it intentionally does not parse execution context or call graphs. Verify the context: the same feature or helper still fails when called from `Start()`, `Interact()`, or another Udon runtime path.
 

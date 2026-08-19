@@ -343,7 +343,9 @@ q = q.normalized;        // CORRECT
 
 ### Editor-Evaluated Field Initializers vs. Udon Runtime
 
-UdonSharp evaluates field initializer expressions as ordinary C# on the Unity/Editor side. It stores the resulting value as initial data for the compiled Udon program; the initializer expression itself does not execute in Udon runtime. This allows ordinary C# features such as LINQ, lambdas, and `List<T>` to generate a final value that Udon can hold. A nondeterministic expression such as `Random.Range` is evaluated at that same time and becomes a baked default, not per-instance, per-client, or per-session randomness.
+UdonSharp evaluates field initializer expressions as ordinary C# on the Unity/Editor side. It stores the resulting value as initial data for the compiled Udon program; the initializer expression itself does not execute in Udon runtime. This allows ordinary C# features such as LINQ, lambdas, and `List<T>` to generate a final value that Udon can hold. A `Random.Range` call in an initializer is evaluated in the Editor and stored as a baked default, not runtime randomness.
+
+Use `Start()` or a lazy-init guard only for local or per-client randomness. For shared per-object or per-session seed/state, the owner generates it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership before writing and then call `RequestSerialization()`. Receivers may apply derived state in `OnDeserialization()` when needed, but that callback is not required for the field synchronization itself, and late joiners receive the current synced state.
 
 The two supported forms below are intentionally in the same `UdonSharpBehaviour`:
 
@@ -405,9 +407,9 @@ private void Start()
 }
 ```
 
-If per-instance, per-client, or per-session randomness is required, generate it
-in `Start()` or a lazy-init guard. Keep deterministic field initializers limited
-to values that can be stored in the compiled Udon program.
+Keep deterministic field initializers limited to values that can be stored in the
+compiled Udon program. The local/per-client `Start()` and lazy-init path above is
+not a substitute for owner-generated shared state.
 
 Keep this boundary strict:
 
