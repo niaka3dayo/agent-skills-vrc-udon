@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-08-18",
+  "generated_at": "2026-08-19",
   "repository": "niaka3dayo/agent-skills-vrc-udon",
   "query": "gh issue list --state all --limit 1000 --json number,title,state,author,labels,comments,url,closedAt",
   "timeline_query": "gh api repos/niaka3dayo/agent-skills-vrc-udon/issues/{number}/timeline --paginate -H 'Accept: application/vnd.github+json'",
   "scope": "External authors of GitHub Issues that contributed accepted, confirmed, or implemented corrections or knowledge additions. PR-only contributors are out of scope.",
   "classification": {
-    "issues_scanned": 152,
+    "issues_scanned": 157,
     "maintainer_and_bot_authors_excluded": [
       "niaka3dayo",
       "github-actions[bot]",
@@ -78,12 +78,8 @@
       "handle": "ureishi",
       "issues": [337, 338, 341, 342, 344],
       "evidence": {
-        "classification": "implemented, confirmed, and accepted current work",
-        "merged_prs": [339, 340],
-        "open_accepted_issues": [341, 342, 344],
-        "acceptance_notes": {
-          "344": "Accepted into the v4.0.0 support work; technical implementation is tracked separately from this policy PR."
-        }
+        "classification": "implemented and confirmed",
+        "merged_prs": [339, 340, 345, 347, 348]
       }
     }
   ],
