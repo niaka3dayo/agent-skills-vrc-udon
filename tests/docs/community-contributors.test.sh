@@ -16,22 +16,36 @@ fail() {
 }
 
 CENSUS="$ROOT_DIR/tests/docs/fixtures/community-contributor-census.json"
+DOC_SYNC="$ROOT_DIR/.claude/rules/doc-sync.md"
 [ -f "$CENSUS" ] || fail "missing contributor census evidence: $CENSUS"
+[ -f "$DOC_SYNC" ] || fail "missing documentation sync rule: $DOC_SYNC"
 
 # The census is the sole source of truth. The README contract intentionally
 # contains only stable profile links and avatar attributes; Issue evidence stays
 # in the fixture for auditability rather than being duplicated in each README.
-python3 - "$CENSUS" "${README_FILES[@]}" <<'PY'
+python3 - "$CENSUS" "$DOC_SYNC" "${README_FILES[@]}" <<'PY'
 import json
 import re
 import sys
 from pathlib import Path
 
 census_path = Path(sys.argv[1])
-readme_paths = [Path(path) for path in sys.argv[2:]]
+doc_sync_path = Path(sys.argv[2])
+readme_paths = [Path(path) for path in sys.argv[3:]]
 data = json.loads(census_path.read_text(encoding="utf-8"))
 classification = data["classification"]
 contributors = data["contributors"]
+
+doc_sync = doc_sync_path.read_text(encoding="utf-8")
+assert "ordered profile-linked avatar block" in doc_sync, (
+    "the maintainer rule must preserve the avatar-only README contract"
+)
+assert "tests/docs/fixtures/community-contributor-census.json" in doc_sync, (
+    "the maintainer rule must name the Issue-evidence source of truth"
+)
+assert "Issue links, and descriptions synchronized across all five READMEs" not in doc_sync, (
+    "the maintainer rule still requires the removed contributor list format"
+)
 
 excluded_handles = {
     "niaka3dayo",
@@ -46,6 +60,15 @@ assert len(expected_handles) == len(set(expected_handles)), (
 )
 assert not excluded_handles.intersection(expected_handles)
 assert all(re.fullmatch(r"[A-Za-z0-9_-]+", handle) for handle in expected_handles)
+
+ureishi = next(
+    contributor for contributor in contributors if contributor["handle"] == "ureishi"
+)
+assert ureishi["issues"] == [337, 338, 341, 342, 344]
+assert ureishi["evidence"]["merged_prs"] == [339, 340, 345, 347, 348]
+assert "open_accepted_issues" not in ureishi["evidence"], (
+    "the census still records closed @ureishi reports as open work"
+)
 
 # Keep the census integrity checks here so the contract cannot silently become
 # detached from the evidence that selected the eight reporters.
