@@ -1134,8 +1134,8 @@ public class SyncedUrlList : UdonSharpBehaviour
 - **Deletion requires shifting**: When removing a URL from the middle, all subsequent URL fields must be
   reassigned (shifted down). This is an O(n) operation on synced fields. For frequently modified lists, consider
   using a "soft delete" flag in the metadata instead of physically shifting.
-- **Late-joiner sync**: All `[UdonSynced]` fields are automatically sent to late joiners. No special handling
-  is needed beyond calling `RequestSerialization()` in `OnPlayerJoined` if the owner needs to push current state.
+- **Late-joiner sync**: All `[UdonSynced]` fields are automatically sent to late joiners and can be
+  applied in `OnDeserialization()` as needed. No join callback or manual resend is required for unchanged state.
 
 ---
 

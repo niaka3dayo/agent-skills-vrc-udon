@@ -204,12 +204,6 @@ Called when players join, leave, or change state.
 public override void OnPlayerJoined(VRCPlayerApi player)
 {
     Debug.Log($"{player.displayName} joined!");
-
-    // Sync state for new player if we own the object
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
 }
 
 public override void OnPlayerLeft(VRCPlayerApi player)
@@ -824,6 +818,8 @@ OnDeserialization             ← receives synced variable state from owner
 
 > **Note**: Synced variable values are **not guaranteed to be initialized** before `OnDeserialization` fires. Do not read synced variables in `Start()` for late joiners — they may still be at default values.
 
+Late joiners automatically receive the latest synced values. Use `OnDeserialization()` to apply derived state after the snapshot arrives; an unchanged state does not need a join-triggered `RequestSerialization()`.
+
 #### Edge Case: Owner Calls RequestSerialization Near OnPlayerJoined
 
 If the current owner calls `RequestSerialization()` at or very close to the time a late joiner's `OnPlayerJoined` fires (for example, in their own `OnPlayerJoined` handler), the following race condition can occur on the **late joiner's client**:
@@ -846,17 +842,9 @@ When a new player joins while you are already in the instance:
 OnPlayerJoined(newPlayer)     ← fires only for the newly joined player
 ```
 
-If you are the owner of synced objects, this is the correct place to call `RequestSerialization()` to push current state to the late joiner:
-
-```csharp
-public override void OnPlayerJoined(VRCPlayerApi player)
-{
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
-}
-```
+Late joiners automatically receive the current synced values. Keep this callback
+for join notifications; apply any derived state in `OnDeserialization()` rather
+than resending unchanged state from `OnPlayerJoined`.
 
 ---
 
@@ -961,13 +949,15 @@ public override void OnPlayerJoined(VRCPlayerApi player)
 ### Ownership Check Before Sync
 
 ```csharp
-public override void OnPlayerJoined(VRCPlayerApi player)
+// Sync only after an owner-side mutation.
+[UdonSynced] private int score;
+
+public void _SetScore(int newScore)
 {
-    // Only owner should trigger sync for late joiners
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
+    if (!Networking.IsOwner(gameObject)) return;
+
+    score = newScore;
+    RequestSerialization();
 }
 ```
 

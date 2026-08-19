@@ -1342,12 +1342,6 @@ public override void OnPlayerJoined(VRCPlayerApi player)
     if (player == null || !player.IsValid()) return;
 
     Debug.Log($"{player.displayName} joined");
-
-    // Late joiners receive current synced values automatically; this owner refresh is defensive only.
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
 }
 
 public override void OnPlayerLeft(VRCPlayerApi player)
