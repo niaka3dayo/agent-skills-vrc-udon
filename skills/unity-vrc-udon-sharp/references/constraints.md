@@ -3,7 +3,9 @@
 Complete reference of C# features and their availability in UdonSharp, including SDK version availability,
 compiler behavior details, and annotated code examples.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
 
 > For the quick-reference checklist and code generation rules, see `rules/udonsharp-constraints.md`.
 
@@ -11,14 +13,28 @@ compiler behavior details, and annotated code examples.
 
 ## Compiler Behavior Overview
 
-UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. This has several implications:
+UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. Editor-side conversion and Udon runtime execution are distinct contexts. This has several implications:
 
-- **Static analysis at compile time**: Blocked features cause compile errors, not runtime exceptions.
-- **Field initializers run at compile time**: Values are baked into the serialized asset, not evaluated at scene load.
+- **Static analysis for Udon runtime code**: Features blocked by the Udon compiler cause compile errors, not runtime exceptions.
+- **Field initializers are Editor-evaluated C#**: Their expressions generate initial data for the compiled Udon program rather than UdonVM instructions. Some ordinary C# features that are blocked in Udon runtime code are valid in this limited context.
 - **Struct semantics differ**: UdonVM passes structs by value; mutating methods on structs return new values and do not modify the original.
 - **Method lookup cost**: UdonVM performs string-based method lookup; public methods are visible to Udon's event system and incur slightly higher overhead.
 - **Checked arithmetic**: UdonVM runs with overflow checking enabled by default. Operations that would silently wrap in standard C# will behave as checked.
 - **No JIT**: There is no just-in-time compilation. All method dispatch is interpreted.
+
+### Inspector visibility vs. Unity serialization
+
+`[HideInInspector]` hides a public field from the Inspector but does not disable Unity serialization. Use `[HideInInspector] public` when Editor-time wiring produces a value that must be persisted into a Scene or Prefab. Use `[System.NonSerialized] public` when another UdonBehaviour needs runtime-only access through direct access or `SetProgramVariable`; these values should be assigned by runtime code rather than loaded from the Scene/Prefab.
+
+```csharp
+// Positive example: editor-time wiring is intentionally persisted.
+[HideInInspector] public GameObject bakedTarget; // Editor-time wiring; value must be persisted into a Scene or Prefab.
+
+// Runtime-only example: another behaviour fills this value before a callback.
+[System.NonSerialized] public int selectedIndex = -1;
+```
+
+If `[HideInInspector]` is intentional, comment the persistence reason next to the declaration. Do not use it as a substitute for `[System.NonSerialized]` on temporary runtime state.
 
 ---
 
@@ -76,17 +92,17 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 
 ---
 
-## Unsupported Features
+## Features Unsupported in Udon Runtime
 
 ### Collections and Generics
 
 | Feature | Status | SDK Added | Alternative |
 |---------|--------|-----------|-------------|
-| `List<T>` | Blocked | — | Use `T[]` arrays or `DataList` (SDK 3.7.1+) |
-| `Dictionary<T,K>` | Blocked | — | Use `DataDictionary` from VRC SDK (SDK 3.7.1+) |
-| `Queue<T>`, `Stack<T>` | Blocked | — | Implement with arrays |
-| `HashSet<T>` | Blocked | — | Use arrays with manual deduplication |
-| Generic type parameters | Blocked | — | Use concrete types |
+| `List<T>` | Blocked in Udon runtime | — | Use `T[]` arrays or `DataList` (SDK 3.7.1+); Editor-evaluated initializers may use it to generate a final Udon-supported value |
+| `Dictionary<T,K>` | Blocked in Udon runtime | — | Use `DataDictionary` from VRC SDK (SDK 3.7.1+); same initializer boundary as `List<T>` |
+| `Queue<T>`, `Stack<T>` | Blocked in Udon runtime | — | Implement with arrays |
+| `HashSet<T>` | Blocked in Udon runtime | — | Use arrays with manual deduplication |
+| Generic type parameters | Blocked in Udon runtime | — | Use concrete types |
 
 **DataList / DataDictionary (SDK 3.7.1+):**
 
@@ -135,9 +151,9 @@ if (dict.ContainsKey("key1"))
 | Delegates | Blocked | — | Use `SendCustomEvent` |
 | `Button.onClick.AddListener()` | Blocked | — | Inspector OnClick -> `SendCustomEvent` |
 | Events (C# events) | Blocked | — | Use UdonSharp events |
-| LINQ | Blocked | — | Use manual loops |
+| LINQ | Blocked in Udon runtime | — | Use manual loops; Editor-evaluated initializers may use it to generate a final Udon-supported value |
 | Anonymous types | Blocked | — | Define explicit types |
-| Lambda expressions | Blocked | — | Use named methods |
+| Lambda expressions | Blocked in Udon runtime | — | Use named methods; Editor-evaluated initializers may use them during initial value generation |
 | Local functions | Blocked | — | Use private methods |
 | Pattern matching | Blocked | — | Use traditional `if`/`switch` |
 
@@ -202,7 +218,7 @@ public void _DoSomething()
 | `System.Net` | Blocked | — | Use `VRCStringDownloader`, `VRCImageDownloader` |
 | `System.Reflection` | Blocked | — | Not available |
 | `System.Threading` | Blocked | — | Not available |
-| `System.Linq` | Blocked | — | Use manual loops |
+| `System.Linq` | Blocked in Udon runtime | — | Use manual loops; Editor-evaluated initializers are the limited exception described below |
 | `System.Text.StringBuilder` | Available | **3.7.1** | Efficient string concatenation |
 | `System.Text.RegularExpressions` | Available | **3.7.1** | Pattern matching (Regex) |
 | `System.Random` | Available | **3.7.1** | Deterministic random with seed |
@@ -325,23 +341,83 @@ q.Normalize();           // WRONG - q is not normalized
 q = q.normalized;        // CORRECT
 ```
 
-### Field Initializers Are Compile-Time
+### Editor-Evaluated Field Initializers vs. Udon Runtime
 
-Field initializers are evaluated when UdonSharp compiles the script, not at scene load or instance creation. The baked value is stored in the serialized asset.
+UdonSharp evaluates field initializer expressions as ordinary C# on the Unity/Editor side. It stores the resulting value as initial data for the compiled Udon program; the initializer expression itself does not execute in Udon runtime. This allows ordinary C# features such as LINQ, lambdas, and `List<T>` to generate a final value that Udon can hold. A `Random.Range` call in an initializer is evaluated in the Editor and stored as a baked default, not runtime randomness.
+
+Use `Start()` or a lazy-init guard only for local or per-client randomness. For shared per-object or per-session seed/state, the owner generates it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership before writing and then call `RequestSerialization()`. Receivers may apply derived state in `OnDeserialization()` when needed, but that callback is not required for the field synchronization itself, and late joiners receive the current synced state.
+
+The two supported forms below are intentionally in the same `UdonSharpBehaviour`:
 
 ```csharp
-// WRONG - Random.Range is evaluated once at compile time
-// All instances of this script get the same value
-private int randomValue = Random.Range(0, 100);
+using System.Collections.Generic;
+using System.Linq;
+using UdonSharp;
+using UnityEngine;
 
-// CORRECT - evaluate at runtime in Start()
-private int randomValue;
-
-void Start()
+public class FieldInitializerExample : UdonSharpBehaviour
 {
-    randomValue = Random.Range(0, 100); // Different each play
+    // Form 1: LINQ and a lambda directly in the initializer.
+    private readonly string[] numberLabels = Enumerable
+        .Range(0, 101)
+        .Select(value => $"No.{value:D3}")
+        .ToArray();
+
+    // Form 2: call a same-behaviour static helper that uses List<T>,
+    // then convert the helper result into the final Udon-supported array.
+    private readonly string[] squareLabels = CreateSquares(10)
+        .Select(value => value.ToString())
+        .ToArray();
+
+    public static int[] CreateSquares(int count)
+    {
+        List<int> values = new List<int>();
+
+        for (int index = 0; index < count; index++)
+        {
+            values.Add(index * index);
+        }
+
+        return values.ToArray();
+    }
+
+    public override void Interact()
+    {
+        // Udon runtime consumes only the generated arrays.
+        Debug.Log(numberLabels[0]);
+        Debug.Log(squareLabels[0]);
+    }
 }
 ```
+
+These permissions apply only while generating field initial data. Calling `CreateSquares`, LINQ, lambdas, or `List<T>` from `Start()`, `Interact()`, or any other Udon runtime path remains unsupported.
+
+Do not use an initializer for runtime randomness:
+
+```csharp
+// NG: this value is chosen during Editor evaluation and baked into the program.
+private int seed = Random.Range(0, 100);
+
+// OK: each instance generates its own value at runtime.
+private int _seed;
+
+private void Start()
+{
+    _seed = Random.Range(0, 100);
+}
+```
+
+Keep deterministic field initializers limited to values that can be stored in the
+compiled Udon program. The local/per-client `Start()` and lazy-init path above is
+not a substitute for owner-generated shared state.
+
+Keep this boundary strict:
+
+- The final field type and value must be supported by Udon.
+- Limit the expression and any helper it calls to pure initial value generation that does not depend on scene, runtime, or player state.
+- Do not use `Networking.LocalPlayer` or scene references in an initializer.
+- Constructors and field initializers may run on a loading thread while Unity loads a scene. Do not call main-thread-only Unity APIs such as `FindObjectsByType` from them.
+- If a value needs current scene or player state, initialize it in `Start()` or through the lazy-init pattern below.
 
 **Lazy Initialization Pattern** (for objects that may be inactive at Start):
 
@@ -508,13 +584,14 @@ For Continuous sync, keep synced strings very short or switch to Manual sync.
 
 Before compiling UdonSharp code, verify:
 
-- [ ] No `List<T>` or `Dictionary<T,K>` usage
+- [ ] No `List<T>` or `Dictionary<T,K>` usage in Udon runtime code
 - [ ] No `interface` declarations
 - [ ] No method overloading (all methods have unique names)
 - [ ] No `try`/`catch` blocks
 - [ ] No `async`/`await` or `yield return`
-- [ ] No LINQ queries (`.Where()`, `.Select()`, etc.)
-- [ ] No lambda expressions (`=>` in variable context)
+- [ ] No LINQ queries (`.Where()`, `.Select()`, etc.) in Udon runtime code
+- [ ] No lambda expressions (`=>` in variable context) in Udon runtime code
+- [ ] Editor-evaluated field initializers produce a final Udon-supported value without scene/player/runtime state or main-thread-only Unity APIs
 - [ ] No `System.IO` or `System.Net` usage
 - [ ] All recursive methods have `[RecursiveMethod]` attribute
 - [ ] Struct methods: using return values, not relying on in-place mutation
@@ -741,21 +818,47 @@ public class InputManager : UdonSharpBehaviour
 
 ---
 
+### Independent VRCUrl Initial Values
+
+`VRCUrl.Empty` returns a shared instance; it does not create a fresh empty URL on each access.
+Do not use it to initialize any UdonSharp field that needs an independent initial value. This
+includes `[SerializeField]`, `[UdonSynced]`, and ordinary private fields. With SDK 3.10.4,
+Inspector overrides backed by this shared value can appear in another field, array element, or
+GameObject that uses the same UdonSharp program. Create a separate `new VRCUrl("")` for each
+field and each array element instead:
+
+```csharp
+private VRCUrl _localUrl = new VRCUrl("");
+[SerializeField] private VRCUrl _primaryUrl = new VRCUrl("");
+[UdonSynced] private VRCUrl _syncedUrl = new VRCUrl("");
+[SerializeField] private VRCUrl[] _urls = new VRCUrl[]
+{
+    new VRCUrl(""),
+    new VRCUrl(""),
+};
+```
+
+This rule is specific to independent initial values on UdonSharp fields. Runtime returns, resets,
+and assignments that only need an empty sentinel may still use `VRCUrl.Empty`.
+
+---
+
 ### Synced VRCUrl Lists
 
 `VRCUrl[]` syncs like any other supported array type. VRChat 2021.3.2's release notes state
-"Udon can now sync `String` arrays and `VRCUrl` arrays", and `VRCUrl[]` is present in the SDK's
-syncable-type list (`UdonNetworkTypes.CanSync`, verified against SDK 3.10.3). Use Manual sync
-(Continuous does not support arrays) and always initialize the field -- an uninitialized synced
-array prevents the behaviour from syncing.
+"Udon can now sync `String` arrays and `VRCUrl` arrays", and `VRCUrl[]` is present in the SDK 3.10.4
+syncable-type list (`UdonNetworkTypes.CanSync`). Use Manual sync (Continuous does not support
+arrays) and always initialize the field -- an uninitialized synced array prevents the behaviour
+from syncing.
 
 ```csharp
 [UdonSynced] private VRCUrl[] _urls = new VRCUrl[0]; // Manual sync behaviour
 ```
 
-The example below uses individual fixed slots instead of an array -- a bounded-capacity variant
-that makes the maximum list size explicit. The JSON metadata pattern (sender name, timestamp,
-content type via `VRCJson`) applies equally to either layout.
+The example below uses individual fixed slots instead of an array -- a bounded-capacity variant.
+Fixed slots bound capacity and make the maximum list size explicit; they are a design choice for
+predictable limits, not a workaround for unsupported array sync. The JSON metadata pattern (sender
+name, timestamp, content type via `VRCJson`) applies equally to either layout.
 
 **Complete Example -- Fixed-Slot Synced URL List with Metadata:**
 
@@ -771,14 +874,14 @@ public class SyncedUrlList : UdonSharpBehaviour
     private const int MaxUrls = 8;
 
     // Fixed slots cap the list at MaxUrls; a plain VRCUrl[] field also syncs.
-    [UdonSynced] private VRCUrl SyncedUrl_0 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_1 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_2 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_3 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_4 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_5 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_6 = VRCUrl.Empty;
-    [UdonSynced] private VRCUrl SyncedUrl_7 = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl SyncedUrl_0 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_1 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_2 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_3 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_4 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_5 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_6 = new VRCUrl("");
+    [UdonSynced] private VRCUrl SyncedUrl_7 = new VRCUrl("");
 
     // Metadata for all URLs synced as a single JSON string.
     // Format: [[timestamp, typeId, "senderName"], ...]
@@ -1009,7 +1112,7 @@ public class SyncedUrlList : UdonSharpBehaviour
 
 | Element | Purpose |
 |---------|---------|
-| Individual `[UdonSynced] VRCUrl` fields | Each URL synced as its own field (array sync not supported) |
+| Individual `[UdonSynced] VRCUrl` fields | Fixed-slot, bounded-capacity alternative when the maximum list size should be explicit; `VRCUrl[]` remains syncable |
 | `switch`-based get/set methods | Maps runtime index to the correct field |
 | `[UdonSynced] string` for metadata | JSON-encoded array of `[timestamp, type, sender]` entries |
 | `VRCJson.TrySerializeToJson` / `TryDeserializeFromJson` | Serialization of structured metadata into a single synced string |
@@ -1031,8 +1134,8 @@ public class SyncedUrlList : UdonSharpBehaviour
 - **Deletion requires shifting**: When removing a URL from the middle, all subsequent URL fields must be
   reassigned (shifted down). This is an O(n) operation on synced fields. For frequently modified lists, consider
   using a "soft delete" flag in the metadata instead of physically shifting.
-- **Late-joiner sync**: All `[UdonSynced]` fields are automatically sent to late joiners. No special handling
-  is needed beyond calling `RequestSerialization()` in `OnPlayerJoined` if the owner needs to push current state.
+- **Late-joiner sync**: All `[UdonSynced]` fields are automatically sent to late joiners and can be
+  applied in `OnDeserialization()` as needed. No join callback or manual resend is required for unchanged state.
 
 ---
 

@@ -1,15 +1,31 @@
 # Web Loading (String / Image Download)
 
-**Supported SDK Versions**: 3.7.1 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
 
 Since `System.Net` is unavailable in UdonSharp, VRChat-specific APIs must be used to retrieve data from the web.
+
+## SDK 3.10.4 event receiver arguments
+
+On SDK 3.10.4, pass `this` as the receiver argument; the explicit cast is no longer needed.
+The receiver argument is still required for UdonSharp callbacks, including on SDK 3.10.4.
+
+```csharp
+VRCStringDownloader.LoadUrl(dataUrl, this);
+
+var downloader = new VRCImageDownloader();
+downloader.DownloadImage(imageUrl, material, this);
+```
+
+This is a change to the cast, not to callback routing: omit the receiver argument and the completion event still has no target.
 
 ## Overview
 
 | API | Purpose | Namespace |
 |-----|------|----------|
 | `VRCStringDownloader` | Text/JSON download | `VRC.SDK3.StringLoading` |
-| `VRCImageDownloader` | Image download (Texture2D) | `VRC.SDK3.ImageLoading` |
+| `VRCImageDownloader` | Image download (Texture2D) | `VRC.SDK3.Image` |
 | `VRCJson` | JSON parsing (string -> DataDictionary) | `VRC.SDK3.Data` |
 
 ## Common Constraints
@@ -87,7 +103,6 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Components;
 using VRC.SDK3.StringLoading;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class UserUrlLoader : UdonSharpBehaviour
@@ -98,7 +113,7 @@ public class UserUrlLoader : UdonSharpBehaviour
     public void _OnLoadButtonClicked()
     {
         VRCUrl url = urlInputField.GetUrl();
-        VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(url, this);
     }
 
     public override void OnStringLoadSuccess(IVRCStringDownload result)
@@ -134,7 +149,7 @@ public void _LoadNext()
     _downloader.DownloadImage(
         imageUrls[_currentIndex],
         targetMaterial,
-        (IUdonEventReceiver)this,
+        this,
         new TextureInfo()
     );
     _currentIndex++;
@@ -147,7 +162,7 @@ public void _LoadNext()
 
 public void _FetchScores()
 {
-    VRCStringDownloader.LoadUrl(scoreBoardUrl, (IUdonEventReceiver)this);
+    VRCStringDownloader.LoadUrl(scoreBoardUrl, this);
 }
 // -> The server returns the latest data. No need to change the URL itself.
 ```
@@ -182,6 +197,7 @@ VRCUrl url = new VRCUrl(dynamicUrl); // Compiles but fails at runtime
 
 ```csharp
 using VRC.SDK3.StringLoading;
+using VRC.Udon.Common.Interfaces;
 
 // Static method: Download text from URL
 VRCStringDownloader.LoadUrl(VRCUrl url, IUdonEventReceiver udonBehaviour);
@@ -213,7 +229,6 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class StringDownloadExample : UdonSharpBehaviour
@@ -222,7 +237,7 @@ public class StringDownloadExample : UdonSharpBehaviour
 
     public void _StartDownload()
     {
-        VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(dataUrl, this);
     }
 
     public override void OnStringLoadSuccess(IVRCStringDownload result)
@@ -245,7 +260,8 @@ public class StringDownloadExample : UdonSharpBehaviour
 ### API
 
 ```csharp
-using VRC.SDK3.ImageLoading;
+using VRC.SDK3.Image;
+using VRC.Udon.Common.Interfaces;
 
 // Constructor: Create an instance (reusable)
 VRCImageDownloader imageDownloader = new VRCImageDownloader();
@@ -326,8 +342,7 @@ using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
-using VRC.SDK3.ImageLoading;
-using VRC.Udon.Common.Interfaces;
+using VRC.SDK3.Image;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class ImageDownloadExample : UdonSharpBehaviour
@@ -359,7 +374,7 @@ public class ImageDownloadExample : UdonSharpBehaviour
         _currentDownload = _downloader.DownloadImage(
             imageUrl,
             targetMaterial,
-            (IUdonEventReceiver)this,
+            this,
             info
         );
     }
@@ -425,7 +440,6 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class JsonDownloadExample : UdonSharpBehaviour
@@ -438,7 +452,7 @@ public class JsonDownloadExample : UdonSharpBehaviour
 
     public void _FetchData()
     {
-        VRCStringDownloader.LoadUrl(jsonUrl, (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(jsonUrl, this);
     }
 
     public override void OnStringLoadSuccess(IVRCStringDownload result)
@@ -509,7 +523,7 @@ private const float RETRY_DELAY = 6.0f; // 5-second limit + margin
 public void _StartDownload()
 {
     _retryCount = 0;
-    VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
+    VRCStringDownloader.LoadUrl(dataUrl, this);
 }
 
 public override void OnStringLoadError(IVRCStringDownload result)
@@ -528,7 +542,7 @@ public override void OnStringLoadError(IVRCStringDownload result)
 
 public void _RetryDownload()
 {
-    VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
+    VRCStringDownloader.LoadUrl(dataUrl, this);
 }
 ```
 
@@ -558,7 +572,7 @@ public void _DownloadNext()
         OnAllDownloadsComplete();
         return;
     }
-    VRCStringDownloader.LoadUrl(urls[_currentIndex], (IUdonEventReceiver)this);
+    VRCStringDownloader.LoadUrl(urls[_currentIndex], this);
 }
 
 public override void OnStringLoadSuccess(IVRCStringDownload result)
@@ -594,7 +608,7 @@ private void OnAllDownloadsComplete()
 | Image download error | Image exceeds 2048x2048 | Pre-resize the image |
 | Image download error | URL redirects | Use a direct URL (short URLs not supported) |
 | Want to download faster than every 5 seconds | Rate limiting | Not possible. Requests are only queued. Processing order is random |
-| Image events not received in UdonSharp | `udonBehaviour` parameter not specified | Explicitly pass `(IUdonEventReceiver)this` |
+| Image events not received in UdonSharp | Receiver argument omitted | Pass `this` explicitly; the SDK 3.10.4 cast is unnecessary |
 | JSON numbers are not `int` | VRCJson specification | Cast with `(int)token.Double` |
 | Memory usage keeps growing | Old textures not destroyed | Call `Destroy(oldTexture)` before replacing textures; `IVRCImageDownload.Dispose()` only releases the wrapper state |
 | Error inside JSON after successful parse | Lazy parsing specification | Check for false on `TryGetValue` for nested values |

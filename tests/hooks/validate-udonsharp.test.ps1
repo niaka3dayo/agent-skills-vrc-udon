@@ -7,6 +7,8 @@ $Hook = Join-Path $RepoRoot "skills/unity-vrc-udon-sharp/hooks/validate-udonshar
 $SharedFixtures = Join-Path $RepoRoot "tests/hooks/fixtures/validate-udonsharp"
 $SharedRules = Join-Path $SharedFixtures "rules.tsv"
 $SharedCases = Join-Path $SharedFixtures "cases.tsv"
+$ContextWarnings = Join-Path $SharedFixtures "context-warnings.txt"
+$HardBlockerWarnings = Join-Path $SharedFixtures "runtime-hard-blockers.txt"
 $TemplateCases = Join-Path $SharedFixtures "template-cases.tsv"
 $TemplateRoot = Join-Path $RepoRoot "skills/unity-vrc-udon-sharp/assets/templates"
 $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("validate-udonsharp-" + [guid]::NewGuid())
@@ -147,6 +149,18 @@ function Invoke-SharedParityMatrix {
         return $ActualIds.ToArray()
     }
 
+    function Convert-ToCanonicalDiagnosticText([string]$Stderr) {
+        $CanonicalLines = New-Object System.Collections.Generic.List[string]
+        foreach ($Line in [regex]::Split($Stderr, '\r?\n')) {
+            $PlainLine = [regex]::Replace($Line, "$([char]27)\[[0-9;]*m", '')
+            $MarkerIndex = $PlainLine.IndexOf('[UdonSharp]')
+            if ($MarkerIndex -ge 0) {
+                $CanonicalLines.Add($PlainLine.Substring($MarkerIndex))
+            }
+        }
+        return ($CanonicalLines -join "`n") + "`n"
+    }
+
     $SyntheticLines = @(
         "[UdonSharp] BLOCKED: $($RuleSubstrings[1])",
         "[UdonSharp] BLOCKED: $($RuleSubstrings[0])"
@@ -284,6 +298,34 @@ function Invoke-SharedParityMatrix {
             Write-Output "  expected: $ExpectedDisplay"
             Write-Output "  actual:   $ActualDisplay"
             $script:Failed++
+        }
+
+        if ($CaseId.StartsWith('context-')) {
+            $ExpectedDiagnostics = [System.IO.File]::ReadAllText($ContextWarnings).Replace("`r`n", "`n")
+            $ActualDiagnostics = Convert-ToCanonicalDiagnosticText $HookResult.Stderr
+            if ($ActualDiagnostics -ceq $ExpectedDiagnostics) {
+                Write-Output "PASS [shared case $CaseId] severity and text are exact"
+                $script:Passed++
+            } else {
+                Write-Output "FAIL [shared case $CaseId] severity or text mismatch"
+                Write-Output "EXPECTED:`n$ExpectedDiagnostics"
+                Write-Output "ACTUAL:`n$ActualDiagnostics"
+                $script:Failed++
+            }
+        }
+
+        if ($CaseId.StartsWith('runtime-hard-blockers-')) {
+            $ExpectedDiagnostics = [System.IO.File]::ReadAllText($HardBlockerWarnings).Replace("`r`n", "`n")
+            $ActualDiagnostics = Convert-ToCanonicalDiagnosticText $HookResult.Stderr
+            if ($ActualDiagnostics -ceq $ExpectedDiagnostics) {
+                Write-Output "PASS [shared case $CaseId] hard blockers stay exact"
+                $script:Passed++
+            } else {
+                Write-Output "FAIL [shared case $CaseId] hard blocker severity or text mismatch"
+                Write-Output "EXPECTED:`n$ExpectedDiagnostics"
+                Write-Output "ACTUAL:`n$ActualDiagnostics"
+                $script:Failed++
+            }
         }
     }
 

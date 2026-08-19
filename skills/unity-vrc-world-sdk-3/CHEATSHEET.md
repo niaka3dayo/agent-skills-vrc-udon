@@ -1,6 +1,8 @@
 # VRC World SDK 3 Cheatsheet
 
-**SDK 3.7.1 - 3.10.4 supported**
+**Active support / last verified**: SDK 3.10.4
+
+SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
 
 ---
 
@@ -426,7 +428,7 @@ site:github.com/vrchat-community "issue keyword"
 |-------|------|
 | Performance targets, Quest optimization checklist | [references/performance.md](references/performance.md) |
 | Lightmap settings, Quest bake parameter reference | [references/lighting.md](references/lighting.md) |
-| Full SDK 3.7.1-3.10.4 world component reference | [references/components.md](references/components.md) |
+| Full active SDK 3.10.4 world component reference | [references/components.md](references/components.md) |
 | VRChat layer system, collision, and selective rendering reference | [references/layers.md](references/layers.md) |
 | Audio and video configuration, voice settings, Steam Audio, and video players | [references/audio-video.md](references/audio-video.md) |
 | SDK Build Panel validation alert catalog, Auto Fix side effects, red/yellow/white warning responses | [references/build-validation.md](references/build-validation.md) |

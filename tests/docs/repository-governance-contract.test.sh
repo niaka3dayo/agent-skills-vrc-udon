@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SECURITY="$ROOT_DIR/SECURITY.md"
 CHANGELOG="$ROOT_DIR/CHANGELOG.md"
 DOC_SYNC="$ROOT_DIR/.claude/rules/doc-sync.md"
+CONTRIBUTING="$ROOT_DIR/CONTRIBUTING.md"
 CLAUDE="$ROOT_DIR/CLAUDE.md"
 LABELS="$ROOT_DIR/.github/labels.yml"
 LABEL_SYNC="$ROOT_DIR/.github/workflows/label-sync.yml"
@@ -37,6 +38,18 @@ for path in "$CHANGELOG" "$DOC_SYNC" "$CLAUDE"; do
     require_text "$path" "$ARCHIVE"
     require_text "$path" "$NO_BACKFILL"
 done
+
+# The contributor census is intentionally Issue-originated and must not turn
+# maintainer, bot, invalid-report, or PR-only activity into public credit.
+require_text "$DOC_SYNC" 'external GitHub Issue reporters'
+require_text "$DOC_SYNC" 'Exclude maintainer and bot accounts'
+require_text "$DOC_SYNC" 'invalid/duplicate/wontfix/spam Issues'
+require_text "$DOC_SYNC" 'PR-only contributors'
+
+# The support boundary applies to both distributed Skills, not only the file
+# from which this guidance happened to be copied.
+require_text "$CONTRIBUTING" 'for either distributed Skill'
+require_text "$CONTRIBUTING" 'applies to both distributed Skills'
 require_text "$CHANGELOG" '[1.2.0]: https://github.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/v1.2.0'
 require_text "$CHANGELOG" '[1.0.0]: https://github.com/niaka3dayo/agent-skills-vrc-udon/releases/tag/v1.0.0'
 forbid_text "$DOC_SYNC" 'CHANGELOG.md` — managed by Release Drafter, not manual edits'

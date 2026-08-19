@@ -1,0 +1,91 @@
+{
+  "generated_at": "2026-08-19",
+  "repository": "niaka3dayo/agent-skills-vrc-udon",
+  "query": "gh issue list --state all --limit 1000 --json number,title,state,author,labels,comments,url,closedAt",
+  "timeline_query": "gh api repos/niaka3dayo/agent-skills-vrc-udon/issues/{number}/timeline --paginate -H 'Accept: application/vnd.github+json'",
+  "scope": "External authors of GitHub Issues that contributed accepted, confirmed, or implemented corrections or knowledge additions. PR-only contributors are out of scope.",
+  "classification": {
+    "issues_scanned": 157,
+    "maintainer_and_bot_authors_excluded": [
+      "niaka3dayo",
+      "github-actions[bot]",
+      "dependabot[bot]",
+      "renovate[bot]"
+    ],
+    "selected_reporters": 8,
+    "selected_issues": 20,
+    "duplicate_invalid_wontfix_spam_issues_selected": 0,
+    "selection_rule": "Include an external Issue author when the Issue was confirmed, accepted, or implemented. Confirmed or accepted open reports remain included when they are part of the current v4.0.0 support work. Exclude duplicate, invalid, wontfix, spam, maintainer, bot, and PR-only activity."
+  },
+  "contributors": [
+    {
+      "handle": "KatanoShingo",
+      "issues": [181, 182, 189, 199, 213, 302],
+      "evidence": {
+        "classification": "implemented",
+        "merged_prs": [183, 187, 191, 194, 198, 201, 202, 204, 215, 216, 229, 314, 323]
+      }
+    },
+    {
+      "handle": "Guribo",
+      "issues": [171],
+      "evidence": {
+        "classification": "implemented and confirmed",
+        "merged_prs": [172]
+      }
+    },
+    {
+      "handle": "haru0416-dev",
+      "issues": [164, 165],
+      "evidence": {
+        "classification": "implemented",
+        "merged_prs": [166, 167, 168]
+      }
+    },
+    {
+      "handle": "Yodokoro",
+      "issues": [267, 286, 297],
+      "evidence": {
+        "classification": "implemented and confirmed",
+        "merged_prs": [269, 287, 298]
+      }
+    },
+    {
+      "handle": "tetradice",
+      "issues": [281],
+      "evidence": {
+        "classification": "implemented and reporter-confirmed",
+        "merged_prs": [282]
+      }
+    },
+    {
+      "handle": "owlboy",
+      "issues": [324],
+      "evidence": {
+        "classification": "implemented and confirmed",
+        "merged_prs": [325]
+      }
+    },
+    {
+      "handle": "nomlasvrc",
+      "issues": [333],
+      "evidence": {
+        "classification": "implemented and confirmed",
+        "merged_prs": [334]
+      }
+    },
+    {
+      "handle": "ureishi",
+      "issues": [337, 338, 341, 342, 344],
+      "evidence": {
+        "classification": "implemented and confirmed",
+        "merged_prs": [339, 340, 345, 347, 348]
+      }
+    }
+  ],
+  "exclusions": {
+    "external_reporters_with_no_accepted_confirmed_or_implemented_issue": [],
+    "duplicate_invalid_wontfix_spam_reports": [],
+    "pr_only_contributors": "Not searched as contributors because this census is intentionally Issue-originated."
+  }
+}

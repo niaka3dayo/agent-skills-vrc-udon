@@ -1,6 +1,8 @@
 # Web Loading — Advanced Packed Resource Patterns
 
-**Supported SDK Versions**: 3.7.1 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
 
 Advanced techniques for embedding multiple textures in a single `VRCStringDownloader` response
 to work around `VRCImageDownloader` limitations. For the base API reference see
@@ -103,7 +105,6 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PackFormatParser : UdonSharpBehaviour
@@ -382,8 +383,8 @@ public class ResourceIndex : UdonSharpBehaviour
     }
 
     // Result fields written by GetUrlIndex / GetInnerIndex — read immediately after the call
-    [HideInInspector] public int LastUrlIndex   = -1;
-    [HideInInspector] public int LastInnerIndex = -1;
+    [System.NonSerialized] public int LastUrlIndex   = -1;
+    [System.NonSerialized] public int LastInnerIndex = -1;
 
     /**
      * Searches for resourceId and returns true if found.
@@ -530,7 +531,6 @@ using System;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
 public class PackedResourceLoader : UdonSharpBehaviour
@@ -603,7 +603,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
         _hasRuntimeSprite = new bool[_uiSlots.Length];
 
         // Download resource index first
-        VRCStringDownloader.LoadUrl(_indexUrl, (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(_indexUrl, this);
     }
 
     // ── Download callbacks ───────────────────────────────────────────────────
@@ -710,7 +710,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
         if (urlIdx >= _packUrls.Length) return;
         _pendingUrlIndex  = urlIdx;
         _pendingSlotIndex = slotIdx;
-        VRCStringDownloader.LoadUrl(_packUrls[urlIdx], (IUdonEventReceiver)this);
+        VRCStringDownloader.LoadUrl(_packUrls[urlIdx], this);
         // Rate limit: next slot after 5.5 s
         SendCustomEventDelayedSeconds(nameof(_LoadNextSlot), 5.5f);
     }
@@ -873,7 +873,7 @@ public class PackedResourceLoader : UdonSharpBehaviour
 
 | Symptom | Likely Cause | Solution |
 |---|---|---|
-| `Convert.FromBase64String` throws at runtime | `System.Convert` unavailable in older SDK | Requires SDK 3.7.1+; check SDK version in `ProjectSettings` |
+| `Convert.FromBase64String` throws at runtime | `System.Convert` unavailable in an older SDK | Historical migration guidance only: SDK 3.7.1 introduced the available surface; unsupported older projects should verify their project version in `ProjectSettings` rather than treating this as an active support route |
 | Decoded texture is entirely black or garbled | Texture format mismatch (DXT on Quest, or ETC2 on PC) | Verify `#if UNITY_ANDROID` selects the correct `TextureFormat`; confirm server served the right platform file |
 | `LoadRawTextureData` produces corrupt image | Wrong byte count — `dataLength` in JSON does not match actual encoded data | Re-validate the server pack builder; log `rawBytes.Length` vs the expected `width * height * bpp` |
 | VRAM grows after repeated resource loads | `Destroy()` not called on old textures before creating new ones | In `ApplyTextureFromCache`, call `Destroy(oldSprite.texture)` before assigning the new sprite |

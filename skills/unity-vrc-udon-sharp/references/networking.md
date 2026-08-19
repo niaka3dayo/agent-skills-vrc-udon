@@ -2,7 +2,9 @@
 
 Comprehensive guide to networking and synchronization in UdonSharp.
 
-**Supported SDK Versions**: 3.7.1 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
 
 > **Warning**: Networking in Udon is a work in progress and can be fragile. Keep implementations simple and test thoroughly with multiple players.
 >
@@ -528,7 +530,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 - **On remote clients:** the new ownership becomes visible after VRChat propagates the change. Each remote client's `OnOwnershipTransferred` fires when the propagation arrives.
 - **No client-side arbitration:** when two clients call `SetOwner` simultaneously, both succeed locally and may write synced variables; VRChat resolves the durable owner by network arrival order. The loser's write is overwritten when the winner's serialization arrives. This is by design — see [networking-antipatterns.md §1](networking-antipatterns.md#1-ownership-race-condition) for the recommended `IsOwner`-guarded pattern, and [§"Ownership Arbitration with OnOwnershipRequest"](#ownership-arbitration-with-onownershiprequest) below for owner-side protection during critical actions.
 
-> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; current SDKs (3.7.1+, this skill's coverage range) are locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
+> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; the active target (SDK 3.10.4) is locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
 
 ### Owner Leave and Ownership Cascade
 
@@ -682,7 +684,7 @@ public void _IncrementScore()
 
 ### Detecting Changes
 
-Use `OnDeserialization` or `FieldChangeCallback`:
+For scalar synced values, use `OnDeserialization` or `FieldChangeCallback`:
 
 ```csharp
 // Method 1: OnDeserialization
@@ -713,6 +715,140 @@ private void OnHealthChanged()
     healthBar.value = _health;
 }
 ```
+
+### Synced Arrays: Apply Them After Deserialization
+
+`FieldChangeCallback` is useful for scalar synced fields, but it is not a
+receiver contract for arrays. The official [`OnVariableChanged` guidance](https://creators.vrchat.com/worlds/udon/networking/network-components/#onvariablechanged)
+states that changing an array's contents does not trigger the event because the
+array itself is unchanged. The official [Udon Example Scene](https://creators.vrchat.com/worlds/examples/udon-example-scene/)
+uses `OnDeserialization()` for its array example for the same reason.
+
+Do not depend on `FieldChangeCallback` for same-length element changes, array reassignments, or array length changes. Reassignment and length changes are not special exceptions to this guidance; use one receiver path for every synced array shape. The owner applies the same idempotent method immediately after the mutation, and remote clients apply it from `OnDeserialization()` after the serialized snapshot is complete. For Manual sync, make all element writes (or a single array reassignment) first, then make one `RequestSerialization()` after the complete array update.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SyncedArrayReceiver : UdonSharpBehaviour
+{
+    [UdonSynced] private int[] _syncedValues = new int[4];
+
+    public void _SetValues(int[] values)
+    {
+        if (values == null) return;
+
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+        _syncedValues = values;
+        ApplyValues();
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        ApplyValues();
+    }
+
+    private void ApplyValues()
+    {
+        if (_syncedValues == null) return;
+
+        // Idempotent projection: derive the local display from the snapshot.
+        UpdateDisplay(_syncedValues);
+    }
+
+    private void UpdateDisplay(int[] values)
+    {
+        // Update UI or other derived state from values.
+    }
+}
+```
+
+The basic pattern intentionally has no revision counter: `ApplyValues()` is
+safe to run again for the same state. Add a revision only when the apply step
+has a non-idempotent side effect, such as playing a sound or writing a one-time
+record. A revision does not establish ordering or stale-packet rejection; it is
+only a duplicate-side-effect guard shared by the owner and `OnDeserialization`
+paths. A late joiner's first `OnDeserialization()` receives the current revision,
+so record the first received revision as a baseline without replaying historical one-shot effects.
+Durable state must still be projected by `ApplyValues()` before the
+baseline return; only later revisions may trigger the one-shot.
+
+```csharp
+// Optional guard for a non-idempotent effect; keep the basic path revision-free.
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class RevisionGuardedArray : UdonSharpBehaviour
+{
+    [UdonSynced] private int[] _syncedValues = new int[4];
+    [UdonSynced] private int _revision;
+    [SerializeField] private AudioSource _sound;
+    private int _appliedRevision;
+    private bool _hasAppliedRevision;
+
+    private void Start()
+    {
+        // The owner has already applied its local baseline; receivers have not.
+        if (!Networking.IsOwner(gameObject)) return;
+        _hasAppliedRevision = true;
+        _appliedRevision = _revision;
+    }
+
+    public void _SetValues(int[] values)
+    {
+        if (values == null) return;
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+        _syncedValues = values;
+        _revision++;
+        ApplyValues();
+        ApplyOneShotIfNeeded();
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        // Durable UI/state is never suppressed by the one-shot baseline.
+        ApplyValues();
+        ApplyOneShotIfNeeded();
+    }
+
+    private void ApplyValues()
+    {
+        if (_syncedValues == null) return;
+        UpdateDisplay(_syncedValues);
+    }
+
+    private void ApplyOneShotIfNeeded()
+    {
+        if (!_hasAppliedRevision)
+        {
+            // Late joiner: record the first received revision only.
+            _hasAppliedRevision = true;
+            _appliedRevision = _revision;
+            return;
+        }
+        if (_appliedRevision == _revision) return;
+
+        _appliedRevision = _revision;
+        PlayOneShot();
+    }
+
+    private void UpdateDisplay(int[] values) { /* Durable projection. */ }
+    private void PlayOneShot() { if (_sound != null) _sound.Play(); }
+}
+```
+
+Increment `_revision` with the array mutation, then call the same
+`ApplyOneShotIfNeeded()` helper on the owner and from `OnDeserialization()` on
+receivers. The owner starts with its local revision baseline, while a receiver
+records the first snapshot as a baseline. Use this only for the non-idempotent
+effect; keep ordinary UI or derived-state updates on the revision-free
+`ApplyValues()` path above.
 
 ## Network Events
 
@@ -1206,12 +1342,6 @@ public override void OnPlayerJoined(VRCPlayerApi player)
     if (player == null || !player.IsValid()) return;
 
     Debug.Log($"{player.displayName} joined");
-
-    // Late joiners receive current synced values automatically; this owner refresh is defensive only.
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
 }
 
 public override void OnPlayerLeft(VRCPlayerApi player)

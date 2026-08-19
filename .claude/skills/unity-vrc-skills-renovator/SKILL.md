@@ -10,7 +10,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "3.0.2"
+    version: "4.0.0"
     tags: skill-maintenance, sdk-update, knowledge-management
     internal: true
 ---
@@ -44,12 +44,12 @@ A guide for renovating (filling knowledge, refreshing, and improving quality of)
 
 ### Phase 1: Current State Analysis
 
-1. **Check the current SDK version support for each skill**
+1. **Check the active and verified SDK target for each skill**
 
 ```text
 Read: skills/unity-vrc-udon-sharp/SKILL.md
 Read: skills/unity-vrc-world-sdk-3/SKILL.md
-→ Check the "Supported SDK version" line in each file
+→ Check the "Active support / last verified" line in each file
 ```
 
 2. **Check the file list for each skill**

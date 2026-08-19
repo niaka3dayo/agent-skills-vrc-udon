@@ -72,6 +72,15 @@ jobs:
       - name: Check network event hardening and SDK coverage
         run: bash tests/docs/network-event-hardening.test.sh
 
+      - name: Check SDK active support policy
+        run: bash tests/docs/sdk-support-policy.test.sh
+
+      - name: Check Udon event receiver reference
+        run: bash tests/docs/udon-event-receiver-reference.test.sh
+
+      - name: Check community contributor acknowledgements
+        run: bash tests/docs/community-contributors.test.sh
+
       - name: Check repository governance contracts
         run: bash tests/docs/repository-governance-contract.test.sh
 
@@ -80,6 +89,18 @@ jobs:
 
       - name: Check layers runtime exception and evidence boundary
         run: bash tests/docs/layers-reference-contract.test.sh
+
+      - name: Check runtime public field serialization guidance
+        run: bash tests/docs/runtime-public-field-serialization-reference.test.sh
+
+      - name: Check Editor-evaluated field initializer boundary
+        run: bash tests/docs/field-initializer-context-reference.test.sh
+
+      - name: Check VRCUrl.Empty field initializer boundary
+        run: bash tests/docs/vrcurl-empty-initializer-reference.test.sh
+
+      - name: Check synced array callback and VRCUrl[] guidance
+        run: bash tests/docs/synced-array-callback-reference.test.sh
 
   markdown:
     name: Markdown Links

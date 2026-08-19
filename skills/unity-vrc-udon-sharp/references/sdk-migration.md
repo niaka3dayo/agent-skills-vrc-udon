@@ -2,10 +2,13 @@
 
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
-**Applies to**: SDK 3.7.x through 3.10.4
+**Historical migration coverage**: SDK 3.7.x through 3.10.4
+**Active support / last verified**: SDK 3.10.4
 
-Use the current supported SDK when publishing. The version markers below describe
-feature availability; they do not claim an upload cutoff for older SDK versions.
+Use SDK 3.10.4 when publishing. The version markers below preserve feature
+availability and migration facts; SDK 3.7.1-3.10.3 are not support or validation
+targets for this Skill. This is the Skill's boundary, not a claim about VRChat's
+own SDK policy.
 
 ## Version markers
 
@@ -16,6 +19,20 @@ Version-specific notes in this skill use three marker forms. Match them verbatim
 - `(unresolved as of SDK X.Y.Z)` — a bug is still open in this version. Include a tracking link (canny, GitHub issue) when available.
 
 ---
+
+## SDK 3.10.4 receiver migration
+
+`UdonSharpBehaviour` directly implements `IUdonEventReceiver` starting with SDK 3.10.4. The active Skill examples therefore pass `this` directly and keep the receiver argument.
+The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.4 example.
+
+```csharp
+using VRC.SDK3.StringLoading;
+using VRC.Udon.Common.Interfaces;
+
+VRCStringDownloader.LoadUrl(dataUrl, (IUdonEventReceiver)this);
+```
+
+When a project moves to the active SDK target, remove the cast and remove the interface using when that block no longer refers to `IUdonEventReceiver` or another type from that namespace.
 
 ## SDK 3.7.x to 3.8.x
 

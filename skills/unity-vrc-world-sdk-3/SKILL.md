@@ -9,7 +9,7 @@ description: >
     VRC_ObjectSync, VRC_CameraDolly, spawn points, collision matrices,
     PhysBone and Contact component placement, Box Contacts,
     Global Avatar PhysBone Colliders, and VRCPhysBoneCollider component setup.
-    SDK 3.7.1-3.10.4. Triggers on: VRChat world scene, VRC SDK, scene setup,
+    Active support / last verified: SDK 3.10.4. Triggers on: VRChat world scene, VRC SDK, scene setup,
     component placement, optimization, Quest support, light baking, upload,
     SDK validation, Build Panel warning, Auto Fix, red warning, yellow warning, or white warning.
     Do not use for UdonSharp C# or VRCTween calls; use
@@ -17,7 +17,7 @@ description: >
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "3.0.2"
+    version: "4.0.0"
     tags: vrchat, world-sdk, scene-setup, optimization, components, upload, sdk-validation, build-panel
 ---
 
@@ -141,23 +141,27 @@ Quest required? → Yes
 
 ## SDK Versions
 
-**Covered versions**: SDK 3.7.1 - 3.10.4 (last verified: 3.10.4)
+**Active support / last verified**: SDK 3.10.4
+
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.4.
+
+The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.3 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.4 unless a reference explicitly marks a historical migration case.
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |
-| 3.7.1  | StringBuilder, Regex, System.Random                                            | ✅             |
-| 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | ✅             |
-| 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | ✅             |
-| 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | ✅             |
-| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings | ✅ |
-| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) | ✅ |
-| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | ✅             |
-| 3.10.1 | Bug fixes and stability improvements                                           | ✅             |
-| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | ✅             |
-| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | ✅             |
-| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | ✅ Last verified |
+| 3.7.1  | StringBuilder, Regex, System.Random                                            | Historical     |
+| 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | Historical     |
+| 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | Historical     |
+| 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | Historical     |
+| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings | Historical |
+| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) | Historical |
+| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | Historical     |
+| 3.10.1 | Bug fixes and stability improvements                                           | Historical     |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | Historical     |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | Historical     |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Active / Last verified |
 
-Use the current supported SDK for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
+Use SDK 3.10.4 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
 
 ---
 

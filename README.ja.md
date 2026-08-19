@@ -1,7 +1,7 @@
 [English](README.md) | **日本語** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
@@ -34,13 +34,13 @@
 
 <h2 id="about">概要</h2>
 
-**UdonSharp**（C# &rarr; Udon Assembly）を使ったVRChatワールド開発には、通常のC#とは大きく異なる厳格なコンパイル制約があります。`List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などは**コンパイルエラー**になります。
+**UdonSharp**（C# &rarr; Udon Assembly）を使ったVRChatワールド開発には、通常のC#とは大きく異なる厳格なコンパイル制約があります。Udon runtimeで実行されるコードでは、`List<T>`、`async/await`、`try/catch`、LINQ、ラムダ式などは**コンパイルエラー**になります。一方、Editorで評価されるフィールド初期化子は別のC#実行コンテキストであり、最終的にUdonが保持できるフィールド値を生成するために一部の機能を使用できます。
 
 このリポジトリは、AIコーディングエージェントが最初から正しいUdonSharpコードを生成できるよう、必要な知識を提供します。
 
 | 問題 | 解決策 |
 |---------|----------|
-| AIが `List<T>`、`async/await` 等を生成してしまう | ルール + フックによる自動検出と警告 |
+| AIがUdon runtimeコードに `List<T>`、`async/await` 等を生成してしまう | ルール + フックによる自動検出と警告 |
 | 同期変数の肥大化 | デシジョンツリー + データバジェット |
 | 誤ったネットワーキングパターン | パターンライブラリ + アンチパターン集 |
 | SDKバージョンごとの機能差異 | バージョンテーブルと機能マッピング |
@@ -130,11 +130,11 @@ UdonSharpスクリプティングのコアスキルです。コンパイル制�
 
 | 分野 | 内容 |
 |------|---------|
-| **制約** | 使用不可なC#機能と代替手段（`List<T>` &rarr; `DataList`、`async` &rarr; `SendCustomEventDelayedSeconds`） |
+| **制約** | Udon runtimeで使用不可なC#機能と代替手段（`List<T>` &rarr; `DataList`、`async` &rarr; `SendCustomEventDelayedSeconds`）、Editorで評価される初期化子との境界 |
 | **ネットワーキング** | オーナーシップモデル、Manual/Continuousシンク、FieldChangeCallback、アンチパターン |
-| **NetworkCallable** | SDK 3.8.1以降のパラメータ付きネットワークイベント（最大8引数） |
-| **パーシスタンス** | SDK 3.7.4以降のPlayerData/PlayerObject API |
-| **ダイナミクス** | SDK 3.10.0以降のPhysBones、Contacts、ワールド向けVRC Constraints |
+| **NetworkCallable** | SDK 3.8.1で導入されたパラメータ付きネットワークイベント（最大8引数） |
+| **パーシスタンス** | SDK 3.7.4で導入されたPlayerData/PlayerObject API |
+| **ダイナミクス** | SDK 3.10.0で導入されたPhysBones、Contacts、ワールド向けVRC Constraints |
 | **Webローディング** | 文字列・画像ダウンロード、VRCJson、VRCUrlの制約 |
 | **テンプレート** | 17種のテンプレート（インタラクション、同期パターン、永続化、エディタユーティリティなど） |
 
@@ -192,7 +192,8 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 | カテゴリ | チェック内容 | 重大度 |
 |----------|-------|----------|
-| 使用禁止機能 | `List<T>`、`async/await`、`try/catch`、LINQ、コルーチン、ラムダ式 | ERROR |
+| 文脈依存の機能 | `List<T>`、LINQ、ラムダ式（Udon runtimeでは使用不可。Editorで評価されるフィールド初期化子では有効な場合あり） | WARNING |
+| Runtime使用禁止機能 | `async/await`、`try/catch`、コルーチン | ERROR |
 | 使用禁止パターン | `AddListener()`、`StartCoroutine()` | ERROR |
 | ネットワーキング | `RequestSerialization()` なしの `[UdonSynced]` | WARNING |
 | ネットワーキング | `Networking.SetOwner()` なしの `[UdonSynced]` | WARNING |
@@ -210,19 +211,25 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 
 ## SDKバージョン
 
+**現在のサポート対象 / 最終検証済み**: VRChat SDK 3.10.4
+
+v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定版への切り替えはこのリポジトリで検証してから行います。安定版になっただけで自動的にサポート対象へ追加することはありません。現在の最終検証済みは3.10.4です。
+
+以下の表には、移行時の参考になる機能追加の履歴を残しています。SDK 3.7.1〜3.10.3は履歴情報のみで、このSkillのサポート対象・検証対象ではありません。これはSkill自身のサポート範囲であり、VRChatのSDK方針を示すものではありません。
+
 | SDKバージョン | 主な機能 | ステータス |
 |:-----------:|:-------------|:------:|
-| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | サポート済み |
-| **3.7.4** | Persistence API（PlayerData / PlayerObject） | サポート済み |
-| **3.7.6** | マルチプラットフォームビルド＆パブリッシュ（PC + Android） | サポート済み |
-| **3.8.0** | PhysBone依存関係ソート、Force Kinematic On Remote | サポート済み |
-| **3.8.1** | `[NetworkCallable]` パラメータ付きイベント、`Others`/`Self` ターゲット | サポート済み |
-| **3.9.0** | Camera Dolly API、Auto Hold Pickup | サポート済み |
-| **3.10.0** | ワールド向けVRChat Dynamics（PhysBones、Contacts、VRC Constraints） | サポート済み |
-| **3.10.1** | バグ修正、安定性の向上 | サポート済み |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones修正、シェーダー時間グローバル | サポート済み |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（アバター）、Mirror 描画タイミング修正 | サポート済み |
-| **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 最新安定版 |
+| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | 履歴 |
+| **3.7.4** | Persistence API（PlayerData / PlayerObject） | 履歴 |
+| **3.7.6** | マルチプラットフォームビルド＆パブリッシュ（PC + Android） | 履歴 |
+| **3.8.0** | PhysBone依存関係ソート、Force Kinematic On Remote | 履歴 |
+| **3.8.1** | `[NetworkCallable]` パラメータ付きイベント、`Others`/`Self` ターゲット | 履歴 |
+| **3.9.0** | Camera Dolly API、Auto Hold Pickup | 履歴 |
+| **3.10.0** | ワールド向けVRChat Dynamics（PhysBones、Contacts、VRC Constraints） | 履歴 |
+| **3.10.1** | バグ修正、安定性の向上 | 履歴 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones修正、シェーダー時間グローバル | 履歴 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（アバター）、Mirror 描画タイミング修正 | 履歴 |
+| **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 現行サポート / 最終検証済み |
 
 > **注意**: 公開前に、VRChatが現在サポートしているSDKバージョンをプロジェクトで使用していることを確認してください。
 
@@ -237,6 +244,25 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 | VRChatフォーラム（Q&A） | https://ask.vrchat.com/ |
 | VRChat Canny（バグ・機能要望） | https://feedback.vrchat.com/ |
 | VRChat コミュニティGitHub | https://github.com/vrchat-community |
+
+---
+
+<h2 id="community-contributors">コミュニティからの貢献</h2>
+
+具体的なIssueを立て、検証や修正方針まで一緒に詰めてくださった皆さんに感謝します。
+
+<!-- community-contributors:start -->
+<p>
+<a href="https://github.com/KatanoShingo" title="@KatanoShingo"><img src="https://github.com/KatanoShingo.png?size=64" width="64" height="64" alt="@KatanoShingo"></a>
+<a href="https://github.com/Guribo" title="@Guribo"><img src="https://github.com/Guribo.png?size=64" width="64" height="64" alt="@Guribo"></a>
+<a href="https://github.com/haru0416-dev" title="@haru0416-dev"><img src="https://github.com/haru0416-dev.png?size=64" width="64" height="64" alt="@haru0416-dev"></a>
+<a href="https://github.com/Yodokoro" title="@Yodokoro"><img src="https://github.com/Yodokoro.png?size=64" width="64" height="64" alt="@Yodokoro"></a>
+<a href="https://github.com/tetradice" title="@tetradice"><img src="https://github.com/tetradice.png?size=64" width="64" height="64" alt="@tetradice"></a>
+<a href="https://github.com/owlboy" title="@owlboy"><img src="https://github.com/owlboy.png?size=64" width="64" height="64" alt="@owlboy"></a>
+<a href="https://github.com/nomlasvrc" title="@nomlasvrc"><img src="https://github.com/nomlasvrc.png?size=64" width="64" height="64" alt="@nomlasvrc"></a>
+<a href="https://github.com/ureishi" title="@ureishi"><img src="https://github.com/ureishi.png?size=64" width="64" height="64" alt="@ureishi"></a>
+</p>
+<!-- community-contributors:end -->
 
 ---
 
@@ -263,7 +289,7 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 - コンテンツは**「現状のまま」**提供されており、いかなる保証もありません。[LICENSE](LICENSE) をご確認ください。
 - これは個人プロジェクトです。**誤り、古くなった情報、または不完全な内容が含まれる可能性があります。** 常に[VRChat公式ドキュメント](https://creators.vrchat.com/)で確認してください。
 - このリポジトリが原因で生じた問題（ビルドエラー、アップロード拒否、予期しないワールドの動作など）について、作者は一切責任を負いません。
-- SDKカバレッジ（3.7.1〜3.10.4）は最終更新時点のものです。新しいVRChatリリースで動作が変わる可能性があります。
+- 現在のSDKサポート対象は、最終検証済みの3.10.4のみです。古いバージョンの行は移行時の履歴情報であり、そのSDKの検証や修正を約束するものではありません。新しいVRChatリリースで動作が変わる可能性があります。
 
 ### AI支援による作成
 

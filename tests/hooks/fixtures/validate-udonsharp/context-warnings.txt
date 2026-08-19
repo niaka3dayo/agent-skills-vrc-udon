@@ -1,0 +1,3 @@
+[UdonSharp] WARNING: Generic collections (List<T>, Dictionary<K,V>) detected. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime; generic collections are not supported in Udon runtime.
+[UdonSharp] WARNING: LINQ not supported in Udon runtime. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime.
+[UdonSharp] WARNING: Lambda expression detected. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime; lambda expressions are not supported in Udon runtime.

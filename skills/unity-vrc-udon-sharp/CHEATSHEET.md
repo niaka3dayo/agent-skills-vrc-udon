@@ -1,8 +1,14 @@
 # UdonSharp Cheatsheet
 
-**SDK 3.7.1 - 3.10.4 Coverage**
+**Active support / last verified**: SDK 3.10.4
 
-## Blocked Features and Alternatives
+SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
+
+## Features Blocked in Udon Runtime
+
+These alternatives apply to code that executes in Udon. Editor-evaluated field initializers may use `List<T>`, LINQ, and lambdas only to generate a final field value that Udon can hold; the same code remains blocked in `Start()`, `Interact()`, and other Udon runtime methods. A `Random.Range` call in an initializer is evaluated in the Editor and stored as a baked default, not runtime randomness.
+
+Use `Start()` or a lazy-init guard only for local or per-client randomness. For shared per-object or per-session seed/state, the owner generates it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership before writing and then call `RequestSerialization()`. Receivers may apply derived state in `OnDeserialization()` when needed, but that callback is not required for the field synchronization itself, and late joiners receive the current synced state.
 
 | Blocked | Alternative |
 |---------|------------|
@@ -14,7 +20,7 @@
 | LINQ | `for` loops |
 | `interface` | Base class / `SendCustomEvent` |
 
-## Available Features (SDK 3.7.1+)
+## Available Features (historical baseline: SDK 3.7.1)
 
 | Feature | SDK | Notes |
 |---------|-----|-------|
@@ -98,6 +104,18 @@ public void SetValue(int newValue) {
     RequestSerialization();
 }
 ```
+
+The property pattern above is for scalar values. **Synced arrays: always apply
+them from `OnDeserialization()`**. This covers same-length element changes,
+array reassignments, and array length changes; do not attach
+`FieldChangeCallback` to an array and wait for its setter. The owner should call
+the same idempotent `ApplyValues()` method immediately after the mutation, then
+call `RequestSerialization()` once for the completed update.
+
+If a revision guard protects a historical one-shot effect, a late joiner's first
+`OnDeserialization()` should baseline the received revision without that effect.
+Run durable `ApplyValues()` first and let only later revisions trigger the
+one-shot; a revision is not ordering or stale-packet protection.
 
 ---
 
@@ -208,11 +226,11 @@ public void _DoLoop() {
 }
 ```
 
-For cancelable timers on SDK 3.10.4+, use `VRCTween.DelayedCall`; keep helper-`GameObject` cancellation workarounds only for older SDK projects.
+For cancelable timers on the active SDK target (3.10.4), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
 
 ---
 
-## VRCTween (SDK 3.10.4+)
+## VRCTween (introduced in SDK 3.10.4)
 
 ```csharp
 using VRC.SDK3.Components;
@@ -237,7 +255,7 @@ void OnDestroy() {
 | Need | Use | Notes |
 |------|-----|-------|
 | Smooth transform/UI/audio changes | `TweenPosition`, `TweenScale`, `TweenFade`, `TweenPitch` | Returns `VRCTweenHandle` |
-| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on SDK 3.10.4+ |
+| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.4) |
 | Delayed active toggle | `VRCTween.DelayedSetActive(target, active, seconds)` | Use for local visibility/state toggles |
 | Cleanup | `handle.Kill()` / `gameObject.KillAllTweens()` | Kill stored handles and long/infinite tweens |
 | High-frequency retargeting | `ChangeEndValue`, `SetDuration`, `SetEase`, `Restart` | Reuse a handle instead of kill/recreate in hot paths |
@@ -270,6 +288,15 @@ SendCustomNetworkEvent(NetworkEventTarget.Owner, "MethodName");
 // Local-only public event target: leading _ and no [NetworkCallable].
 public void _ApplyLocalPreview() { }
 ```
+
+### Public field serialization
+
+| Need | Declaration |
+|------|-------------|
+| Editor-time DI/bake/autowire value must persist into a Scene/Prefab | `[HideInInspector] public` — add a comment explaining the persistence reason |
+| Runtime-only value accessed by another behaviour | `[System.NonSerialized] public` — assign it at runtime |
+
+`[HideInInspector]` changes Inspector visibility only; it does not disable Unity serialization. `[System.NonSerialized]` keeps the field public for runtime access while excluding it from Scene/Prefab serialization. Use this for runtime-only state.
 
 ---
 
@@ -414,6 +441,7 @@ private void Log(string msg) {
 | NullReference on player | Check `player != null && player.IsValid()` |
 | Method not found (SendCustomEvent / network event target) | Make the target method public and parameterless (pass data via `SetProgramVariable`); plain network events are also parameterless ([NetworkCallable] allows up to 8) |
 | FieldChangeCallback not firing | Use property setter even for local changes |
+| Array contents changed: use `OnDeserialization()` | Rebuild derived state from the complete array snapshot; do not depend on `FieldChangeCallback` |
 | Cannot modify struct | `var v = struct; v.x = 1; struct = v;` |
 | Start() not called | Inactive object support: `OnEnable()` + `Initialize()` |
 
@@ -425,16 +453,16 @@ See `references/web-loading.md` for details.
 
 ```csharp
 using VRC.SDK3.StringLoading;  // String Loading
-using VRC.SDK3.ImageLoading;   // Image Loading
+using VRC.SDK3.Image;           // Image Loading
 using VRC.SDK3.Data;           // VRCJson
 
 // String download
-VRCStringDownloader.LoadUrl(url, (IUdonEventReceiver)this);
+VRCStringDownloader.LoadUrl(url, this);
 // -> OnStringLoadSuccess(IVRCStringDownload) / OnStringLoadError
 
 // Image download (Dispose the wrapper + Destroy the assigned Texture2D — see image-loading-vram.md)
 var dl = new VRCImageDownloader();
-dl.DownloadImage(url, material, (IUdonEventReceiver)this, textureInfo);
+dl.DownloadImage(url, material, this, textureInfo);
 // -> OnImageLoadSuccess(IVRCImageDownload) / OnImageLoadError
 
 // JSON parse (after string download)

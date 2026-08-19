@@ -345,8 +345,8 @@ public class VoteSystemCore : UdonSharpBehaviour
         SyncedVoterPlayerIds[SyncedVoterCount] = caller.playerId;
         SyncedVoterCount++;
         ++SyncedYesCount;
-        RequestSerialization();
         RefreshCount();
+        RequestSerialization();
     }
 
     public override void OnDeserialization()
@@ -369,6 +369,22 @@ deduplication permits at most one accepted vote per player. Configure a smaller
 array when the world capacity is lower.
 
 `[NetworkCallable(N)]` paces remote sends for one event on one behaviour and queues excess sends on the sender. It is not an aggregate receiver or resource bound across callers. Here, the fixed array, input checks, and authoritative deduplication provide the receiver resource bound; the attribute only paces each sender's requests.
+
+---
+
+### Array values: use OnDeserialization, not FieldChangeCallback
+
+`FieldChangeCallback` is appropriate for the scalar counters below, but do not
+use it as the receive hook for a `[UdonSynced]` array. Array contents can change
+without the array variable itself changing, so the callback is not a contract
+for same length, reassigning the array, or changing its length. Apply the array
+from `OnDeserialization()` instead. The owner should call the same idempotent
+apply method immediately after its mutation and then call
+`RequestSerialization()` once for the completed update.
+
+The fixed `SyncedVoterPlayerIds` array in Pattern 3c follows this rule: the
+owner updates the accepted snapshot and `RefreshCount()` locally, while every
+receiver calls `RefreshCount()` from `OnDeserialization()`.
 
 ---
 
@@ -421,7 +437,7 @@ public class DualCounterSync : UdonSharpBehaviour
 | Approach | Pros | Cons |
 |------|------|------|
 | `OnDeserialization()` | Simple, full update | Cannot tell which variable changed |
-| `FieldChangeCallback` | Detects individual variable changes | Requires property definitions |
+| `FieldChangeCallback` | Detects individual scalar variable changes | Requires property definitions; not a synced-array receive hook |
 
 **When to use**: 1-2 variables -> OnDeserialization is sufficient. 3+ variables needing individual responses -> FieldChangeCallback.
 

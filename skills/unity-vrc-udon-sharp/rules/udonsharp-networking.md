@@ -2,7 +2,9 @@
 
 Core networking rules and constraints. See `../references/networking.md` for detailed patterns.
 
-**SDK Coverage**: 3.7.1 - 3.10.4
+**Active support / last verified**: SDK 3.10.4
+
+Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
 
 ## Ownership Model
 
@@ -177,6 +179,67 @@ private void OnHealthChanged()
     healthBar.value = _health;
 }
 ```
+
+### Synced Arrays: OnDeserialization Is the Receiver Hook
+
+`OnVariableChanged` does not fire when an array's contents change because the array
+itself is still the same variable. Therefore, a `[UdonSynced]` array must not depend on `FieldChangeCallback` for its receive-side update. Do not make any of these mutation shapes an exception:
+
+- same-length element changes
+- array reassignments
+- array length changes
+
+Use `OnDeserialization()` for all three cases. The owner applies the same idempotent `ApplyValues()` method immediately after changing the array, then
+calls `RequestSerialization()` once after the complete update. Remote clients
+call that method from `OnDeserialization()` after the received snapshot has been
+applied. This keeps the owner and receivers on the same state-projection path
+without relying on a callback that is not an array contract.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using UnityEngine.UI;
+using VRC.SDKBase;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class SyncedArrayExample : UdonSharpBehaviour
+{
+    [SerializeField] private Text _valueText;
+    [UdonSynced] private int[] _syncedValues = new int[4];
+
+    public override void Interact()
+    {
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+        for (int i = 0; i < _syncedValues.Length; i++)
+            _syncedValues[i] = Random.Range(0, 100);
+
+        // Apply locally now; the owner does not wait for its own sync callback.
+        ApplyValues();
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        ApplyValues();
+    }
+
+    private void ApplyValues()
+    {
+        if (_syncedValues == null || _syncedValues.Length == 0) return;
+
+        // Idempotent state projection: redraw from the current array snapshot.
+        if (_valueText != null) _valueText.text = _syncedValues[0].ToString();
+    }
+}
+```
+
+Keep `ApplyValues()` idempotent when possible. A revision is only an optional guard for non-idempotent side effects such as a sound, animation, or one-time record that must not run twice when the owner and receiver paths both visit the same revision. It does not provide ordering or stale-packet rejection;
+it is only a duplicate-side-effect guard. A late joiner's first `OnDeserialization()`
+receives the current revision, so baseline that first revision before allowing a
+historical one-shot side effect. Run durable `ApplyValues()` before the baseline
+return; only later revisions should trigger the side effect.
 
 ## Key Principles
 

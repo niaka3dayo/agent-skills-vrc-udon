@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | **繁體中文** | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.7.1--3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="授權條款" />
@@ -34,13 +34,13 @@
 
 <h2 id="about">簡介</h2>
 
-使用 **UdonSharp**（C# → Udon Assembly）進行 VRChat 世界開發時，存在嚴格的編譯限制，與標準 C# 有顯著差異。`List<T>`、`async/await`、`try/catch`、LINQ、lambda 等功能會導致**編譯錯誤**。
+使用 **UdonSharp**（C# → Udon Assembly）進行 VRChat 世界開發時，存在嚴格的編譯限制，與標準 C# 有顯著差異。在 Udon runtime 中執行的程式碼裡，`List<T>`、`async/await`、`try/catch`、LINQ、lambda 等功能會導致**編譯錯誤**。由 Editor 求值的欄位初始設定式屬於獨立的 C# 執行環境，可以使用其中部分功能來產生最終由 Udon 支援的欄位值。
 
 本專案為 AI 程式碼代理提供必要知識，使其從一開始就能生成正確的 UdonSharp 程式碼。
 
 | 問題 | 解決方案 |
 |------|----------|
-| AI 生成 `List<T>`、`async/await` 等不支援的語法 | 規則 + 掛鉤自動偵測並發出警告 |
+| AI 在 Udon runtime 程式碼中生成 `List<T>`、`async/await` 等不支援的語法 | 規則 + 掛鉤自動偵測並發出警告 |
 | 同步變數過度膨脹 | 決策樹 + 資料量預算 |
 | 不正確的網路模式 | 模式庫 + 反模式集 |
 | SDK 版本間功能差異 | 版本對照表與功能對應 |
@@ -130,11 +130,11 @@ UdonSharp 腳本核心技能。涵蓋編譯限制、網路、事件與範本。
 
 | 領域 | 內容 |
 |------|------|
-| **限制** | 被禁止的 C# 功能與替代方案（`List<T>` → `DataList`、`async` → `SendCustomEventDelayedSeconds`） |
+| **限制** | Udon runtime 中被禁止的 C# 功能與替代方案（`List<T>` → `DataList`、`async` → `SendCustomEventDelayedSeconds`），以及 Editor 欄位初始設定式的邊界 |
 | **網路** | 所有權模型、Manual/Continuous 同步、FieldChangeCallback、反模式 |
-| **NetworkCallable** | SDK 3.8.1+ 參數化網路事件（最多 8 個參數） |
-| **持久化** | SDK 3.7.4+ PlayerData/PlayerObject API |
-| **動態元件** | SDK 3.10.0+ PhysBones、Contacts、VRC Constraints for Worlds |
+| **NetworkCallable** | SDK 3.8.1 導入的參數化網路事件（最多 8 個參數） |
+| **持久化** | SDK 3.7.4 導入的 PlayerData/PlayerObject API |
+| **動態元件** | SDK 3.10.0 導入的 PhysBones、Contacts、VRC Constraints for Worlds |
 | **網頁載入** | String/Image 下載、VRCJson、VRCUrl 限制 |
 | **範本** | 17 個範本（互動、同步模式、持久化、編輯器工具等） |
 
@@ -192,7 +192,8 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 | 類別 | 檢查項目 | 嚴重程度 |
 |------|----------|----------|
-| 禁止功能 | `List<T>`、`async/await`、`try/catch`、LINQ、Coroutine、lambda | ERROR |
+| 依賴執行環境的功能 | `List<T>`、LINQ、lambda（在 Udon runtime 中禁止；由 Editor 求值的欄位初始設定式中可能有效） | WARNING |
+| Runtime 禁止功能 | `async/await`、`try/catch`、Coroutine | ERROR |
 | 禁止模式 | `AddListener()`、`StartCoroutine()` | ERROR |
 | 網路 | `[UdonSynced]` 缺少 `RequestSerialization()` | WARNING |
 | 網路 | `[UdonSynced]` 缺少 `Networking.SetOwner()` | WARNING |
@@ -209,19 +210,25 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 
 ## SDK 版本
 
+**目前支援 / 最後驗證**：VRChat SDK 3.10.4
+
+從 v4.0.0 起，本專案只支援最新的穩定版 SDK；只有在本儲存庫完成驗證後，支援目標才會切換到新的穩定版本。目前最後驗證的目標是 3.10.4。
+
+下表保留了方便移轉參考的功能導入歷史。SDK 3.7.1-3.10.3的項目僅供歷史參考，不是本 Skill 的支援或驗證目標。這是本 Skill 的支援界線，不代表 VRChat 自身的 SDK 政策。
+
 | SDK 版本 | 主要功能 | 狀態 |
 |:--------:|:---------|:----:|
-| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | 已支援 |
-| **3.7.4** | Persistence API（PlayerData / PlayerObject） | 已支援 |
-| **3.7.6** | 多平台建置與發布（PC + Android） | 已支援 |
-| **3.8.0** | PhysBone 依賴排序、Force Kinematic On Remote | 已支援 |
-| **3.8.1** | `[NetworkCallable]` 參數化事件、`Others`/`Self` 目標 | 已支援 |
-| **3.9.0** | Camera Dolly API、Auto Hold pickup | 已支援 |
-| **3.10.0** | VRChat Dynamics for Worlds（PhysBones、Contacts、VRC Constraints） | 已支援 |
-| **3.10.1** | 錯誤修正、穩定性改善 | 已支援 |
-| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修正、shader 時間全域變數 | 已支援 |
-| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（頭像）、Mirror 渲染順序修正 | 已支援 |
-| **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 存取、DataList/DataDictionary 容量 API | 最新穩定版 |
+| **3.7.1** | `StringBuilder`、`Regex`、`System.Random` | 歷史 |
+| **3.7.4** | Persistence API（PlayerData / PlayerObject） | 歷史 |
+| **3.7.6** | 多平台建置與發布（PC + Android） | 歷史 |
+| **3.8.0** | PhysBone 依賴排序、Force Kinematic On Remote | 歷史 |
+| **3.8.1** | `[NetworkCallable]` 參數化事件、`Others`/`Self` 目標 | 歷史 |
+| **3.9.0** | Camera Dolly API、Auto Hold pickup | 歷史 |
+| **3.10.0** | VRChat Dynamics for Worlds（PhysBones、Contacts、VRC Constraints） | 歷史 |
+| **3.10.1** | 錯誤修正、穩定性改善 | 歷史 |
+| **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修正、shader 時間全域變數 | 歷史 |
+| **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（頭像）、Mirror 渲染順序修正 | 歷史 |
+| **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 存取、DataList/DataDictionary 容量 API | 目前支援 / 最後驗證 |
 
 > **注意**：發佈前，請確認專案使用的是 VRChat 目前支援的 SDK 版本。
 
@@ -236,6 +243,25 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 | VRChat 論壇（問答） | https://ask.vrchat.com/ |
 | VRChat Canny（錯誤/功能建議） | https://feedback.vrchat.com/ |
 | VRChat 社群 GitHub | https://github.com/vrchat-community |
+
+---
+
+<h2 id="community-contributors">社群貢獻者</h2>
+
+感謝這些提出具體 Issue、參與驗證並協助完善修正方案的貢獻者。
+
+<!-- community-contributors:start -->
+<p>
+<a href="https://github.com/KatanoShingo" title="@KatanoShingo"><img src="https://github.com/KatanoShingo.png?size=64" width="64" height="64" alt="@KatanoShingo"></a>
+<a href="https://github.com/Guribo" title="@Guribo"><img src="https://github.com/Guribo.png?size=64" width="64" height="64" alt="@Guribo"></a>
+<a href="https://github.com/haru0416-dev" title="@haru0416-dev"><img src="https://github.com/haru0416-dev.png?size=64" width="64" height="64" alt="@haru0416-dev"></a>
+<a href="https://github.com/Yodokoro" title="@Yodokoro"><img src="https://github.com/Yodokoro.png?size=64" width="64" height="64" alt="@Yodokoro"></a>
+<a href="https://github.com/tetradice" title="@tetradice"><img src="https://github.com/tetradice.png?size=64" width="64" height="64" alt="@tetradice"></a>
+<a href="https://github.com/owlboy" title="@owlboy"><img src="https://github.com/owlboy.png?size=64" width="64" height="64" alt="@owlboy"></a>
+<a href="https://github.com/nomlasvrc" title="@nomlasvrc"><img src="https://github.com/nomlasvrc.png?size=64" width="64" height="64" alt="@nomlasvrc"></a>
+<a href="https://github.com/ureishi" title="@ureishi"><img src="https://github.com/ureishi.png?size=64" width="64" height="64" alt="@ureishi"></a>
+</p>
+<!-- community-contributors:end -->
 
 ---
 
@@ -262,7 +288,7 @@ Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入�
 - 內容以**「現狀」**提供，不附帶任何保證。請參閱 [LICENSE](LICENSE)。
 - 這是一個個人專案。**可能存在錯誤、過時資訊或不完整的內容。** 請務必與 [VRChat 官方文件](https://creators.vrchat.com/) 進行核對。
 - 作者不對本儲存庫造成的問題承擔任何責任（建置錯誤、上傳被拒絕、非預期的世界行為等）。
-- SDK 涵蓋範圍（3.7.1 - 3.10.4）反映的是最後更新時的狀態。VRChat 發布新版本時，行為可能會有所變更。
+- 目前支援的 SDK 僅限最後驗證過的 3.10.4。較舊版本的項目只是移轉歷史資訊，不承諾對這些 SDK 進行驗證或修正。VRChat 發布新版本時，行為可能會有所變更。
 
 ### AI 輔助建立
 

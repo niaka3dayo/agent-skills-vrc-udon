@@ -2,6 +2,9 @@
 
 Object pooling, synced game state management, NetworkCallable patterns, persistence, dynamics interactions, and delayed event debouncing.
 
+**Active support / last verified**: SDK 3.10.4
+**Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
+
 ## Object Pooling
 
 ### Simple Object Pooling
@@ -610,7 +613,7 @@ Reuse a single local room model to render the illusion of multiple rooms by sepa
 - Some level of voice isolation between rooms is desired (a side effect of physical separation)
 - Players in the same room must visibly share the same space; players in different rooms must not collide
 
-Requires SDK >= 3.7.4 for the recommended `VRCPlayerObject` tier. The other tiers (fixed-size synced array, local-only) work on older SDKs.
+The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target, SDK 3.10.4. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
 
 ### Architecture (state vs presentation split)
 
@@ -813,7 +816,10 @@ public class DebouncedSearch : UdonSharpBehaviour
 
 ### Problem
 
-Syncing `string[]` via `[UdonSynced]` serialises each element individually with per-element overhead. For arrays that change together as a logical unit — playlist titles, display names, ordered slot labels — this wastes bandwidth and produces multiple `OnDeserialization` callbacks if the array is written element-by-element in a loop.
+For arrays that change together as a logical unit — playlist titles, display
+names, ordered slot labels — build the complete value first and serialize the
+batch once. Write every element (or build the joined string), then make one `RequestSerialization()` after all elements are updated. OnDeserialization runs after the serialized snapshot is applied, so it is not a per-element
+callback and should rebuild the local projection from that complete snapshot.
 
 ### Solution
 
@@ -913,7 +919,7 @@ public class SyncedPlaylist : UdonSharpBehaviour
     // ── Owner-side write ──────────────────────────────────────────────────
 
     /// <summary>
-    /// Sets the playlist titles (owner only) and serializes.
+    /// Sets the playlist titles (owner only) and serializes once.
     /// </summary>
     public void SetTitles(string[] titles)
     {
@@ -921,6 +927,8 @@ public class SyncedPlaylist : UdonSharpBehaviour
 
         _titles       = titles ?? new string[0];
         _syncedTitles = JoinForSync(_titles);
+        OnPlaylistUpdated();
+        // One request covers the complete batch; do not request inside a loop.
         RequestSerialization();
     }
 

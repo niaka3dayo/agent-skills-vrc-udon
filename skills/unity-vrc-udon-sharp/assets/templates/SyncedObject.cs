@@ -138,21 +138,6 @@ public class SyncedObject : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Called when a new player joins the instance.
-    /// </summary>
-    public override void OnPlayerJoined(VRCPlayerApi player)
-    {
-        if (player == null || !player.IsValid()) return;
-
-        // If we're the owner, send current state to new player
-        if (Networking.IsOwner(gameObject))
-        {
-            RequestSerialization();
-            LogDebug($"Syncing state for new player: {player.displayName}");
-        }
-    }
-
-    /// <summary>
     /// Called when ownership of this object changes.
     /// </summary>
     public override void OnOwnershipTransferred(VRCPlayerApi player)

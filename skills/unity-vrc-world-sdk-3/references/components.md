@@ -1,6 +1,9 @@
 # VRChat World Components Complete Reference
 
-Full component reference for SDK 3.7.1 - 3.10.4.
+Full component reference for the active SDK target, 3.10.4. Version-specific feature introductions below are retained as historical migration information only.
+
+**Active support / last verified**: SDK 3.10.4
+**Historical version notes**: Older version numbers are not supported or validation targets for this Skill.
 
 ## Table of Contents
 

@@ -39,7 +39,6 @@ using VRC.SDKBase;
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
-using VRC.Udon.Common.Interfaces;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class VideoPlayerStateMachine : UdonSharpBehaviour
@@ -218,7 +217,7 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 {
     [SerializeField] private BaseVRCVideoPlayer _videoPlayer;
 
-    [UdonSynced] private VRCUrl   _syncUrl       = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl   _syncUrl       = new VRCUrl("");
     [UdonSynced] private int      _syncClockTime = 0;   // server ms at commit
     [UdonSynced] private float    _syncStartTime = 0f;  // playback offset at commit
     [UdonSynced] private float    _syncSpeed     = 1f;
@@ -342,7 +341,7 @@ public class LateJoinerVideoSync : UdonSharpBehaviour
 {
     [SerializeField] private BaseVRCVideoPlayer _videoPlayer;
 
-    [UdonSynced] private VRCUrl _syncUrl       = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl _syncUrl       = new VRCUrl("");
     [UdonSynced] private int    _syncClockTime = 0;
     [UdonSynced] private float  _syncStartTime = 0f;
 
@@ -535,7 +534,7 @@ public class VideoErrorHandler : UdonSharpBehaviour
     [SerializeField] private float _defaultRetryDelay = 2.0f;
     [SerializeField] private float _rateLimitedDelay  = 5.5f;
 
-    [UdonSynced] private VRCUrl _currentUrl = VRCUrl.Empty;
+    [UdonSynced] private VRCUrl _currentUrl = new VRCUrl("");
 
     private int              _retryCount     = 0;
     private BaseVRCVideoPlayer _activePlayer;

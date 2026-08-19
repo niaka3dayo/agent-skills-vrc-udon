@@ -2,11 +2,17 @@
 
 ## Phase 1: Current State Assessment
 
-- [ ] Check SDK version support for each skill
+- [ ] Check the active and verified SDK target for each skill
+  ```text
+  Active support / last verified: SDK 3.10.4
+  ```
+- [ ] Keep older version numbers only as historical migration information
+- [ ] Confirm the active-versus-historical boundary is explicit and does not attribute the cutoff to VRChat
+- [ ] For a new stable release, verify it in this repository before moving the active target
   ```text
   Read: skills/unity-vrc-udon-sharp/SKILL.md
   Read: skills/unity-vrc-world-sdk-3/SKILL.md
-  → Find the "Supported SDK version" line
+  → Find the "Active support / last verified" line
   ```
 
 - [ ] Check the file list for update targets
@@ -132,7 +138,7 @@ Classify collected information:
 ## Phase 4: Update unity-vrc-udon-sharp
 
 ### Priority 1: SKILL.md
-- [ ] Update SDK version support
+- [ ] Update the active SDK support declaration and preserve useful historical version notes
 - [ ] Add new feature summary
 - [ ] Update resource list
 
@@ -163,7 +169,7 @@ Classify collected information:
 ## Phase 5: Update unity-vrc-world-sdk-3
 
 ### Priority 1: SKILL.md
-- [ ] Update SDK version support
+- [ ] Update the active SDK support declaration and preserve useful historical version notes
 - [ ] Add new feature summary
 
 ### Priority 2: components.md

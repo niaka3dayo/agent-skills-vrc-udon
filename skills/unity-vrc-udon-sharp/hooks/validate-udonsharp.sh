@@ -455,9 +455,9 @@ fi
 # === Validation Rules ===
 warnings=()
 
-# Blocked generics
+# Context-sensitive generic collections
 if grep -qE "List[[:space:]]*<|Dictionary[[:space:]]*<|HashSet[[:space:]]*<|Queue[[:space:]]*<|Stack[[:space:]]*<" "$flat_file"; then
-    warnings+=("[UdonSharp] BLOCKED: Generic collections (List<T>, Dictionary<K,V>) not supported. Use arrays or DataList/DataDictionary.")
+    warnings+=("[UdonSharp] WARNING: Generic collections (List<T>, Dictionary<K,V>) detected. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime; generic collections are not supported in Udon runtime.")
 fi
 
 # async/await
@@ -472,7 +472,7 @@ fi
 
 # LINQ
 if grep -qE "\.Where\(|\.Select\(|\.OrderBy\(|\.FirstOrDefault\(|\.Any\(|\.All\(" "$masked_file"; then
-    warnings+=("[UdonSharp] BLOCKED: LINQ not supported. Use manual for loops.")
+    warnings+=("[UdonSharp] WARNING: LINQ not supported in Udon runtime. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime.")
 fi
 
 # yield return (coroutines)
@@ -623,7 +623,7 @@ LC_ALL=C awk '
     END { exit found ? 0 : 1 }
 ' "$flat_file" || lambda_scan_status=$?
 if [[ "$lambda_scan_status" -eq 0 ]]; then
-    warnings+=("[UdonSharp] WARNING: Lambda expression detected. Use named methods instead.")
+    warnings+=("[UdonSharp] WARNING: Lambda expression detected. Check whether this code only generates a Udon-compatible field initial value in the Unity Editor or runs in Udon runtime; lambda expressions are not supported in Udon runtime.")
 elif [[ "$lambda_scan_status" -ne 1 ]]; then
     skip_validation "LAMBDA_SCAN_FAILED"
 fi
