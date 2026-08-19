@@ -11,6 +11,11 @@ CHEATSHEET="$UDON_DIR/CHEATSHEET.md"
 SKILL="$UDON_DIR/SKILL.md"
 CONSTRAINTS="$UDON_DIR/references/constraints.md"
 PATTERNS="$UDON_DIR/references/patterns-networking.md"
+EVENTS="$UDON_DIR/references/events.md"
+API="$UDON_DIR/references/api.md"
+STATE_MACHINE="$UDON_DIR/assets/templates/StateMachine.cs"
+SYNCED_OBJECT="$UDON_DIR/assets/templates/SyncedObject.cs"
+MASTER_POOL="$UDON_DIR/assets/templates/MasterManagedPlayerPool.cs"
 
 require_text() {
     local path="$1"
@@ -48,6 +53,9 @@ require_text "$RULES" 'public override void OnDeserialization()'
 require_text "$RULES" 'RequestSerialization();'
 require_text "$RULES" 'revision is only an optional guard for non-idempotent side effects'
 require_text "$RULES" 'does not provide ordering or stale-packet rejection'
+require_text "$RULES" "late joiner's first \`OnDeserialization()\`"
+require_text "$RULES" 'baseline'
+require_text "$RULES" 'historical one-shot side effect'
 
 # The detailed reference must point to the two official examples and preserve
 # the owner-immediate/remote-deserialization split.
@@ -62,6 +70,9 @@ require_text "$NETWORKING" 'one `RequestSerialization()` after the complete arra
 require_text "$NETWORKING" 'revision does not establish ordering'
 require_text "$NETWORKING" '[UdonSynced] private int _revision;'
 require_text "$NETWORKING" 'ApplyOneShotIfNeeded()'
+require_text "$NETWORKING" 'first received revision as a baseline'
+require_text "$NETWORKING" 'historical one-shot effects'
+require_text "$NETWORKING" 'class RevisionGuardedArray'
 
 # Every user-facing surface should route array reactions through
 # OnDeserialization, while keeping scalar FieldChangeCallback guidance intact.
@@ -70,8 +81,42 @@ require_text "$SYNC_EXAMPLES" 'same length, reassigning the array, or changing i
 require_text "$TROUBLESHOOTING" '### Synced Array Callback Silent Failure'
 require_text "$TROUBLESHOOTING" 'same-length element changes, array reassignments, and array length changes'
 require_text "$TROUBLESHOOTING" 'ApplyValues()'
+require_text "$TROUBLESHOOTING" 'late joiner'
+require_text "$TROUBLESHOOTING" 'baseline'
 require_text "$CHEATSHEET" 'Array contents changed: use `OnDeserialization()`'
+require_text "$CHEATSHEET" 'late joiner'
+require_text "$CHEATSHEET" 'baseline'
 require_text "$SKILL" 'Synced arrays: always apply them from `OnDeserialization()`'
+
+# The late-joiner troubleshooting section must describe the automatic current
+# snapshot and derived-state hook without teaching a join-triggered resend.
+python3 - "$TROUBLESHOOTING" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+
+def fail(message: str) -> None:
+    print(f"ERROR: late-joiner section contract: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+text = Path(sys.argv[1]).read_text()
+match = re.search(r"^### Late Joiner State Issues\n(.*?)(?=^#{1,3} |\Z)", text, re.M | re.S)
+if not match:
+    fail("section not found")
+section = match.group(1)
+if "Late joiners automatically receive the current synced values" not in section:
+    fail("automatic current synced values are not stated")
+if "OnDeserialization()" not in section or "ApplyState()" not in section:
+    fail("derived-state application via OnDeserialization() is not retained")
+normalized_section = re.sub(r"\s+", " ", section)
+if "Do not call `RequestSerialization()` just because a player joined" not in normalized_section:
+    fail("join-triggered resend boundary is not stated")
+for block in re.findall(r"```csharp\s*\n(.*?)```", section, re.S):
+    if "OnPlayerJoined" in block or "RequestSerialization()" in block:
+        fail("join-triggered resend example remains in the section")
+PY
 
 # VRCUrl[] is a supported sync type. The old workaround wording must not
 # return in any distributed UdonSharp document.
@@ -90,7 +135,7 @@ forbid_text "$PATTERNS" 'produces multiple `OnDeserialization` callbacks'
 # array examples. Presence checks alone cannot detect a callback deleted from
 # a receiver, an owner apply deleted before serialization, or a request moved
 # into the element-update loop.
-python3 - "$RULES" "$NETWORKING" "$SYNC_EXAMPLES" "$PATTERNS" "$TROUBLESHOOTING" <<'PY'
+python3 - "$RULES" "$NETWORKING" "$SYNC_EXAMPLES" "$PATTERNS" "$TROUBLESHOOTING" "$EVENTS" "$CONSTRAINTS" "$API" "$STATE_MACHINE" "$SYNCED_OBJECT" "$MASTER_POOL" <<'PY'
 from pathlib import Path
 import re
 import sys
@@ -110,6 +155,17 @@ def class_block(path: Path, class_name: str) -> str:
         if f"class {class_name}" in block:
             return block
     fail(f"class {class_name} not found in {path}")
+
+
+def heading_section(path: Path, heading: str) -> str:
+    match = re.search(
+        rf"^{re.escape(heading)}\n(.*?)(?=^#{{1,3}} |\Z)",
+        path.read_text(),
+        re.M | re.S,
+    )
+    if not match:
+        fail(f"heading {heading!r} not found in {path}")
+    return match.group(1)
 
 
 def method_block(source: str, signature: str) -> str:
@@ -158,6 +214,12 @@ networking = Path(sys.argv[2])
 sync_examples = Path(sys.argv[3])
 patterns = Path(sys.argv[4])
 troubleshooting = Path(sys.argv[5])
+events = Path(sys.argv[6])
+constraints = Path(sys.argv[7])
+api = Path(sys.argv[8])
+state_machine = Path(sys.argv[9])
+synced_object = Path(sys.argv[10])
+master_pool = Path(sys.argv[11])
 
 canonical = class_block(rules, "SyncedArrayExample")
 canonical_owner = method_block(canonical, "public override void Interact()")
@@ -229,6 +291,38 @@ vote_receiver = method_block(vote, "public override void OnDeserialization()")
 if "RefreshCount();" not in vote_receiver:
     fail("vote receiver no longer refreshes from OnDeserialization")
 
+revision = class_block(networking, "RevisionGuardedArray")
+revision_owner = method_block(revision, "public void _SetValues(int[] values)")
+assert_order(
+    "revision owner",
+    revision_owner,
+    "_revision++;",
+    "ApplyValues();",
+    "ApplyOneShotIfNeeded();",
+    "RequestSerialization();",
+)
+revision_receiver = method_block(
+    revision,
+    "public override void OnDeserialization()",
+)
+assert_order(
+    "revision receiver baseline",
+    revision_receiver,
+    "ApplyValues();",
+    "ApplyOneShotIfNeeded();",
+)
+if "PlayOneShot();" in revision_receiver:
+    fail("revision receiver must delegate one-shot handling to ApplyOneShotIfNeeded()")
+revision_helper = method_block(revision, "private void ApplyOneShotIfNeeded()")
+assert_order(
+    "revision helper",
+    revision_helper,
+    "if (!_hasAppliedRevision)",
+    "_appliedRevision = _revision;",
+    "return;",
+    "PlayOneShot();",
+)
+
 playlist = class_block(patterns, "SyncedPlaylist")
 playlist_owner = method_block(playlist, "public void SetTitles(string[] titles)")
 assert_order(
@@ -247,6 +341,70 @@ assert_order(
     "_titles = SplitFromSync(_syncedTitles);",
     "OnPlaylistUpdated();",
 )
+
+# Keep join callbacks as notifications and require Manual serialization to
+# follow an actual owner-side mutation. Preserve the two legitimate join-time
+# assignment examples instead of banning all OnPlayerJoined serialization.
+player_events = heading_section(events, "## Player Events")
+if "Debug.Log" not in player_events or "OnPlayerLeft" not in player_events:
+    fail("events Player Events notification example was removed")
+if "RequestSerialization()" in player_events:
+    fail("events Player Events still contains an unchanged-state resend")
+
+another_player = heading_section(events, "### Scenario: Another Player Joins Your Instance")
+if "OnPlayerJoined(newPlayer)" not in another_player:
+    fail("events another-player notification scenario was removed")
+if "automatically receive the current synced values" not in another_player:
+    fail("events another-player scenario lacks automatic late-join state guidance")
+if "RequestSerialization()" in another_player:
+    fail("events another-player scenario still contains a resend example")
+
+ownership_section = heading_section(events, "### Ownership Check Before Sync")
+ownership_block = next(iter(re.findall(r"```csharp\s*\n(.*?)```", ownership_section, re.S)), "")
+ownership_method = method_block(ownership_block, "public void _SetScore(int newScore)")
+assert_order(
+    "events ownership mutation",
+    ownership_method,
+    "if (!Networking.IsOwner(gameObject)) return;",
+    "score = newScore;",
+    "RequestSerialization();",
+)
+if "OnPlayerJoined" in ownership_method:
+    fail("events ownership example still uses a join callback as its sync trigger")
+
+networking_events = heading_section(networking, "## Player Events")
+if "Debug.Log" not in networking_events or "OnPlayerLeft" not in networking_events:
+    fail("networking Player Events notification example was removed")
+if "RequestSerialization()" in networking_events:
+    fail("networking Player Events still contains an unchanged-state resend")
+
+constraints_text = constraints.read_text()
+if "No special handling is needed beyond calling `RequestSerialization()` in `OnPlayerJoined`" in constraints_text:
+    fail("constraints still requires an OnPlayerJoined resend")
+if "All `[UdonSynced]` fields are automatically sent to late joiners" not in constraints_text:
+    fail("constraints lost automatic late-join sync guidance")
+if "OnDeserialization" not in constraints_text:
+    fail("constraints lost the receiver apply hook")
+
+for path in (state_machine, synced_object):
+    if "public override void OnPlayerJoined" in path.read_text():
+        fail(f"{path} still contains a resend-only OnPlayerJoined override")
+
+api_pool = next((block for block in csharp_blocks(api) if "class PoolManager" in block), "")
+api_join = method_block(api_pool, "public override void OnPlayerJoined(VRCPlayerApi player)")
+assert_order(
+    "api object-pool join mutation",
+    api_join,
+    "assignedPlayerIds[poolIndex] = player.playerId;",
+    "RequestSerialization();",
+)
+
+master_join = method_block(master_pool.read_text(), "public override void OnPlayerJoined(VRCPlayerApi player)")
+assignment_position = master_join.find("_assignments[slot] = player.playerId;")
+if assignment_position < 0:
+    fail("master-managed pool join mutation was weakened")
+if "_SerializeAssignments();" not in master_join[assignment_position:]:
+    fail("master-managed pool serializes before assigning the joined player")
 
 # This scanner deliberately spans newlines across consecutive attributes and
 # the array declaration. A one-line grep misses the mutation it is intended

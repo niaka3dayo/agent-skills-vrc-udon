@@ -64,13 +64,18 @@ public class MyScript : UdonSharpBehaviour { }
 
 ### 2. Editor-Evaluated Field Initializers
 
-Field initializers are evaluated as ordinary C# on the Unity/Editor side, and their resulting value becomes initial data for the compiled Udon program. An initializer may directly use LINQ/lambdas or call a static helper on the same `UdonSharpBehaviour` that uses `List<T>`, provided the final field type and value are supported by Udon. This does not make those features callable from `Start()`, `Interact()`, or other Udon runtime methods.
+Field initializers are evaluated as ordinary C# on the Unity/Editor side, and their resulting value becomes initial data for the compiled Udon program. An initializer may directly use LINQ/lambdas or call a static helper on the same `UdonSharpBehaviour` that uses `List<T>`, provided the final field type and value are supported by Udon. This does not make those features callable from `Start()`, `Interact()`, or other Udon runtime methods. A `Random.Range` call in an initializer is evaluated in the Editor and stored as the compiled Udon program's baked default, not runtime randomness.
+
+Use `Start()` or a lazy-init guard only for local or per-client randomness. For shared per-object or per-session seed/state, the owner generates it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership before writing and then call `RequestSerialization()`. Receivers may apply derived state in `OnDeserialization()` when needed, but that callback is not required for the field synchronization itself, and late joiners receive the current synced state.
 
 Keep initializer generation pure and independent of scene, player, or runtime state. Do not use `Networking.LocalPlayer`, scene references, or main-thread-only Unity APIs such as `FindObjectsByType`; constructors and field initializers can run on a loading thread. See `references/constraints.md` for complete examples and the lazy-init pattern.
 
 ```csharp
 // OK: Editor-evaluated initial value that Udon can hold
 private int maxPlayers = 10;
+
+// NG: Random.Range is evaluated in the Editor and baked into the program
+// private int seed = Random.Range(0, 100);
 
 // NG: Player/runtime state is unavailable during initial value generation
 // private VRCPlayerApi player = Networking.LocalPlayer;

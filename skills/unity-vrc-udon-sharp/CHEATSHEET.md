@@ -6,7 +6,9 @@ SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; th
 
 ## Features Blocked in Udon Runtime
 
-These alternatives apply to code that executes in Udon. Editor-evaluated field initializers may use `List<T>`, LINQ, and lambdas only to generate a final field value that Udon can hold; the same code remains blocked in `Start()`, `Interact()`, and other Udon runtime methods.
+These alternatives apply to code that executes in Udon. Editor-evaluated field initializers may use `List<T>`, LINQ, and lambdas only to generate a final field value that Udon can hold; the same code remains blocked in `Start()`, `Interact()`, and other Udon runtime methods. A `Random.Range` call in an initializer is evaluated in the Editor and stored as a baked default, not runtime randomness.
+
+Use `Start()` or a lazy-init guard only for local or per-client randomness. For shared per-object or per-session seed/state, the owner generates it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership before writing and then call `RequestSerialization()`. Receivers may apply derived state in `OnDeserialization()` when needed, but that callback is not required for the field synchronization itself, and late joiners receive the current synced state.
 
 | Blocked | Alternative |
 |---------|------------|
@@ -109,6 +111,11 @@ array reassignments, and array length changes; do not attach
 `FieldChangeCallback` to an array and wait for its setter. The owner should call
 the same idempotent `ApplyValues()` method immediately after the mutation, then
 call `RequestSerialization()` once for the completed update.
+
+If a revision guard protects a historical one-shot effect, a late joiner's first
+`OnDeserialization()` should baseline the received revision without that effect.
+Run durable `ApplyValues()` first and let only later revisions trigger the
+one-shot; a revision is not ordering or stale-packet protection.
 
 ---
 

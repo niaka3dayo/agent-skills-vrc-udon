@@ -497,7 +497,10 @@ private void ApplyValues()
 The owner calls `ApplyValues()` immediately after changing the array and calls
 `RequestSerialization()` once after the complete Manual-sync update. A revision
 guard is optional for non-idempotent effects only; it does not provide packet
-ordering or stale-packet rejection.
+ordering or stale-packet rejection. For a late joiner, the first
+`OnDeserialization()` contains the current revision and may represent a
+historical one-shot. Run durable `ApplyValues()` first, then baseline that first
+revision without the one-shot; only later revisions should call it.
 
 ---
 
@@ -546,18 +549,13 @@ private void DoAction()
 
 **Solution:**
 
-Read synced state in `OnDeserialization`; it fires after the joining client receives current values. `Start()` runs before the first deserialization, so do not read synced variables there.
+Late joiners automatically receive the current synced values. Read them in
+`OnDeserialization()`, which runs after the snapshot is applied, and use that
+callback to apply derived state. `Start()` runs before the first deserialization,
+so do not read synced variables there. Do not call `RequestSerialization()` just
+because a player joined; serialize only after an actual owner-side state change.
 
 ```csharp
-
-public override void OnPlayerJoined(VRCPlayerApi player)
-{
-    // Only owner needs to sync
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
-}
 
 public override void OnDeserialization()
 {
@@ -1632,7 +1630,7 @@ public int maxHealth = 100; // Serialized value from Inspector wins
 
 **Solution:**
 
-An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime.
+An Editor-evaluated field initializer produces the default value stored with the compiled Udon program. A value already serialized on a scene or prefab instance can override that default; this does not mean the initializer expression ran in Udon runtime. A `Random.Range` call in an initializer is evaluated in the Editor and stored as a baked default, not runtime randomness.
 
 ```csharp
 
@@ -1650,6 +1648,14 @@ void Start()
 ```
 
 Use an initializer for pure initial value generation when the final field type and value are supported by Udon. LINQ, lambdas, and a same-behaviour static helper using `List<T>` are allowed only in that Editor-side evaluation. If the value depends on `Networking.LocalPlayer`, a scene reference, or other runtime state, assign it in `Start()` or lazy initialization instead. Constructors and field initializers can run on a loading thread, so they must not call main-thread-only Unity APIs such as `FindObjectsByType`.
+
+For runtime randomness, do not write `private int seed = Random.Range(0, 100);` as a
+field initializer. Use `Start()` or a lazy-init guard only for local or per-client
+randomness. For shared per-object or per-session seed/state, the owner generates
+it and stores it in a `[UdonSynced]` field; with Manual sync, establish ownership
+before writing and then call `RequestSerialization()`. Receivers may apply derived
+state in `OnDeserialization()` when needed, but that callback is not required for
+the field synchronization itself, and late joiners receive the current synced state.
 
 The validator reports `List<T>`, LINQ, and lambdas as warnings in both initializer and Udon runtime code because it intentionally does not parse execution context or call graphs. Verify the context: the same feature or helper still fails when called from `Start()`, `Interact()`, or another Udon runtime path.
 

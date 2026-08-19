@@ -253,21 +253,6 @@ public class StateMachine : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Called when a new player joins.
-    /// The owner re-serializes to push current state to the newcomer.
-    /// </summary>
-    public override void OnPlayerJoined(VRCPlayerApi player)
-    {
-        if (player == null || !player.IsValid()) return;
-
-        if (Networking.IsOwner(gameObject))
-        {
-            RequestSerialization();
-            LogDebug("OnPlayerJoined: re-serialized for " + player.displayName);
-        }
-    }
-
-    /// <summary>
     /// Called when ownership of this object is transferred.
     /// The new owner resumes responsibility for timed transitions.
     /// </summary>

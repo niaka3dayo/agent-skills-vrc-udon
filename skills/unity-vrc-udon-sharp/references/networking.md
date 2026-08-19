@@ -773,30 +773,82 @@ safe to run again for the same state. Add a revision only when the apply step
 has a non-idempotent side effect, such as playing a sound or writing a one-time
 record. A revision does not establish ordering or stale-packet rejection; it is
 only a duplicate-side-effect guard shared by the owner and `OnDeserialization`
-paths.
+paths. A late joiner's first `OnDeserialization()` receives the current revision,
+so record the first received revision as a baseline without replaying historical one-shot effects.
+Durable state must still be projected by `ApplyValues()` before the
+baseline return; only later revisions may trigger the one-shot.
 
 ```csharp
 // Optional guard for a non-idempotent effect; keep the basic path revision-free.
-[SerializeField] private AudioSource _sound;
-[UdonSynced] private int _revision;
-private int _appliedRevision;
-private bool _hasAppliedRevision;
-
-private void ApplyOneShotIfNeeded()
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+public class RevisionGuardedArray : UdonSharpBehaviour
 {
-    if (_hasAppliedRevision && _appliedRevision == _revision) return;
+    [UdonSynced] private int[] _syncedValues = new int[4];
+    [UdonSynced] private int _revision;
+    [SerializeField] private AudioSource _sound;
+    private int _appliedRevision;
+    private bool _hasAppliedRevision;
 
-    _hasAppliedRevision = true;
-    _appliedRevision = _revision;
-    if (_sound != null) _sound.Play();
+    private void Start()
+    {
+        // The owner has already applied its local baseline; receivers have not.
+        if (!Networking.IsOwner(gameObject)) return;
+        _hasAppliedRevision = true;
+        _appliedRevision = _revision;
+    }
+
+    public void _SetValues(int[] values)
+    {
+        if (values == null) return;
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+
+        _syncedValues = values;
+        _revision++;
+        ApplyValues();
+        ApplyOneShotIfNeeded();
+        RequestSerialization();
+    }
+
+    public override void OnDeserialization()
+    {
+        // Durable UI/state is never suppressed by the one-shot baseline.
+        ApplyValues();
+        ApplyOneShotIfNeeded();
+    }
+
+    private void ApplyValues()
+    {
+        if (_syncedValues == null) return;
+        UpdateDisplay(_syncedValues);
+    }
+
+    private void ApplyOneShotIfNeeded()
+    {
+        if (!_hasAppliedRevision)
+        {
+            // Late joiner: record the first received revision only.
+            _hasAppliedRevision = true;
+            _appliedRevision = _revision;
+            return;
+        }
+        if (_appliedRevision == _revision) return;
+
+        _appliedRevision = _revision;
+        PlayOneShot();
+    }
+
+    private void UpdateDisplay(int[] values) { /* Durable projection. */ }
+    private void PlayOneShot() { if (_sound != null) _sound.Play(); }
 }
 ```
 
-Increment `_revision` with the array mutation, then call
-`ApplyOneShotIfNeeded()` immediately on the owner and again from
-`OnDeserialization()` on receivers. Use this only for the non-idempotent effect;
-keep ordinary UI or derived-state updates on the revision-free `ApplyValues()`
-path above.
+Increment `_revision` with the array mutation, then call the same
+`ApplyOneShotIfNeeded()` helper on the owner and from `OnDeserialization()` on
+receivers. The owner starts with its local revision baseline, while a receiver
+records the first snapshot as a baseline. Use this only for the non-idempotent
+effect; keep ordinary UI or derived-state updates on the revision-free
+`ApplyValues()` path above.
 
 ## Network Events
 
@@ -1290,12 +1342,6 @@ public override void OnPlayerJoined(VRCPlayerApi player)
     if (player == null || !player.IsValid()) return;
 
     Debug.Log($"{player.displayName} joined");
-
-    // Late joiners receive current synced values automatically; this owner refresh is defensive only.
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
 }
 
 public override void OnPlayerLeft(VRCPlayerApi player)
