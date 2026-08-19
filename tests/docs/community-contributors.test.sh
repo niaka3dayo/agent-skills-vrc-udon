@@ -47,6 +47,9 @@ community_rule = community_rule_match.group(1)
 assert "ordered profile-linked avatar block" in community_rule, (
     "the maintainer rule must preserve the avatar-only README contract"
 )
+assert "across all five READMEs" in community_rule, (
+    "the maintainer rule must keep all five README translations in scope"
+)
 assert "tests/docs/fixtures/community-contributor-census.json" in community_rule, (
     "the maintainer rule must name the Issue-evidence source of truth"
 )
