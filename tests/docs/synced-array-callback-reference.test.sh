@@ -83,6 +83,36 @@ require_text "$CHEATSHEET" 'late joiner'
 require_text "$CHEATSHEET" 'baseline'
 require_text "$SKILL" 'Synced arrays: always apply them from `OnDeserialization()`'
 
+# The late-joiner troubleshooting section must describe the automatic current
+# snapshot and derived-state hook without teaching a join-triggered resend.
+python3 - "$TROUBLESHOOTING" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+
+def fail(message: str) -> None:
+    print(f"ERROR: late-joiner section contract: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+text = Path(sys.argv[1]).read_text()
+match = re.search(r"^### Late Joiner State Issues\n(.*?)(?=^#{1,3} |\Z)", text, re.M | re.S)
+if not match:
+    fail("section not found")
+section = match.group(1)
+if "Late joiners automatically receive the current synced values" not in section:
+    fail("automatic current synced values are not stated")
+if "OnDeserialization()" not in section or "ApplyState()" not in section:
+    fail("derived-state application via OnDeserialization() is not retained")
+normalized_section = re.sub(r"\s+", " ", section)
+if "Do not call `RequestSerialization()` just because a player joined" not in normalized_section:
+    fail("join-triggered resend boundary is not stated")
+for block in re.findall(r"```csharp\s*\n(.*?)```", section, re.S):
+    if "OnPlayerJoined" in block or "RequestSerialization()" in block:
+        fail("join-triggered resend example remains in the section")
+PY
+
 # VRCUrl[] is a supported sync type. The old workaround wording must not
 # return in any distributed UdonSharp document.
 require_text "$CONSTRAINTS" '`VRCUrl[]` syncs like any other supported array type.'

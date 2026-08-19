@@ -549,18 +549,13 @@ private void DoAction()
 
 **Solution:**
 
-Read synced state in `OnDeserialization`; it fires after the joining client receives current values. `Start()` runs before the first deserialization, so do not read synced variables there.
+Late joiners automatically receive the current synced values. Read them in
+`OnDeserialization()`, which runs after the snapshot is applied, and use that
+callback to apply derived state. `Start()` runs before the first deserialization,
+so do not read synced variables there. Do not call `RequestSerialization()` just
+because a player joined; serialize only after an actual owner-side state change.
 
 ```csharp
-
-public override void OnPlayerJoined(VRCPlayerApi player)
-{
-    // Only owner needs to sync
-    if (Networking.IsOwner(gameObject))
-    {
-        RequestSerialization();
-    }
-}
 
 public override void OnDeserialization()
 {
