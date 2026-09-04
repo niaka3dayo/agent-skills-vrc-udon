@@ -2,7 +2,7 @@
 
 Object pooling, synced game state management, NetworkCallable patterns, persistence, dynamics interactions, and delayed event debouncing.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 **Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
 
 ## Object Pooling
@@ -613,7 +613,7 @@ Reuse a single local room model to render the illusion of multiple rooms by sepa
 - Some level of voice isolation between rooms is desired (a side effect of physical separation)
 - Players in the same room must visibly share the same space; players in different rooms must not collide
 
-The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target, SDK 3.10.4. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
+The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target, SDK 3.10.5. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
 
 ### Architecture (state vs presentation split)
 

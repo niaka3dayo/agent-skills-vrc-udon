@@ -44,14 +44,14 @@ require_file "$REF"
 
 # SDK evidence and color/severity model
 require_text "$REF" "Last verified SDK"
-require_text "$REF" 'VRChat Worlds SDK `3.10.4`'
-require_text "$REF" 'Base SDK `3.10.4`'
+require_text "$REF" 'VRChat Worlds SDK `3.10.5`'
+require_text "$REF" 'Base SDK `3.10.5`'
 require_text "$REF" "OnGUIError"
 require_text "$REF" "OnGUIWarning"
 require_text "$REF" "OnGUIInformation"
 require_text "$REF" "Auto Fix"
 
-# Representative red/yellow/white alert families from the SDK 3.10.4 catalog
+# Representative red/yellow/white alert families from the SDK 3.10.5 catalog
 require_text "$REF" "A VRCSceneDescriptor is required to build a World"
 require_text "$REF" "A VRCSceneDescriptor or VRCAvatarDescriptor"
 require_text "$REF" "Multiple Pipeline Managers found in scene. Please remove all but one."

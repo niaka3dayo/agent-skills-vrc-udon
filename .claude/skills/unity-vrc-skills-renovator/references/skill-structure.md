@@ -121,7 +121,7 @@ Knowledge / Rules / Enforcement must always reflect the same facts:
 At the beginning of each active reference file:
 
 ```markdown
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 **Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
 ```
 

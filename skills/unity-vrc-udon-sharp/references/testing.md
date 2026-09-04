@@ -2,9 +2,9 @@
 
 Practical guide for testing and debugging UdonSharp worlds in VRChat.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@ Older version numbers in this reference record feature introductions or migratio
 
 ## ClientSim — Editor Testing
 
-ClientSim (Client Simulator) replicates VRChat client behavior in the Unity Editor without requiring a live VRChat build. It is included in the VRChat Worlds SDK — no separate installation is needed.
+ClientSim (Client Simulator) simulates selected VRChat client behavior in the Unity Editor without requiring a live VRChat build. It is included in the VRChat Worlds SDK — no separate installation is needed.
 
 ### Starting a ClientSim Session
 
@@ -40,6 +40,11 @@ Open **VRChat SDK > ClientSim Settings** and uncheck **Enable ClientSim**.
 - Basic server-time simulation
 
 ### What ClientSim Does NOT Simulate
+
+Since [SDK 3.10.5](https://creators.vrchat.com/releases/release-3-10-5/), leaving
+Play Mode does not run Udon Unity events such as `OnDisable`. Do not use an
+Editor Play → Edit transition as evidence that gameplay cleanup or persistence
+callbacks execute in VRChat. Test disabling the object during gameplay separately.
 
 | Not Simulated | Why This Matters |
 |---|---|
@@ -73,6 +78,10 @@ VRChat launches with your world loaded. The local client is the **instance maste
 ### Build and Reload
 
 Set **Number of Clients** to `0`. This rebuilds the world and moves the already-running client into the new instance — significantly faster for iteration since no login sequence is required.
+
+SDK 3.10.5 fixes `VRC_SdkBuilder.ActiveBuildType` to report `Test` during
+**Build & Reload**. Editor build tooling should handle this as a test build;
+do not infer an upload from the absence of newly launched clients.
 
 ---
 

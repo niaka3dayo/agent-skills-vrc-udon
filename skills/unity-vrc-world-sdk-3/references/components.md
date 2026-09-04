@@ -1,13 +1,14 @@
 # VRChat World Components Complete Reference
 
-Full component reference for the active SDK target, 3.10.4. Version-specific feature introductions below are retained as historical migration information only.
+Full component reference for the active SDK target, 3.10.5. Version-specific feature introductions below are retained as historical migration information only.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 **Historical version notes**: Older version numbers are not supported or validation targets for this Skill.
 
 ## Table of Contents
 
 - [VRC_SceneDescriptor](#vrc_scenedescriptor)
+- [WorldQualitySettings (SDK 3.10.5)](#worldqualitysettings-sdk-3105)
 - [VRC_Pickup](#vrc_pickup)
 - [VRC_Station](#vrc_station)
 - [VRC_ObjectSync](#vrc_objectsync)
@@ -97,9 +98,52 @@ Full component reference for the active SDK target, 3.10.4. Version-specific fea
 
 ---
 
+## WorldQualitySettings (SDK 3.10.5)
+
+Use the SDK's `WorldQualitySettings` UdonSharp script for startup quality
+configuration. It is included in the final 3.10.5 VRCWorld sample prefab and
+default world scene. Updating the SDK does not prove that an existing scene
+gained this component or that its saved values match the new sample.
+
+1. Inspect the upload scene for an existing WorldQualitySettings component and
+   other scripts writing `VRCQualitySettings`. Prefer configuring one controller.
+2. If absent and needed, add the SDK script from
+   `Packages/com.vrchat.worlds/Samples/VRCQualitySettings/Scripts/WorldQualitySettings.cs`
+   to a scene GameObject. Do not add another entire VRCWorld prefab just for this
+   script; that can duplicate the Scene Descriptor and Pipeline Manager.
+3. Configure its custom Inspector, compile UdonSharp, then validate the visual
+   result in VRChat on PC and the targeted mobile platform.
+
+| Inspector control | Startup behavior |
+|---|---|
+| Realtime Reflection Probes → **Override** | When enabled, applies **Enable on PC** or **Enable on Mobile** according to the build platform. When disabled, skips this setter. |
+| Shadows → **Shadowmask Mode** | Always assigned by `Start()`, including when both Override checkboxes are off. `DistanceShadowmask` is PC-only. |
+| Shadows → **Override Shadow Distance** | When enabled, passes Low, Medium, High and Mobile values to `VRCQualitySettings.SetShadowDistance`. When disabled, skips this call. |
+
+The script's authored defaults are Shadowmask mode, both overrides off, PC
+realtime probes on / Mobile off, and shadow distances High 150, Medium 75,
+Low 75, Mobile 50. Read the actual component's serialized values before changing
+them. The Inspector notes that mobile shadows are currently disabled; a mobile
+distance field is not proof of rendering support.
+
+Keep baked probes as the performance starting point. Realtime probe support on
+all platforms does not establish a safe performance budget. For interactive C#
+controls, route to [VRCQualitySettings API guidance](../../unity-vrc-udon-sharp/references/api.md#vrcqualitysettings--writable-settings-sdk-3105).
+
+Sources: [official quality settings reference](https://creators.vrchat.com/worlds/udon/vrc-graphics/vrc-quality-settings/),
+[SDK 3.10.5 release notes](https://creators.vrchat.com/releases/release-3-10-5/),
+final SDK `Samples/VRCQualitySettings/Scripts/WorldQualitySettings.cs` and its
+`Editor/WorldQualitySettingsEditor.cs`.
+
+---
+
 ## VRC_Pickup
 
 Allows players to grab objects.
+
+SDK 3.10.5 adds **Outline Renderers** for choosing which renderers receive the
+pickup outline. For supported renderer types and the fallback when no valid
+renderer is assigned, use the [official VRC Pickup reference](https://creators.vrchat.com/worlds/components/vrc_pickup/).
 
 ### Required Setup
 

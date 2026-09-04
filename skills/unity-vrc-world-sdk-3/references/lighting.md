@@ -152,6 +152,13 @@ Recommended density:
 
 ## Reflection Probes
 
+SDK 3.10.5 adds startup controls through
+[WorldQualitySettings](components.md#worldqualitysettings-sdk-3105): realtime
+reflection probes can be enabled on all platforms, while Distance Shadowmask is
+PC-only. Inspect the existing component and its override flags before changing
+quality settings. Baked probes remain the performance starting point; verify
+realtime cost on the intended hardware.
+
 ### Purpose
 
 ```text
@@ -168,7 +175,7 @@ Reflection Probes:
 ```text
 
 Recommended settings:
-├── Type: Baked (avoid Realtime)
+├── Type: Baked (use Realtime only with a measured budget)
 ├── Resolution: 128-256
 ├── HDR: ✅ (when quality is important)
 ├── Box Projection: Only when needed

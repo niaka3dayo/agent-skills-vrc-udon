@@ -1,8 +1,8 @@
 # UdonSharp Cheatsheet
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
+SDK 3.7.1-3.10.4 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
 
 ## Features Blocked in Udon Runtime
 
@@ -226,7 +226,7 @@ public void _DoLoop() {
 }
 ```
 
-For cancelable timers on the active SDK target (3.10.4), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
+For cancelable timers on the active SDK target (3.10.5), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
 
 ---
 
@@ -255,7 +255,7 @@ void OnDestroy() {
 | Need | Use | Notes |
 |------|-----|-------|
 | Smooth transform/UI/audio changes | `TweenPosition`, `TweenScale`, `TweenFade`, `TweenPitch` | Returns `VRCTweenHandle` |
-| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.4) |
+| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.5) |
 | Delayed active toggle | `VRCTween.DelayedSetActive(target, active, seconds)` | Use for local visibility/state toggles |
 | Cleanup | `handle.Kill()` / `gameObject.KillAllTweens()` | Kill stored handles and long/infinite tweens |
 | High-frequency retargeting | `ChangeEndValue`, `SetDuration`, `SetEase`, `Restart` | Reuse a handle instead of kill/recreate in hot paths |
@@ -264,9 +264,17 @@ VRCTween is **local-only**: it does not automatically sync. For shared animation
 
 ---
 
+## Quality Settings (SDK 3.10.5)
+
+`VRCQualitySettings.RealtimeReflectionProbes` and `ShadowmaskMode` are writable.
+Distance Shadowmask is PC-only. Check existing WorldQualitySettings startup
+setters before adding runtime controls; see [api.md](references/api.md#vrcqualitysettings--writable-settings-sdk-3105).
+
+---
+
 ## Assembly Definitions
 
-For simple world scripts, do not add an asmdef by default. If a package/asmdef workflow puts an `UdonSharpBehaviour` under a Unity `.asmdef`, create the corresponding U# Assembly Definition and set Source Assembly to that Unity Assembly Definition asset. Auto Referenced is a compile reference policy, not build inclusion: ON is friendlier for prefab/simple-world integration; OFF creates an explicit boundary where user scripts need their own asmdef/reference. See [references/assembly-definitions.md](references/assembly-definitions.md).
+For simple world scripts, do not add an asmdef by default. If a package/asmdef workflow puts an `UdonSharpBehaviour` under a Unity `.asmdef`, create the corresponding U# Assembly Definition and set Source Assembly to that Unity Assembly Definition asset. Auto Referenced is a compile reference policy, not build inclusion: ON is friendlier for prefab/simple-world integration; OFF creates an explicit boundary where user scripts need their own asmdef/reference. SDK 3.10.5 honors assembly Version Defines; avoid custom `VRC_ENABLE_*` names. See [references/assembly-definitions.md](references/assembly-definitions.md).
 
 ---
 

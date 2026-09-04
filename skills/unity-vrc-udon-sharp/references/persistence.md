@@ -1,11 +1,11 @@
 # VRChat Persistence Reference
 
-Comprehensive guide to persistent data storage in VRChat worlds. The feature was introduced in SDK 3.7.4; the active verified target is SDK 3.10.4.
+Comprehensive guide to persistent data storage in VRChat worlds. The feature was introduced in SDK 3.7.4; the active verified target is SDK 3.10.5.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 **Historical feature introduction**: SDK 3.7.4
 
-SDK 3.7.4-3.10.3 references are historical migration information only, not active support or validation targets for this Skill.
+SDK 3.7.4-3.10.4 references are historical migration information only, not active support or validation targets for this Skill.
 
 ## Overview
 

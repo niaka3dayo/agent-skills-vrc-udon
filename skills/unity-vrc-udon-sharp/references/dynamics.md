@@ -1,11 +1,11 @@
 # VRChat Dynamics for Worlds Reference
 
-Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0; the active verified target is SDK 3.10.4.
+Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0; the active verified target is SDK 3.10.5.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 **Historical feature introduction**: SDK 3.10.0
 
-SDK 3.10.0-3.10.3 entries are historical feature context only, not active support or validation targets for this Skill.
+SDK 3.10.0-3.10.4 entries are historical feature context only, not active support or validation targets for this Skill.
 
 ## Overview
 
@@ -288,6 +288,11 @@ VRC Phys Bone
 ```
 
 ### PhysBone Events
+
+In [SDK 3.10.5](https://creators.vrchat.com/releases/release-3-10-5/), PhysBone
+**Reset When Disabled** also resets animator parameters and Udon state. When
+debugging a value that changes on disable, inspect this component setting before
+adding a second reset in Udon. This does not add a new PhysBone callback.
 
 ```csharp
 using UdonSharp;

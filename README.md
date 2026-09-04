@@ -1,7 +1,7 @@
 **English** | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.5-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
@@ -211,11 +211,11 @@ through unchanged and emits `VALIDATOR-WARNING: validation skipped
 
 ## SDK Versions
 
-**Active support / last verified**: VRChat SDK 3.10.4
+**Active support / last verified**: VRChat SDK 3.10.5
 
-From v4.0.0 onward, the support policy is latest stable SDK only; the support target moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.4.
+From v4.0.0 onward, the support policy is latest stable SDK only; the support target moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.5.
 
-The table below keeps historical feature-introduction notes for migration reference. SDK 3.7.1-3.10.3 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
+The table below keeps historical feature-introduction notes for migration reference. SDK 3.7.1-3.10.4 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
 
 | SDK Version | Key Features | Status |
 |:-----------:|:-------------|:------:|
@@ -229,7 +229,8 @@ The table below keeps historical feature-introduction notes for migration refere
 | **3.10.1** | Bug fixes, stability improvements | Historical |
 | **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones fixes, shader time globals | Historical |
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Historical |
-| **3.10.4** | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary capacity APIs | Active / Last verified |
+| **3.10.4** | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary capacity APIs | Historical |
+| **3.10.5** | WorldQualitySettings, writable VRCQualitySettings, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager validation | Active / Last verified |
 
 > **Note**: Before publishing, confirm that the project uses an SDK version currently supported by VRChat.
 
@@ -289,7 +290,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 - Content is provided **"AS IS"** without warranty. See [LICENSE](LICENSE).
 - This is a personal project. **Errors, outdated information, or incomplete content may exist.** Always verify against [official VRChat documentation](https://creators.vrchat.com/).
 - The author assumes no liability for issues caused by this repository (build errors, upload rejections, unexpected world behavior, etc.).
-- Active SDK support is limited to 3.10.4, the last verified target. Older version entries are historical migration information, not a promise to test or fix those SDKs. Behavior may change with new VRChat releases.
+- Active SDK support is limited to 3.10.5, the last verified target. Older version entries are historical migration information, not a promise to test or fix those SDKs. Behavior may change with new VRChat releases.
 
 ### AI-Assisted Creation
 
