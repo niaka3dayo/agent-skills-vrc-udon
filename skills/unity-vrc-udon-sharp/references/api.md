@@ -2,9 +2,9 @@
 
 Complete reference of VRChat-specific classes, methods, and types available in UdonSharp.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
 ## VRCPlayerApi
 
@@ -956,6 +956,52 @@ public class PersistentScore : UdonSharpBehaviour
     }
 }
 ```
+
+## VRCQualitySettings — writable settings (SDK 3.10.5)
+
+For Udon runtime quality controls, use `VRC.SDK3.Rendering.VRCQualitySettings`.
+For scene-wide startup defaults, first inspect the SDK's existing
+[WorldQualitySettings component](../../unity-vrc-world-sdk-3/references/components.md#worldqualitysettings-sdk-3105)
+before writing another controller that could overwrite the same settings.
+
+The official reference's introductory “read-only” description does not apply to
+these two properties: the final 3.10.5 SDK exposes getters **and setters**.
+
+| Property | Type | Authoring boundary |
+|---|---|---|
+| `RealtimeReflectionProbes` | `bool` | Enables/disables realtime probes on all platforms; enabling is not evidence that a world meets its frame budget. |
+| `ShadowmaskMode` | `UnityEngine.ShadowmaskMode` | `DistanceShadowmask` support is PC-only. Do not promise the same lighting result on mobile. |
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Rendering;
+
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+public class WorldQualityControl : UdonSharpBehaviour
+{
+    public void _ApplyQuality()
+    {
+        // Explicit authoring choice; avoid competing startup setters.
+        VRCQualitySettings.RealtimeReflectionProbes = false;
+        VRCQualitySettings.ShadowmaskMode = ShadowmaskMode.Shadowmask;
+        bool probesEnabled = VRCQualitySettings.RealtimeReflectionProbes;
+        ShadowmaskMode mode = VRCQualitySettings.ShadowmaskMode;
+        Debug.Log("Quality settings: " + probesEnabled + ", " + mode);
+    }
+}
+```
+
+Do not infer user-setting precedence, the timing of effective rendering changes,
+or identical getter behavior across platforms from successful compilation. Test
+the intended visual result in VRChat on each target platform. The existing
+`OnVRCQualitySettingsChanged` callback handles user quality changes; do not
+assume writing these properties fires that event or synchronizes other players.
+
+Sources: [official quality settings reference](https://creators.vrchat.com/worlds/udon/vrc-graphics/vrc-quality-settings/),
+[SDK 3.10.5 release notes](https://creators.vrchat.com/releases/release-3-10-5/).
+
+---
 
 ## VRCCameraSettings API (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0)
 

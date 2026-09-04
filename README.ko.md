@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | **한국어**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.5-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="에이전트 스킬" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="라이선스" />
@@ -211,11 +211,11 @@ validation skipped (JQ_UNAVAILABLE)`을 출력합니다.
 
 ## SDK 버전
 
-**현재 지원 / 마지막 검증**: VRChat SDK 3.10.4
+**현재 지원 / 마지막 검증**: VRChat SDK 3.10.5
 
-v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 지원 전환은 이 저장소에서 검증한 뒤에만 진행합니다. 안정 버전이 되었다는 이유만으로 자동 지원하지 않습니다. 현재 마지막으로 검증한 대상은 3.10.4입니다.
+v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 지원 전환은 이 저장소에서 검증한 뒤에만 진행합니다. 안정 버전이 되었다는 이유만으로 자동 지원하지 않습니다. 현재 마지막으로 검증한 대상은 3.10.5입니다.
 
-아래 표에는 마이그레이션에 참고할 수 있는 기능 도입 이력을 남겨 두었습니다. SDK 3.7.1-3.10.3 항목은 과거 기록일 뿐이며, 이 Skill의 지원 또는 검증 대상이 아닙니다. 이는 이 Skill의 지원 범위이며 VRChat 자체의 SDK 정책을 뜻하지 않습니다.
+아래 표에는 마이그레이션에 참고할 수 있는 기능 도입 이력을 남겨 두었습니다. SDK 3.7.1-3.10.4 항목은 과거 기록일 뿐이며, 이 Skill의 지원 또는 검증 대상이 아닙니다. 이는 이 Skill의 지원 범위이며 VRChat 자체의 SDK 정책을 뜻하지 않습니다.
 
 | SDK 버전 | 주요 기능 | 상태 |
 |:--------:|:----------|:----:|
@@ -229,7 +229,8 @@ v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 �
 | **3.10.1** | 버그 수정, 안정성 개선 | 과거 기록 |
 | **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate, PhysBones 수정, 셰이더 시간 글로벌 변수 | 과거 기록 |
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`, VRCRaycast (아바타), Mirror 렌더 순서 수정 | 과거 기록 |
-| **3.10.4** | VRCTween, Box형 Contacts, Global Avatar PhysBone Colliders, 월드 `VRCPhysBoneCollider` Udon 접근, DataList/DataDictionary 용량 API | 현재 지원 / 마지막 검증 |
+| **3.10.4** | VRCTween, Box형 Contacts, Global Avatar PhysBone Colliders, 월드 `VRCPhysBoneCollider` Udon 접근, DataList/DataDictionary 용량 API | 과거 기록 |
+| **3.10.5** | WorldQualitySettings, VRCQualitySettings 쓰기, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager 검증 | 현재 지원 / 마지막 검증 |
 
 > **참고**: 게시하기 전에 프로젝트에서 VRChat이 현재 지원하는 SDK 버전을 사용하고 있는지 확인하세요.
 
@@ -289,7 +290,7 @@ v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 �
 - 콘텐츠는 어떠한 보증 없이 **"있는 그대로"** 제공됩니다. [LICENSE](LICENSE)를 참조하세요.
 - 이것은 개인 프로젝트입니다. **오류, 오래된 정보, 불완전한 내용이 있을 수 있습니다.** 반드시 [공식 VRChat 문서](https://creators.vrchat.com/)와 대조하여 확인하세요.
 - 이 리포지토리로 인해 발생하는 문제(빌드 오류, 업로드 거부, 예상치 못한 월드 동작 등)에 대해 저자는 어떠한 책임도 지지 않습니다.
-- 현재 지원하는 SDK는 마지막으로 검증한 3.10.4뿐입니다. 이전 버전 항목은 마이그레이션을 위한 역사적 정보이며, 해당 SDK를 검증하거나 수정한다는 약속이 아닙니다. 새로운 VRChat 릴리스에 따라 동작이 변경될 수 있습니다.
+- 현재 지원하는 SDK는 마지막으로 검증한 3.10.5뿐입니다. 이전 버전 항목은 마이그레이션을 위한 역사적 정보이며, 해당 SDK를 검증하거나 수정한다는 약속이 아닙니다. 새로운 VRChat 릴리스에 따라 동작이 변경될 수 있습니다.
 
 ### AI 지원 제작
 

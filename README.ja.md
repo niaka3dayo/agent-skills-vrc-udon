@@ -1,7 +1,7 @@
 [English](README.md) | **日本語** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.5-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="Agent Skills" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="License" />
@@ -211,11 +211,11 @@ Bash版の検証には `jq` が必要です。利用できない場合は入力�
 
 ## SDKバージョン
 
-**現在のサポート対象 / 最終検証済み**: VRChat SDK 3.10.4
+**現在のサポート対象 / 最終検証済み**: VRChat SDK 3.10.5
 
-v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定版への切り替えはこのリポジトリで検証してから行います。安定版になっただけで自動的にサポート対象へ追加することはありません。現在の最終検証済みは3.10.4です。
+v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定版への切り替えはこのリポジトリで検証してから行います。安定版になっただけで自動的にサポート対象へ追加することはありません。現在の最終検証済みは3.10.5です。
 
-以下の表には、移行時の参考になる機能追加の履歴を残しています。SDK 3.7.1〜3.10.3は履歴情報のみで、このSkillのサポート対象・検証対象ではありません。これはSkill自身のサポート範囲であり、VRChatのSDK方針を示すものではありません。
+以下の表には、移行時の参考になる機能追加の履歴を残しています。SDK 3.7.1〜3.10.4は履歴情報のみで、このSkillのサポート対象・検証対象ではありません。これはSkill自身のサポート範囲であり、VRChatのSDK方針を示すものではありません。
 
 | SDKバージョン | 主な機能 | ステータス |
 |:-----------:|:-------------|:------:|
@@ -229,7 +229,8 @@ v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定�
 | **3.10.1** | バグ修正、安定性の向上 | 履歴 |
 | **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones修正、シェーダー時間グローバル | 履歴 |
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（アバター）、Mirror 描画タイミング修正 | 履歴 |
-| **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 現行サポート / 最終検証済み |
+| **3.10.4** | VRCTween、Box形状のContacts、Global Avatar PhysBone Colliders、ワールドの`VRCPhysBoneCollider` Udonアクセス、DataList/DataDictionary容量API | 履歴 |
+| **3.10.5** | WorldQualitySettings、VRCQualitySettingsの書き込み、Assembly Version Defines、PickupのOutline Renderers、Pipeline Manager検証 | 現行サポート / 最終検証済み |
 
 > **注意**: 公開前に、VRChatが現在サポートしているSDKバージョンをプロジェクトで使用していることを確認してください。
 
@@ -289,7 +290,7 @@ v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定�
 - コンテンツは**「現状のまま」**提供されており、いかなる保証もありません。[LICENSE](LICENSE) をご確認ください。
 - これは個人プロジェクトです。**誤り、古くなった情報、または不完全な内容が含まれる可能性があります。** 常に[VRChat公式ドキュメント](https://creators.vrchat.com/)で確認してください。
 - このリポジトリが原因で生じた問題（ビルドエラー、アップロード拒否、予期しないワールドの動作など）について、作者は一切責任を負いません。
-- 現在のSDKサポート対象は、最終検証済みの3.10.4のみです。古いバージョンの行は移行時の履歴情報であり、そのSDKの検証や修正を約束するものではありません。新しいVRChatリリースで動作が変わる可能性があります。
+- 現在のSDKサポート対象は、最終検証済みの3.10.5のみです。古いバージョンの行は移行時の履歴情報であり、そのSDKの検証や修正を約束するものではありません。新しいVRChatリリースで動作が変わる可能性があります。
 
 ### AI支援による作成
 

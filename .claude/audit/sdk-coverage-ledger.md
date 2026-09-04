@@ -110,3 +110,66 @@ release-only rows are not treated as binary discoveries.
 | Voice Audio Rework | `skip` | Not shipped in the audited release; do not add or reframe voice-audio guidance for this audit. |
 | Runtime Texture Compression | `skip` | No authoring wrapper surface found in the 3.10.4 wrapper DLL census; not adopted into skill coverage from this audit. |
 | World Preloading | `skip` | No authoring wrapper surface found in the 3.10.4 wrapper DLL census; not adopted into skill coverage from this audit. |
+
+## Audit: SDK 3.10.5
+
+Scope: [implementation Issue #360](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/360),
+superseding [preview tracker #329](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/329).
+The final stable Base/Worlds packages, not the beta feature list, define this release.
+
+### Artifact and documentation evidence
+
+- [Official release notes](https://creators.vrchat.com/releases/release-3-10-5/),
+  [package release](https://github.com/vrchat/packages/releases/tag/3.10.5), and
+  [VPM index](https://vrchat.github.io/packages/index.json), checked 2026-09-05 JST (2026-09-04 UTC).
+  Package release timestamp: 2026-09-04 17:06:34 UTC (2026-09-05 02:06:34 JST).
+- Official ZIP SHA-256: Base
+  `fbfb3e7a38778dcb55d7a860286819e6f0726d10d5039f61474bd1b9c629029e`;
+  Worlds `51fbd4812ca9216b91d4a242319f8a29058222f2819ecebc3bce086093ffda7c`.
+  Downloaded archive hashes matched the official index. All 3,795 installed
+  Base/Worlds files in the verification project matched the archives before testing.
+- Re-censused official 3.10.4 and final 3.10.5 wrapper DLLs: 81 extern types in
+  each; raw members 2,442 → 2,449, seven additions and no removals across three
+  types. This counts raw wrapper symbols, not seven new user-facing APIs.
+- The live [quality settings reference](https://creators.vrchat.com/worlds/udon/vrc-graphics/vrc-quality-settings/)
+  already lists both properties; the live [Pickup reference](https://creators.vrchat.com/worlds/components/vrc_pickup/)
+  already documents Outline Renderers. Neither is a reference-missing discovery.
+  The quality page's “read-only” introduction conflicts with the new setters;
+  the included guidance resolves that ambiguity rather than duplicating the page.
+
+### Decisions
+
+| Item | Evidence and expert delta | Status / destination |
+|---|---|---|
+| WorldQualitySettings | New SDK UdonSharp script + custom Inspector; script GUID appears in VRCWorld prefab and default scene. Startup always assigns Shadowmask Mode, while probes/shadow distance have separate overrides. Updating a package does not prove an existing scene gained it. | `included` — World components, lighting and routing; inspect existing serialized values before adding another controller. |
+| VRCQualitySettings | Four new wrapper accessors: `RealtimeReflectionProbes` bool get/set and `ShadowmaskMode` UnityEngine.ShadowmaskMode get/set. Release notes allow realtime probes on all platforms; Distance Shadowmask is PC-only. | `included` — Udon api.md, routing and cheatsheet. Signature/compile evidence; effective renderer state, user-setting precedence and hardware performance are not inferred. |
+| Assembly Version Defines | Compiler uses each Unity script assembly's defines; U# Assembly Definition is still required. Unknown `VRC_ENABLE_*` defines are filtered. | `included` — assembly-definitions.md and a short constraints rule. No source-grep hook for project-wide define state. |
+| UdonSharp script creation in Assets/Packages | Final source fixes creation in both locations; beta.2 supersedes the earlier Assets-only restriction. | `included` — package authoring note; existing AutoGenerator left intact. |
+| Pipeline Manager validation | WorldBuilder adds two `OnGUIError` call sites (6 → 8; warnings 22 and information 5 unchanged). Duplicate Auto Fix only preserves a manager on the descriptor object; none there means all managers are removed. Built-scene validator and upload guards also reject invalid counts. | `included` — build-validation.md, safe identity-preserving procedure and source anchors. No unrelated layer-policy changes. |
+| Pickup Outline Renderers | Two new wrapper accessors; official component page documents renderer selection, supported types and fallback. | `skip` duplicate reference — official-page route and SDK summary only; no duplicate property table or sample. |
+| Build & Reload | Release/source fix `VRC_SdkBuilder.ActiveBuildType` to `Test`, along with build callback/UI feedback. | `included` — brief editor-scripting/testing guidance; build export failure propagation remains source/history evidence. |
+| ClientSim Play → Edit events | Official fix suppresses Udon Unity events such as OnDisable when leaving Play Mode. | `included` — testing boundary; do not treat Editor shutdown as gameplay callback evidence. |
+| PhysBone Reset When Disabled | Official fix also resets animator parameters and Udon state. | `included` — short Dynamics debugging note; no new callback claim. |
+| VRCJson nested braces / DataToken int-to-long | Official bug fixes, no new authoring contract requiring another recipe. | `skip` — release history; preserve existing Data Container guidance. |
+| Contacts offset sphere / domain reload / ClientSim persistence | Official correctness fixes. | `skip` — release history; no new runtime API or unmeasured workaround. |
+| Constraint Activate/Zero Undo and dirty state | Editor fix for existing operations. | `skip` — release history; no expanded constraint API table. |
+| VRCInputMethod.Embodied | One new wrapper enum getter, absent from release-note contract. | `candidate` — existence only; no device mapping or runtime semantics asserted. |
+| Internal C# parser version change | Source uses C# 9 parsing. Parser configuration does not prove Udon supports every C# 9 feature. | `candidate` — no general language-support expansion. |
+| VRCBillboard / AttachTransformToBone / DetachTransformFromBone | Exact searches across final Base/Worlds files and wrapper census found none. | `skip` for 3.10.5; deferred preview history from #329, not a support promise or blocker for this final-artifact scope. |
+| VRCRaycast RootTransform / avatar-only changes | Avatar authoring scope. | `skip` — outside both distributed world/Udon Skills. |
+| AudioLink / Toon Standard changes | Shader/package integration release history, outside the selected scene/Udon expert delta. | `skip` — no new tutorial or dependency. |
+| Layers runtime observations | Existing discrepancy in #295 remains separate; upstream documentation proposal is still open. | `skip` change — preserve measured observations and current guidance. |
+
+Raw archives, SDK sources, census dumps and Unity probe artifacts stay in the
+ignored SDK workspace and are excluded from npm. The recorded inclusion scope
+does not claim live-client rendering or actual device performance was measured.
+
+Unity 2022.3.22f1 with resolved Base/Worlds 3.10.5 generated three real Udon
+programs: the public quality example (including enum/bool logging) contained all
+four getter/setter externs; the same Version Define with expressions `3.10.5`
+and `99.0.0` selected the expected opposite branches in compiled Udon heaps.
+Unity also confirmed both shipped scene/prefab assets' nine quality values,
+program asset links, and custom-editor registration/OnEnable. Inspector drawing,
+clicks and live-client rendering were not tested. No regression of existing
+local Unity assets was accepted: all 3,828 pre-existing files matched their
+pre-test SHA-256 after the dedicated probe completed.

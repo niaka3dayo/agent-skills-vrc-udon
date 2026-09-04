@@ -503,7 +503,7 @@ VRChat SDK > Show Control Panel
 Builder tab > Validations section
 - Auto-fixable issues have buttons for fixing
 - Follow instructions for manual fixes
-- For exact SDK 3.10.4 red/yellow/white alert meanings and Auto Fix side effects,
+- For exact SDK 3.10.5 red/yellow/white alert meanings and Auto Fix side effects,
   use references/build-validation.md
 
 ```

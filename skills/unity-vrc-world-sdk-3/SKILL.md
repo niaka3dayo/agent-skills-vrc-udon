@@ -5,19 +5,20 @@ description: >
     optimization, and upload. Use for VRChat world scene configuration,
     VRC SDK components, layers, baked lighting, Quest/Android performance,
     Dynamics for Worlds, Build Panel warning triage, validation, and upload.
-    Covers VRC_SceneDescriptor, VRC_Pickup, VRC_Station, VRC_Mirror,
+    Covers WorldQualitySettings, VRC_SceneDescriptor, VRC_Pickup, VRC_Station, VRC_Mirror,
     VRC_ObjectSync, VRC_CameraDolly, spawn points, collision matrices,
     PhysBone and Contact component placement, Box Contacts,
     Global Avatar PhysBone Colliders, and VRCPhysBoneCollider component setup.
-    Active support / last verified: SDK 3.10.4. Triggers on: VRChat world scene, VRC SDK, scene setup,
+    Active support / last verified: SDK 3.10.5. Triggers on: VRChat world scene, VRC SDK, scene setup,
     component placement, optimization, Quest support, light baking, upload,
     SDK validation, Build Panel warning, Auto Fix, red warning, yellow warning, or white warning.
     Do not use for UdonSharp C# or VRCTween calls; use
     unity-vrc-udon-sharp for runtime scripting.
+    UdonSharp package, asmdef, and Version Defines work also belongs to that skill.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "4.0.0"
+    version: "4.1.0"
     tags: vrchat, world-sdk, scene-setup, optimization, components, upload, sdk-validation, build-panel
 ---
 
@@ -89,6 +90,7 @@ Load only what the task requires.
 | Setting up seating (VRC_Station) | `components.md` | `layers.md` | `audio-video.md`, `performance.md` | Station collider + exit requirements are VRChat-specific |
 | Optimizing FPS for Quest | `performance.md`, `lighting.md` | `troubleshooting.md` | `audio-video.md`, `upload.md` | Quest limits differ from PC; bake requirements non-obvious |
 | Adding audio or video player / voice zones (SetVoiceGain, Steam Audio) | `audio-video.md`, `components.md` | `troubleshooting.md` | `lighting.md`, `performance.md` | AVPro vs Unity Video selection is VRChat-specific |
+| Configuring WorldQualitySettings, realtime probes, or Shadowmask Mode | `components.md` | `lighting.md`; Udon API: `unity-vrc-udon-sharp` | `audio-video.md`, `layers.md` | Existing startup setters and override flags can overwrite authored quality choices |
 | Baking lights / lightmap setup | `lighting.md`, `performance.md` | — | `audio-video.md`, `layers.md` | Lightmap resolution and probe placement affect Quest VRAM |
 | SDK Build Panel validation alerts, red/yellow/white warnings, or Auto Fix questions | `build-validation.md` | `upload.md`, `troubleshooting.md` | `audio-video.md`, `lighting.md` | Alert severity, build consequence, and Auto Fix side effects must come from SDK-backed catalog |
 | World upload and publish | `upload.md` | `build-validation.md`, `troubleshooting.md` | `audio-video.md`, `lighting.md` | Upload steps and validation order are fragile; easy to miss |
@@ -141,11 +143,11 @@ Quest required? → Yes
 
 ## SDK Versions
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.4.
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.5.
 
-The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.3 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.4 unless a reference explicitly marks a historical migration case.
+The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.4 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.5 unless a reference explicitly marks a historical migration case.
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |
@@ -159,9 +161,10 @@ The table below keeps feature-introduction history for migration reference. SDK 
 | 3.10.1 | Bug fixes and stability improvements                                           | Historical     |
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | Historical     |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | Historical     |
-| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Active / Last verified |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Historical |
+| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Active / Last verified |
 
-Use SDK 3.10.4 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
+Use SDK 3.10.5 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
 
 ---
 
@@ -473,7 +476,7 @@ Starter templates for common SDK component patterns. Repository checks cover sta
 | `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |
 | `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
-| `references/build-validation.md` | SDK 3.10.4 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
+| `references/build-validation.md` | SDK 3.10.5 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
 | `references/upload.md`          | Upload procedure                                                                                 | 300+          |
 | `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
 | `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |

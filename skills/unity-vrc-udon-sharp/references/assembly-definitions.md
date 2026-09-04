@@ -29,6 +29,48 @@ Without that corresponding U# asset, UdonSharp can compile the C# assembly in Un
 
 Fix the assembly relationship before moving files: verify the script's containing `.asmdef`, create or update the U# Assembly Definition, and point its Source Assembly at the Unity Assembly Definition asset.
 
+## Assembly Version Defines (SDK 3.10.5)
+
+SDK 3.10.5 passes each Unity assembly's defines to UdonSharp, including
+**Version Defines**. Use this for package-version-dependent Udon code when an
+asmdef boundary already makes sense; it does not replace the matching U#
+Assembly Definition above.
+
+1. Select the script's Unity `.asmdef` and add a Version Define for
+   `com.vrchat.worlds` with Expression `3.10.5` and Define
+   `WORLD_SDK_3_10_5_OR_NEWER` (Unity's single-version expression means that
+   version or later).
+2. Keep the matching U# Assembly Definition's Source Assembly pointed at this
+   `.asmdef`. A define in another assembly does not configure this script.
+3. Guard the version-sensitive calls, then compile with UdonSharp; a successful
+   Unity C# compilation alone does not prove that a Udon program was generated.
+
+```csharp
+#if WORLD_SDK_3_10_5_OR_NEWER
+VRC.SDK3.Rendering.VRCQualitySettings.RealtimeReflectionProbes = false;
+#else
+// Do not reference APIs missing from this package version.
+#endif
+```
+
+The expression is a package compatibility guard, not a promise that this Skill
+supports future SDKs. Verify the defined and undefined branches when maintaining
+a package. UdonSharp's Version Defines support itself starts in 3.10.5; do not
+assume Unity and Udon choose the same branch on an older compiler merely because
+the new API is guarded. Avoid custom names starting with `VRC_ENABLE_`: the SDK filters unknown
+defines with that reserved prefix. Do not broaden the supported C# language
+surface merely because an internal parser version changed.
+
+SDK 3.10.5 also fixes UdonSharp script creation in both **Assets and Packages**.
+The final release supersedes the beta's Assets-only restriction. For editable
+package sources, verify the destination, generated script/program assets, and
+assembly relationship after creation; do not edit a read-only package cache.
+
+Sources: [SDK 3.10.5 release notes](https://creators.vrchat.com/releases/release-3-10-5/),
+[Unity Version Defines](https://docs.unity3d.com/2022.3/Documentation/Manual/ScriptCompilationAssemblyDefinitionFiles.html#version-defines),
+SDK `Integrations/UdonSharp/Editor/Compiler/CompilationContext.cs` and
+`Integrations/UdonSharp/Editor/UdonSharpUtils.cs`.
+
 ## VPM Package Layout Is a Design Choice
 
 Do not force a single folder layout on every package. Choose the boundary from how creators consume the package:

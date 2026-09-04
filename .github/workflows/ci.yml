@@ -156,6 +156,8 @@ jobs:
 
       - name: Check editorconfig compliance
         uses: editorconfig-checker/action-editorconfig-checker@840e866d93b8e032123c23bac69dece044d4d84c  # v2.2.0
+        with:
+          version: v3.11.3  # v4 renamed the ec-* assets required by this action.
 
   version-sync:
     name: Version Sync

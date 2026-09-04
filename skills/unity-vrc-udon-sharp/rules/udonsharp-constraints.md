@@ -2,12 +2,16 @@
 
 UdonSharp compiles C# to Udon Assembly. Code that executes in the Udon runtime must adhere to these constraints, which differ from standard C#. Unity/Editor-side field initializer evaluation has the narrow exception described below.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
+Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
 > For detailed examples, SDK version availability, and compiler behavior explanations,
 > see `references/constraints.md`.
+
+SDK 3.10.5 honors assembly Version Defines. Keep the matching U# Assembly
+Definition, and do not name custom defines `VRC_ENABLE_*` (reserved/filtered by
+the SDK). See [assembly-definitions.md](../references/assembly-definitions.md).
 
 ## Blocked in Udon Runtime
 
@@ -37,7 +41,7 @@ Older version numbers in this rule record feature introductions or migration fac
 
 ## Available Features (historical baseline: SDK 3.7.1)
 
-The version labels in this section are historical feature-introduction markers; use SDK 3.10.4 for current generation and validation.
+The version labels in this section are historical feature-introduction markers; use SDK 3.10.5 for current generation and validation.
 
 | Feature | Notes |
 |---------|-------|

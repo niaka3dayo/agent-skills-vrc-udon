@@ -2,7 +2,7 @@
 
 Array helpers, array utility helpers (List&lt;T&gt; alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, and abstract class callback patterns.
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 **Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
 
 ## Array Helpers
@@ -511,9 +511,9 @@ public class MyResultHandler : ProcessCallbackBase
 
 `SendCustomEventDelayedSeconds` has no cancellation API. Once scheduled, the callback will fire even if the caller's state has changed and the event is no longer wanted. The pending-callback-counter debounce (see [Delayed Event Debounce in patterns-networking.md](patterns-networking.md)) handles "soft cancel" — it lets the callback fire but makes it a no-op. That is sufficient for debounce cases but not for situations where the callback absolutely must not execute: side effects inside the callback (audio playback, network requests, object destruction) will still run through the guard check even if they then return early.
 
-### Solution on the active SDK target (3.10.4)
+### Solution on the active SDK target (3.10.5)
 
-Prefer `VRCTween.DelayedCall`, which behaves like `SendCustomEventDelayedSeconds` but returns a `VRCTweenHandle` that can be killed before it fires. See [VRCTween Patterns](vrctween.md#cancelable-delays) for the active SDK 3.10.4 guidance.
+Prefer `VRCTween.DelayedCall`, which behaves like `SendCustomEventDelayedSeconds` but returns a `VRCTweenHandle` that can be killed before it fires. See [VRCTween Patterns](vrctween.md#cancelable-delays) for the active SDK 3.10.5 guidance.
 
 ```csharp
 using VRC.SDK3.Components;
@@ -536,7 +536,7 @@ public void _CancelPendingRetry()
 
 For historical migration only, projects pinned below SDK 3.10.4 can instantiate a helper `GameObject` that carries a tiny `UdonSharpBehaviour`. Schedule `SendCustomEventDelayedSeconds` on the helper itself. To cancel, call `Destroy(helperGameObject)` before the delay expires — the destroyed behaviour never executes its scheduled callback.
 
-**Trade-off:** Allocates a `GameObject` per timer instance. Use `VRCTween.DelayedCall` on the active SDK target (3.10.4); use the pending-callback-counter pattern for high-frequency debounce; use this historical fallback only when documenting an unsupported older project that truly must not fire the callback.
+**Trade-off:** Allocates a `GameObject` per timer instance. Use `VRCTween.DelayedCall` on the active SDK target (3.10.5); use the pending-callback-counter pattern for high-frequency debounce; use this historical fallback only when documenting an unsupported older project that truly must not fire the callback.
 
 **When to use:**
 - SDK < 3.10.4 projects where `VRCTween.DelayedCall` is unavailable

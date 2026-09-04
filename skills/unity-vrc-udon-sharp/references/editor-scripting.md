@@ -481,6 +481,11 @@ This inspector is for the plain helper, not for a `UdonSharpBehaviour`, so it do
 
 ## Build Pipeline Callbacks
 
+For tooling branching on `VRC_SdkBuilder.ActiveBuildType`,
+[SDK 3.10.5](https://creators.vrchat.com/releases/release-3-10-5/) reports `Test`
+during Build & Reload. This is distinct from the callback's world/avatar
+`VRCSDKRequestedBuildType` below. Do not treat a reload as an upload.
+
 The SDK exposes two documented hooks for running custom code when a world or avatar build starts. Both are verified against SDK 3.10.3 and documented on the [official build pipeline page](https://creators.vrchat.com/sdk/build-pipeline-callbacks-and-interfaces/).
 
 ### IVRCSDKBuildRequestedCallback
