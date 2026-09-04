@@ -1,8 +1,8 @@
 # Web Loading — Advanced Packed Resource Patterns
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.3 are not supported or validation targets for this Skill.
+Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
 Advanced techniques for embedding multiple textures in a single `VRCStringDownloader` response
 to work around `VRCImageDownloader` limitations. For the base API reference see

@@ -1,7 +1,7 @@
 [English](README.md) | [日本語](README.ja.md) | **简体中文** | [繁體中文](README.zh-TW.md) | [한국어](README.ko.md)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.4-00b4d8?style=for-the-badge" alt="VRChat SDK" />
+  <img src="https://img.shields.io/badge/VRChat_SDK-3.10.5-00b4d8?style=for-the-badge" alt="VRChat SDK" />
   <img src="https://img.shields.io/badge/UdonSharp-C%23_%E2%86%92_Udon-5C2D91?style=for-the-badge&logo=csharp&logoColor=white" alt="UdonSharp" />
   <img src="https://img.shields.io/badge/AI_Agent-Skills_%26_Rules-ff6b35?style=for-the-badge" alt="AI Agent 技能" />
   <img src="https://img.shields.io/github/license/niaka3dayo/agent-skills-vrc-udon?style=for-the-badge" alt="许可证" />
@@ -210,11 +210,11 @@ Bash 验证器需要 `jq`。如果无法使用 `jq`，钩子会原样传递输�
 
 ## SDK 版本
 
-**当前支持 / 最后验证**：VRChat SDK 3.10.4
+**当前支持 / 最后验证**：VRChat SDK 3.10.5
 
-从 v4.0.0 起，本项目只支持最新的稳定版 SDK；只有在本仓库完成验证后，支持目标才会切换到新的稳定版本。目前最后验证的目标是 3.10.4。
+从 v4.0.0 起，本项目只支持最新的稳定版 SDK；只有在本仓库完成验证后，支持目标才会切换到新的稳定版本。目前最后验证的目标是 3.10.5。
 
-下表保留了便于迁移参考的功能引入历史。SDK 3.7.1-3.10.3的条目仅供历史参考，不属于本 Skill 的支持或验证目标。这是本 Skill 的支持边界，并不代表 VRChat 自身的 SDK 政策。
+下表保留了便于迁移参考的功能引入历史。SDK 3.7.1-3.10.4的条目仅供历史参考，不属于本 Skill 的支持或验证目标。这是本 Skill 的支持边界，并不代表 VRChat 自身的 SDK 政策。
 
 | SDK 版本 | 主要特性 | 状态 |
 |:--------:|:---------|:----:|
@@ -228,7 +228,8 @@ Bash 验证器需要 `jq`。如果无法使用 `jq`，钩子会原样传递输�
 | **3.10.1** | Bug 修复、稳定性改进 | 历史 |
 | **3.10.2** | EventTiming.PostLateUpdate/FixedUpdate、PhysBones 修复、着色器时间全局变量 | 历史 |
 | **3.10.3** | `VRCPlayerApi.isVRCPlus`、VRCRaycast（头像）、Mirror 渲染顺序修复 | 历史 |
-| **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 访问、DataList/DataDictionary 容量 API | 当前支持 / 最后验证 |
+| **3.10.4** | VRCTween、Box 形 Contacts、Global Avatar PhysBone Colliders、世界 `VRCPhysBoneCollider` Udon 访问、DataList/DataDictionary 容量 API | 历史 |
+| **3.10.5** | WorldQualitySettings、VRCQualitySettings 写入、Assembly Version Defines、Pickup Outline Renderers、Pipeline Manager 验证 | 当前支持 / 最后验证 |
 
 > **注意**：发布前，请确认项目使用的是 VRChat 当前支持的 SDK 版本。
 
@@ -288,7 +289,7 @@ Bash 验证器需要 `jq`。如果无法使用 `jq`，钩子会原样传递输�
 - 内容以 **"按原样"（AS IS）** 提供，不附带任何保证。请参阅 [LICENSE](LICENSE)。
 - 这是一个个人项目。**可能存在错误、过时信息或不完整的内容。** 请始终以 [VRChat 官方文档](https://creators.vrchat.com/) 为准进行验证。
 - 作者不对因使用本仓库而导致的任何问题（构建错误、上传被拒、意外的世界行为等）承担责任。
-- 当前支持的 SDK 仅为最后验证过的 3.10.4。较旧版本的条目只是迁移历史信息，并不承诺对这些 SDK 进行验证或修复。VRChat 新版本发布后，行为可能会发生变化。
+- 当前支持的 SDK 仅为最后验证过的 3.10.5。较旧版本的条目只是迁移历史信息，并不承诺对这些 SDK 进行验证或修复。VRChat 新版本发布后，行为可能会发生变化。
 
 ### AI 辅助创建
 

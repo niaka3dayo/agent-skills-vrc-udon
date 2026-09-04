@@ -4,7 +4,7 @@
 
 - [ ] Check the active and verified SDK target for each skill
   ```text
-  Active support / last verified: SDK 3.10.4
+  Active support / last verified: SDK 3.10.5
   ```
 - [ ] Keep older version numbers only as historical migration information
 - [ ] Confirm the active-versus-historical boundary is explicit and does not attribute the cutoff to VRChat

@@ -31,7 +31,7 @@ fi
 require_text "$SKILL_DIR/references/web-loading.md" \
     '| `VRCImageDownloader` | Image download (Texture2D) | `VRC.SDK3.Image` |'
 require_text "$SKILL_DIR/references/sdk-migration.md" \
-    'The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.4 example.'
+    'The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.5 example.'
 require_text "$SKILL_DIR/SKILL.md" \
     'SDK 3.10.4: `UdonSharpBehaviour` implements `IUdonEventReceiver` directly.'
 grep -Fq -- 'https://creators.vrchat.com/releases/release-3-10-4/' "$SKILL_DIR/SKILL.md" \

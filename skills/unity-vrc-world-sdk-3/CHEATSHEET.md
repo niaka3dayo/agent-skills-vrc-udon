@@ -1,8 +1,8 @@
 # VRC World SDK 3 Cheatsheet
 
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
+SDK 3.7.1-3.10.4 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
 
 ---
 
@@ -21,6 +21,10 @@ SDK 3.7.1-3.10.3 labels below are historical feature-introduction notes only; th
 ---
 
 ## Scene Setup
+
+SDK 3.10.5 includes WorldQualitySettings in the VRCWorld sample/default scene.
+Inspect the existing component before adding one: Shadowmask Mode applies at
+startup even with both Override flags off. See [component setup](references/components.md#worldqualitysettings-sdk-3105).
 
 ### Checklist
 
@@ -428,7 +432,7 @@ site:github.com/vrchat-community "issue keyword"
 |-------|------|
 | Performance targets, Quest optimization checklist | [references/performance.md](references/performance.md) |
 | Lightmap settings, Quest bake parameter reference | [references/lighting.md](references/lighting.md) |
-| Full active SDK 3.10.4 world component reference | [references/components.md](references/components.md) |
+| Full active SDK 3.10.5 world component reference | [references/components.md](references/components.md) |
 | VRChat layer system, collision, and selective rendering reference | [references/layers.md](references/layers.md) |
 | Audio and video configuration, voice settings, Steam Audio, and video players | [references/audio-video.md](references/audio-video.md) |
 | SDK Build Panel validation alert catalog, Auto Fix side effects, red/yellow/white warning responses | [references/build-validation.md](references/build-validation.md) |

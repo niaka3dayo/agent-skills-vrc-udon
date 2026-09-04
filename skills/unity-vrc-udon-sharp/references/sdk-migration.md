@@ -3,10 +3,10 @@
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
 **Historical migration coverage**: SDK 3.7.x through 3.10.4
-**Active support / last verified**: SDK 3.10.4
+**Active support / last verified**: SDK 3.10.5
 
-Use SDK 3.10.4 when publishing. The version markers below preserve feature
-availability and migration facts; SDK 3.7.1-3.10.3 are not support or validation
+Use SDK 3.10.5 when publishing. The version markers below preserve feature
+availability and migration facts; SDK 3.7.1-3.10.4 are not support or validation
 targets for this Skill. This is the Skill's boundary, not a claim about VRChat's
 own SDK policy.
 
@@ -20,10 +20,28 @@ Version-specific notes in this skill use three marker forms. Match them verbatim
 
 ---
 
+## SDK 3.10.5 migration
+
+1. Update Base and Worlds together and confirm the resolved package versions.
+2. For startup quality settings, inspect the existing
+   [WorldQualitySettings component](../../unity-vrc-world-sdk-3/references/components.md#worldqualitysettings-sdk-3105)
+   before adding another setter. For Udon controls, read
+   [VRCQualitySettings](api.md#vrcqualitysettings--writable-settings-sdk-3105).
+3. For package scripts using conditional compilation, verify
+   [Assembly Version Defines and the matching U# asset](assembly-definitions.md#assembly-version-defines-sdk-3105).
+4. Resolve the new [Pipeline Manager validation](../../unity-vrc-world-sdk-3/references/build-validation.md#pipeline-manager-identity-and-built-scene-checks-sdk-3105)
+   without losing the intended blueprint ID. A build processor can invalidate the
+   exported scene even when the source scene is correct.
+5. Recheck lifecycle tests against the [ClientSim Play → Edit and Build & Reload changes](testing.md).
+
+The final Base/Worlds 3.10.5 artifacts do not contain the preview
+`VRCBillboard`, `AttachTransformToBone`, or `DetachTransformFromBone` surfaces.
+Do not generate code for them from preview announcements.
+
 ## SDK 3.10.4 receiver migration
 
 `UdonSharpBehaviour` directly implements `IUdonEventReceiver` starting with SDK 3.10.4. The active Skill examples therefore pass `this` directly and keep the receiver argument.
-The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.4 example.
+The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.5 example.
 
 ```csharp
 using VRC.SDK3.StringLoading;
