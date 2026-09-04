@@ -423,6 +423,7 @@ site:github.com/vrchat-community "issue keyword"
 | 3.9.0 | Camera Dolly, Auto Hold |
 | 3.10.0 | Dynamics (PhysBones, Contacts) |
 | 3.10.4 | Box-shaped Contact Sender/Receiver authoring updates |
+| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation |
 
 ---
 

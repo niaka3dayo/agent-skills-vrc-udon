@@ -162,7 +162,7 @@ The table below keeps feature-introduction history for migration reference. SDK 
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | Historical     |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | Historical     |
 | 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Historical |
-| 3.10.5 | WorldQualitySettings, writable VRCQualitySettings, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager validation | Active / Last verified |
+| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Active / Last verified |
 
 Use SDK 3.10.5 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
 

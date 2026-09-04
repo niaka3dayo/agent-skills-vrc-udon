@@ -121,7 +121,7 @@ The final stable Base/Worlds packages, not the beta feature list, define this re
 
 - [Official release notes](https://creators.vrchat.com/releases/release-3-10-5/),
   [package release](https://github.com/vrchat/packages/releases/tag/3.10.5), and
-  [VPM index](https://vrchat.github.io/packages/index.json), checked 2026-09-05.
+  [VPM index](https://vrchat.github.io/packages/index.json), checked 2026-09-05 JST (2026-09-04 UTC).
   Package release timestamp: 2026-09-04 17:06:34 UTC (2026-09-05 02:06:34 JST).
 - Official ZIP SHA-256: Base
   `fbfb3e7a38778dcb55d7a860286819e6f0726d10d5039f61474bd1b9c629029e`;
