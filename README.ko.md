@@ -262,6 +262,7 @@ v4.0.0부터는 최신 안정 SDK만 지원하며, 새 안정 버전으로의 �
 <a href="https://github.com/owlboy" title="@owlboy"><img src="https://github.com/owlboy.png?size=64" width="64" height="64" alt="@owlboy"></a>
 <a href="https://github.com/nomlasvrc" title="@nomlasvrc"><img src="https://github.com/nomlasvrc.png?size=64" width="64" height="64" alt="@nomlasvrc"></a>
 <a href="https://github.com/ureishi" title="@ureishi"><img src="https://github.com/ureishi.png?size=64" width="64" height="64" alt="@ureishi"></a>
+<a href="https://github.com/irucaVRC" title="@irucaVRC"><img src="https://github.com/irucaVRC.png?size=64" width="64" height="64" alt="@irucaVRC"></a>
 </p>
 <!-- community-contributors:end -->
 

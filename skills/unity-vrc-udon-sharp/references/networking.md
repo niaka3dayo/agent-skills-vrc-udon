@@ -1046,7 +1046,7 @@ public class OwnerControlledDamage : UdonSharpBehaviour
 | `static` not allowed | Static methods cannot be used |
 | `virtual`/`override` not allowed | Virtual methods cannot be used |
 | Simple method declaration only | Generic, abstract, extern, async, sealed, operator, and explicit-interface forms are not allowed |
-| No overloading | Multiple methods with the same name not allowed |
+| No overloading | A `[NetworkCallable]` name cannot be shared with another method, even one without the attribute; ordinary direct-call overloads are supported |
 | Maximum 8 parameters | More than 8 parameters not allowed |
 | No by-reference parameters | `ref`, `out`, and `in` parameters are not allowed |
 | No `params` parameters | Parameter arrays declared with `params` are not allowed |

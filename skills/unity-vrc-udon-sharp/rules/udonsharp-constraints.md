@@ -21,7 +21,6 @@ the SDK). See [assembly-definitions.md](../references/assembly-definitions.md).
 | `HashSet<T>`, `Queue<T>`, `Stack<T>` | Implement with arrays |
 | Generic type parameters | Use concrete types |
 | `interface` | Base class inheritance or `SendCustomEvent` |
-| Method overloading | Unique method names (`DoInt`, `DoString`) |
 | Operator overloading | Explicit methods |
 | `try`/`catch`/`finally`/`throw` | Defensive null checks + early return |
 | `async`/`await` | `SendCustomEventDelayedSeconds()` |
@@ -38,6 +37,18 @@ the SDK). See [assembly-definitions.md](../references/assembly-definitions.md).
 | `System.Reflection` | Not available |
 | `System.Threading` | Not available |
 | `unsafe`, pointers | Not available |
+
+## Method Overloading
+
+Ordinary methods support overloads by parameter type or count, including return
+values, when called directly. `SendCustomEvent(string)` dispatches a public,
+parameterless event by name; it does not select an argument-taking overload.
+For local-only entry points, prefix the name with `_` and omit `[NetworkCallable]`.
+For network entries, follow the caller authorization guidance in
+[Network Event Hardening](udonsharp-networking.md#network-event-hardening).
+Keep `[NetworkCallable]` names unique even among methods without the attribute,
+and keep built-in event signatures unchanged. See
+[constraints.md](../references/constraints.md#language-features) for examples and SDK evidence.
 
 ## Available Features (historical baseline: SDK 3.7.1)
 
@@ -226,7 +237,7 @@ Types that can be used with `[UdonSynced]`:
 
 - [ ] No `List<T>` / `Dictionary<T,K>` in Udon runtime code
 - [ ] No `interface` declarations
-- [ ] No method overloading (all method names are unique)
+- [ ] String-dispatched event entries are public and parameterless; `[NetworkCallable]` names have no overloads
 - [ ] No `try`/`catch`
 - [ ] No `async`/`await` / `yield return`
 - [ ] No LINQ / Lambda in Udon runtime code

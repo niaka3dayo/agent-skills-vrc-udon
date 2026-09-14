@@ -139,7 +139,7 @@ Constraints on `[NetworkCallable]` methods:
 - Method must be `public`
 - A `[NetworkCallable]` method must return `void`.
 - Cannot be `static`, `virtual`, or `override`
-- No method overloading
+- No overloads of a `[NetworkCallable]` method, including same-name methods without the attribute; ordinary direct-call overloads remain supported
 - Maximum 8 parameters
 - Parameter types must be syncable types (same set as `[UdonSynced]`)
 - Default rate limit: 5 calls/sec/event; configurable up to 100/sec via `[NetworkCallable(n)]`

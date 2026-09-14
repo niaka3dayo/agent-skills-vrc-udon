@@ -149,7 +149,7 @@ Caller authorization and receiver ownership are separate checks: authorize `Netw
 | Attribute | `[NetworkCallable]` required |
 | Return type | A `[NetworkCallable]` method must return `void`. |
 | `static` / `virtual` / `override` | Not allowed |
-| Overloading | Not allowed (UdonSharp-wide constraint) |
+| Overloading | A `[NetworkCallable]` method name must be unique, including among methods without the attribute; ordinary direct-call overloads are supported |
 | Rate limit | Default 5 calls/sec/event (configurable up to 100 calls/sec) |
 | Parameter count | Maximum 8 |
 

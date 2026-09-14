@@ -89,7 +89,7 @@ assert "open_accepted_issues" not in ureishi["evidence"], (
 )
 
 # Keep the census integrity checks here so the contract cannot silently become
-# detached from the evidence that selected the eight reporters.
+# detached from the evidence that selected the reporters.
 expected_issues = sorted(
     {
         int(issue)

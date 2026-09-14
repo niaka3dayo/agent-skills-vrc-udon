@@ -77,7 +77,7 @@ function Assert-NotContains([string]$Label, [string]$Actual, [string]$Unexpected
 }
 
 function Invoke-SharedParityMatrix {
-    $ExpectedInventory = 'GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY;METHOD_OVERLOAD'
+    $ExpectedInventory = 'GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY'
     $RuleIds = New-Object System.Collections.Generic.List[string]
     $RuleSubstrings = New-Object System.Collections.Generic.List[string]
     $SeenRuleIds = New-Object 'System.Collections.Generic.HashSet[string]'
@@ -108,13 +108,13 @@ function Invoke-SharedParityMatrix {
 
     $ActualInventory = $RuleIds -join ';'
     if ($ActualInventory -ne $ExpectedInventory) {
-        Write-Output 'FAIL [shared rules] 20-rule inventory mismatch'
+        Write-Output 'FAIL [shared rules] 19-rule inventory mismatch'
         Write-Output "  expected: $ExpectedInventory"
         Write-Output "  actual:   $ActualInventory"
         $script:Failed++
         return
     }
-    Write-Output 'PASS [shared rules] 20-rule inventory is exact'
+    Write-Output 'PASS [shared rules] 19-rule inventory is exact'
     $script:Passed++
 
     function Convert-WarningLinesToRuleIds([string[]]$Lines) {

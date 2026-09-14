@@ -262,6 +262,7 @@ v4.0.0以降は最新の安定版SDKのみをサポートし、新しい安定�
 <a href="https://github.com/owlboy" title="@owlboy"><img src="https://github.com/owlboy.png?size=64" width="64" height="64" alt="@owlboy"></a>
 <a href="https://github.com/nomlasvrc" title="@nomlasvrc"><img src="https://github.com/nomlasvrc.png?size=64" width="64" height="64" alt="@nomlasvrc"></a>
 <a href="https://github.com/ureishi" title="@ureishi"><img src="https://github.com/ureishi.png?size=64" width="64" height="64" alt="@ureishi"></a>
+<a href="https://github.com/irucaVRC" title="@irucaVRC"><img src="https://github.com/irucaVRC.png?size=64" width="64" height="64" alt="@irucaVRC"></a>
 </p>
 <!-- community-contributors:end -->
 

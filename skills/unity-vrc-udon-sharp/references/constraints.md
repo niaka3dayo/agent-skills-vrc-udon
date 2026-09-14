@@ -142,7 +142,7 @@ if (dict.ContainsKey("key1"))
 | Feature | Status | SDK Added | Alternative |
 |---------|--------|-----------|-------------|
 | `interface` | Blocked | — | Use base class or `SendCustomEvent` |
-| Method overloading | Blocked | — | Use distinct method names |
+| Method overloading | Supported for direct calls | — | Keep `[NetworkCallable]` method names unique; see below |
 | Operator overloading | Blocked | — | Use explicit methods |
 | `try`/`catch`/`finally` | Blocked | — | Use defensive null checks |
 | `throw` exceptions | Blocked | — | Use return values for errors |
@@ -157,17 +157,44 @@ if (dict.ContainsKey("key1"))
 | Local functions | Blocked | — | Use private methods |
 | Pattern matching | Blocked | — | Use traditional `if`/`switch` |
 
-**Method Overloading Alternative:**
+**Method Overloading and Event Entry Points:**
+
+Ordinary UdonSharp methods can share a name when their parameter types or counts
+differ. Direct calls resolve the matching signature, including methods with return
+values. This is verified in SDK 3.10.5; it is not a feature introduced in that SDK.
 
 ```csharp
-// WRONG - overloading not supported
-public void _DoSomething(int value) { }
-public void _DoSomething(string value) { }  // Compile error
+public void _DoSomething(int value) { Debug.Log(value); }
+public void _DoSomething(string value) { Debug.Log(value); }
 
-// CORRECT - use distinct names
-public void DoSomethingInt(int value) { }
-public void DoSomethingString(string value) { }
+public void _RunExample()
+{
+    _DoSomething(42);
+    _DoSomething("hello");
+}
 ```
+
+Event dispatch has separate constraints:
+
+- `SendCustomEvent(string)` takes an event name, not arguments or a signature.
+  Use a `public`, parameterless entry point that calls the desired overload.
+  That string call cannot select an overload that accepts arguments. A parameterless
+  entry point with the same name can coexist with ordinary overloads.
+  For local-only entry points, prefix the name with `_` and omit `[NetworkCallable]`.
+  Parameterless public methods without `_` can also be reached by legacy
+  `SendCustomNetworkEvent` calls. For network entries, validate
+  `NetworkCalling.CallingPlayer` and apply the world's authorization policy;
+  see [Network Event Hardening](networking.md#network-event-hardening-and-sender-authorization).
+- A `[NetworkCallable]` method must not share its name with another method,
+  even if the other method lacks the attribute. Use distinct names for network
+  entry points; see [NetworkCallable constraints](networking.md#networkcallable-constraints).
+- Built-in Unity/Udon callbacks must keep their supported signatures. Ordinary
+  overload support does not allow arbitrary overloads of built-in events.
+
+The SDK 3.10.5 compiler implements these distinctions in
+`Packages/com.vrchat.worlds/Integrations/UdonSharp/Editor/Compiler/CompilationContext.cs`
+(`BuildMethodLayout`). Source: [SDK 3.10.5 release](https://github.com/vrchat/packages/releases/tag/3.10.5)
+and [official network-event requirements](https://creators.vrchat.com/worlds/udon/networking/events/).
 
 **Exception Handling Alternative (defensive programming):**
 
@@ -586,7 +613,7 @@ Before compiling UdonSharp code, verify:
 
 - [ ] No `List<T>` or `Dictionary<T,K>` usage in Udon runtime code
 - [ ] No `interface` declarations
-- [ ] No method overloading (all methods have unique names)
+- [ ] String-dispatched event entries are public and parameterless; `[NetworkCallable]` names have no overloads
 - [ ] No `try`/`catch` blocks
 - [ ] No `async`/`await` or `yield return`
 - [ ] No LINQ queries (`.Where()`, `.Select()`, etc.) in Udon runtime code
