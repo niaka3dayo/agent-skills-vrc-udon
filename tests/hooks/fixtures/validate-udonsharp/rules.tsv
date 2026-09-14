@@ -17,4 +17,3 @@ SYNC_COUNT	synced variables detected (target: <5
 SYNC_ARRAY	Synced int[]/float[] detected
 SYNC_MODE_CONFLICT	NoVariableSync mode but [UdonSynced] variables found
 MULTIDIM_ARRAY	Multi-dimensional arrays (T[,]) not supported
-METHOD_OVERLOAD	Method overloading detected

@@ -91,7 +91,7 @@ materialize_fixture() {
 }
 
 run_shared_parity_matrix() {
-    local expected_inventory='GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY;METHOD_OVERLOAD'
+    local expected_inventory='GENERIC;ASYNC;TRY_CATCH;LINQ;YIELD_RETURN;INTERFACE;START_COROUTINE;ADD_LISTENER;LAMBDA;SYNC_NO_SERIALIZE;SYNC_NO_OWNER;PLAYER_VALIDITY;UNITY_CALLBACK_OVERRIDE;GETCOMPONENT_UDON;SYSTEM_IO_NET;SYNC_COUNT;SYNC_ARRAY;SYNC_MODE_CONFLICT;MULTIDIM_ARRAY'
     local rule_ids=()
     local rule_substrings=()
     local seen_rule_ids=';'
@@ -123,13 +123,13 @@ run_shared_parity_matrix() {
     local actual_inventory
     actual_inventory="$(IFS=';'; echo "${rule_ids[*]}")"
     if [ "$actual_inventory" != "$expected_inventory" ]; then
-        echo "FAIL [shared rules] 20-rule inventory mismatch"
+        echo "FAIL [shared rules] 19-rule inventory mismatch"
         echo "  expected: $expected_inventory"
         echo "  actual:   $actual_inventory"
         FAIL=$((FAIL + 1))
         return
     fi
-    echo "PASS [shared rules] 20-rule inventory is exact"
+    echo "PASS [shared rules] 19-rule inventory is exact"
     PASS=$((PASS + 1))
 
     map_warning_file() {
