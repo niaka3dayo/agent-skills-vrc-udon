@@ -180,6 +180,11 @@ Event dispatch has separate constraints:
   Use a `public`, parameterless entry point that calls the desired overload.
   That string call cannot select an overload that accepts arguments. A parameterless
   entry point with the same name can coexist with ordinary overloads.
+  For local-only entry points, prefix the name with `_` and omit `[NetworkCallable]`.
+  Parameterless public methods without `_` can also be reached by legacy
+  `SendCustomNetworkEvent` calls. For network entries, validate
+  `NetworkCalling.CallingPlayer` and apply the world's authorization policy;
+  see [Network Event Hardening](networking.md#network-event-hardening-and-sender-authorization).
 - A `[NetworkCallable]` method must not share its name with another method,
   even if the other method lacks the attribute. Use distinct names for network
   entry points; see [NetworkCallable constraints](networking.md#networkcallable-constraints).

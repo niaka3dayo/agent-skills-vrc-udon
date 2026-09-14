@@ -43,6 +43,9 @@ the SDK). See [assembly-definitions.md](../references/assembly-definitions.md).
 Ordinary methods support overloads by parameter type or count, including return
 values, when called directly. `SendCustomEvent(string)` dispatches a public,
 parameterless event by name; it does not select an argument-taking overload.
+For local-only entry points, prefix the name with `_` and omit `[NetworkCallable]`.
+For network entries, follow the caller authorization guidance in
+[Network Event Hardening](udonsharp-networking.md#network-event-hardening).
 Keep `[NetworkCallable]` names unique even among methods without the attribute,
 and keep built-in event signatures unchanged. See
 [constraints.md](../references/constraints.md#language-features) for examples and SDK evidence.
