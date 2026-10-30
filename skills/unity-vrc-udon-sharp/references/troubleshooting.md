@@ -775,7 +775,7 @@ Debug.Log($"PlayerData usage: {used} / {Networking.GetPlayerDataStorageLimit()} 
 
 **Solution:**
 1. Ensure the script is active in the scene hierarchy
-2. Test with a new instance (no saved data); `OnPlayerRestored` still fires when there is no save data
+2. Do not treat an empty save as the cause: `OnPlayerRestored` still fires when the player has no saved data. A new instance does not give an empty save, because persistence is shared across instances of the world
 
 PlayerData needs no component. `VRC Enable Persistence` only applies to PlayerObject data.
 
