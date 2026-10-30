@@ -9,9 +9,9 @@ description: >
     VRC_ObjectSync, VRC_CameraDolly, spawn points, collision matrices,
     PhysBone and Contact component placement, Box Contacts,
     Global Avatar PhysBone Colliders, and VRCPhysBoneCollider component setup.
-    Active support / last verified: SDK 3.10.5. Triggers on: VRChat world scene, VRC SDK, scene setup,
-    component placement, optimization, Quest support, light baking, upload,
-    SDK validation, Build Panel warning, Auto Fix, red warning, yellow warning, or white warning.
+    Active support / last verified: SDK 3.10.6. Triggers on: VRChat world scene, VRC SDK, scene setup,
+    component placement, VRCBillboard, VRCPlacementZone, Quest support, light baking,
+    SDK validation, Build Panel warning, Auto Fix, or red/yellow/white warnings.
     Do not use for UdonSharp C# or VRCTween calls; use
     unity-vrc-udon-sharp for runtime scripting.
     UdonSharp package, asmdef, and Version Defines work also belongs to that skill.
@@ -71,7 +71,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 | 3 | Set Respawn Height at or above the world floor | Player respawns → falls → respawns again → infinite loop; players cannot recover | Set to an unreachable depth (e.g., floor at Y=0 → Respawn at Y=-100) |
 | 4 | Skip "Setup Layers for VRChat" on a new project | Layer collision matrix is wrong by default — players walk through walls, Pickups clip floors | Run VRChat SDK > Builder > "Setup Layers for VRChat" before placing any colliders |
 | 5 | Enable Post-Processing without an Android build profile | Post-processing is disabled at runtime on Android, so the authored effect will not appear and unnecessary resources can still enlarge the build | Use a separate Android build profile with post-processing removed |
-| 6 | Place more than 2 active video players simultaneously | Each player adds significant decoding overhead; running >2 simultaneously is a common cause of frame drops and audio issues in practice | Disable extra players at scene start; activate only the currently playing one |
+| 6 | Leave several video players decoding at once without profiling the target devices | Each active player adds decoding overhead, which can cause frame drops and audio issues | Disable players that are not playing; profile concurrent playback on each target |
 | 7 | Use Cloth on Android, or add many Unity Constraints without profiling | Cloth is disabled on Android. Unity Constraints are permitted in worlds, but overuse can significantly affect performance | Remove Cloth from the Android build; prefer VRC Constraints for new work and profile any constraint-heavy setup |
 | 8 | Upload without completing a lightmap bake | Realtime GI adds substantial scene-dependent render cost and is unsuitable as an unmeasured fallback on Android | Bake lights before upload, then verify the result on the target device |
 | 9 | Place player walkable surfaces on Default layer (0) | Collision matrix is wrong by default — avatar physics collision is unreliable; players may clip through geometry | Use Environment (layer 11) for all walkable geometry, walls, and floors |
@@ -80,7 +80,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 
 ## Reference Loading Guide
 
-Load only what the task requires.
+Load only what the task requires. When a request spans several rows, load every MANDATORY READ those rows list; a Do NOT Load entry never overrides another matching row's MANDATORY READ.
 
 | Task | MANDATORY READ | Optional | Do NOT Load | Load Rationale |
 |------|---------------|----------|-------------|----------------|
@@ -143,11 +143,11 @@ Quest required? → Yes
 
 ## SDK Versions
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
-From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.5.
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.6.
 
-The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.4 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.5 unless a reference explicitly marks a historical migration case.
+The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.5 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.6 unless a reference explicitly marks a historical migration case.
 
 | SDK    | New Features                                                                   | Status         |
 | ------ | ------------------------------------------------------------------------------ | -------------- |
@@ -162,9 +162,10 @@ The table below keeps feature-introduction history for migration reference. SDK 
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | Historical     |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | Historical     |
 | 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Historical |
-| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Active / Last verified |
+| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Historical |
+| 3.10.6 | VRCBillboard, VRCVelocityTracker, VRCPlacementZone, Interact Outline Renderers; constraint source methods and UdonSharp compiler fixes → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Active / Last verified |
 
-Use SDK 3.10.5 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
+Use SDK 3.10.6 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
 
 ---
 
@@ -218,7 +219,7 @@ Exactly **one** is required in every VRChat world.
 // Players enter facing the Z+ direction of the spawn Transform.
 
 // VRChat-specific requirements:
-// - At least 2-3 spawn points (for simultaneous joins — single spawn causes overlap)
+// - One spawn point is supported; add more if simultaneous joins should not stack on one spot
 // - Place slightly above the floor (~0.1m) to avoid floor collision on spawn
 // - Keep clear of obstacles (VR player guardian area is larger than their avatar)
 // - Account for VR guardian boundaries — desktop player sizes differ from VR
@@ -239,8 +240,8 @@ Exactly **one** is required in every VRChat world.
 
 ## Components
 
-**MANDATORY READ** [`references/components.md`](references/components.md) (~800 lines) before configuring any VRC component below. Load in full — dependency requirements and Udon event hooks are distributed throughout.
-**Do NOT Load**: `references/audio-video.md` (unless the task involves audio/video components), `references/lighting.md`.
+**MANDATORY READ** [`references/components.md`](references/components.md) (~970 lines) before configuring any VRC component below. Load in full — dependency requirements and Udon event hooks are distributed throughout.
+**Do NOT Load**: `references/audio-video.md` (unless the task involves audio/video components), `references/lighting.md` (unless the task configures WorldQualitySettings, realtime reflection probes, or Shadowmask Mode).
 
 | Component                  | Required Elements        | Purpose                        | SDK  |
 | -------------------------- | ------------------------ | ------------------------------ | ---- |
@@ -255,6 +256,9 @@ Exactly **one** is required in every VRChat world.
 | **VRC_AvatarPedestal**     | -                        | Avatar display/switch          | -    |
 | **VRC_CameraDolly**        | -                        | Camera dolly                   | 3.9+ |
 | **VRCCameraSettings**      | None (static API)        | Read camera info from Udon     | 3.8.1+ |
+| **VRCBillboard**          | -                        | Face the local viewpoint       | 3.10.6+ |
+| **VRCVelocityTracker**    | -                        | Read velocity without a loop   | 3.10.6+ |
+| **VRCPlacementZone**      | -                        | Control user portal/sticker placement | 3.10.6+ |
 
 ### VRC_ObjectSync vs UdonSynced
 
@@ -416,8 +420,8 @@ When preserving an existing `AudioSource`, keep `volume`, `spatialBlend`, `rollo
 □ Spawns configured
 □ Respawn Height appropriate
 □ Layer/Collision Matrix verified
-□ Light baking complete
-□ Mirror default OFF
+□ Lighting approach finalized (bake complete, or realtime cost measured)
+□ Mirrors default OFF unless the world's purpose needs them on (cost measured)
 □ Project-defined frame-time or frame-rate target met in representative scenes and player counts
 □ No Validation errors
 □ Content Warnings set
@@ -471,12 +475,12 @@ Starter templates for common SDK component patterns. Repository checks cover sta
 
 | File                            | Content                                                                                          | Approx. Lines |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
-| `references/components.md`      | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) | 800+          |
+| `references/components.md`      | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) | 950+          |
 | `references/layers.md`          | Layers & collision                                                                               | 230+          |
 | `references/performance.md`     | Performance optimization                                                                         | 700+          |
 | `references/lighting.md`        | Lighting settings                                                                                | 400+          |
 | `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
-| `references/build-validation.md` | SDK 3.10.5 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
+| `references/build-validation.md` | SDK 3.10.6 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
 | `references/upload.md`          | Upload procedure                                                                                 | 300+          |
 | `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
 | `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |

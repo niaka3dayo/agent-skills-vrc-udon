@@ -1,8 +1,8 @@
 # VRChat World Components Complete Reference
 
-Full component reference for the active SDK target, 3.10.5. Version-specific feature introductions below are retained as historical migration information only.
+Full component reference for the active SDK target, 3.10.6. Version-specific feature introductions below are retained as historical migration information only.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 **Historical version notes**: Older version numbers are not supported or validation targets for this Skill.
 
 ## Table of Contents
@@ -19,6 +19,9 @@ Full component reference for the active SDK target, 3.10.5. Version-specific fea
 - [VRC_AvatarPedestal](#vrc_avatarpedestal)
 - [VRC_CameraDolly](#vrc_cameradolly)
 - [VRCCameraSettings API](#vrccamerasettings-api)
+- [VRCBillboard (SDK 3.10.6)](#vrcbillboard-sdk-3106)
+- [VRCVelocityTracker (SDK 3.10.6)](#vrcvelocitytracker-sdk-3106)
+- [VRCPlacementZone (SDK 3.10.6)](#vrcplacementzone-sdk-3106)
 - [Contacts in Worlds](#contacts-in-worlds)
 - [PhysBones and Global Collision in Worlds](#physbones-and-global-collision-in-worlds)
 - [Avatar-driven features that read world colliders](#avatar-driven-features-that-read-world-colliders)
@@ -144,6 +147,14 @@ Allows players to grab objects.
 SDK 3.10.5 adds **Outline Renderers** for choosing which renderers receive the
 pickup outline. For supported renderer types and the fallback when no valid
 renderer is assigned, use the [official VRC Pickup reference](https://creators.vrchat.com/worlds/components/vrc_pickup/).
+
+SDK 3.10.6 adds the same **Outline Renderers** list to UdonBehaviours that
+implement `Interact()` (Inspector Interact settings; there is no new Udon
+accessor). Starting in client 2026.4.1, pickups and interactables whose list is
+empty no longer outline SkinnedMeshRenderers by default
+([SDK 3.10.6 release notes](https://creators.vrchat.com/releases/release-3-10-6/)).
+Assign the renderers explicitly when a skinned mesh should be outlined. The
+ClientSim bundled with SDK 3.10.6 follows the same empty-list rule.
 
 ### Required Setup
 
@@ -686,6 +697,68 @@ public class DollyTrigger : UdonSharpBehaviour
 
 For the full scripting reference, see the udon-sharp skill's
 [`api.md` Camera Dolly section](../../unity-vrc-udon-sharp/references/api.md#vrc-camera-dolly-api-sdk-390).
+
+---
+
+## VRCBillboard (SDK 3.10.6)
+
+Add Component > VRChat > Worlds > VRC Billboard for a no-code billboard that
+faces the local viewpoint (camera on desktop, head in VR). It registers on
+`OnEnable` and unregisters on `OnDisable`, so toggling the GameObject is safe,
+and ClientSim Play mode turns it toward the ClientSim camera.
+
+- **Facing** defaults to `Back` (local -Z), which suits Canvas, TextMeshPro,
+  Quad and SpriteRenderer. Use `Forward` for an imported model whose
+  front is along +Z.
+- **Up From** and **Match Viewpoint Rotation** sit under the Overrides foldout.
+  Set Up From to a station or vehicle so content stays upright for its rider.
+- Assigning a property at runtime re-registers the component; the change applies
+  on the next billboarding pass.
+- It always tracks the local viewpoint. To aim at anything else, use a VRC Aim
+  or Look At constraint.
+
+For Udon registration and the frame-order caveat, see the
+[UdonSharp pattern](../../unity-vrc-udon-sharp/references/patterns-performance.md#vrcbillboard-sdk-3106).
+Source: [official VRCBillboard page](https://creators.vrchat.com/worlds/udon/vrc-billboard/).
+
+---
+
+## VRCVelocityTracker (SDK 3.10.6)
+
+Add it to a GameObject whose velocity Udon needs to read, instead of running a
+custom position-difference loop. `GetLinearVelocity()` (m/s) and
+`GetAngularVelocity()` (rad/s) measure over the last rendered frame; the
+`GetFixed...` variants measure over the last physics step. All four return zero
+while the component is disabled. Source:
+[official VRC Velocity Tracker page](https://creators.vrchat.com/worlds/components/vrc_velocitytracker/).
+
+---
+
+## VRCPlacementZone (SDK 3.10.6)
+
+A local-space box (Center, Rotation, Size) that controls where users can place
+portals, stickers, sharing pedestals, and world-attached items. Each content type
+is **Unaffected**, **Block Here**, or **Only Allow Here**
+(`VRCPlacementZone.PlacementPermission` in Udon).
+
+- An overlap of an Only Allow Here zone and a Block Here zone still allows
+  placement, so a Block Here zone fully inside an Only Allow Here zone has no
+  effect. Two Only Allow Here zones allow placement inside either one.
+- Embed the box slightly into surfaces that should reject placement, especially
+  for stickers, which can attach to any surface.
+- Zones only prevent placement. Enabling a zone does not remove content that is
+  already placed. Pickups that spawn without attaching to a surface are not
+  Attached Items.
+- Portal rules apply to portals that users place, not to portals the world
+  creator placed in the scene
+  ([Developer Update, 22 October 2026](https://ask.vrchat.com/t/developer-update-22-october-2026/49154)).
+- If Udon moves a zone or changes its permissions at runtime, sync that state to
+  every user yourself; VRChat warns that mismatched zones between users can cause
+  unexpected behavior.
+
+This repository compiled the Udon setters and ran them in ClientSim; it has not
+tested placement itself in a VRChat client. Source:
+[official VRC Placement Zone page](https://creators.vrchat.com/worlds/components/vrc_placementzone/).
 
 ---
 

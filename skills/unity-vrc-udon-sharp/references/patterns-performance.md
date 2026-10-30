@@ -330,6 +330,42 @@ public class CameraTracker : UdonSharpBehaviour
 }
 ```
 
+### VRCBillboard (SDK 3.10.6+)
+
+When an object only needs to face the local viewpoint, register it with `VRCBillboard` instead of rotating it from `Update()` or `PostLateUpdate()`. The client rotates every registered `Transform` in one pass. Rules from the [official VRCBillboard page](https://creators.vrchat.com/worlds/udon/vrc-billboard/):
+
+- Registration is keyed by `Transform`; the most recent `Register` call wins, and `Unregister` stops billboarding no matter which script registered it.
+- Pair `Register` in `OnEnable()` with `Unregister` in `OnDisable()`. Destroyed objects are dropped automatically.
+- The billboarding pass runs after `PostLateUpdate`, so reading the billboard's rotation in `Update`, `LateUpdate`, or `PostLateUpdate` returns the previous frame's value. Register a second object instead of copying the rotation.
+- It always tracks the local viewpoint. To aim at anything else, use `VRCAimConstraint` or `VRCLookAtConstraint`.
+- Optional parameters are usually set with named arguments; UdonSharp compiles named arguments that skip optional parameters correctly in SDK 3.10.6.
+
+```csharp
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Components;
+
+public class BillboardLabel : UdonSharpBehaviour
+{
+    public Transform vehicle;
+
+    void OnEnable()
+    {
+        // Local -Z faces the viewpoint; allowTilt also pitches it toward the viewpoint.
+        VRCBillboard.Register(transform, allowTilt: true, smoothingFactor: 0.25f);
+        // Yaw only and upright for a rider in a banking vehicle:
+        // VRCBillboard.Register(transform, upFrom: vehicle);
+    }
+
+    void OnDisable()
+    {
+        VRCBillboard.Unregister(transform);
+    }
+}
+```
+
+For a no-code setup, add the VRC Billboard component instead; see the World SDK [components reference](../../unity-vrc-world-sdk-3/references/components.md#vrcbillboard-sdk-3106).
+
 ### Bounds Pre-Check for Spatial Queries
 
 `Collider.ClosestPoint()` is expensive. When you have many potential colliders, compute a compound `Bounds` at startup that wraps all of them. Discard distant queries with a fast `Bounds.Contains()` before paying the full cost.

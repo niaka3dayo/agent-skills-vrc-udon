@@ -1,11 +1,11 @@
 # VRChat Dynamics for Worlds Reference
 
-Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0; the active verified target is SDK 3.10.5.
+Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0; the active verified target is SDK 3.10.6.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 **Historical feature introduction**: SDK 3.10.0
 
-SDK 3.10.0-3.10.4 entries are historical feature context only, not active support or validation targets for this Skill.
+SDK 3.10.0-3.10.5 entries are historical feature context only, not active support or validation targets for this Skill.
 
 ## Overview
 
@@ -420,30 +420,38 @@ VRC Position Constraint
 ```csharp
 using UdonSharp;
 using UnityEngine;
+using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Constraint.Components;
 
 public class ConstraintController : UdonSharpBehaviour
 {
     public VRCPositionConstraint posConstraint;
-    public VRCAimConstraint aimConstraint;
 
     public void _EnableConstraint()
     {
         posConstraint.IsActive = true;
+        posConstraint.ApplyConfigurationChanges();
     }
 
     public void _DisableConstraint()
     {
         posConstraint.IsActive = false;
+        posConstraint.ApplyConfigurationChanges();
     }
 
+    // SDK 3.10.6+: copy the source struct, edit it, then write it back.
     public void SetWeight(float weight)
     {
-        // Set source weight (index 0)
-        posConstraint.SetSourceWeight(0, weight);
+        if (posConstraint.SourceCount == 0) return;
+        VRCConstraintSource source = posConstraint.GetSource(0);
+        source.Weight = weight;
+        posConstraint.SetSource(0, source);
+        posConstraint.ApplyConfigurationChanges();
     }
 }
 ```
+
+After changing constraint properties from a script, call `ApplyConfigurationChanges()` once; the [official Constraints API](https://creators.vrchat.com/common-components/constraints/constraints-api) states that changes may not be applied otherwise.
 
 ### VRC Constraints vs Unity Constraints
 
@@ -457,7 +465,7 @@ VRChat provides its own constraint components as an alternative to Unity's built
 | **PC** | Supported | Supported |
 | **Network sync** | Compatible with VRChat networking (sync via UdonSynced/VRC_ObjectSync) | No VRChat network integration |
 | **Performance** | Optimized for VRChat | Standard Unity performance |
-| **Udon API access** | Full (`IsActive`, `SetSourceWeight`, etc.) | Not all properties exposed to Udon |
+| **Udon API access** | `IsActive`, `GlobalWeight`, `SmoothingFactor`, source methods (SDK 3.10.6+), etc. | Not all properties exposed to Udon |
 | **PhysBone compatibility** | Full | Not guaranteed |
 
 #### Formal Component Names
@@ -510,45 +518,46 @@ All six VRC Constraint types share a common base API. The table below summarises
 | `VRCScaleConstraint` | Constrains world/local scale | Object that scales with a target |
 | `VRCParentConstraint` | Constrains position **and** rotation (like re-parenting) | Attaching props to moving targets |
 | `VRCAimConstraint` | Rotates so a chosen axis points at the target | Turrets, eye tracking |
-| `VRCLookAtConstraint` | Rotates so the forward axis looks at the target (Y-up preserved) | Billboards, simplified eye tracking |
+| `VRCLookAtConstraint` | Rotates so the forward axis looks at the target (Y-up preserved) | Aiming at a scene Transform, simplified eye tracking; for viewpoint-facing billboards use `VRCBillboard` (SDK 3.10.6+) |
 
 All types live in `VRC.SDK3.Dynamics.Constraint.Components`.
 
 ### Udon-Accessible Properties
 
-The properties below are available on every VRC Constraint component from Udon. Properties marked **read/write** can be set at runtime.
+The properties below are read/write from Udon on every VRC Constraint component, except the read-only `TargetTransform`. Descriptions follow the [official Constraints API](https://creators.vrchat.com/common-components/constraints/constraints-api); call `ApplyConfigurationChanges()` once after script changes.
 
 #### Common Properties (All Types)
 
-| Property | Type | Access | Description |
-|----------|------|--------|-------------|
-| `IsActive` | `bool` | R/W | Enables or disables the constraint evaluation |
-| `GlobalWeight` | `float` | R/W | Master blend weight (0.0 – 1.0) applied on top of per-source weights |
-| `FreezeToWorld` | `bool` | R/W | When `true`, locks the constrained object in world space (ignores sources) |
-| `AffectsPositionX/Y/Z` | `bool` | R/W | (Position / Parent) Toggle per-axis position constraint |
-| `AffectsRotationX/Y/Z` | `bool` | R/W | (Rotation / Parent) Toggle per-axis rotation constraint |
-| `AffectsScaleX/Y/Z` | `bool` | R/W | (Scale) Toggle per-axis scale constraint |
+| Property | Type | Description |
+|----------|------|-------------|
+| `IsActive` | `bool` | Enables or disables the constraint evaluation |
+| `GlobalWeight` | `float` | Weight applied on top of all per-source weights |
+| `Locked` | `bool` | Lock state; constraints are always treated as locked in play mode |
+| `FreezeToWorld` | `bool` | Captures the current pose when switched on and tries to hold it in world space |
+| `SolveInLocalSpace` | `bool` | Solves in local space instead of world space |
+| `TargetTransform` | `Transform` | Read-only from Udon (no setter in the 3.10.6 wrapper). Transform that receives the result; `null` means the constraint's own transform |
+| `SmoothingFactor` | `float` | SDK 3.10.6+. `0` snaps; higher values move about 63% of the way to the target every `SmoothingFactor` seconds |
 
-#### Source List Methods
+Per-axis "Affects" toggles are Inspector/C# settings only; the 3.10.6 Udon wrapper has no `Affects*` accessors.
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `GetSourceCount()` | `int` | Returns the current number of constraint sources |
-| `GetSource(int index)` | `VRCConstraintSource` | Returns the source struct at the given index |
-| `SetSource(int index, VRCConstraintSource source)` | `void` | Overwrites the source at the given index |
-| `AddSource(VRCConstraintSource source)` | `void` | Appends a new source to the list |
-| `RemoveSource(int index)` | `void` | Removes the source at the given index |
-| `SetSourceWeight(int index, float weight)` | `void` | Convenience method – sets only the weight of source at index |
+#### Source Methods (SDK 3.10.6+)
+
+| Member | Returns | Notes |
+|--------|---------|-------|
+| `SourceCount` | `int` | Property, not a method |
+| `GetSource(int index)` | `VRCConstraintSource` | Out of range: logs an error and returns an empty source |
+| `SetSource(int index, VRCConstraintSource source)` | `void` | Overwrites the source at `index` |
+| `AddSource(VRCConstraintSource source)` | `void` | Appends to the end |
+| `RemoveSource(int index)` / `RemoveSource(VRCConstraintSource source)` | `void` / `bool` | The struct overload returns `true` when a matching source was removed |
+| `GetSources(VRCConstraintSource[] sources)` | `int` | Copies into the array you pass; returns the number copied |
+| `SetSources(VRCConstraintSource[] sources)` | `void` | Replaces every source; `null` or empty clears the list |
+| `ClearSources()` | `void` | Removes every source |
+
+These members are new in SDK 3.10.6. The SDK 3.10.4 and 3.10.5 Udon wrappers expose source access only through the `Sources` list. Do not generate `GetSourceCount()` or `SetSourceWeight()`: neither exists in SDK 3.10.4, 3.10.5, or 3.10.6. On 3.10.6, VRChat recommends these methods over editing `Sources` directly from Udon; direct list edits have reliability issues and stay exposed only for backward compatibility.
 
 #### VRCConstraintSource Struct
 
-`VRCConstraintSource` is a value-type struct. Always assign the full struct back after modifying it (struct-mutation rule applies — see [UdonSharp constraints reference](../rules/udonsharp-constraints.md)):
-
-```csharp
-// Fields
-public Transform sourceTransform;   // The target Transform (can be null to disable source)
-public float weight;                // Per-source blend weight (0.0 – 1.0)
-```
+`VRCConstraintSource` (namespace `VRC.Dynamics`) is a value-type struct with the properties `SourceTransform`, `Weight`, `ParentPositionOffset`, and `ParentRotationOffset`. Construct it with `new VRCConstraintSource(transform, weight)` or `new VRCConstraintSource(transform, weight, positionOffset, rotationOffset)`. A value returned by `GetSource()` is a copy: edit the copy, then write it back with `SetSource()`.
 
 ### Code Examples
 
@@ -567,15 +576,15 @@ public class ConstraintToggle : UdonSharpBehaviour
     [Header("Constraint to control")]
     public VRCPositionConstraint positionConstraint;
 
-    [Header("Optional: animate global weight instead of hard on/off")]
-    public bool useWeightFade = false;
+    [Header("Optional: switch GlobalWeight between 0 and 1 instead of IsActive")]
+    public bool useGlobalWeight = false;
 
     // Called from a UI button or InteractEvent
     public void _EnableConstraint()
     {
         if (positionConstraint == null) return;
 
-        if (useWeightFade)
+        if (useGlobalWeight)
         {
             positionConstraint.GlobalWeight = 1f;
         }
@@ -583,13 +592,14 @@ public class ConstraintToggle : UdonSharpBehaviour
         {
             positionConstraint.IsActive = true;
         }
+        positionConstraint.ApplyConfigurationChanges();
     }
 
     public void _DisableConstraint()
     {
         if (positionConstraint == null) return;
 
-        if (useWeightFade)
+        if (useGlobalWeight)
         {
             positionConstraint.GlobalWeight = 0f;
         }
@@ -597,6 +607,7 @@ public class ConstraintToggle : UdonSharpBehaviour
         {
             positionConstraint.IsActive = false;
         }
+        positionConstraint.ApplyConfigurationChanges();
     }
 
     // Toggle helper – safe to call from network events
@@ -604,24 +615,26 @@ public class ConstraintToggle : UdonSharpBehaviour
     {
         if (positionConstraint == null) return;
         positionConstraint.IsActive = !positionConstraint.IsActive;
+        positionConstraint.ApplyConfigurationChanges();
     }
 }
 ```
 
 **Notes**:
 - Setting `IsActive = false` stops constraint evaluation entirely (cheapest option).
-- Setting `GlobalWeight = 0` keeps evaluation running but blends to zero; useful for smooth transitions.
+- Setting `GlobalWeight = 0` keeps evaluation running but blends to zero. The switch is instant; for gradual motion use `SmoothingFactor` (SDK 3.10.6+) or step `GlobalWeight` yourself.
+- Call `ApplyConfigurationChanges()` once after the property edits, as the official Constraints API requires for script changes.
 - No ownership transfer is needed to change constraint properties on the local client. If the result must be visible to all players, combine with `[UdonSynced]` state and `RequestSerialization()`.
 
-#### Example 2: Modify Constraint Sources at Runtime
+#### Example 2: Modify Constraint Sources at Runtime (SDK 3.10.6+)
 
 Dynamically swap or blend between multiple target transforms — for example, switching which player a spotlight follows.
 
 ```csharp
 using UdonSharp;
 using UnityEngine;
+using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Constraint.Components;
-using VRC.SDKBase;
 
 public class ConstraintSourceSwapper : UdonSharpBehaviour
 {
@@ -631,119 +644,112 @@ public class ConstraintSourceSwapper : UdonSharpBehaviour
     [Header("A pool of potential target transforms")]
     public Transform[] targetPool;
 
-    // Switch the single source to point at a new target
+    // Point the single source at a new target
     public void SetTarget(int targetIndex)
     {
         if (spotlightAim == null) return;
         if (targetIndex < 0 || targetIndex >= targetPool.Length) return;
 
-        // Build a new source struct pointing at the chosen transform
-        VRCConstraintSource newSource = new VRCConstraintSource();
-        newSource.sourceTransform = targetPool[targetIndex];
-        newSource.weight = 1f;
+        VRCConstraintSource newSource = new VRCConstraintSource(targetPool[targetIndex], 1f);
 
-        if (spotlightAim.GetSourceCount() == 0)
+        if (spotlightAim.SourceCount == 0)
         {
             spotlightAim.AddSource(newSource);
         }
         else
         {
-            // Overwrite the first (and only) source
             spotlightAim.SetSource(0, newSource);
         }
+        spotlightAim.ApplyConfigurationChanges();
     }
 
-    // Blend equally between two targets by adjusting their weights
+    // Blend between two existing sources by editing their weights
     public void BlendBetweenTargets(int indexA, int indexB, float weightA)
     {
         if (spotlightAim == null) return;
-        if (spotlightAim.GetSourceCount() < 2) return;
+        int count = spotlightAim.SourceCount;
+        if (indexA < 0 || indexA >= count || indexB < 0 || indexB >= count) return;
 
-        float weightB = 1f - weightA;
+        VRCConstraintSource sourceA = spotlightAim.GetSource(indexA);
+        sourceA.Weight = weightA;
+        spotlightAim.SetSource(indexA, sourceA);
 
-        // SetSourceWeight is a convenience wrapper; equivalent to reading the source,
-        // updating weight, and calling SetSource() back.
-        spotlightAim.SetSourceWeight(indexA, weightA);
-        spotlightAim.SetSourceWeight(indexB, weightB);
+        VRCConstraintSource sourceB = spotlightAim.GetSource(indexB);
+        sourceB.Weight = 1f - weightA;
+        spotlightAim.SetSource(indexB, sourceB);
+        spotlightAim.ApplyConfigurationChanges();
     }
 
-    // Remove all sources except the first, then clear it
     public void _ClearAllSources()
     {
         if (spotlightAim == null) return;
-
-        int count = spotlightAim.GetSourceCount();
-        // Remove from the end to avoid index shifting
-        for (int i = count - 1; i > 0; i--)
-        {
-            spotlightAim.RemoveSource(i);
-        }
-
-        if (spotlightAim.GetSourceCount() > 0)
-        {
-            VRCConstraintSource empty = new VRCConstraintSource();
-            empty.sourceTransform = null;
-            empty.weight = 0f;
-            spotlightAim.SetSource(0, empty);
-        }
+        spotlightAim.ClearSources();
+        spotlightAim.ApplyConfigurationChanges();
     }
 }
 ```
 
 **Notes**:
-- `VRCConstraintSource` is a **struct** — always construct a new instance and assign it; do not attempt to mutate the value returned by `GetSource()` in place (see [struct mutation caveat](../rules/udonsharp-constraints.md#3-struct-mutation)).
-- Remove sources from the **highest index downward** when removing multiple at once, to avoid index shifting mid-loop.
-- `SetSourceWeight(index, weight)` is a shorthand for read-modify-write with `GetSource` / `SetSource`; both approaches are equivalent.
+- `VRCConstraintSource` is a **struct**: `GetSource()` returns a copy, so write the edited copy back with `SetSource()`.
+- Each method ends with one `ApplyConfigurationChanges()` call, following the official rule for script edits.
+- Check `index < SourceCount` before `GetSource()` / `SetSource()`; an out-of-range index logs an error instead of throwing.
+- Removing by index shifts later sources down. When removing several by index, go from the highest index downward, or use `ClearSources()` / `SetSources()`.
 
 ### Per-Type Additional Properties
 
-Some constraint types expose extra writable properties beyond the common set:
+Some constraint types expose extra Udon properties beyond the common set (names as exposed by the 3.10.6 Udon wrapper):
 
 | Type | Extra Properties | Description |
 |------|-----------------|-------------|
-| `VRCAimConstraint` | `AimVector`, `UpVector`, `WorldUpVector`, `WorldUpType` | Axis vectors for the aim calculation |
-| `VRCLookAtConstraint` | `Roll` | Roll angle offset around the look axis |
-| `VRCParentConstraint` | `AffectsPositionX/Y/Z`, `AffectsRotationX/Y/Z` | Independent axis masking for position and rotation |
+| `VRCAimConstraint` | `AimAxis`, `UpAxis`, `WorldUp`, `WorldUpVector`, `WorldUpTransform` | Aim alignment; `WorldUp` is `VRCConstraintBase.WorldUpType` (`VRC.Dynamics`) |
+| `VRCLookAtConstraint` | `Roll`, `UseUpTransform`, `WorldUpTransform` | `Roll` applies only while `UseUpTransform` is `false` |
+| `VRCPositionConstraint` / `VRCRotationConstraint` / `VRCScaleConstraint` | `*AtRest`, `*Offset` | At-rest and offset values for the constrained channel |
+| `VRCParentConstraint` | `PositionAtRest`, `RotationAtRest` | Per-source offsets live on each source (`ParentPositionOffset` / `ParentRotationOffset`) |
 
-### Runtime Source Management — Pattern Summary
+### Runtime Source Management — Pattern Summary (SDK 3.10.6+)
 
 ```csharp
+using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Constraint.Components;
 
-// --- Read ---
-int count = constraint.GetSourceCount();
-VRCConstraintSource src = constraint.GetSource(0);
-float w = src.weight;
-Transform t = src.sourceTransform;
+// --- Read (check the index first; out of range logs an error) ---
+int count = constraint.SourceCount;
+if (count > 0)
+{
+    VRCConstraintSource src = constraint.GetSource(0);
+    float w = src.Weight;
+    Transform t = src.SourceTransform;
 
-// --- Write (weight only) ---
-constraint.SetSourceWeight(0, 0.5f);
+    // --- Write (copy, edit, write back) ---
+    src.SourceTransform = someNewTransform;
+    src.Weight = 0.75f;
+    constraint.SetSource(0, src);
+}
 
-// --- Write (full source) ---
-// IMPORTANT: structs must be fully reassigned — do not mutate GetSource() result in place
-VRCConstraintSource updated = constraint.GetSource(0);
-updated.sourceTransform = someNewTransform; // modify copy
-updated.weight = 0.75f;
-constraint.SetSource(0, updated);           // write back
+// --- Add / remove ---
+VRCConstraintSource added = new VRCConstraintSource(targetTransform, 1f);
+constraint.AddSource(added);
+bool removed = constraint.RemoveSource(added);
+if (constraint.SourceCount > 0) constraint.RemoveSource(constraint.SourceCount - 1);
 
-// --- Add ---
-VRCConstraintSource newSrc = new VRCConstraintSource();
-newSrc.sourceTransform = targetTransform;
-newSrc.weight = 1f;
-constraint.AddSource(newSrc);
+// --- Bulk ---
+VRCConstraintSource[] snapshot = new VRCConstraintSource[constraint.SourceCount];
+int copied = constraint.GetSources(snapshot);
+constraint.SetSources(snapshot);
+constraint.ClearSources();
 
-// --- Remove (always remove from highest index first in loops) ---
-constraint.RemoveSource(count - 1);
+// --- Apply once after the batch of edits ---
+constraint.ApplyConfigurationChanges();
 ```
 
 ### Performance Considerations
 
 | Tip | Reason |
 |-----|--------|
-| Disable (`IsActive = false`) when not needed | Stops CPU evaluation of the constraint entirely |
-| Prefer `SetSourceWeight` over removing/re-adding sources | Avoids internal list reallocation |
+| Disable (`IsActive = false`) when not needed | Stops evaluation of the constraint |
+| Edit an existing source's `Weight` instead of removing/re-adding sources | Keeps source indices stable |
 | Avoid modifying sources every `Update()` frame | Batch changes and apply only when the target actually changes |
-| Use `GlobalWeight` for smooth fades | Cheaper than adding/removing sources for blending |
+| Use `SmoothingFactor` > 0 for built-in smoothing (SDK 3.10.6+) | `GlobalWeight` changes the blend instantly; it does not animate by itself |
 
 ## Common Patterns
 
