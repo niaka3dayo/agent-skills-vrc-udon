@@ -893,14 +893,13 @@ if (PlayerData.TryGetInt(player, "highScore", out int score))
     Debug.Log($"High score: {score}");
 }
 
-// Set values (only on local player's own data)
-PlayerData.SetInt(Networking.LocalPlayer, "highScore", 1000);
-PlayerData.SetString(Networking.LocalPlayer, "username", "Player1");
-PlayerData.SetFloat(Networking.LocalPlayer, "volume", 0.8f);
-PlayerData.SetBool(Networking.LocalPlayer, "tutorialComplete", true);
+// Set values (writes the local player's own data; there is no player argument)
+PlayerData.SetInt("highScore", 1000);
+PlayerData.SetString("username", "Player1");
+PlayerData.SetFloat("volume", 0.8f);
+PlayerData.SetBool("tutorialComplete", true);
 
-// Delete key
-PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
+// Keys cannot be deleted once written; overwrite the value instead
 ```
 
 ### Supported Types
@@ -951,7 +950,7 @@ public class PersistentScore : UdonSharpBehaviour
         if (score > highScore)
         {
             highScore = score;
-            PlayerData.SetInt(Networking.LocalPlayer, "highScore", score);
+            PlayerData.SetInt("highScore", score);
         }
     }
 }

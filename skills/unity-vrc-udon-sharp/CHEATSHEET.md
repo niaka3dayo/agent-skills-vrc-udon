@@ -380,7 +380,7 @@ public override void OnPlayerRestored(VRCPlayerApi player) {
 }
 
 // Save data
-PlayerData.SetInt(Networking.LocalPlayer, "score", 100);
+PlayerData.SetInt("score", 100);
 ```
 
 **Limit:** 100KB per player per world

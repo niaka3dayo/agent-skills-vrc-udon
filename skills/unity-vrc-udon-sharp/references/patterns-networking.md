@@ -343,23 +343,28 @@ public class SettingsManager : UdonSharpBehaviour
     public void _OnVolumeChanged()
     {
         if (!initialized) return;
-        PlayerData.SetFloat(Networking.LocalPlayer, "volume", volumeSlider.value);
+        PlayerData.SetFloat("volume", volumeSlider.value);
         ApplyVolume(volumeSlider.value);
     }
 
     public void _OnMusicToggled()
     {
         if (!initialized) return;
-        PlayerData.SetBool(Networking.LocalPlayer, "musicEnabled", musicToggle.isOn);
+        PlayerData.SetBool("musicEnabled", musicToggle.isOn);
         ApplyMusic(musicToggle.isOn);
     }
 
     public void _OnQualityChanged()
     {
         if (!initialized) return;
-        PlayerData.SetInt(Networking.LocalPlayer, "quality", qualityDropdown.value);
+        PlayerData.SetInt("quality", qualityDropdown.value);
         ApplyQuality(qualityDropdown.value);
     }
+
+    // World-specific: apply each setting to your own audio or quality objects.
+    private void ApplyVolume(float value) { }
+    private void ApplyMusic(bool enabled) { }
+    private void ApplyQuality(int level) { }
 }
 ```
 
@@ -394,7 +399,7 @@ public class UnlockSystem : UdonSharpBehaviour
         if (!dataReady) return;
         if (index < 0 || index >= unlockKeys.Length) return;
 
-        PlayerData.SetBool(Networking.LocalPlayer, unlockKeys[index], true);
+        PlayerData.SetBool(unlockKeys[index], true);
         unlockableObjects[index].SetActive(true);
 
         Debug.Log($"Unlocked: {unlockKeys[index]}");
@@ -406,7 +411,8 @@ public class UnlockSystem : UdonSharpBehaviour
 
         for (int i = 0; i < unlockKeys.Length; i++)
         {
-            PlayerData.DeleteKey(Networking.LocalPlayer, unlockKeys[i]);
+            // Keys cannot be deleted once written; overwrite the value instead.
+            PlayerData.SetBool(unlockKeys[i], false);
             unlockableObjects[i].SetActive(false);
         }
     }
