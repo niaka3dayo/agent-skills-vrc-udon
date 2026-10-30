@@ -2,7 +2,7 @@
 
 Complete reference of VRChat-specific classes, methods, and types available in UdonSharp.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
 Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
@@ -893,14 +893,13 @@ if (PlayerData.TryGetInt(player, "highScore", out int score))
     Debug.Log($"High score: {score}");
 }
 
-// Set values (only on local player's own data)
-PlayerData.SetInt(Networking.LocalPlayer, "highScore", 1000);
-PlayerData.SetString(Networking.LocalPlayer, "username", "Player1");
-PlayerData.SetFloat(Networking.LocalPlayer, "volume", 0.8f);
-PlayerData.SetBool(Networking.LocalPlayer, "tutorialComplete", true);
+// Set values (writes the local player's own data; there is no player argument)
+PlayerData.SetInt("highScore", 1000);
+PlayerData.SetString("username", "Player1");
+PlayerData.SetFloat("volume", 0.8f);
+PlayerData.SetBool("tutorialComplete", true);
 
-// Delete key
-PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
+// Keys cannot be deleted once written; overwrite the value instead
 ```
 
 ### Supported Types
@@ -951,7 +950,7 @@ public class PersistentScore : UdonSharpBehaviour
         if (score > highScore)
         {
             highScore = score;
-            PlayerData.SetInt(Networking.LocalPlayer, "highScore", score);
+            PlayerData.SetInt("highScore", score);
         }
     }
 }

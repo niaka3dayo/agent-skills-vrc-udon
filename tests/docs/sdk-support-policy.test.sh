@@ -111,7 +111,7 @@ echo "PASS: unverified future SDK auto-support mutation rejected"
 # distinguish it from historical feature-introduction entries. This wording is
 # deliberately English in the canonical README so future translations can be
 # checked against the same policy without treating VRChat's own policy as ours.
-require_text "$ROOT_DIR/README.md" '**Active support / last verified**: VRChat SDK 3.10.5'
+require_text "$ROOT_DIR/README.md" '**Active support / last verified**: VRChat SDK 3.10.6'
 require_text "$ROOT_DIR/README.md" 'From v4.0.0 onward, the support policy is latest stable SDK only; the support target moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically.'
 require_text "$ROOT_DIR/README.md" 'historical feature-introduction notes'
 require_text "$ROOT_DIR/README.md" "not a statement about VRChat's own SDK policy"
@@ -121,8 +121,8 @@ forbid_text "$ROOT_DIR/README.md" 'SDK coverage (3.7.1 - 3.10.4)'
 # All translations carry the same current target and must not advertise the old
 # range in their badge or accuracy note.
 for path in "${README_FILES[@]}"; do
-    require_text "$path" '3.10.5'
-    require_text "$path" 'VRChat_SDK-3.10.5-'
+    require_text "$path" '3.10.6'
+    require_text "$path" 'VRChat_SDK-3.10.6-'
 done
 
 # Translations must carry the same stable-only policy and verification gate,
@@ -143,7 +143,7 @@ for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/SKILL.md" \
     "$ROOT_DIR/skills/unity-vrc-world-sdk-3/SKILL.md"; do
     require_text "$path" 'Active support / last verified'
-    require_text "$path" 'SDK 3.10.5'
+    require_text "$path" 'SDK 3.10.6'
     require_text "$path" 'historical'
     forbid_regex "$path" '(Supported SDK Versions|SDK Coverage|Covered versions)'
 done
@@ -175,7 +175,7 @@ for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading.md" \
     "$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/components.md"; do
     require_text "$path" 'Active support / last verified'
-    require_text "$path" '3.10.5'
+    require_text "$path" '3.10.6'
 done
 
 for path in \
@@ -188,31 +188,31 @@ for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md"; do
     require_text "$path" 'Active support / last verified'
-    require_text "$path" '3.10.5'
+    require_text "$path" '3.10.6'
     forbid_regex "$path" 'SDK Coverage.*3\.7\.1'
 done
 
 # Distributed agent templates and maintainer guidance must teach the same
 # active-vs-historical boundary.
 for path in "$ROOT_DIR/templates/AGENTS.md" "$ROOT_DIR/templates/CLAUDE.md" "$ROOT_DIR/templates/GEMINI.md"; do
-    require_text "$path" 'active: 3.10.5'
+    require_text "$path" 'active: 3.10.6'
     require_text "$path" 'historical'
     forbid_regex "$path" 'SDK \(3\.7\.1.{0,8}3\.10\.4\)'
 done
 
-require_text "$ROOT_DIR/CONTRIBUTING.md" '**Active and verified target**: SDK 3.10.5'
+require_text "$ROOT_DIR/CONTRIBUTING.md" '**Active and verified target**: SDK 3.10.6'
 require_text "$ROOT_DIR/CONTRIBUTING.md" 'historical migration information only'
-require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" '**Active support / last verified**: SDK 3.10.5'
+require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" '**Active support / last verified**: SDK 3.10.6'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/update-checklist.md" 'active-versus-historical boundary'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md" 'active and verified target'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" '**Active support / last verified**: SDK 3.10.5'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" '**Active support / last verified**: SDK 3.10.6'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" 'SDK 3\.10\.4\+|SDK 3\.10\.4 or newer'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween (introduced in SDK 3.10.4)'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween \(SDK 3\.10\.4\+\)|on SDK 3\.10\.4\+'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'Solution on the active SDK target (3.10.5)'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'Solution on the active SDK target (3.10.6)'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'routeable SDK 3\.10\.4\+|on SDK 3\.10\.4\+'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading-advanced.md" 'Historical migration guidance only: SDK 3.7.1 introduced the available surface'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'remains the recommended choice on the active SDK target, SDK 3.10.5'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'remains the recommended choice on the active SDK target, SDK 3.10.6'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'valid alternative for small, capacity-limited worlds'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'valid for single-player preview or debugging'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'historical migration context, not an active-support cutoff'

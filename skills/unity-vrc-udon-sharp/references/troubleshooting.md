@@ -2,7 +2,7 @@
 
 Common errors, causes, and solutions for VRChat UdonSharp development.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
 Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
@@ -733,7 +733,7 @@ public void SaveScore(int score)
         Debug.LogWarning("Data not ready!");
         return;
     }
-    PlayerData.SetInt(Networking.LocalPlayer, "score", score);
+    PlayerData.SetInt("score", score);
 }
 
 ```
@@ -745,7 +745,7 @@ public void SaveScore(int score)
 **Symptoms:** Data does not persist across sessions
 
 **Causes:**
-1. Writing to wrong player (not local player)
+1. Expecting to write another player's data (setters always write the local player's data)
 2. Exceeding storage limit (100 KB)
 3. Key name too long (max 128 characters)
 
@@ -753,15 +753,13 @@ public void SaveScore(int score)
 
 ```csharp
 
-// WRONG - Trying to write to other player's data
-PlayerData.SetInt(otherPlayer, "score", 100); // Will fail silently
+// Setters take no player argument and always write the local player's data.
+// There is no API for writing another player's data.
+PlayerData.SetInt("score", 100);
 
-// CORRECT - Write to local player only
-PlayerData.SetInt(Networking.LocalPlayer, "score", 100);
-
-// Debug storage usage
-string[] keys = PlayerData.GetKeys(Networking.LocalPlayer);
-Debug.Log($"Using {keys.Length} keys");
+// Debug storage usage (bytes; call Networking.RequestStorageUsageUpdate() to refresh)
+int used = Networking.GetPlayerDataStorageUsage(Networking.LocalPlayer);
+Debug.Log($"PlayerData usage: {used} / {Networking.GetPlayerDataStorageLimit()} bytes");
 
 ```
 
@@ -772,14 +770,14 @@ Debug.Log($"Using {keys.Length} keys");
 **Symptoms:** Event is not called, data does not load
 
 **Causes:**
-1. VRC Enable Persistence not enabled on UdonBehaviour
-2. Script not present in scene at load time
-3. Player data is corrupted
+1. Script not present in scene at load time
+2. Player data is corrupted
 
 **Solution:**
-1. Check the "VRC Enable Persistence" checkbox in Inspector
-2. Ensure the script is active in the scene hierarchy
-3. Test with a new instance (no saved data)
+1. Ensure the script is active in the scene hierarchy
+2. Do not treat an empty save as the cause: `OnPlayerRestored` still fires when the player has no saved data. A new instance does not give an empty save, because persistence is shared across instances of the world
+
+PlayerData needs no component. `VRC Enable Persistence` only applies to PlayerObject data.
 
 ---
 
@@ -895,6 +893,8 @@ public override void OnContactEnter(ContactEnterInfo info)
 When a player sits in a VRCStation, the **PlayerLocal (Layer 10) capsule collider is effectively disabled**. This causes `OnPlayerTriggerEnter`, `OnPlayerTriggerExit`, and `OnPlayerTriggerStay` to **not fire** for seated players.
 
 This is a [known long-standing issue](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations) (unresolved as of SDK 3.10.3).
+
+**Remote-player collider (client 2026.4.1)**: the [SDK 3.10.6 release notes](https://creators.vrchat.com/releases/release-3-10-6/) state that client 2026.4.1 adjusts the collider shape on remote players to match the local player's capsule. Re-test trigger zones tuned against the old remote shape with two clients. This repository has not re-measured station or trigger behavior on 2026.4.1, so keep the observations below unchanged until it does.
 
 ### Symptoms
 

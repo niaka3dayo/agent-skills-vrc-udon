@@ -1,8 +1,8 @@
 # VRChat Persistence Reference
 
-Comprehensive guide to persistent data storage in VRChat worlds. The feature was introduced in SDK 3.7.4; the active verified target is SDK 3.10.5.
+Comprehensive guide to persistent data storage in VRChat worlds. The feature was introduced in SDK 3.7.4; the active verified target is SDK 3.10.6.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 **Historical feature introduction**: SDK 3.7.4
 
 SDK 3.7.4-3.10.4 references are historical migration information only, not active support or validation targets for this Skill.
@@ -76,9 +76,9 @@ PlayerData is a key-value database for storing simple data per player:
 
 ### Setup
 
-1. Enable persistence on your UdonBehaviour in the Inspector
+1. No component is needed: any UdonBehaviour can call the `PlayerData` functions (`VRCEnablePersistence` is only for PlayerObject data)
 2. Wait for `OnPlayerRestored` before accessing data
-3. Use `PlayerData` static methods to read/write
+3. Use `PlayerData` static methods to read any player's data and write the local player's data
 
 ### Reading Data
 
@@ -130,8 +130,8 @@ public void SaveHighScore(int score)
     VRCPlayerApi local = Networking.LocalPlayer;
 
     // Can only write to your own data
-    PlayerData.SetInt(local, "highScore", score);
-    PlayerData.SetString(local, "lastPlayed", System.DateTime.UtcNow.ToString());
+    PlayerData.SetInt("highScore", score);
+    PlayerData.SetString("lastPlayed", System.DateTime.UtcNow.ToString());
 }
 ```
 
@@ -157,11 +157,8 @@ public void SaveHighScore(int score)
 // Check if key exists
 bool exists = PlayerData.HasKey(player, "keyName");
 
-// Delete a key
-PlayerData.DeleteKey(Networking.LocalPlayer, "oldKey");
-
-// Get all keys (for debugging)
-string[] keys = PlayerData.GetKeys(player);
+// Keys cannot be deleted once written; overwrite the value instead.
+// To list keys, use the PlayerData.Info[] passed to OnPlayerDataUpdated.
 ```
 
 ### Checking Data Usage (SDK 3.10.0+)
@@ -516,7 +513,7 @@ public void SafeSaveData(string key, int value)
         return;
     }
 
-    PlayerData.SetInt(local, key, value);
+    PlayerData.SetInt(key, value);
 }
 ```
 
@@ -554,13 +551,13 @@ public class SettingsManager : UdonSharpBehaviour
     public void _OnVolumeChanged()
     {
         if (!initialized) return;
-        PlayerData.SetFloat(Networking.LocalPlayer, "musicVolume", volumeSlider.value);
+        PlayerData.SetFloat("musicVolume", volumeSlider.value);
     }
 
     public void _OnMusicToggled()
     {
         if (!initialized) return;
-        PlayerData.SetBool(Networking.LocalPlayer, "musicEnabled", musicToggle.isOn);
+        PlayerData.SetBool("musicEnabled", musicToggle.isOn);
     }
 }
 ```
@@ -584,7 +581,7 @@ public class DailyReward : UdonSharpBehaviour
             {
                 // New day - give reward
                 GiveReward(player);
-                PlayerData.SetString(player, "lastLogin", today);
+                PlayerData.SetString("lastLogin", today);
             }
             else
             {
@@ -595,7 +592,7 @@ public class DailyReward : UdonSharpBehaviour
         {
             // First time player
             GiveReward(player);
-            PlayerData.SetString(player, "lastLogin", today);
+            PlayerData.SetString("lastLogin", today);
         }
     }
 
@@ -603,11 +600,11 @@ public class DailyReward : UdonSharpBehaviour
     {
         if (PlayerData.TryGetInt(player, "gold", out int gold))
         {
-            PlayerData.SetInt(player, "gold", gold + rewardAmount);
+            PlayerData.SetInt("gold", gold + rewardAmount);
         }
         else
         {
-            PlayerData.SetInt(player, "gold", rewardAmount);
+            PlayerData.SetInt("gold", rewardAmount);
         }
 
         Debug.Log($"Daily reward: +{rewardAmount} gold!");
@@ -664,7 +661,7 @@ public class DataAgingExample : UdonSharpBehaviour
         // Initialize with an empty JSON object if no data exists yet
         if (!PlayerData.HasKey(player, DataKey))
         {
-            PlayerData.SetString(player, DataKey, "{}");
+            PlayerData.SetString(DataKey, "{}");
             return;
         }
 
@@ -758,7 +755,7 @@ public class DataAgingExample : UdonSharpBehaviour
         // --- Step 4: Serialize and write back ---
         if (VRCJson.TrySerializeToJson(pruned, JsonExportType.Minify, out DataToken result))
         {
-            PlayerData.SetString(player, DataKey, result.String);
+            PlayerData.SetString(DataKey, result.String);
 
             int removed = entryKeys.Count - pruned.Count;
             Debug.Log($"[DataAging] Pruned {removed} entries, kept {pruned.Count}");
@@ -794,7 +791,7 @@ public class DataAgingExample : UdonSharpBehaviour
 
         if (VRCJson.TrySerializeToJson(dict, JsonExportType.Minify, out DataToken updated))
         {
-            PlayerData.SetString(local, DataKey, updated.String);
+            PlayerData.SetString(DataKey, updated.String);
         }
     }
 }
@@ -819,17 +816,25 @@ public class DataAgingExample : UdonSharpBehaviour
 ### Checking Saved Data
 
 ```csharp
-public void _DebugPrintAllData()
-{
-    VRCPlayerApi local = Networking.LocalPlayer;
-    string[] keys = PlayerData.GetKeys(local);
+using UdonSharp;
+using UnityEngine;
+using VRC.SDKBase;
+using VRC.SDK3.Persistence;
 
-    Debug.Log($"=== PlayerData for {local.displayName} ===");
-    foreach (string key in keys)
+public class PlayerDataDebugger : UdonSharpBehaviour
+{
+    // The infos array lists every current key for that player.
+    public override void OnPlayerDataUpdated(VRCPlayerApi player, PlayerData.Info[] infos)
     {
-        Debug.Log($"  {key}");
+        if (!player.isLocal) return;
+
+        Debug.Log($"=== PlayerData for {player.displayName} ===");
+        for (int i = 0; i < infos.Length; i++)
+        {
+            Debug.Log($"  {infos[i].Key}");
+        }
+        Debug.Log($"=== Total: {infos.Length} keys ===");
     }
-    Debug.Log($"=== Total: {keys.Length} keys ===");
 }
 ```
 

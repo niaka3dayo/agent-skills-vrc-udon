@@ -172,7 +172,7 @@ See [LICENSE](LICENSE) for details.
 
 When reporting issues, please specify the SDK version.
 
-**Active and verified target**: SDK 3.10.5.
+**Active and verified target**: SDK 3.10.6.
 
 References to SDK 3.7.1-3.10.4 are historical migration information only; they are not supported or validation targets for either distributed Skill. This support boundary applies to both distributed Skills and is not a statement about VRChat's own SDK policy.
 

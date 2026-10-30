@@ -1,21 +1,21 @@
 ---
 name: unity-vrc-udon-sharp
 description: >-
-    UdonSharp scripting skill for VRChat SDK 3.10.5 (active and verified target). Use when writing,
+    UdonSharp scripting skill for VRChat SDK 3.10.6 (active and verified target). Use when writing,
     reviewing, debugging, or migrating UdonSharp C# and UdonBehaviour code.
     Positive triggers include UdonSharp, NetworkCallable, NetworkCalling,
     CallingPlayer, Udon network authorization, synced runtime state, a local public helper,
     public-method audit, C# to Udon conversion, and UdonSharp Assembly Version Defines.
-    VRCQualitySettings and VRCTween calls,
+    VRCQualitySettings, VRCBillboard, constraint source, and VRCTween calls,
     PhysBone/Contact callbacks, world VRCPhysBoneCollider runtime access,
     persistence, collection, web, and other component APIs trigger this skill
     when the request is about Udon, C#, or runtime API access. Excludes
-    scene setup, component setup, Build Panel work, layers, optimization, and
+    scene setup, component setup, Build Panel work, layers, scene and rendering optimization, and
     upload; route those requests to unity-vrc-world-sdk-3.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "4.1.1"
+    version: "4.2.0"
     tags: vrchat, udonsharp, udon, networking, sync, persistence, dynamics, asmdef, vpm, assembly-definition
 ---
 
@@ -51,7 +51,7 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 ## Core Principles
 
 1. **Constraints First** — For Udon runtime code, assume standard C# features are blocked until verified. Treat Editor-evaluated field initializers separately and require a final Udon-supported value. Check `udonsharp-constraints.md` before using any API.
-2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. Always `SetOwner` → modify → `RequestSerialization`.
+2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. If the local player is not the owner, `SetOwner` first; then modify → `RequestSerialization` (Manual sync).
 3. **Late Joiner Correctness** — State must be correct for players who join after events have occurred. Design for re-serialization, not just live updates.
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
 5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()` **for state-change reactions; for hot-path or periodic work, see [Event Dispatch & Cross-Behaviour Call Cost Tiers](references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers)**.
@@ -69,7 +69,7 @@ Revision is not ordering or stale-packet protection.
 
 ## SDK 3.10.4 event receiver arguments
 
-SDK 3.10.5 is the active and verified target for this Skill.
+SDK 3.10.6 is the active and verified target for this Skill.
 SDK 3.10.4: `UdonSharpBehaviour` implements `IUdonEventReceiver` directly.
 An API that requires a receiver can therefore receive `this` directly:
 
@@ -107,14 +107,15 @@ These Udon runtime and Unity serialization constraints cause either **compile-ti
 | 10 | Use `Button.onClick.AddListener()` | Not available in Udon — no runtime delegate support | Configure `SendCustomEvent` via Inspector OnClick |
 | 11 | Mix Continuous and Manual sync concerns on one behaviour | Wastes bandwidth (discrete values in Continuous) or loses control (redundant `RequestSerialization` in Continuous) | Separate behaviours: Continuous for position/rotation, Manual for discrete state |
 | 12 | Write to `[UdonSynced]` fields without an `IsOwner` guard | Non-owner writes are purely local and silently reverted on the next deserialization from the actual owner | `Networking.SetOwner` first if needed (locally immediate), then write under `IsOwner` and call `RequestSerialization()` |
-| 13 | Use `[NetworkCallable]` on an unsupported SDK below 3.8.1 (historical migration only) | Compile error — the attribute and parameterized network-event API are unavailable | Use the active SDK target, 3.10.5; for historical migration notes, use synced variables and react in `OnDeserialization`/`FieldChangeCallback` instead of pairing them with a network event |
-| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrabbed`, `OnContactEnter`, etc.) on an unsupported SDK below 3.10.0 (historical migration only) | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Use the active SDK target, 3.10.5; for historical migration, verify the project is at least SDK 3.10.0 |
-| 15 | Use `PlayerData` persistence API on an unsupported SDK below 3.7.4 (historical migration only) | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Use the active SDK target, 3.10.5; for historical migration, verify the project is at least SDK 3.7.4 |
+| 13 | Use `[NetworkCallable]` on an unsupported SDK below 3.8.1 (historical migration only) | Compile error — the attribute and parameterized network-event API are unavailable | Use the active SDK target, 3.10.6; for historical migration notes, use synced variables and react in `OnDeserialization`/`FieldChangeCallback` instead of pairing them with a network event |
+| 14 | Use PhysBones/Contacts API (`OnPhysBoneGrabbed`, `OnContactEnter`, etc.) on an unsupported SDK below 3.10.0 (historical migration only) | Compiles but silently ignored at runtime — world-side Dynamics did not exist pre-3.10.0, so callbacks never fire | Use the active SDK target, 3.10.6; for historical migration, verify the project is at least SDK 3.10.0 |
+| 15 | Use `PlayerData` persistence API on an unsupported SDK below 3.7.4 (historical migration only) | Compile error — missing symbol; `PlayerData`, `PlayerObject`, and `OnPlayerRestored` were added in 3.7.4 and are not in the Udon whitelist before then | Use the active SDK target, 3.10.6; for historical migration, verify the project is at least SDK 3.7.4 |
 | 16 | Put a Unity `.asmdef` around UdonSharpBehaviour without matching U# Assembly Definition | Unity compiles the C# assembly, but UdonSharp reports the script does not belong to a U# assembly | For simple world scripts, avoid asmdef; for package/asmdef workflows, create the corresponding U# Assembly Definition and set Source Assembly to the Unity `.asmdef` (see `references/assembly-definitions.md`) |
 | 17 | Create a `.cs` script without a corresponding `.asset` file | Script is not recognized as UdonBehaviour — "The associated script cannot be loaded", no Udon compilation | **Every time** a `.cs` is created: verify `Assets/Editor/UdonSharpProgramAssetAutoGenerator.cs` exists, install from `references/editor-scripting.md` if missing, notify the user (see Rule 8 in `rules/udonsharp-constraints.md`) |
 | 18 | Call `Debug.Log()` inside `Update()`, `PostLateUpdate()`, or any per-frame event | VRChat's client-side log rate limiter silently drops excess entries; the implicit string allocation every frame causes sustained GC pressure that tanks framerate. ClientSim and Unity Editor hide both symptoms | Guard with `if (debugMode && Time.frameCount % 60 == 0)`, or move all logging to event-driven callbacks |
 | 19 | Use `[UdonSynced]` on a `GameObject`, `Transform`, `UdonBehaviour`, or any component reference | Only primitives, value types (Vector3, Quaternion, Color, etc.), string, VRCUrl, and simple arrays of these are syncable. Component references either fail at compile time or are silently never serialized depending on SDK version | Sync a player ID (`int`) or scene object index (`int`) and resolve the actual reference locally on each client |
 | 20 | Initialize any UdonSharp `VRCUrl` field that needs an independent initial value with `VRCUrl.Empty` | `VRCUrl.Empty` is a shared instance, so Inspector data can leak between fields, array elements, or GameObjects that use the same UdonSharp program | Give `[SerializeField]`, `[UdonSynced]`, and ordinary private fields—and each array element—their own `new VRCUrl("")`; reserve `VRCUrl.Empty` for runtime sentinel use |
+| 21 | Call `GetSourceCount()` / `SetSourceWeight()`, or edit a VRC constraint's `Sources` list directly from Udon | The two methods do not exist (compile error); VRChat reports reliability issues with direct `Sources` edits from Udon | `SourceCount` and a `GetSource()` / `SetSource()` round trip (SDK 3.10.6+); see [dynamics.md](references/dynamics.md#source-methods-sdk-3106) |
 
 ## Sync Mode Quick Decision
 
@@ -122,7 +123,7 @@ These Udon runtime and Unity serialization constraints cause either **compile-ti
 Changing every frame (position, rotation)?    -> Continuous sync
 Changing on user action (toggle, score)?      -> Manual sync + RequestSerialization()
 No sync needed (local UI, effects)?           -> NoVariableSync
-Need reliable one-shot calls with params?     -> [NetworkCallable] (introduced in SDK 3.8.1; active target 3.10.5)
+Need reliable one-shot calls with params?     -> [NetworkCallable] (introduced in SDK 3.8.1; active target 3.10.6)
 Temporary effect for all players, no state?   -> SendCustomNetworkEvent (no synced vars)
 ```
 
@@ -156,7 +157,7 @@ OnOwnershipTransferred not firing on a remote client?
 
 ## Reference Loading Guide
 
-Load only what you need. Over-loading wastes tokens; under-loading causes critical mistakes.
+Load only what you need. Over-loading wastes tokens; under-loading causes critical mistakes. When a request spans several rows, load every MANDATORY READ those rows list; a Do NOT Load entry never overrides another matching row's MANDATORY READ.
 
 | Task | MANDATORY READ | Optional | Do NOT Load |
 |------|---------------|----------|-------------|
@@ -168,7 +169,7 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Using PhysBones/Contacts/Constraints, Box Contacts, Global Avatar PhysBone Colliders, or world `VRCPhysBoneCollider` Udon access | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
 | Reading/writing VRCQualitySettings at runtime | `api.md` | `events.md`; scene defaults: `unity-vrc-world-sdk-3` | `networking.md`, `dynamics.md`, `web-loading.md` |
 | Tuning DataList/DataDictionary capacity or using `DataDictionary.EnsureCapacity` | `api.md` | `constraints.md`, `patterns-utilities.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
-| Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
+| Optimizing performance (Update loops, VRCBillboard) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
 | Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
@@ -211,13 +212,13 @@ Station + trigger zone detection?       -> troubleshooting.md
 | Interactive object (click/use) | `BasicInteraction.cs` | Cooldown, toggle, audio feedback |
 | Synced toggle / shared object | `SyncedObject.cs` | Ownership guard, FieldChangeCallback, late-joiner init |
 | Per-player movement settings | `PlayerSettings.cs` | Walk/run/jump speed via trigger zone |
-| Contact-based collision detection | `ContactReceiver.cs` | OnContactEnter/Exit, avatar vs world, debounce (introduced in SDK 3.10.0; active target 3.10.5) |
+| Contact-based collision detection | `ContactReceiver.cs` | OnContactEnter/Exit, avatar vs world, debounce (introduced in SDK 3.10.0; active target 3.10.6) |
 | **State & Game Logic** | | |
 | State machine / game flow | `StateMachine.cs` | Timed transitions, synced state, late-joiner safety |
 | Game with undo/history | `UndoableGameManager.cs` | byte[] history, NetworkCallable `_OwnerProcessMove`/`_OwnerUndo`/`_OwnerReset` |
 | Object pool (player slots) | `MasterManagedPlayerPool.cs` | FIFO ring buffer, master-managed, OnPlayerJoined/Left |
 | **Persistence & Data** | | |
-| Save/load player data | `DataPersistence.cs` | PlayerData API, OnPlayerRestored, auto-save (introduced in SDK 3.7.4; active target 3.10.5) |
+| Save/load player data | `DataPersistence.cs` | PlayerData API, OnPlayerRestored, auto-save (introduced in SDK 3.7.4; active target 3.10.6) |
 | **Networking Patterns** | | |
 | Rate-limited sync (slider drag) | `RateLimitedSync.cs` | 0.15s cooldown, last-write-wins |
 | Batched sync (rapid events) | `BatchedSync.cs` | Idempotent schedule, 0.2s delay, single packet |
@@ -246,11 +247,11 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 ## SDK Versions
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
-From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.5.
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.6.
 
-The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.4 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.5 unless a reference explicitly marks a historical migration case.
+The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.5 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.6 unless a reference explicitly marks a historical migration case.
 
 | SDK Version | Key Features | Status |
 |-------------|--------------|--------|
@@ -265,9 +266,10 @@ The table below keeps feature-introduction history for migration reference. SDK 
 | 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals | Historical |
 | 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix | Historical |
 | 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary custom capacity, `DataDictionary.EnsureCapacity`, `UdonSharpBehaviour` implements `IUdonEventReceiver` and accepts direct receiver `this` | Historical |
-| 3.10.5 | WorldQualitySettings, writable VRCQualitySettings, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager validation | Active / Last verified |
+| 3.10.5 | WorldQualitySettings, writable VRCQualitySettings, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager validation | Historical |
+| 3.10.6 | `VRCBillboard`, `VRCVelocityTracker`, `VRCPlacementZone`, constraint source methods and `SmoothingFactor`, Interact Outline Renderers, UdonSharp enum-comparison and named-argument fixes | Active / Last verified |
 
-Use SDK 3.10.5 for publishing. Check the matching release notes before relying on a version-specific API or migration step.
+Use SDK 3.10.6 for publishing. Check the matching release notes before relying on a version-specific API or migration step.
 
 ## Official Resources
 
@@ -287,11 +289,11 @@ Use SDK 3.10.5 for publishing. Check the matching release notes before relying o
 | `networking.md` | Ownership model, sync modes, RequestSerialization, NetworkCallable, network-event sender authorization, data limits | UdonSynced, SetOwner, BehaviourSyncMode, FieldChangeCallback, OnDeserialization, NetworkCalling, CallingPlayer, InNetworkCall, legacy event, underscore, authorization, master leave, ownership cascade |
 | `networking-bandwidth.md` | Bandwidth throttling, bit packing, synced data size examples, debugging, owner-centric architecture | IsClogged, bandwidth, throttle, bit packing, data budget, IsMaster |
 | `networking-antipatterns.md` | 6 anti-patterns to avoid; 5 advanced sync patterns with template links | anti-pattern, race condition, ownership fight, late-joiner, PackedStateSync, BatchedSync |
-| `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (introduced in SDK 3.7.4; active target 3.10.5); per-player save data; storage usage query API (introduced in SDK 3.10.0; active target 3.10.5) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, GetPlayerObjectStorageUsage, GetPlayerObjectStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
-| `dynamics.md` | PhysBones, Contacts, VRC Constraints (introduced in SDK 3.10.0; active target 3.10.5); VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access (SDK 3.10.4+) | PhysBone, ContactReceiver, ContactSender, Box Contact, Global Avatar PhysBone Collider, VRCPhysBoneCollider, VRCTween, VRCConstraint, OnContactEnter |
+| `persistence.md` | Storage layer decision tree (local/synced/PlayerData/PlayerObject); PlayerData/PlayerObject API (introduced in SDK 3.7.4; active target 3.10.6); per-player save data; storage usage query API (introduced in SDK 3.10.0; active target 3.10.6) | storage layer, decision tree, local variable, PlayerData, PlayerObject, OnPlayerRestored, SetInt, TryGetInt, GetPlayerDataStorageUsage, GetPlayerDataStorageLimit, GetPlayerObjectStorageUsage, GetPlayerObjectStorageLimit, RequestStorageUsageUpdate, OnPersistenceUsageUpdated, storage quota, storage usage, which storage, when to use PlayerData |
+| `dynamics.md` | PhysBones, Contacts, VRC Constraints (introduced in SDK 3.10.0; active target 3.10.6); VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access (SDK 3.10.4+); constraint source methods and `SmoothingFactor` (SDK 3.10.6+) | PhysBone, ContactReceiver, ContactSender, Box Contact, Global Avatar PhysBone Collider, VRCPhysBoneCollider, VRCTween, VRCConstraint, SourceCount, GetSource, SetSource, SmoothingFactor, OnContactEnter |
 | `patterns-core.md` | Initialization, interaction, player detection, timer, audio, pickup, animation, UI, teleportation, lazy init guard, remote players | Interact, OnEnable, Initialize, AudioSource, VRCPickup, Animator, UI, TeleportTo, remote players, _GetRemotePlayers, exclude local player, FindAll alternative |
 | `patterns-networking.md` | Object pooling, NetworkCallable sender-validation patterns, persistence integration, dynamics interactions, synced game state, distant-room pseudo-multi-room (state/presentation split, self-owned or master-coordinated session arbitration), delayed event debounce, string join for array sync | pool, MasterManagedPlayerPool, NetworkCallable, CallingPlayer, InNetworkCall, sender authorization, DamageReceiver, game state, distant room, pseudo multi-room, room assignment, roomIndex, LocalRoomPresenter, RoomAssignment, NoVariableSync, TeleportTo per-client, debounce, state machine, string join, array sync, paragraph separator, U+2029 |
-| `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, spatial query, platform optimization, frame budget Stopwatch, heavy processing architecture (rebuild, replay, reset/cancel), rate limit resolver, GameObject lookup cost tiers | Update, PostLateUpdate, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rebuild, replay, reset, cancel, operation log, authoritative data, derived state, cursor rebuild, rate limit, URL scheduler, video load queue, GameObject.Find, Find cost, lookup cost tier, SerializeField vs Find, silent failure on rename, SendCustomEvent cost, cross-behaviour call, EventBus hot path, delayed loop spike, public method lookup, event dispatch tier |
+| `patterns-performance.md` | Partial class pattern, update handler, PostLateUpdate, VRCBillboard (SDK 3.10.6+), spatial query, platform optimization, frame budget Stopwatch, heavy processing architecture (rebuild, replay, reset/cancel), rate limit resolver, GameObject lookup cost tiers | Update, PostLateUpdate, VRCBillboard, Bounds, AnimatorHash, performance, mobile, PC, Stopwatch, frame budget, SendCustomEventDelayedFrames, heavy processing, rebuild, replay, reset, cancel, operation log, authoritative data, derived state, cursor rebuild, rate limit, URL scheduler, video load queue, GameObject.Find, Find cost, lookup cost tier, SerializeField vs Find, silent failure on rename, SendCustomEvent cost, cross-behaviour call, EventBus hot path, delayed loop spike, public method lookup, event dispatch tier |
 | `patterns-utilities.md` | Array helpers (List alternatives), event bus, GameObject relay communication, pseudo-struct double-cast, abstract class callback, cancellable delayed event, re-entrance guard, UdonEvent pseudo-delegate | ArrayUtils, EventBus, relay, subscriber, FindIndex, ShuffleArray, object array, pseudo struct, double cast, abstract class, callback, interface alternative, cancellable timer, re-entrance, emitting guard, UdonEvent, pseudo delegate |
 | `patterns-ui.md` | UI/Canvas patterns: immobilize guard, avatar-scale-aware UI, FOV-responsive positioning, platform-adaptive layout, dynamic player list, scroll input abstraction, lookup-table localization, toggle-animator bridge, settings persistence via PlayerObject, listener-based menu events, finger touch interaction, modular app architecture | Canvas, UI, menu, Immobilize, avatar scale, FOV, platform, Quest, VR, desktop, player list, scroll, localization, language, Toggle, Animator, PlayerObject, settings, persistence, listener, broadcast, finger touch, fingertip, haptic, FingerPointer, FingerTouchCanvas, touch canvas, app architecture, AppModule, AppManager, plugin lifecycle, CanvasGroup transition |
 | `patterns-video.md` | Video player state machine, server-time playback sync, late joiner sync, AVPro Blit buffering, error retry with fallback, synced playlist/queue, platform URL selection | video player, AVPro, VRCUnityVideoPlayer, BaseVRCVideoPlayer, playback sync, server time, GetServerTimeInMilliseconds, late joiner, VRCGraphics.Blit, OnVideoReady, OnVideoError, retry, fallback, playlist, queue, shuffle, repeat, Quest URL |
@@ -316,8 +318,8 @@ Use SDK 3.10.5 for publishing. Check the matching release notes before relying o
 | `SyncedObject.cs` | Network-synced object (Manual sync, ownership guard, late-joiner init flag) |
 | `PlayerSettings.cs` | Per-player movement settings (walk/run/jump speed) |
 | `StateMachine.cs` | State machine with synced state and transitions |
-| `DataPersistence.cs` | PlayerData save/load with OnPlayerRestored (introduced in SDK 3.7.4; active target 3.10.5) |
-| `ContactReceiver.cs` | Contact receiver for world-side collision detection (introduced in SDK 3.10.0; active target 3.10.5) |
+| `DataPersistence.cs` | PlayerData save/load with OnPlayerRestored (introduced in SDK 3.7.4; active target 3.10.6) |
+| `ContactReceiver.cs` | Contact receiver for world-side collision detection (introduced in SDK 3.10.0; active target 3.10.6) |
 | `CustomInspector.cs` | Custom editor inspector with UdonSharpEditor |
 | `MasterManagedPlayerPool.cs` | Master-managed player object pool for non-security session arbitration; FIFO ring buffer; OnPlayerJoined/Left; `_VerifyAssignments` after master handoff |
 | `EventBus.cs` | Subscriber list event bus (max 32 listeners); RegisterListener/UnregisterListener/RaiseEvent; in-place compaction |

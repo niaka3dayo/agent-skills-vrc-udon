@@ -2,7 +2,7 @@
 
 Object pooling, synced game state management, NetworkCallable patterns, persistence, dynamics interactions, and delayed event debouncing.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 **Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
 
 ## Object Pooling
@@ -343,23 +343,28 @@ public class SettingsManager : UdonSharpBehaviour
     public void _OnVolumeChanged()
     {
         if (!initialized) return;
-        PlayerData.SetFloat(Networking.LocalPlayer, "volume", volumeSlider.value);
+        PlayerData.SetFloat("volume", volumeSlider.value);
         ApplyVolume(volumeSlider.value);
     }
 
     public void _OnMusicToggled()
     {
         if (!initialized) return;
-        PlayerData.SetBool(Networking.LocalPlayer, "musicEnabled", musicToggle.isOn);
+        PlayerData.SetBool("musicEnabled", musicToggle.isOn);
         ApplyMusic(musicToggle.isOn);
     }
 
     public void _OnQualityChanged()
     {
         if (!initialized) return;
-        PlayerData.SetInt(Networking.LocalPlayer, "quality", qualityDropdown.value);
+        PlayerData.SetInt("quality", qualityDropdown.value);
         ApplyQuality(qualityDropdown.value);
     }
+
+    // World-specific: apply each setting to your own audio or quality objects.
+    private void ApplyVolume(float value) { }
+    private void ApplyMusic(bool enabled) { }
+    private void ApplyQuality(int level) { }
 }
 ```
 
@@ -394,7 +399,7 @@ public class UnlockSystem : UdonSharpBehaviour
         if (!dataReady) return;
         if (index < 0 || index >= unlockKeys.Length) return;
 
-        PlayerData.SetBool(Networking.LocalPlayer, unlockKeys[index], true);
+        PlayerData.SetBool(unlockKeys[index], true);
         unlockableObjects[index].SetActive(true);
 
         Debug.Log($"Unlocked: {unlockKeys[index]}");
@@ -406,7 +411,8 @@ public class UnlockSystem : UdonSharpBehaviour
 
         for (int i = 0; i < unlockKeys.Length; i++)
         {
-            PlayerData.DeleteKey(Networking.LocalPlayer, unlockKeys[i]);
+            // Keys cannot be deleted once written; overwrite the value instead.
+            PlayerData.SetBool(unlockKeys[i], false);
             unlockableObjects[i].SetActive(false);
         }
     }
@@ -613,7 +619,7 @@ Reuse a single local room model to render the illusion of multiple rooms by sepa
 - Some level of voice isolation between rooms is desired (a side effect of physical separation)
 - Players in the same room must visibly share the same space; players in different rooms must not collide
 
-The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target, SDK 3.10.5. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
+The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target, SDK 3.10.6. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
 
 ### Architecture (state vs presentation split)
 

@@ -223,8 +223,10 @@ Method 1: Screenshot
 - Captures the current Scene View
 
 Method 2: External image
-- Import a PNG/JPG
-- Select as thumbnail
+- Click the thumbnail selector (the SDK file dialog filters .png)
+- SDK 3.10.6+: confirm the "Thumbnail Accuracy Warning" first; the image
+  must represent what users will see in the world ("Don't show again for
+  this project" hides the reminder)
 
 Recommended specifications:
 - Resolution: 1200x900 or higher

@@ -173,3 +173,53 @@ program asset links, and custom-editor registration/OnEnable. Inspector drawing,
 clicks and live-client rendering were not tested. No regression of existing
 local Unity assets was accepted: all 3,828 pre-existing files matched their
 pre-test SHA-256 after the dedicated probe completed.
+
+## Audit: SDK 3.10.6
+
+Stable Base/Worlds 3.10.6 were published on 2026-10-30 16:24 UTC. Both ZIPs
+matched the official package-index SHA-256 (`c1f891298905…` Base,
+`2792eb597356…` Worlds), and the local Unity project's packages are
+byte-identical to them. Sources: [release notes](https://creators.vrchat.com/releases/release-3-10-6/),
+[GitHub release](https://github.com/vrchat/packages/releases/tag/3.10.6).
+
+### Artifact and documentation evidence
+
+- Wrapper census 3.10.5 → 3.10.6: 81 → 85 extern types, 0 removals. New types:
+  `VRCBillboard`, `VRCBillboardFacing`, `VRCPlacementZone`,
+  `VRCVelocityTracker`. All six VRC constraint types gained `AddSource`,
+  `ClearSources`, `GetSource`, `GetSources`, `RemoveSource` (index and struct),
+  `SetSource`, `SetSources`, `SourceCount`, and `SmoothingFactor`.
+- Exact scans of Base/Worlds 3.10.4, 3.10.5 and 3.10.6 found no
+  `SetSourceWeight`; `GetSourceCount` appears only in an unrelated audio plugin.
+  The 3.10.4/3.10.5 constraint wrappers exposed only `Sources`.
+- Build Panel sources: WorldBuilder changes only by enabling the new thumbnail
+  accuracy reminder (`OnGUIError`/`OnGUIWarning`/`OnGUIInformation` call sites
+  stay 8/22/5); `VRCSdkControlPanelBuilder.cs`, `VRCWorldPostBuildValidator.cs`
+  and `AutoAddSpatialAudioComponents.cs` are unchanged. `WorldValidation.cs`
+  allowlists the three new components and changes PlayableDirector audio
+  handling; four catalog line references shifted.
+- Unity 2022.3.22f1: three UdonSharp fixtures compiled and their heaps contained
+  all 22 expected externs. ClientSim Play mode (single client) returned the
+  corrected enum comparison and named-argument results, exercised every new
+  constraint source member, applied the placement-zone setters, and showed
+  yaw-only billboard facing. No VRChat client, multi-client, Quest, outline
+  rendering, or portal/sticker placement test was run.
+
+### Decisions
+
+| Item | Evidence and expert delta | Status / destination |
+|---|---|---|
+| Constraint source methods + `SmoothingFactor` | New wrappers, official API page, ClientSim run. The previous reference taught nonexistent `GetSourceCount()` / `SetSourceWeight()`, lowercase struct fields, and non-Udon `Affects*` / `AimVector` / `UpVector` / `WorldUpType` properties. | `included` correction — dynamics.md, sdk-migration.md, cheatsheet. |
+| `ApplyConfigurationChanges()` after constraint property edits | Official API page requirement; examples omitted it. | `included` — constraint examples. |
+| VRCBillboard | Official page + wrappers + compile/ClientSim. Expert delta: Transform-keyed last-registration-wins, Unregister from any script, pass runs after PostLateUpdate. | `included` — patterns-performance.md, World components.md. |
+| VRCVelocityTracker | Official page documents the four getters, units, and zero when disabled. | `included` (World components.md only); no Udon method table. |
+| VRCPlacementZone | Official page + Dev Update 2026-10-22 (user-placed portals only). Placement itself untested. | `included` — combination pitfalls, sync responsibility, no-removal rule. |
+| Interact Outline Renderers | Field on `VRC_Interactable`, drawn in U# Interact settings; no Udon accessor. Client 2026.4.1 stops default SkinnedMeshRenderer outlines when empty (release notes; ClientSim matches). | `included` — short components.md note. |
+| UdonSharp enum comparison / named arguments | Release-noted compiler fixes; ClientSim returned `True` / `301`. | `included` — sdk-migration.md. |
+| Null `VRCUrl` sync with persistence | Release-noted fix. | `included` — one migration line; field-initializer rule unchanged. |
+| Thumbnail accuracy reminder | New SDK dialog before selecting an external `.png` thumbnail. | `included` — upload.md thumbnail note. |
+| Remote-player capsule (client 2026.4.1) | Stated in the SDK release notes; not re-measured. | `included` as an attributed re-test note; existing station/layer observations unchanged. |
+| `UdonBehaviour.LastErrorReason` | New public C# property, not release-noted, no Udon wrapper. | `skip` — editor/C# diagnostic only. |
+| Face tracking, expression parameters, VRCRaycast 1.1, Contact Advanced Parameters / Material Contacts | Avatar, animator, or shader scope. | `skip` — outside both distributed Skills. |
+| `AttachTransformToBone` / `DetachTransformFromBone`, friend APIs, voice rework | Absent from final 3.10.6 artifacts. | `skip` — continue monitoring in #370. |
+| `ActivateConstraint` / `ZeroConstraint` | Already listed in the 3.10.3 "Notable skips (documented)" section. | `skip` unchanged. |

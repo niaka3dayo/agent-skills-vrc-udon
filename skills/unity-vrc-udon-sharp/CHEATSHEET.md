@@ -1,6 +1,6 @@
 # UdonSharp Cheatsheet
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
 SDK 3.7.1-3.10.4 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
 
@@ -226,7 +226,7 @@ public void _DoLoop() {
 }
 ```
 
-For cancelable timers on the active SDK target (3.10.5), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
+For cancelable timers on the active SDK target (3.10.6), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
 
 ---
 
@@ -255,7 +255,7 @@ void OnDestroy() {
 | Need | Use | Notes |
 |------|-----|-------|
 | Smooth transform/UI/audio changes | `TweenPosition`, `TweenScale`, `TweenFade`, `TweenPitch` | Returns `VRCTweenHandle` |
-| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.5) |
+| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.6) |
 | Delayed active toggle | `VRCTween.DelayedSetActive(target, active, seconds)` | Use for local visibility/state toggles |
 | Cleanup | `handle.Kill()` / `gameObject.KillAllTweens()` | Kill stored handles and long/infinite tweens |
 | High-frequency retargeting | `ChangeEndValue`, `SetDuration`, `SetEase`, `Restart` | Reuse a handle instead of kill/recreate in hot paths |
@@ -380,7 +380,7 @@ public override void OnPlayerRestored(VRCPlayerApi player) {
 }
 
 // Save data
-PlayerData.SetInt(Networking.LocalPlayer, "score", 100);
+PlayerData.SetInt("score", 100);
 ```
 
 **Limit:** 100KB per player per world
@@ -406,6 +406,13 @@ public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info) {
     Debug.Log($"Grabbed by: {info.player?.displayName}");
 }
 ```
+
+Constraint sources (SDK 3.10.6+): use `SourceCount` and copy/edit/write back with
+`GetSource()` / `SetSource()`. `GetSourceCount()` and `SetSourceWeight()` do not
+exist (checked in SDK 3.10.4-3.10.6). Call `ApplyConfigurationChanges()` once after a batch of edits. Simple
+viewpoint-facing objects: `VRCBillboard.Register(transform)` /
+`Unregister(transform)`; see [dynamics.md](references/dynamics.md#source-methods-sdk-3106)
+and [patterns-performance.md](references/patterns-performance.md#vrcbillboard-sdk-3106).
 
 ---
 

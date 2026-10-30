@@ -6,14 +6,14 @@ about VRChat SDK validation, red/yellow/white warnings, Build Panel alerts,
 
 ## Scope and evidence
 
-- **Last verified SDK**: VRChat Worlds SDK `3.10.5` and Base SDK `3.10.5`.
+- **Last verified SDK**: VRChat Worlds SDK `3.10.6` and Base SDK `3.10.6`.
 - **Primary source files**:
   - `Packages/com.vrchat.worlds/Editor/VRCSDK/SDK3/VRCSdkControlPanelWorldBuilder.cs`
   - `Packages/com.vrchat.worlds/Editor/VRCSDK/SDK3/VRCWorldPostBuildValidator.cs`
   - `Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/ControlPanel/VRCSdkControlPanelBuilder.cs`
   - `Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/VRChat/Scripts/Validation/WorldValidation.cs`
   - `Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/Components/AutoAddSpatialAudioComponents.cs`
-- **Build gating**: SDK 3.10.5 blocks the world build on `OnGUIError` entries.
+- **Build gating**: SDK 3.10.6 blocks the world build on `OnGUIError` entries.
   `OnGUIWarning` and `OnGUIInformation` entries are still shown in the Build
   Panel but are not red build blockers by themselves.
 - **Builder availability errors**: some red Build Panel states are produced
@@ -37,7 +37,7 @@ When answering a validation question:
    values.
 5. Treat SDK Auto Fix as a convenience, not as proof that the mutation is safe
    for every project.
-6. If the warning comes from a newer SDK than `3.10.5`, re-check the local SDK
+6. If the warning comes from a newer SDK than `3.10.6`, re-check the local SDK
    source before presenting the catalog as complete.
 
 ### Fix-safety classes
@@ -58,7 +58,7 @@ When answering a validation question:
 | `OnGUIWarning` | Yellow | Does not block by color, but may affect runtime, compatibility, or upload quality | Explain and recommend a safe fix |
 | `OnGUIInformation` | White / info | Does not block; usually readability, visual quality, or editor guidance | Explain and offer optional guarded fix |
 
-## SDK 3.10.5 world alert catalog
+## SDK 3.10.6 world alert catalog
 
 ### Red errors
 
@@ -100,7 +100,7 @@ When answering a validation question:
 | Substance materials | `One or more scene objects have Substance materials...` | SDK detects Substance materials in the scene. | Bake Substances to regular materials. | No; Select affected objects. | Keep original Substance sources outside the upload scene if needed. | `VRCSdkControlPanelWorldBuilder.cs:651-656` |
 | Reference Camera TAA | `The Reference Camera has a Post-process Layer component that uses Temporal Anti-Aliasing...` | Reference Camera Post-process Layer uses TAA. | Select another anti-aliasing mode for that camera. | Yes; sets anti-aliasing to None. | Confirm PC/Quest visual quality after the change. | `VRCSdkControlPanelWorldBuilder.cs:659-673` |
 | AssetBundle over size limit | Dynamic message from `GetAssetBundleOverSizeLimitMessageSDKWarning(...)` | Compressed or uncompressed world bundle exceeds SDK size checks. | Reduce asset size: textures, meshes, audio, videos, baked data, or platform-specific variants. | No. | Requires profiling; do not delete assets blindly. | `VRCSdkControlPanelWorldBuilder.cs:676-691` |
-| Unsupported mobile shader | `World uses unsupported shader 'X'...` | On Android/iOS builds, a root GameObject uses a shader outside the SDK world mobile whitelist. | Replace with supported VRChat Mobile/world shaders or platform-specific materials. | No. | May be PC-only acceptable but Quest/mobile incompatible. | `VRCSdkControlPanelWorldBuilder.cs:693-705`; `WorldValidation.cs:664-666` |
+| Unsupported mobile shader | `World uses unsupported shader 'X'...` | On Android/iOS builds, a root GameObject uses a shader outside the SDK world mobile whitelist. | Replace with supported VRChat Mobile/world shaders or platform-specific materials. | No. | May be PC-only acceptable but Quest/mobile incompatible. | `VRCSdkControlPanelWorldBuilder.cs:693-705`; `WorldValidation.cs:667-669` |
 | Oversized textures | `This scene has textures bigger than 8192...` | Renderer materials use textures whose importer max size exceeds `8192`. | Lower texture importer max size and re-check memory. | Yes; sets importer max size to `8192`, reserializes, and refreshes assets. | Reimport changes assets globally; keep source textures backed up if needed. | `VRCSdkControlPanelWorldBuilder.cs:890-912`; `VRCSdkControlPanelBuilder.cs:65, 1129-1168` |
 | Spawn too far from origin | `The spawn position is too far from the World Origin...` / `One of the spawn positions...` | Single or multi-spawn mode has a spawn outside ±1000 on any axis. | Move spawn transforms closer to world origin or redesign the origin/layout. | No; Select spawn. | Floating-origin and far-world designs need explicit review. | `VRCSdkControlPanelWorldBuilder.cs:963-971, 982-989` |
 | Spawn below respawn height | `The spawn position at ... is below the respawn height...` / `A spawn position at ...` | A valid spawn Transform is below `VRC_SceneDescriptor.RespawnHeightY`. | Move the spawn above the respawn plane or lower Respawn Height safely below playable space. | No; Select scene. | This is often the cause of spawn/respawn loops. | `VRCSdkControlPanelWorldBuilder.cs:973-977, 992-997` |
@@ -185,7 +185,7 @@ and have no Build Panel Auto Fix:
 Source: `VRCWorldPostBuildValidator.cs:17-45`. The source scene can pass validation
 while a build script changes the exported scene. Repair that script instead of
 repeatedly editing an already-correct source scene. Upload paths also reject
-multiple managers (`VRCSdkControlPanelWorldBuilder.cs:2852-2859, 3360-3367, 3440-3447`).
+multiple managers (`VRCSdkControlPanelWorldBuilder.cs:2853-2860, 3361-3368, 3441-3448`).
 The built-scene check enforces the count; it does not prove the blueprint ID is
 the world you intend to update.
 
@@ -215,7 +215,7 @@ grep -RIn --include='*.cs' \
   unity-project-for-sdk-search/TestProject/Packages/com.vrchat.base
 ```
 
-Coverage rule: every SDK 3.10.5 world Build Panel `OnGUIError`,
+Coverage rule: every SDK 3.10.6 world Build Panel `OnGUIError`,
 `OnGUIWarning`, and actionable `OnGUIInformation` found by these searches must
 be either cataloged above or tracked as an unresolved SDK finding before the
 skill claims current coverage.
