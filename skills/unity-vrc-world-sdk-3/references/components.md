@@ -708,7 +708,7 @@ faces the local viewpoint (camera on desktop, head in VR). It registers on
 and ClientSim Play mode turns it toward the ClientSim camera.
 
 - **Facing** defaults to `Back` (local -Z), which suits Canvas, TextMeshPro,
-  Quad, Plane and SpriteRenderer. Use `Forward` for an imported model whose
+  Quad and SpriteRenderer. Use `Forward` for an imported model whose
   front is along +Z.
 - **Up From** and **Match Viewpoint Rotation** sit under the Overrides foldout.
   Set Up From to a station or vehicle so content stays upright for its rider.

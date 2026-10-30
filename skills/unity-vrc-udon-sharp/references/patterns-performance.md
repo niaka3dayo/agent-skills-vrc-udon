@@ -351,9 +351,9 @@ public class BillboardLabel : UdonSharpBehaviour
 
     void OnEnable()
     {
-        // Default: local -Z faces the viewpoint, yaw only.
+        // Local -Z faces the viewpoint; allowTilt also pitches it toward the viewpoint.
         VRCBillboard.Register(transform, allowTilt: true, smoothingFactor: 0.25f);
-        // Stay upright for a rider in a banking vehicle:
+        // Yaw only and upright for a rider in a banking vehicle:
         // VRCBillboard.Register(transform, upFrom: vehicle);
     }
 

@@ -51,7 +51,7 @@ compiler constraints, use `unity-vrc-world-sdk-3` and read
 ## Core Principles
 
 1. **Constraints First** — For Udon runtime code, assume standard C# features are blocked until verified. Treat Editor-evaluated field initializers separately and require a final Udon-supported value. Check `udonsharp-constraints.md` before using any API.
-2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. Always `SetOwner` → modify → `RequestSerialization`.
+2. **Ownership Before Mutation** — Only the owner of an object can modify its synced variables. If the local player is not the owner, `SetOwner` first; then modify → `RequestSerialization` (Manual sync).
 3. **Late Joiner Correctness** — State must be correct for players who join after events have occurred. Design for re-serialization, not just live updates.
 4. **Sync Minimization** — Every synced variable costs bandwidth (see data budget in `udonsharp-sync-selection.md`). Derive what you can locally; sync only the source of truth.
 5. **Event-Driven, Not Polling** — Use `OnDeserialization`, `[FieldChangeCallback]`, and `SendCustomEvent` instead of checking state in `Update()` **for state-change reactions; for hot-path or periodic work, see [Event Dispatch & Cross-Behaviour Call Cost Tiers](references/patterns-performance.md#event-dispatch--cross-behaviour-call-cost-tiers)**.
@@ -169,7 +169,7 @@ Load only what you need. Over-loading wastes tokens; under-loading causes critic
 | Using PhysBones/Contacts/Constraints, Box Contacts, Global Avatar PhysBone Colliders, or world `VRCPhysBoneCollider` Udon access | `dynamics.md`, `events.md` | `patterns-networking.md`, `api.md` | `web-loading.md`, `image-loading-vram.md`, `persistence.md` |
 | Reading/writing VRCQualitySettings at runtime | `api.md` | `events.md`; scene defaults: `unity-vrc-world-sdk-3` | `networking.md`, `dynamics.md`, `web-loading.md` |
 | Tuning DataList/DataDictionary capacity or using `DataDictionary.EnsureCapacity` | `api.md` | `constraints.md`, `patterns-utilities.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `networking-bandwidth.md` |
-| Optimizing performance (Update loops) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
+| Optimizing performance (Update loops, VRCBillboard) | `patterns-performance.md` | `patterns-utilities.md`, `api.md` | `dynamics.md`, `web-loading.md`, `persistence.md` |
 | Building a video player | `patterns-video.md` | `events.md`, `web-loading.md` | `dynamics.md`, `persistence.md`, `image-loading-vram.md` |
 | Debugging/troubleshooting | `troubleshooting.md` | `constraints.md`, `networking.md`, `testing.md` | `patterns-*.md`, `dynamics.md`, `web-loading.md` |
 | Debugging ownership / sync conflicts | `networking.md`, `troubleshooting.md` | `networking-antipatterns.md` | `dynamics.md`, `web-loading.md` |
@@ -251,7 +251,7 @@ Compile constraints and networking rules are defined in **always-loaded Rules**:
 
 From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.6.
 
-The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.5 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.5 unless a reference explicitly marks a historical migration case.
+The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.5 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.6 unless a reference explicitly marks a historical migration case.
 
 | SDK Version | Key Features | Status |
 |-------------|--------------|--------|

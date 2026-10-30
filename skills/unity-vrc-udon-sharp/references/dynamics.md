@@ -738,7 +738,7 @@ constraint.ClearSources();
 | Disable (`IsActive = false`) when not needed | Stops evaluation of the constraint |
 | Edit an existing source's `Weight` instead of removing/re-adding sources | Keeps source indices stable |
 | Avoid modifying sources every `Update()` frame | Batch changes and apply only when the target actually changes |
-| Use `GlobalWeight` or `SmoothingFactor` for smooth transitions | No per-frame Udon interpolation loop |
+| Use `SmoothingFactor` > 0 for built-in smoothing (SDK 3.10.6+) | `GlobalWeight` changes the blend instantly; it does not animate by itself |
 
 ## Common Patterns
 

@@ -513,7 +513,7 @@ public class MyResultHandler : ProcessCallbackBase
 
 ### Solution on the active SDK target (3.10.6)
 
-Prefer `VRCTween.DelayedCall`, which behaves like `SendCustomEventDelayedSeconds` but returns a `VRCTweenHandle` that can be killed before it fires. See [VRCTween Patterns](vrctween.md#cancelable-delays) for the active SDK 3.10.5 guidance.
+Prefer `VRCTween.DelayedCall`, which behaves like `SendCustomEventDelayedSeconds` but returns a `VRCTweenHandle` that can be killed before it fires. See [VRCTween Patterns](vrctween.md#cancelable-delays) for the active SDK 3.10.6 guidance.
 
 ```csharp
 using VRC.SDK3.Components;
