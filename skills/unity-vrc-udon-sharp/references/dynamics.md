@@ -576,15 +576,15 @@ public class ConstraintToggle : UdonSharpBehaviour
     [Header("Constraint to control")]
     public VRCPositionConstraint positionConstraint;
 
-    [Header("Optional: animate global weight instead of hard on/off")]
-    public bool useWeightFade = false;
+    [Header("Optional: switch GlobalWeight between 0 and 1 instead of IsActive")]
+    public bool useGlobalWeight = false;
 
     // Called from a UI button or InteractEvent
     public void _EnableConstraint()
     {
         if (positionConstraint == null) return;
 
-        if (useWeightFade)
+        if (useGlobalWeight)
         {
             positionConstraint.GlobalWeight = 1f;
         }
@@ -599,7 +599,7 @@ public class ConstraintToggle : UdonSharpBehaviour
     {
         if (positionConstraint == null) return;
 
-        if (useWeightFade)
+        if (useGlobalWeight)
         {
             positionConstraint.GlobalWeight = 0f;
         }
@@ -622,7 +622,7 @@ public class ConstraintToggle : UdonSharpBehaviour
 
 **Notes**:
 - Setting `IsActive = false` stops constraint evaluation entirely (cheapest option).
-- Setting `GlobalWeight = 0` keeps evaluation running but blends to zero; useful for smooth transitions.
+- Setting `GlobalWeight = 0` keeps evaluation running but blends to zero. The switch is instant; for gradual motion use `SmoothingFactor` (SDK 3.10.6+) or step `GlobalWeight` yourself.
 - Call `ApplyConfigurationChanges()` once after the property edits, as the official Constraints API requires for script changes.
 - No ownership transfer is needed to change constraint properties on the local client. If the result must be visible to all players, combine with `[UdonSynced]` state and `RequestSerialization()`.
 

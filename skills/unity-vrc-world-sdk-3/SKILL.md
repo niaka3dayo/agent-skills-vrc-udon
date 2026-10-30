@@ -80,7 +80,7 @@ These cause silent world failures, performance disasters, or Quest incompatibili
 
 ## Reference Loading Guide
 
-Load only what the task requires.
+Load only what the task requires. When a request spans several rows, load every MANDATORY READ those rows list; a Do NOT Load entry never overrides another matching row's MANDATORY READ.
 
 | Task | MANDATORY READ | Optional | Do NOT Load | Load Rationale |
 |------|---------------|----------|-------------|----------------|
@@ -420,8 +420,8 @@ When preserving an existing `AudioSource`, keep `volume`, `spatialBlend`, `rollo
 □ Spawns configured
 □ Respawn Height appropriate
 □ Layer/Collision Matrix verified
-□ Light baking complete
-□ Mirror default OFF
+□ Lighting approach finalized (bake complete, or realtime cost measured)
+□ Mirrors default OFF unless the world's purpose needs them on (cost measured)
 □ Project-defined frame-time or frame-rate target met in representative scenes and player counts
 □ No Validation errors
 □ Content Warnings set

@@ -157,7 +157,7 @@ OnOwnershipTransferred not firing on a remote client?
 
 ## Reference Loading Guide
 
-Load only what you need. Over-loading wastes tokens; under-loading causes critical mistakes.
+Load only what you need. Over-loading wastes tokens; under-loading causes critical mistakes. When a request spans several rows, load every MANDATORY READ those rows list; a Do NOT Load entry never overrides another matching row's MANDATORY READ.
 
 | Task | MANDATORY READ | Optional | Do NOT Load |
 |------|---------------|----------|-------------|
