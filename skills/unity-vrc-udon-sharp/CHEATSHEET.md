@@ -409,7 +409,7 @@ public override void OnPhysBoneGrabbed(PhysBoneGrabbedInfo info) {
 
 Constraint sources (SDK 3.10.6+): use `SourceCount` and copy/edit/write back with
 `GetSource()` / `SetSource()`. `GetSourceCount()` and `SetSourceWeight()` do not
-exist (checked in SDK 3.10.4-3.10.6). Call `ApplyConfigurationChanges()` after property edits. Simple
+exist (checked in SDK 3.10.4-3.10.6). Call `ApplyConfigurationChanges()` once after a batch of edits. Simple
 viewpoint-facing objects: `VRCBillboard.Register(transform)` /
 `Unregister(transform)`; see [dynamics.md](references/dynamics.md#source-methods-sdk-3106)
 and [patterns-performance.md](references/patterns-performance.md#vrcbillboard-sdk-3106).

@@ -446,6 +446,7 @@ public class ConstraintController : UdonSharpBehaviour
         VRCConstraintSource source = posConstraint.GetSource(0);
         source.Weight = weight;
         posConstraint.SetSource(0, source);
+        posConstraint.ApplyConfigurationChanges();
     }
 }
 ```
@@ -659,6 +660,7 @@ public class ConstraintSourceSwapper : UdonSharpBehaviour
         {
             spotlightAim.SetSource(0, newSource);
         }
+        spotlightAim.ApplyConfigurationChanges();
     }
 
     // Blend between two existing sources by editing their weights
@@ -675,18 +677,21 @@ public class ConstraintSourceSwapper : UdonSharpBehaviour
         VRCConstraintSource sourceB = spotlightAim.GetSource(indexB);
         sourceB.Weight = 1f - weightA;
         spotlightAim.SetSource(indexB, sourceB);
+        spotlightAim.ApplyConfigurationChanges();
     }
 
     public void _ClearAllSources()
     {
         if (spotlightAim == null) return;
         spotlightAim.ClearSources();
+        spotlightAim.ApplyConfigurationChanges();
     }
 }
 ```
 
 **Notes**:
 - `VRCConstraintSource` is a **struct**: `GetSource()` returns a copy, so write the edited copy back with `SetSource()`.
+- Each method ends with one `ApplyConfigurationChanges()` call, following the official rule for script edits.
 - Check `index < SourceCount` before `GetSource()` / `SetSource()`; an out-of-range index logs an error instead of throwing.
 - Removing by index shifts later sources down. When removing several by index, go from the highest index downward, or use `ClearSources()` / `SetSources()`.
 
@@ -707,28 +712,34 @@ Some constraint types expose extra Udon properties beyond the common set (names 
 using VRC.Dynamics;
 using VRC.SDK3.Dynamics.Constraint.Components;
 
-// --- Read ---
+// --- Read (check the index first; out of range logs an error) ---
 int count = constraint.SourceCount;
-VRCConstraintSource src = constraint.GetSource(0);
-float w = src.Weight;
-Transform t = src.SourceTransform;
+if (count > 0)
+{
+    VRCConstraintSource src = constraint.GetSource(0);
+    float w = src.Weight;
+    Transform t = src.SourceTransform;
 
-// --- Write (copy, edit, write back) ---
-VRCConstraintSource updated = constraint.GetSource(0);
-updated.SourceTransform = someNewTransform;
-updated.Weight = 0.75f;
-constraint.SetSource(0, updated);
+    // --- Write (copy, edit, write back) ---
+    src.SourceTransform = someNewTransform;
+    src.Weight = 0.75f;
+    constraint.SetSource(0, src);
+}
 
 // --- Add / remove ---
-constraint.AddSource(new VRCConstraintSource(targetTransform, 1f));
-bool removed = constraint.RemoveSource(updated);
-constraint.RemoveSource(constraint.SourceCount - 1);
+VRCConstraintSource added = new VRCConstraintSource(targetTransform, 1f);
+constraint.AddSource(added);
+bool removed = constraint.RemoveSource(added);
+if (constraint.SourceCount > 0) constraint.RemoveSource(constraint.SourceCount - 1);
 
 // --- Bulk ---
 VRCConstraintSource[] snapshot = new VRCConstraintSource[constraint.SourceCount];
 int copied = constraint.GetSources(snapshot);
 constraint.SetSources(snapshot);
 constraint.ClearSources();
+
+// --- Apply once after the batch of edits ---
+constraint.ApplyConfigurationChanges();
 ```
 
 ### Performance Considerations
