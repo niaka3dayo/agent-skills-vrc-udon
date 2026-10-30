@@ -84,7 +84,7 @@ setup can move custom layers and requires layer-mask review.
 
 If the cancellation came from SDK Validations, copy the exact red/yellow/white
 message and match it in
-[build-validation.md](build-validation.md#sdk-3104-world-alert-catalog).
+[build-validation.md](build-validation.md#sdk-3106-world-alert-catalog).
 
 ### "Unsupported component" warnings
 
@@ -503,7 +503,7 @@ VRChat SDK > Show Control Panel
 Builder tab > Validations section
 - Auto-fixable issues have buttons for fixing
 - Follow instructions for manual fixes
-- For exact SDK 3.10.5 red/yellow/white alert meanings and Auto Fix side effects,
+- For exact SDK 3.10.6 red/yellow/white alert meanings and Auto Fix side effects,
   use references/build-validation.md
 
 ```

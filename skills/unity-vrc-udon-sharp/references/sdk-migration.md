@@ -2,11 +2,11 @@
 
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
-**Historical migration coverage**: SDK 3.7.x through 3.10.4
-**Active support / last verified**: SDK 3.10.5
+**Historical migration coverage**: SDK 3.7.x through 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
-Use SDK 3.10.5 when publishing. The version markers below preserve feature
-availability and migration facts; SDK 3.7.1-3.10.4 are not support or validation
+Use SDK 3.10.6 when publishing. The version markers below preserve feature
+availability and migration facts; SDK 3.7.1-3.10.5 are not support or validation
 targets for this Skill. This is the Skill's boundary, not a claim about VRChat's
 own SDK policy.
 
@@ -19,6 +19,34 @@ Version-specific notes in this skill use three marker forms. Match them verbatim
 - `(unresolved as of SDK X.Y.Z)` — a bug is still open in this version. Include a tracking link (canny, GitHub issue) when available.
 
 ---
+
+## SDK 3.10.6 migration
+
+1. Update Base and Worlds together. SDK 3.10.6 still uses Unity 2022.3; the
+   [release notes](https://creators.vrchat.com/releases/release-3-10-6/) say not
+   to upgrade SDK projects to Unity 6.
+2. Move Udon edits of a constraint's `Sources` list to the new
+   [source methods](dynamics.md#source-methods-sdk-3106) (requires SDK 3.10.6+).
+   `GetSourceCount()` and `SetSourceWeight()` do not exist in SDK 3.10.4-3.10.6;
+   use `SourceCount` and a `GetSource()` / `SetSource()` round trip.
+3. Re-test code that worked around two UdonSharp compiler bugs (fixed in SDK 3.10.6):
+   comparing enum values directly (for example, `foo >= bar` with equal values
+   returned `false` unless cast to `int`), and named arguments that skip optional
+   parameters (`MyMethod(1, c: 3)` compiled as `MyMethod(1)`). A local ClientSim run
+   on 3.10.6 returned the corrected results for both.
+4. Syncing a null `VRCUrl` in a world that uses persistence no longer throws an
+   Udon exception (fixed in SDK 3.10.6, per the release notes). This does not
+   change the `VRCUrl` field-initializer rule in [constraints.md](constraints.md).
+5. For new world components, see [VRCBillboard](patterns-performance.md#vrcbillboard-sdk-3106)
+   and the World SDK [components reference](../../unity-vrc-world-sdk-3/references/components.md#vrcbillboard-sdk-3106)
+   (VRCBillboard, VRCVelocityTracker, VRCPlacementZone, Interact Outline Renderers).
+6. Client 2026.4.1 changed the remote-player collider to match the local player's
+   capsule (per the release notes). Re-test `OnPlayerTrigger*` zones that were tuned
+   against the old remote collider; see [troubleshooting.md](troubleshooting.md#vrcstation--trigger-detection-issues).
+
+`AttachTransformToBone` and `DetachTransformFromBone` are still absent from the
+final Base/Worlds 3.10.6 artifacts. Do not generate code for them from preview
+announcements.
 
 ## SDK 3.10.5 migration
 
@@ -41,7 +69,7 @@ Do not generate code for them from preview announcements.
 ## SDK 3.10.4 receiver migration
 
 `UdonSharpBehaviour` directly implements `IUdonEventReceiver` starting with SDK 3.10.4. The active Skill examples therefore pass `this` directly and keep the receiver argument.
-The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.5 example.
+The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.6 example.
 
 ```csharp
 using VRC.SDK3.StringLoading;
@@ -309,14 +337,21 @@ public class ConstraintController : UdonSharpBehaviour
 {
     public VRCPositionConstraint posConstraint;
 
-    public void _EnableFollow() => posConstraint.IsActive = true;
-    public void _DisableFollow() => posConstraint.IsActive = false;
+    public void _EnableFollow()
+    {
+        posConstraint.IsActive = true;
+        posConstraint.ApplyConfigurationChanges();
+    }
 
-    public void SetWeight(float w) => posConstraint.SetSourceWeight(0, w);
+    public void _DisableFollow()
+    {
+        posConstraint.IsActive = false;
+        posConstraint.ApplyConfigurationChanges();
+    }
 }
 ```
 
-VRC Constraint types: `VRCPositionConstraint`, `VRCRotationConstraint`, `VRCScaleConstraint`, `VRCParentConstraint`, `VRCAimConstraint`, `VRCLookAtConstraint`. All share a common Udon API (`IsActive`, `GlobalWeight`, `GetSource` / `SetSource`, etc.). See [dynamics.md](dynamics.md) for the full reference.
+VRC Constraint types: `VRCPositionConstraint`, `VRCRotationConstraint`, `VRCScaleConstraint`, `VRCParentConstraint`, `VRCAimConstraint`, `VRCLookAtConstraint`. All share a common Udon API (`IsActive`, `GlobalWeight`, etc.). Source methods such as `GetSource` / `SetSource` require SDK 3.10.6+. See [dynamics.md](dynamics.md) for the full reference.
 
 #### Persistence Storage Information API (SDK 3.10.0+)
 

@@ -2,7 +2,7 @@
 
 Common errors, causes, and solutions for VRChat UdonSharp development.
 
-**Active support / last verified**: SDK 3.10.5
+**Active support / last verified**: SDK 3.10.6
 
 Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
 
@@ -895,6 +895,8 @@ public override void OnContactEnter(ContactEnterInfo info)
 When a player sits in a VRCStation, the **PlayerLocal (Layer 10) capsule collider is effectively disabled**. This causes `OnPlayerTriggerEnter`, `OnPlayerTriggerExit`, and `OnPlayerTriggerStay` to **not fire** for seated players.
 
 This is a [known long-standing issue](https://vrchat.canny.io/sdk-bug-reports/p/playerlocal-collision-should-remain-on-players-in-stations) (unresolved as of SDK 3.10.3).
+
+**Remote-player collider (client 2026.4.1)**: the [SDK 3.10.6 release notes](https://creators.vrchat.com/releases/release-3-10-6/) state that client 2026.4.1 adjusts the collider shape on remote players to match the local player's capsule. Re-test trigger zones tuned against the old remote shape with two clients. This repository has not re-measured station or trigger behavior on 2026.4.1, so keep the observations below unchanged until it does.
 
 ### Symptoms
 
