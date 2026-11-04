@@ -745,7 +745,7 @@ require_text "$LAYERS_REF" "Layer **names are NOT preserved**"
 require_text "$LAYERS_REF" "at runtime the VRChat client overrides them"
 require_text "$LAYERS_REF" 'layer 22 = `user0`'
 require_text "$LAYERS_REF" 'layer 31 = `user9`'
-require_text "$LAYERS_REF" "contradicts the official documentation"
+require_text "$LAYERS_REF" "predates that correction"
 require_text "$LAYERS_REF" "Runtime observation"
 
 # The workaround must describe the script-facing contract, not only the
@@ -760,7 +760,8 @@ require_text "$LAYERS_REF" "LayerMask.NameToLayer(\"YourCustomName\")"
 require_text "$LAYERS_REF" "Issue #286"
 require_text "$LAYERS_REF" "layer-dump script"
 require_text "$LAYERS_REF" "creator-docs#303"
-require_text "$LAYERS_REF" "official docs or client behavior change"
+require_text "$LAYERS_REF" "creator-docs#319"
+require_text "$LAYERS_REF" "If client behavior changes"
 require_text "$LAYERS_REF" "### VRChat Default Collision Matrix"
 
 # Preserve the intentionally retained VRChat-specific built-in behavior rather
@@ -799,6 +800,7 @@ for path in "$CONTRIBUTING" "$RENOVATOR_CHECKLIST"; do
     require_text "$path" "#286"
     require_text "$path" "#287"
     require_text "$path" "creator-docs#303"
+    require_text "$path" "creator-docs#319"
     require_text "$path" "built-in layer collision"
     require_text "$path" "#288"
     require_text "$path" "#294"

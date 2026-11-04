@@ -56,17 +56,20 @@ uploaded worlds.
 Layer **names are NOT preserved**: at runtime the VRChat client overrides them
 to `user0`-`user9` (layer 22 = `user0`, ... layer 31 = `user9`).
 
-> **Note: This contradicts the official documentation (verified by runtime
-> testing).** The official docs state that VRChat "will not override the name
-> and collision matrix" of layers 22-31. Runtime observation (2026-07) shows
-> layer *names* ARE overridden to `user0`-`user9`; only the collision matrix is
-> preserved. See [Issue #286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286)
+> **Note: Older official docs said the opposite.** Earlier versions of the
+> official Layers page said VRChat "will not override the name and collision
+> matrix" of layers 22-31. Runtime observation (2026-07) showed layer *names*
+> ARE overridden to `user0`-`user9`; only the collision matrix is preserved.
+> See [Issue #286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286)
 > (includes a layer-dump script and full runtime output) and
 > [this independent report](https://ask.vrchat.com/t/user-defined-unity-layers-raycasts-ignored-by-vrchat/47933).
-> The error has been reported upstream in
-> [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303);
-> if the official docs or client behavior change, re-verify with the layer-dump
-> script in #286.
+> After the upstream report
+> [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303),
+> the official wording was corrected to match in
+> [creator-docs#319](https://github.com/vrchat-community/creator-docs/pull/319)
+> (merged 2026-11-03). A copy of the official page that still says the names
+> are kept predates that correction. If client behavior changes, re-verify with
+> the layer-dump script in #286.
 
 Layers 22-30 are freely usable; layer 31 should be avoided (see note below).
 

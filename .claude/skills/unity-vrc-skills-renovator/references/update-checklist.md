@@ -30,7 +30,8 @@ from a history-free review.
 - [ ] Inspect `git blame` and `git log` for the claim and surrounding edits.
 - [ ] Read every related Issue/PR and read the two evidence histories separately.
 - [ ] For user-layer names, read Issue #286, PR #287, the maintainer follow-up,
-      and the unresolved upstream report `vrchat-community/creator-docs#303`.
+      the upstream report `vrchat-community/creator-docs#303`, and its docs
+      correction `creator-docs#319`.
       Issue #286 and PR #287 record collision retention, but the attached
       layer-dump directly observes names only: its `LayerMask.LayerToName(0..31)`
       output does not measure collision pairs or the matrix.
@@ -54,10 +55,11 @@ from a history-free review.
       collision matrix from official docs alone; changes require independent runtime/SDK evidence
       for that target and a recorded observation scope.
 
-For the current user-layer exception, #286 and #287 record custom layer names
-being overwritten by the live client to `user0`-`user9`, while the collision
-matrix is retained. The layer-dump is name evidence only; before changing a
-collision boundary, run a separate collision reproduction for the same target.
+For user-layer names, #286 and #287 record custom layer names being
+overwritten by the live client to `user0`-`user9`, while the collision matrix
+is retained; creator-docs#319 corrected the official wording to match. The
+layer-dump is name evidence only; before changing a collision boundary, run a
+separate collision reproduction for the same target.
 
 See [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md) for the reviewer-facing
 evidence policy.
