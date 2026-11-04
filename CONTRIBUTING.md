@@ -108,8 +108,9 @@ official difference, reviewers and maintainers must:
    separately:
    - For user-layer names, read Issue [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286),
      PR [#287](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/287),
-     the maintainer follow-up, and the unresolved upstream report
-     [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303).
+     the maintainer follow-up, the upstream report
+     [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303),
+     and its docs correction [creator-docs#319](https://github.com/vrchat-community/creator-docs/pull/319).
      Issue #286 and PR #287 record collision retention, but the attached
      layer-dump directly observes names only: its `LayerMask.LayerToName(0..31)`
      output does not measure collision pairs or the matrix.
@@ -130,8 +131,9 @@ official difference, reviewers and maintainers must:
 
 Issue #286 and PR #287 record that, for layers 22-31, custom layer names are
 overwritten by the live client to `user0`-`user9` while the collision matrix is
-retained. This official difference is intentional until the runtime behavior
-or the upstream report changes. Do not use #286 to alter a built-in layer
+retained. The official docs were corrected to match in creator-docs#319, so
+older official wording is no longer an official difference to preserve; change
+this only on new runtime evidence. Do not use #286 to alter a built-in layer
 collision claim or mix built-in layer collision behavior into this user-layer
 observation. A name dump is not collision evidence; a built-in collision
 change still needs an independent runtime/SDK reproduction for that target.
