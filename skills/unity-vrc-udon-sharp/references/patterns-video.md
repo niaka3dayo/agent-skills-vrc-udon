@@ -433,7 +433,7 @@ using VRC.SDKBase;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Rendering;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class AVProTextureStabilizer : UdonSharpBehaviour
 {
     [Header("Source")]
@@ -852,7 +852,7 @@ using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PlatformUrlSelector : UdonSharpBehaviour
 {
     // === Solution A: Compile-time selection (URL arrays) ===

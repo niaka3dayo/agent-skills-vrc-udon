@@ -22,7 +22,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class TweenedDoor : UdonSharpBehaviour
 {
     [SerializeField] private GameObject _door;

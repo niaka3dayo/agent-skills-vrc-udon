@@ -60,7 +60,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class AvatarScaleUI : UdonSharpBehaviour
 {
     [Header("Configuration")]
@@ -147,7 +147,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Rendering;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class FovResponsiveUI : UdonSharpBehaviour
 {
     [Header("References")]
@@ -230,7 +230,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Rendering;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PlatformAdaptiveUI : UdonSharpBehaviour
 {
     [Header("Platform-Specific Panels")]
@@ -309,7 +309,7 @@ using UnityEngine.UI;
 using TMPro;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class DynamicPlayerList : UdonSharpBehaviour
 {
     [Header("References")]
@@ -436,7 +436,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class ScrollInputAdapter : UdonSharpBehaviour
 {
     [Header("References")]
@@ -522,7 +522,7 @@ using UnityEngine;
 using TMPro;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class LookupLocalization : UdonSharpBehaviour
 {
     [Header("UI Elements")]
@@ -621,7 +621,7 @@ using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class ToggleAnimatorBridge : UdonSharpBehaviour
 {
     [Header("References")]
@@ -830,7 +830,7 @@ array with manual resize for listener management.
 using UdonSharp;
 using UnityEngine;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class MenuEventBroadcaster : UdonSharpBehaviour
 {
     [Header("Events")]

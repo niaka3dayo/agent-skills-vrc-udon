@@ -106,7 +106,7 @@ using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PackFormatParser : UdonSharpBehaviour
 {
     private const string SupportedVersion = "PACK1";
@@ -176,7 +176,7 @@ using UnityEngine;
 using System;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class Base64TextureDecoder : UdonSharpBehaviour
 {
     /**
@@ -258,7 +258,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PlatformFormatSelector : UdonSharpBehaviour
 {
     // Inspector fields: assign both sets; only the platform-appropriate one is used
@@ -354,7 +354,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Data;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class ResourceIndex : UdonSharpBehaviour
 {
     /** Parallel arrays: _resourceIds[i] maps to (_urlIndices[i], _innerIndices[i]) */
@@ -435,7 +435,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PackedResourceCache : UdonSharpBehaviour
 {
     private const int CacheCapacity = 3;
@@ -532,7 +532,7 @@ using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PackedResourceLoader : UdonSharpBehaviour
 {
     // ── Inspector ────────────────────────────────────────────────────────────

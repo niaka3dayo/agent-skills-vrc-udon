@@ -657,7 +657,7 @@ using VRC.SDKBase;
 // The "struct" type -- the class body contains only the factory method.
 // No fields are declared here; all state lives in the object[] created by New().
 [AddComponentMenu("")]
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PointerState : UdonSharpBehaviour
 {
     /// <summary>
@@ -693,7 +693,7 @@ public class PointerState : UdonSharpBehaviour
 // on a separate UdonSharpBehaviour, keeping the pseudo-struct pattern free of
 // static-class scaffolding.
 [AddComponentMenu("")]
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PointerStateExt : UdonSharpBehaviour
 {
     // --- Field 0: ActiveGraphic ---
