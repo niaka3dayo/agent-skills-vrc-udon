@@ -193,7 +193,8 @@ VRCPlayerApi localPlayer = Networking.LocalPlayer;
 // Check instance master
 bool isMaster = Networking.IsMaster;
 
-// Get server time (synced across all players)
+// Get server time (synced across all players). It wraps and can be negative:
+// take differences with Networking.CalculateServerDeltaTime(now, previous).
 double serverTime = Networking.GetServerTimeInSeconds();
 
 // Check network congestion

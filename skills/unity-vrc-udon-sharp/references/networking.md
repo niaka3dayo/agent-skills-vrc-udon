@@ -454,12 +454,14 @@ void Update()
 
 // GOOD: Sync start time, calculate locally
 [UdonSynced] private double startServerTime;
+[UdonSynced] private bool timerStarted; // server time can be negative, so it cannot mark "unset"
 
 void Update()
 {
-    if (startServerTime > 0)
+    if (timerStarted)
     {
-        float elapsed = (float)(Networking.GetServerTimeInSeconds() - startServerTime);
+        float elapsed = (float)Networking.CalculateServerDeltaTime(
+            Networking.GetServerTimeInSeconds(), startServerTime);
         timerDisplay.text = elapsed.ToString("F1");
     }
 }
@@ -1446,10 +1448,24 @@ void Update()
 {
     if (!gameRunning) return;
 
-    double elapsed = Networking.GetServerTimeInSeconds() - gameStartTime;
+    double elapsed = Networking.CalculateServerDeltaTime(
+        Networking.GetServerTimeInSeconds(), gameStartTime);
     timerDisplay.text = elapsed.ToString("F1");
 }
 ```
+
+#### Server Time Wraps and Can Be Negative
+
+`Networking.GetServerTimeInMilliseconds()` returns an `int`. `Networking.GetServerTimeInSeconds()` returns a `double`, but it is reported to be derived from the same millisecond counter, so it is not a non-wrapping clock either: values stay within about ±2,147,483 s and are often negative. The API docs do not state this; it comes from a [tracked VRChat feedback post](https://feedback.vrchat.com/sdk-bug-reports/p/document-getservertimeinseconds-wrapping) and a [community measurement write-up](https://phi16.hatenablog.com/entry/2025/01/08/023655). Write timer code that is correct whether or not a wrap happens:
+
+| Task | Do | Don't |
+|------|----|-------|
+| Mark a timer as started | Keep a separate `bool` (synced if remote clients need it) | `if (startTime > 0)` or `startTime != 0` as an "unset" check — a valid server time can be negative or zero |
+| Elapsed seconds between two `GetServerTimeInSeconds()` values | `Networking.CalculateServerDeltaTime(now, previous)` — the documented API for the difference between two server timestamps (newer value first) | `now - previous` — returns a large negative number if the clock wrapped in between |
+| Elapsed milliseconds | Subtract as `int`: `int elapsedMs = nowMs - startMs;` (see [patterns-video.md](patterns-video.md#2-server-time-playback-position-sync)) | Widen to `long` or `double` before subtracting |
+| Deadlines that must survive a rejoin or span days | Store a UTC wall-clock value, as in [persistence.md](persistence.md) (`System.DateTime.UtcNow`) | Save a server-time value for comparison in a later session |
+
+Do not "fix" a negative result with `Mathf.Abs`, clamping to 0, or sign masking; those hide the wrap instead of handling it.
 
 ---
 
