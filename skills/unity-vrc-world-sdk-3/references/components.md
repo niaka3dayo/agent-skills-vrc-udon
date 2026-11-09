@@ -613,7 +613,10 @@ Enables VRChat interaction with Unity UI (Canvas).
 // - Keep EventSystem in the scene (don't delete it)
 // - Canvas Z-axis should face away from the player
 // - Set Navigation to "None" on UI elements
+// - Set Scroll Sensitivity to 0 on every ScrollRect (scroll views)
 ```
+
+The last two settings stop movement input from driving the UI. VRChat's [VRC_UIShape troubleshooting](https://creators.vrchat.com/worlds/components/vrc_uishape/) lists both for "the UI is moving when you move, press a key, or move a joystick". With Scroll Sensitivity at 0, players scroll by dragging the content or the scrollbar.
 
 ### TextMeshPro Recommendation
 

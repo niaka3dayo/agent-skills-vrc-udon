@@ -430,6 +430,16 @@ Unity's built-in `ScrollRect` responds to mouse scroll on desktop but has no nat
 for VR controller thumbstick scrolling. This pattern polls VR input axes and desktop mouse
 scroll, then applies the appropriate scroll delta each frame.
 
+**Prerequisites:**
+- Set the ScrollRect's **Scroll Sensitivity to 0**. VRChat's
+  [VRC_UIShape troubleshooting](https://creators.vrchat.com/worlds/components/vrc_uishape/)
+  recommends it because movement input otherwise scrolls the list. Dragging the content or
+  the scrollbar keeps working, and this adapter then becomes the only stick/wheel path.
+- The adapter reads the stick and wheel wherever the player is pointing, so the list also
+  moves while the player walks or turns. Enable the component only while the panel is in use
+  (for example, from the panel's open and close buttons). If dragging is enough for your
+  panel, skip this adapter.
+
 ```csharp
 using UdonSharp;
 using UnityEngine;
