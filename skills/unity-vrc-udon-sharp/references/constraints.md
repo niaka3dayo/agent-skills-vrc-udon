@@ -19,7 +19,7 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 - **Field initializers are Editor-evaluated C#**: Their expressions generate initial data for the compiled Udon program rather than UdonVM instructions. Some ordinary C# features that are blocked in Udon runtime code are valid in this limited context.
 - **Struct semantics differ**: UdonVM passes structs by value; mutating methods on structs return new values and do not modify the original.
 - **Method lookup cost**: UdonVM performs string-based method lookup; public methods are visible to Udon's event system and incur slightly higher overhead.
-- **Integer arithmetic wraps; narrowing casts are checked**: `int` `+`, `-`, `*`, and `++` wrap like unchecked C#, but a cast to a type that cannot hold the value (for example `(int)` of a `long` above `int.MaxValue`) throws `OverflowException` and halts the behaviour. See [Numeric Overflow](#numeric-overflow-wrapping-arithmetic-checked-casts).
+- **Integer arithmetic wraps; `long` to `int` casts are checked**: `int` `+`, `-`, `*`, and `++` wrap like unchecked C#, but `(int)` of a `long` outside the `int` range throws `OverflowException` and halts the behaviour. See [Numeric Overflow](#numeric-overflow-wrapping-arithmetic-checked-casts).
 - **No JIT**: There is no just-in-time compilation. All method dispatch is interpreted.
 
 ### Inspector visibility vs. Unity serialization
@@ -332,7 +332,7 @@ public class SeededRandom : UdonSharpBehaviour
 
 ### Numeric Overflow (Wrapping Arithmetic, Checked Casts)
 
-Integer arithmetic wraps as in unchecked C#. Narrowing casts do not: a value that does not fit the target type throws `OverflowException`, and the UdonBehaviour halts. Verified in the Udon VM (SDK 3.10.6):
+Integer arithmetic wraps as in unchecked C#. A `long` to `int` cast does not: a value outside the `int` range throws `OverflowException`, and the UdonBehaviour halts. Verified in the Udon VM (SDK 3.10.6). Only `long` to `int` was measured; do not assume other conversions, such as `double` to `float`, throw:
 
 ```csharp
 int max = int.MaxValue;

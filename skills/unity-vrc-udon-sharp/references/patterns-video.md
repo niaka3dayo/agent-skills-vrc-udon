@@ -195,8 +195,8 @@ This formula is drift-resistant: a late joiner receives the same `syncClockTime`
 > wrap because Udon `int` subtraction wraps too (verified in the Udon VM, SDK 3.10.6:
 > `-2147483644 - 2147483642` gives `10`). This holds while the real gap is under about 24.8 days
 > (`int.MaxValue` ms); after that the result turns negative. If a session can run that long,
-> have the owner call `_UpdateSyncedPosition()` at least once within that window (for example
-> once a day while playing). It commits `syncClockTime` and the current playback offset
+> have the owner call `_UpdateSyncedPosition()` regularly, well before that window ends (for
+> example once a day while playing). It commits `syncClockTime` and the current playback offset
 > together; updating `syncClockTime` alone would jump playback back. Do **not** cast to `long` or
 > `double` before subtracting (the same values give `-4294967286`), and do not switch to
 > `GetServerTimeInSeconds()` plain subtraction to "avoid overflow" — that value wraps too. See
