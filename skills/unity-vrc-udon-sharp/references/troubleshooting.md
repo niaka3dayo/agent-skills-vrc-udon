@@ -1686,7 +1686,7 @@ var myScript = (MyScript)(object)other.GetComponent(typeof(MyScript));
 
 ```
 
-**Solution (Editor):** Use `GetComponent<MyScript>()` directly. The `GetUdonSharpComponent<T>()` extensions are obsolete in UdonSharp 1.x and only wrap `GetComponent` (see [editor-scripting.md](editor-scripting.md#obsolete-0x-apis)).
+**Solution (Editor):** Use `GetComponent<MyScript>()` directly. The 0.x lookup extensions are obsolete in UdonSharp 1.x and only wrap `GetComponent` (see [editor-scripting.md](editor-scripting.md#obsolete-0x-apis)).
 
 ---
 

@@ -69,7 +69,7 @@ Each `UdonSharpBehaviour` component (the C# "proxy") is paired with a hidden bac
 
 Sources: the UdonSharp [migration guide](https://creators.vrchat.com/worlds/udon/udonsharp/migration/) ("Data is owned by a C# proxy of the UdonSharpBehaviour, and the corresponding UdonBehaviour is empty until runtime"), and the SDK's own inspector, which copies between the two sides only while `EditorApplication.isPlaying` (verified SDK 3.10.6).
 
-> **Official docs conflict:** The [Editor Scripting](https://creators.vrchat.com/worlds/udon/udonsharp/editorscripting/) page still describes the UdonSharp 0.x model: proxies that are not saved, `UpdateProxy()` / `ApplyProxyModifications()` around every edit, and `GetUdonSharpComponent<T>()`. In SDK 3.10.6 those calls are `[Obsolete]` (the first two are empty methods). Follow this section instead.
+> **Official docs conflict:** The [Editor Scripting](https://creators.vrchat.com/worlds/udon/udonsharp/editorscripting/) page still describes the UdonSharp 0.x model: proxies that are not saved, and proxy update and lookup calls around every edit. In SDK 3.10.6 those calls are `[Obsolete]` (see [Obsolete 0.x APIs](#obsolete-0x-apis)). Follow this section instead.
 
 ### Editing in Edit Mode
 
@@ -125,8 +125,9 @@ From the `UdonSharpEditor` namespace:
 using UdonSharpEditor;
 #endif
 
-// Get the proxy C# object from UdonBehaviour
-UdonBehaviour udonBehaviour = GetComponent<UdonBehaviour>();
+// Get the proxy C# object from a backing UdonBehaviour you already hold.
+// GetComponent<UdonBehaviour>() returns only the first UdonBehaviour on the GameObject;
+// to get a known script's proxy, call GetComponent<MyScript>() instead.
 MyScript proxy = UdonSharpEditorUtility.GetProxyBehaviour(udonBehaviour) as MyScript;
 
 // Get UdonBehaviour from proxy
@@ -158,7 +159,7 @@ MyScript undoable = UdonSharpUndo.AddComponent<MyScript>(gameObject);
 
 ### Getting Existing Components
 
-In UdonSharp 1.x, use Unity's regular `GetComponent` family. The `GetUdonSharpComponent*` extensions are obsolete wrappers around it.
+In UdonSharp 1.x, use Unity's regular `GetComponent` family. The 0.x lookup extensions are obsolete wrappers around it (see [Obsolete 0.x APIs](#obsolete-0x-apis)).
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP

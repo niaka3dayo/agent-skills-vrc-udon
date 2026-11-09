@@ -289,6 +289,7 @@ public class CustomInspectorExampleEditor : Editor
         {
             Undo.RecordObject(script.targetPoint, "Move Target Point");
             script.targetPoint.position = newTargetPosition;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(script.targetPoint);
         }
 
         // Draw label
