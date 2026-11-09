@@ -189,12 +189,18 @@ This formula is drift-resistant: a late joiner receives the same `syncClockTime`
 | `syncStartTime` | `float` | Playback offset (seconds) at the moment the sync was committed |
 | `syncSpeed` | `float` | Playback rate (1.0 = normal, 0.5 = half-speed) |
 
-> **int precision note**: `Networking.GetServerTimeInMilliseconds()` returns a signed 32-bit
-> integer. It wraps after ~24.8 days of uptime. For sessions shorter than a few hours this is
-> irrelevant, but for always-on worlds consider using the difference modulo `int.MaxValue` or
-> switching to `GetServerTimeInSeconds()` (double) to avoid overflow.
-> **The examples below use `int` for simplicity; production code should convert to `long` or
-> `double` for sessions exceeding 24 hours.**
+> **Wrap note**: `Networking.GetServerTimeInMilliseconds()` returns a signed 32-bit `int`, so the
+> value wraps from `int.MaxValue` to `int.MinValue` and is often negative. Keep the subtraction in
+> `int` as the examples below do: `int elapsed = now - syncClockTime;` stays correct across the
+> wrap because Udon `int` subtraction wraps too (verified in the Udon VM, SDK 3.10.6:
+> `-2147483644 - 2147483642` gives `10`). This holds while the real gap is under about 24.8 days
+> (`int.MaxValue` ms); after that the result turns negative. If a session can run that long,
+> have the owner call `_UpdateSyncedPosition()` regularly, well before that window ends (for
+> example once a day while playing). It commits `syncClockTime` and the current playback offset
+> together; updating `syncClockTime` alone would jump playback back. Do **not** cast to `long` or
+> `double` before subtracting (the same values give `-4294967286`), and do not switch to
+> `GetServerTimeInSeconds()` plain subtraction to "avoid overflow" — that value wraps too. See
+> [networking.md — Server Time Wraps and Can Be Negative](networking.md#server-time-wraps-and-can-be-negative).
 
 ### Drift Correction
 
