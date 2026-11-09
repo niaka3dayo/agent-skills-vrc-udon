@@ -7,7 +7,9 @@ See `../references/sync-examples.md` for practical patterns and code examples.
 
 ```text
 Q1: Does it need to be visible to other players?
-  No  -> No sync (no [UdonSynced], BehaviourSyncMode.None)
+  No  -> No sync (no [UdonSynced])
+         Receives network events? No  -> BehaviourSyncMode.None
+                                  Yes -> Manual (Continuous if VRCObjectSync is on the GameObject)
   Yes -> Q2
 
 Q2: Do late joiners need to know the current state?
