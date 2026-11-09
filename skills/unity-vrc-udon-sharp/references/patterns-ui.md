@@ -437,8 +437,9 @@ scroll, then applies the appropriate scroll delta each frame.
   the scrollbar keeps working, and this adapter then becomes the only stick/wheel path.
 - The adapter reads the stick and wheel wherever the player is pointing, so the list also
   moves while the player walks or turns. Enable the component only while the panel is in use
-  (for example, from the panel's open and close buttons). If dragging is enough for your
-  panel, skip this adapter.
+  (for example, from the panel's open and close buttons). Every enabled adapter scrolls its
+  own list, so when one panel holds several lists, enable only the adapter of the list in use.
+  If dragging is enough for your panel, skip this adapter.
 
 ```csharp
 using UdonSharp;
