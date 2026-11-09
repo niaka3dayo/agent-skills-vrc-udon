@@ -15,7 +15,7 @@ using VRC.SDK3.Persistence;
 ///
 /// See references/persistence.md for PlayerData vs PlayerObject comparison.
 /// </summary>
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class DataPersistence : UdonSharpBehaviour
 {
     // -------------------------------------------------------------------------

@@ -546,7 +546,7 @@ using UdonSharp;
 using UnityEngine;
 using System.Diagnostics;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class FrameBudgetProcessor : UdonSharpBehaviour
 {
     [Header("Processing Data")]
@@ -939,7 +939,7 @@ using VRC.SDKBase;
 /// Place one instance in the scene and wire all video-loading behaviours to it
 /// via SerializeField.
 /// </summary>
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class UrlLoadScheduler : UdonSharpBehaviour
 {
     [Header("Rate Limit")]

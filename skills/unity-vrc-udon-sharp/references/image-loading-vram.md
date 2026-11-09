@@ -101,7 +101,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Image;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class SafeImageLoader : UdonSharpBehaviour
 {
     [SerializeField] private VRCUrl imageUrl;
@@ -223,7 +223,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Image;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class DoubleBufferImageDisplay : UdonSharpBehaviour
 {
     [Header("Renderers (A/B double buffer)")]
@@ -467,7 +467,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Image;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class StockModeGallery : UdonSharpBehaviour
 {
     [Header("Gallery URLs (all downloaded at startup)")]
@@ -699,7 +699,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class MipmapBiasController : UdonSharpBehaviour
 {
     [Header("Display to control")]
@@ -789,7 +789,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.Image;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class StaggeredImageLoader : UdonSharpBehaviour
 {
     [Header("Image URL")]

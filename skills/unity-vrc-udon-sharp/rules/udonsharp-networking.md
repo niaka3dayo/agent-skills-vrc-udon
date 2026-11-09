@@ -25,7 +25,7 @@ RequestSerialization();
 
 | Mode | Attribute Value | Characteristics | Data Limit |
 |------|----------------|-----------------|------------|
-| **NoVariableSync** | `BehaviourSyncMode.NoVariableSync` | No variable sync, events only | - |
+| **None** | `BehaviourSyncMode.None` | Local only; cannot receive network events | - |
 | **Continuous** | `BehaviourSyncMode.Continuous` | Automatic sync ~10Hz | ~200 bytes |
 | **Manual** | `BehaviourSyncMode.Manual` | Explicit sync via `RequestSerialization()` | ~280KB (280,496 bytes) |
 

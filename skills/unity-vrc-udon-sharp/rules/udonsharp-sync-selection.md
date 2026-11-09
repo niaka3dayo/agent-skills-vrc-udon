@@ -7,7 +7,7 @@ See `../references/sync-examples.md` for practical patterns and code examples.
 
 ```text
 Q1: Does it need to be visible to other players?
-  No  -> No sync (no [UdonSynced], NoVariableSync)
+  No  -> No sync (no [UdonSynced], BehaviourSyncMode.None)
   Yes -> Q2
 
 Q2: Do late joiners need to know the current state?
@@ -19,7 +19,7 @@ Q3: Does the value change continuously? (position/rotation)
   No  -> Manual sync + minimal [UdonSynced]
 ```
 
-Note: `BehaviourSyncMode.None` additionally disables `SendCustomNetworkEvent` — use `NoVariableSync` for event-driven behaviours.
+Note: `BehaviourSyncMode.None` also stops the behaviour from receiving network events, and the compiler does not warn about it. A behaviour that receives events but has no synced variables uses `Manual` (`Continuous` if `VRCObjectSync` is on the same GameObject). Do not use `NoVariableSync` in new code: on SDK 3.10.6 the editor rewrites it, and a `Manual` behaviour on the same GameObject, to `Continuous`. See `../references/networking.md` (NoVariableSync section).
 
 | Use Case | Pattern | Synced Variables | Example |
 |----------|---------|-----------------|---------|
