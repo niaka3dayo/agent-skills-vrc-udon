@@ -1284,19 +1284,22 @@ public override void OnPlayerLeft(VRCPlayerApi player)
 
 ### Changes Not Saved on Prefab
 
-**Cause:** UdonSharp uses a proxy system, and changes to the proxy are not auto-saved.
+**Cause:** Editor code assigned a field on a prefab instance directly without recording the change as a prefab override. In UdonSharp 1.x the C# component is the saved data, so this is the same rule as for any Unity component.
 
 **Solution:**
 
 ```csharp
 
-#if UNITY_EDITOR
-// In custom editor or after programmatic changes
-UdonSharpEditorUtility.CopyProxyToUdon(behaviour);
-EditorUtility.SetDirty(behaviour);
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
+// Direct assignment from editor code
+Undo.RecordObject(behaviour, "Change value");
+behaviour.speed = 10f;
+PrefabUtility.RecordPrefabInstancePropertyModifications(behaviour);
 #endif
 
 ```
+
+Editing through `SerializedObject` / `SerializedProperty` records the override automatically. Do not add `UdonSharpEditorUtility.CopyProxyToUdon()`; in Edit Mode it only adds a duplicate copy to the scene file (see [editor-scripting.md](editor-scripting.md#editing-in-edit-mode)).
 
 ### Runtime-only public field keeps an Inspector value
 
@@ -1683,17 +1686,7 @@ var myScript = (MyScript)(object)other.GetComponent(typeof(MyScript));
 
 ```
 
-**Solution (Editor):**
-
-```csharp
-
-#if UNITY_EDITOR && !COMPILER_UDONSHARP
-var myScript = other.GetUdonSharpComponent<MyScript>();
-#else
-var myScript = (MyScript)(object)other.GetComponent(typeof(MyScript));
-#endif
-
-```
+**Solution (Editor):** Use `GetComponent<MyScript>()` directly. The `GetUdonSharpComponent<T>()` extensions are obsolete in UdonSharp 1.x and only wrap `GetComponent` (see [editor-scripting.md](editor-scripting.md#obsolete-0x-apis)).
 
 ---
 

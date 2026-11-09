@@ -9,7 +9,9 @@ using UdonSharpEditor;
 
 /// <summary>
 /// Template demonstrating custom inspector creation for UdonSharp.
-/// Shows proper use of UdonSharpGUI, Undo, and proxy synchronization.
+/// Shows proper use of UdonSharpGUI, SerializedProperty, and Undo.
+/// In UdonSharp 1.x the C# component holds the saved data in Edit Mode,
+/// so the inspector never calls CopyProxyToUdon.
 ///
 /// This file contains both the runtime behaviour and the editor inspector.
 /// </summary>
@@ -68,7 +70,9 @@ public class CustomInspectorExample : UdonSharpBehaviour
     private void OnActiveChanged()
     {
         // Update visuals based on active state
-        if (TryGetComponent(out Renderer renderer))
+        // TryGetComponent(out ...) is not exposed to Udon
+        Renderer renderer = GetComponent<Renderer>();
+        if (renderer != null)
         {
             renderer.material.color = _isActive ? objectColor : Color.gray;
         }
@@ -76,6 +80,8 @@ public class CustomInspectorExample : UdonSharpBehaviour
 
     /// <summary>
     /// Editor-only: Reset to default values.
+    /// Does not touch renderer.material: in Edit Mode that leaks a material instance into the scene.
+    /// Start() applies the visuals at runtime.
     /// </summary>
     public void _ResetToDefaults()
     {
@@ -83,7 +89,6 @@ public class CustomInspectorExample : UdonSharpBehaviour
         speed = 5.0f;
         health = 100f;
         objectColor = Color.white;
-        OnActiveChanged();
     }
 
 #if UNITY_EDITOR
@@ -244,8 +249,7 @@ public class CustomInspectorExampleEditor : Editor
         {
             Undo.RecordObject(script, "Reset to Defaults");
             script._ResetToDefaults();
-            // Sync proxy to UdonBehaviour
-            UdonSharpEditorUtility.CopyProxyToUdon(script);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(script);
         }
 
         if (GUILayout.Button("Select Target"))
@@ -258,12 +262,8 @@ public class CustomInspectorExampleEditor : Editor
 
         EditorGUILayout.EndHorizontal();
 
-        // Apply changes
-        if (serializedObject.ApplyModifiedProperties())
-        {
-            // Sync any changes to the underlying UdonBehaviour
-            UdonSharpEditorUtility.CopyProxyToUdon(script);
-        }
+        // Apply changes (records Undo and prefab overrides)
+        serializedObject.ApplyModifiedProperties();
     }
 
     /// <summary>

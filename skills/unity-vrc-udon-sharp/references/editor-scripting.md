@@ -4,7 +4,7 @@ Guide to editor scripts, custom inspectors, and working with the UdonSharp proxy
 
 ## Overview
 
-UdonSharp uses a **proxy system** where C# `UdonSharpBehaviour` scripts act as proxies for the underlying `UdonBehaviour` components. Understanding this system is essential for editor scripting.
+UdonSharp uses a **proxy system**: each C# `UdonSharpBehaviour` component is paired with a hidden backing `UdonBehaviour` that runs the compiled program. In UdonSharp 1.x the C# component holds the saved data in Edit Mode, so editor scripts edit it like any other component (see [Proxy System](#proxy-system)).
 
 ## Preprocessor Directives
 
@@ -57,13 +57,66 @@ public class MyScript : UdonSharpBehaviour
 
 ## Proxy System
 
-### How It Works
+### Where the Data Lives (UdonSharp 1.x)
 
-1. Your `UdonSharpBehaviour` C# class is a **proxy**
-2. The actual data lives in the `UdonBehaviour` component
-3. Changes must be synchronized between proxy and underlying UdonBehaviour
+Each `UdonSharpBehaviour` component (the C# "proxy") is paired with a hidden backing `UdonBehaviour` that runs the compiled program.
 
-### Proxy Extension Methods
+| When | Owner of the field values |
+|------|---------------------------|
+| Edit Mode | The C# component. Its serialized fields are saved with the scene or prefab like any other component. The backing `UdonBehaviour`'s public variable table holds only UdonSharp's version marker (`___UdonSharpBehaviourVersion___`). |
+| Entering Play Mode / building | UdonSharp copies the C# values into the backing `UdonBehaviour` itself. |
+| Play Mode | The running Udon program. The SDK's default inspector copies values for display; other editor code copies them itself (see [Play Mode Tools](#play-mode-tools)). |
+
+Sources: the UdonSharp [migration guide](https://creators.vrchat.com/worlds/udon/udonsharp/migration/) ("Data is owned by a C# proxy of the UdonSharpBehaviour, and the corresponding UdonBehaviour is empty until runtime"), and the SDK's own inspector, which copies between the two sides only while `EditorApplication.isPlaying` (verified SDK 3.10.6).
+
+> **Official docs conflict:** The [Editor Scripting](https://creators.vrchat.com/worlds/udon/udonsharp/editorscripting/) page still describes the UdonSharp 0.x model: proxies that are not saved, `UpdateProxy()` / `ApplyProxyModifications()` around every edit, and `GetUdonSharpComponent<T>()`. In SDK 3.10.6 those calls are `[Obsolete]` (the first two are empty methods). Follow this section instead.
+
+### Editing in Edit Mode
+
+Edit the C# component the way you edit any other component:
+
+- **Inspector code:** `serializedObject.Update()` → `PropertyField` or `SerializedProperty` writes → `serializedObject.ApplyModifiedProperties()`. This records Undo and prefab overrides.
+- **Direct assignment from editor code:** call `Undo.RecordObject(component, "...")` before the change and `PrefabUtility.RecordPrefabInstancePropertyModifications(component)` after it. Without the second call, changes to a prefab instance are lost ([Unity docs](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/PrefabUtility.RecordPrefabInstancePropertyModifications.html)).
+- **Do not call `UdonSharpEditorUtility.CopyProxyToUdon()` after Edit Mode changes.** It copies every field into the backing `UdonBehaviour`, which Unity saves as one Base64 string (`serializedPublicVariablesBytesString`) plus an object-reference list. Measured on SDK 3.10.6 with a five-field behaviour: the string grew from 1,364 to 4,028 characters, and changing one `int` afterwards rewrote 4,078 characters of the scene file instead of 10. The editor's Play Mode and scene-open update pass does not remove the copy from the saved scene. Runtime values are unaffected: when a scene is processed for Play Mode or a build, UdonSharp clears the table and copies fresh values from the C# component.
+
+```csharp
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
+// Edit Mode: the C# component is the saved data
+Undo.RecordObject(proxy, "Set speed");
+proxy.speed = 10f;
+PrefabUtility.RecordPrefabInstancePropertyModifications(proxy);
+#endif
+```
+
+### Play Mode Tools
+
+Copy only when an editor tool must exchange values with the running Udon program:
+
+```csharp
+#if UNITY_EDITOR && !COMPILER_UDONSHARP
+if (EditorApplication.isPlaying)
+{
+    // Read the current runtime values into the C# component
+    UdonSharpEditorUtility.CopyUdonToProxy(proxy);
+
+    // Push C# field changes into the running program
+    proxy.speed = 10f;
+    UdonSharpEditorUtility.CopyProxyToUdon(proxy);
+}
+#endif
+```
+
+### Obsolete 0.x APIs
+
+| 0.x call | UdonSharp 1.x |
+|----------|---------------|
+| `behaviour.UpdateProxy()` | Delete it (empty method). In Play Mode tools, use `CopyUdonToProxy` |
+| `behaviour.ApplyProxyModifications()` | Delete it (empty method). Edit Mode: `SerializedObject` or `Undo.RecordObject`. Play Mode tools: `CopyProxyToUdon` |
+| `GetUdonSharpComponent<T>()`, `GetUdonSharpComponents<T>()`, `GetUdonSharpComponentInChildren<T>()`, ... | `GetComponent<T>()`, `GetComponents<T>()`, `GetComponentInChildren<T>()`, ... |
+
+The bundled sample `Samples~/CustomInspectors/CustomInspectorBehaviour.cs` edits fields with `Undo.RecordObject` and direct assignment, but its "Add child behaviour" button still calls `CopyProxyToUdon` in Edit Mode. Do not copy that call.
+
+### Proxy Lookup Helpers
 
 From the `UdonSharpEditor` namespace:
 
@@ -78,21 +131,6 @@ MyScript proxy = UdonSharpEditorUtility.GetProxyBehaviour(udonBehaviour) as MySc
 
 // Get UdonBehaviour from proxy
 UdonBehaviour underlying = UdonSharpEditorUtility.GetBackingUdonBehaviour(proxy);
-```
-
-### Updating Proxy Values
-
-When changing values in editor scripts, use the following pattern:
-
-```csharp
-#if UNITY_EDITOR && !COMPILER_UDONSHARP
-// After modifying the proxy, sync to UdonBehaviour
-proxy.speed = 10f;
-UdonSharpEditorUtility.CopyProxyToUdon(proxy);
-
-// After modifying UdonBehaviour directly, sync to proxy
-UdonSharpEditorUtility.CopyUdonToProxy(proxy);
-#endif
 ```
 
 ## Adding Components
@@ -112,20 +150,20 @@ MyScript script = gameObject.AddUdonSharpComponent<MyScript>();
 // Skipping this helper and calling AddComponent<UdonBehaviour>() directly produces a component
 // with empty programSource — silently does nothing at runtime. See troubleshooting.md
 // "UdonBehaviour with Empty Program Source" for the diagnostic walk-through.
+
+// Undoable variant for tools and inspector buttons
+MyScript undoable = UdonSharpUndo.AddComponent<MyScript>(gameObject);
 #endif
 ```
 
-### GetUdonSharpComponent
+### Getting Existing Components
 
-Get a typed UdonSharpBehaviour from a GameObject:
+In UdonSharp 1.x, use Unity's regular `GetComponent` family. The `GetUdonSharpComponent*` extensions are obsolete wrappers around it.
 
 ```csharp
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
-// In editor, this returns the proxy object
-MyScript script = gameObject.GetUdonSharpComponent<MyScript>();
-
-// Get all of a type
-MyScript[] scripts = gameObject.GetUdonSharpComponentsInChildren<MyScript>();
+MyScript script = gameObject.GetComponent<MyScript>();
+MyScript[] scripts = gameObject.GetComponentsInChildren<MyScript>(true);
 #endif
 ```
 
@@ -152,26 +190,21 @@ public class MyScriptEditor : Editor
         }
 
         // Your custom inspector code here
+        serializedObject.Update();
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Custom Settings", EditorStyles.boldLabel);
 
-        // Use SerializedProperty for proper Undo support
+        // SerializedProperty edits record Undo and prefab overrides
         SerializedProperty speedProp = serializedObject.FindProperty("speed");
         EditorGUILayout.PropertyField(speedProp);
+        serializedObject.ApplyModifiedProperties();
 
-        // Apply changes
-        if (serializedObject.ApplyModifiedProperties())
-        {
-            // Sync changes to UdonBehaviour
-            UdonSharpEditorUtility.CopyProxyToUdon(script);
-        }
-
-        // Custom buttons
+        // Direct assignment: record Undo first. No CopyProxyToUdon in Edit Mode.
         if (GUILayout.Button("Reset Speed"))
         {
             Undo.RecordObject(script, "Reset Speed");
             script.speed = 5f;
-            UdonSharpEditorUtility.CopyProxyToUdon(script);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(script);
         }
     }
 }
@@ -218,7 +251,7 @@ public class TeleportPointEditor : Editor
         {
             Undo.RecordObject(point, "Move Teleport Target");
             point.targetPosition = newPosition;
-            UdonSharpEditorUtility.CopyProxyToUdon(point);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(point);
         }
 
         // Draw label
@@ -295,7 +328,7 @@ public class MyToolWindow : EditorWindow
             {
                 Undo.RecordObject(script, "Reset All Speeds");
                 script.speed = 5f;
-                UdonSharpEditorUtility.CopyProxyToUdon(script);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(script);
             }
         }
     }
@@ -352,7 +385,7 @@ Use the tag when the whole object is development-only; use the interface when on
 
 ### Setup Helper Pattern: One-Click Udon Configuration
 
-An `IEditorOnly` helper can expose a small set of designer-facing fields, then a custom inspector or `[ContextMenu]` method applies them to one or more `UdonSharpBehaviour` components through the editor APIs covered in [Proxy System](#proxy-system): `Undo.RecordObject`, field assignment, `UdonSharpEditorUtility.CopyProxyToUdon`, then `EditorUtility.SetDirty` or scene dirty marking. Prefab users get explicit, simplified configuration in one place and one button instead of hand-editing serialized fields across several Udon components. Missing references can be surfaced before upload via an inspector help box.
+An `IEditorOnly` helper can expose a small set of designer-facing fields, then a custom inspector or `[ContextMenu]` method applies them to one or more `UdonSharpBehaviour` components through the editor APIs covered in [Editing in Edit Mode](#editing-in-edit-mode): `Undo.RecordObject`, field assignment, then `PrefabUtility.RecordPrefabInstancePropertyModifications`. Prefab users get explicit, simplified configuration in one place and one button instead of hand-editing serialized fields across several Udon components. Missing references can be surfaced before upload via an inspector help box.
 
 The pattern splits across two files: the runtime `UdonSharpBehaviour` in its own file (the class name must match the file name, paired with its program asset — see [UdonSharpProgramAsset Auto-Generation](#udonsharpprogramasset-auto-generation)), and the editor-only helper with its custom inspector in another.
 
@@ -384,7 +417,6 @@ using UnityEngine;
 using VRC.SDKBase;
 
 #if UNITY_EDITOR
-using UdonSharpEditor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
@@ -452,11 +484,12 @@ public class TeleporterSetupHelperEditor : Editor
         Undo.RecordObject(controller.transform, "Apply Teleporter Setup");
         controller.transform.SetPositionAndRotation(
             helper.entrance.position, helper.entrance.rotation);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(controller.transform);
 
+        // The C# component is the saved data in Edit Mode; no CopyProxyToUdon
         Undo.RecordObject(controller, "Apply Teleporter Setup");
         controller.exit = helper.exit;
-
-        UdonSharpEditorUtility.CopyProxyToUdon(controller);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(controller);
         EditorUtility.SetDirty(controller);
 
         if (!Application.isPlaying)
@@ -677,7 +710,7 @@ public class PlayerController : UdonSharpBehaviour
 ```csharp
 Undo.RecordObject(target, "Description of change");
 // Make changes
-UdonSharpEditorUtility.CopyProxyToUdon(target);
+PrefabUtility.RecordPrefabInstancePropertyModifications(target);
 ```
 
 ### 2. Check for Null Proxy
@@ -695,15 +728,9 @@ EditorGUILayout.PropertyField(prop);
 serializedObject.ApplyModifiedProperties();
 ```
 
-### 4. Batch Proxy Updates
+### 4. Keep Proxy Copies Out of Edit Mode
 
-```csharp
-// Don't call CopyProxyToUdon after every change
-script.value1 = 1;
-script.value2 = 2;
-script.value3 = 3;
-UdonSharpEditorUtility.CopyProxyToUdon(script); // Once at the end
-```
+`CopyProxyToUdon` and `CopyUdonToProxy` are for Play Mode tools only (guard them with `EditorApplication.isPlaying`). In Edit Mode, `CopyProxyToUdon` duplicates every field into the scene file; see [Editing in Edit Mode](#editing-in-edit-mode).
 
 ### 5. Mark Scene Dirty When Needed
 
@@ -724,11 +751,19 @@ if (GUI.changed)
 
 ### Changes Not Persisting
 
-If changes made in a custom inspector are not persisting:
+If changes made in a custom inspector or editor script are not persisting:
 
-1. Verify you are calling `UdonSharpEditorUtility.CopyProxyToUdon()`
-2. Verify you are using `Undo.RecordObject()` before making changes
-3. Verify you are calling `EditorUtility.SetDirty()` on the target
+1. Inspector code: verify you call `serializedObject.ApplyModifiedProperties()` after editing `SerializedProperty` values
+2. Direct assignment: verify you call `Undo.RecordObject()` before the change
+3. Prefab instances: verify you call `PrefabUtility.RecordPrefabInstancePropertyModifications()` after a direct assignment
+
+`CopyProxyToUdon` does not fix this in UdonSharp 1.x; the C# component is what gets saved.
+
+### Scene Diffs Rewrite `serializedPublicVariablesBytesString`
+
+**Cause:** An editor script calls `UdonSharpEditorUtility.CopyProxyToUdon()` in Edit Mode, a 0.x-era pattern that older guides still show. The backing `UdonBehaviour` then stores a second copy of every field as one Base64 string, and each later field change rewrites the whole string.
+
+**Fix:** Remove the Edit Mode call (see [Editing in Edit Mode](#editing-in-edit-mode)). That stops further rewrites; the copy already saved does not change runtime values, because Play Mode and builds replace the table with fresh values from the C# component. Do not hand-edit the Base64 string; it also holds UdonSharp's version marker, and data migrated from UdonSharp 0.x can live there.
 
 ### Serialization Errors
 
