@@ -456,6 +456,14 @@ void Update()
 [UdonSynced] private double startServerTime;
 [UdonSynced] private bool timerStarted; // server time can be negative, so it cannot mark "unset"
 
+public void _StartTimer()
+{
+    Networking.SetOwner(Networking.LocalPlayer, gameObject);
+    startServerTime = Networking.GetServerTimeInSeconds();
+    timerStarted = true;
+    RequestSerialization(); // Manual sync
+}
+
 void Update()
 {
     if (timerStarted)
@@ -1462,8 +1470,8 @@ void Update()
 |------|----|-------|
 | Mark a timer as started | Keep a separate `bool` (synced if remote clients need it) | `if (startTime > 0)` or `startTime != 0` as an "unset" check — a valid server time can be negative or zero |
 | Elapsed seconds between two `GetServerTimeInSeconds()` values | `Networking.CalculateServerDeltaTime(now, previous)` — the documented API for the difference between two server timestamps (newer value first) | `now - previous` — returns a large negative number if the clock wrapped in between |
-| Elapsed milliseconds | Subtract as `int`: `int elapsedMs = nowMs - startMs;` (see [patterns-video.md](patterns-video.md#2-server-time-playback-position-sync)) | Widen to `long` or `double` before subtracting |
-| Deadlines that must survive a rejoin or span days | Store a UTC wall-clock value, as in [persistence.md](persistence.md) (`System.DateTime.UtcNow`) | Save a server-time value for comparison in a later session |
+| Elapsed milliseconds | Subtract as `int`: `int elapsedMs = nowMs - startMs;` (see [patterns-video.md](patterns-video.md#2-server-time-playback-position-sync)). This holds while the real gap is under about 24.8 days (`int.MaxValue` ms); if a session can run longer, refresh the start timestamp, for example on each play or seek | Widen to `long` or `double` before subtracting |
+| Deadlines that must survive a rejoin or span days | Store a UTC wall-clock value, as in [persistence.md](persistence.md) (`System.DateTime.UtcNow`). `UtcNow` reads each player's device clock, which can be off or changed by the player, so do not use it where an exact or cheat-resistant deadline matters | Save a server-time value for comparison in a later session |
 
 Do not "fix" a negative result with `Mathf.Abs`, clamping to 0, or sign masking; those hide the wrap instead of handling it.
 

@@ -193,8 +193,10 @@ This formula is drift-resistant: a late joiner receives the same `syncClockTime`
 > value wraps from `int.MaxValue` to `int.MinValue` and is often negative. Keep the subtraction in
 > `int` as the examples below do: `int elapsed = now - syncClockTime;` stays correct across the
 > wrap because Udon `int` subtraction wraps too (verified in the Udon VM, SDK 3.10.6:
-> `-2147483644 - 2147483642` gives `10`). Do **not** cast to `long` or `double` before
-> subtracting (the same values give `-4294967286`), and do not switch to
+> `-2147483644 - 2147483642` gives `10`). This holds while the real gap is under about 24.8 days
+> (`int.MaxValue` ms); after that the result turns negative, so refresh `syncClockTime` (for
+> example on each play or seek) if a session can run that long. Do **not** cast to `long` or
+> `double` before subtracting (the same values give `-4294967286`), and do not switch to
 > `GetServerTimeInSeconds()` plain subtraction to "avoid overflow" — that value wraps too. See
 > [networking.md — Server Time Wraps and Can Be Negative](networking.md#server-time-wraps-and-can-be-negative).
 
