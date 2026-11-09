@@ -19,7 +19,7 @@ UdonSharp transpiles C# source to Udon Assembly, which runs on VRChat's UdonVM. 
 - **Field initializers are Editor-evaluated C#**: Their expressions generate initial data for the compiled Udon program rather than UdonVM instructions. Some ordinary C# features that are blocked in Udon runtime code are valid in this limited context.
 - **Struct semantics differ**: UdonVM passes structs by value; mutating methods on structs return new values and do not modify the original.
 - **Method lookup cost**: UdonVM performs string-based method lookup; public methods are visible to Udon's event system and incur slightly higher overhead.
-- **Integer arithmetic wraps; `long` to `int` casts are checked**: `int` `+`, `-`, `*`, and `++` wrap like unchecked C#, but `(int)` of a `long` outside the `int` range throws `OverflowException` and halts the behaviour. See [Numeric Overflow](#numeric-overflow-wrapping-arithmetic-checked-casts).
+- **`int` arithmetic wraps; narrowing integer conversions are checked**: `int` `+`, `-`, `*`, and `++` wrap like unchecked C#, but converting a value that does not fit into a smaller integer type throws `OverflowException` and halts the behaviour, for example `(int)` of a `long` above `int.MaxValue`, or `++` on a `byte` at 255. See [Numeric Overflow](#numeric-overflow-wrapping-arithmetic-checked-casts).
 - **No JIT**: There is no just-in-time compilation. All method dispatch is interpreted.
 
 ### Inspector visibility vs. Unity serialization
@@ -332,7 +332,7 @@ public class SeededRandom : UdonSharpBehaviour
 
 ### Numeric Overflow (Wrapping Arithmetic, Checked Casts)
 
-Integer arithmetic wraps as in unchecked C#. A `long` to `int` cast does not: a value outside the `int` range throws `OverflowException`, and the UdonBehaviour halts. Verified in the Udon VM (SDK 3.10.6). Only `long` to `int` was measured; do not assume other conversions, such as `double` to `float`, throw:
+`int` arithmetic wraps as in unchecked C#. Conversions to a smaller integer type do not: a value that does not fit throws `OverflowException`, and the UdonBehaviour halts. This includes `++` on a `byte`, because the result is converted back to `byte`. A `double` to `float` conversion does not throw; an out-of-range value becomes infinity. Verified in the Udon VM (SDK 3.10.6):
 
 ```csharp
 int max = int.MaxValue;
@@ -340,6 +340,11 @@ int sum = max + 1;        // int.MinValue: wraps, no exception (++ and * wrap to
 
 long big = 3000000000L;
 int narrowed = (int)big;  // throws OverflowException; the behaviour halts
+
+byte counter = 255;
+counter++;                // throws OverflowException; an int would wrap
+
+float f = (float)double.MaxValue;  // float.PositiveInfinity, no exception
 
 // Range-check before a narrowing cast
 if (big >= int.MinValue && big <= int.MaxValue)
@@ -354,7 +359,7 @@ if (value < int.MaxValue)
 }
 ```
 
-Code that depends on wrapping, such as the difference between two `GetServerTimeInMilliseconds()` values, works as written (see [networking.md](networking.md#server-time-wraps-and-can-be-negative)).
+Code that depends on `int` wrapping, such as the difference between two `GetServerTimeInMilliseconds()` values, works as written while the real gap is under about 24.8 days (see [networking.md](networking.md#server-time-wraps-and-can-be-negative)).
 
 ### Struct Method Mutation
 
