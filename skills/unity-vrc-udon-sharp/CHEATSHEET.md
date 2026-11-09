@@ -39,7 +39,7 @@ Use `Start()` or a lazy-init guard only for local or per-client randomness. For 
 
 | Mode | Use Case | Limit | Sync Method |
 |------|----------|-------|-------------|
-| `NoVariableSync` | Events only | - | No sync |
+| `None` | Local only (cannot receive network events) | - | No sync |
 | `Continuous` | Position/rotation | ~200B | Automatic ~10Hz |
 | `Manual` | State/score | 280KB | `RequestSerialization()` |
 

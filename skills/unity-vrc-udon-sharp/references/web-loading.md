@@ -104,7 +104,7 @@ using VRC.SDKBase;
 using VRC.SDK3.Components;
 using VRC.SDK3.StringLoading;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class UserUrlLoader : UdonSharpBehaviour
 {
     [SerializeField] private VRCUrlInputField urlInputField;
@@ -230,7 +230,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class StringDownloadExample : UdonSharpBehaviour
 {
     public VRCUrl dataUrl;
@@ -344,7 +344,7 @@ using UnityEngine.UI;
 using VRC.SDKBase;
 using VRC.SDK3.Image;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class ImageDownloadExample : UdonSharpBehaviour
 {
     public VRCUrl imageUrl;
@@ -441,7 +441,7 @@ using VRC.SDKBase;
 using VRC.SDK3.StringLoading;
 using VRC.SDK3.Data;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class JsonDownloadExample : UdonSharpBehaviour
 {
     [Header("Data Source")]

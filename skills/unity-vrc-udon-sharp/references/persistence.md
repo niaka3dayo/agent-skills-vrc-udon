@@ -59,7 +59,7 @@ Does another player need to see this value?
 | Writing PlayerData before `OnPlayerRestored` fires | Write is silently ignored | Always guard writes with a `_dataReady` flag set in `OnPlayerRestored` |
 | Changing a PlayerObject prefab or scene wiring without checking saved Network IDs | Persistence keys are bound to Network IDs; breaking the mapping loses saved data | Audit Network IDs before restructuring; keep a mapping document |
 
-> **Cross-reference:** For choosing between Continuous, Manual, and NoVariableSync *within* the synced layer, see the sync selection rule in [../rules/udonsharp-sync-selection.md](../rules/udonsharp-sync-selection.md). For bandwidth budgeting, see [networking-bandwidth.md](networking-bandwidth.md).
+> **Cross-reference:** For choosing between Continuous, Manual, and None *within* the synced layer, see the sync selection rule in [../rules/udonsharp-sync-selection.md](../rules/udonsharp-sync-selection.md). For bandwidth budgeting, see [networking-bandwidth.md](networking-bandwidth.md).
 
 ---
 
@@ -641,7 +641,7 @@ using VRC.SDKBase;
 /// Each entry is keyed by a Unix timestamp (seconds). On restore, entries
 /// older than <see cref="retainDays"/> calendar days are discarded.
 /// </summary>
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class DataAgingExample : UdonSharpBehaviour
 {
     /// <summary>How many calendar days of data to keep.</summary>

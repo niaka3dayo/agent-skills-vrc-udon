@@ -11,7 +11,7 @@ using VRC.SDKBase;
 /// 2. Configure speed multipliers in Inspector
 /// 3. Player settings change when entering/exiting the trigger zone
 /// </summary>
-[UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PlayerSettings : UdonSharpBehaviour
 {
     [Header("Movement Settings")]
