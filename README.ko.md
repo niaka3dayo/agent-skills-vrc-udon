@@ -117,6 +117,7 @@ skills/                                  # 모든 스킬
 templates/                               # AI 도구 설정 템플릿
   CLAUDE.md  AGENTS.md  GEMINI.md        # 인스톨러를 통해 사용자에게 배포
 .claude-plugin/marketplace.json         # Claude Code 플러그인 등록
+hooks/hooks.json                        # Claude Code 플러그인 훅 등록
 CLAUDE.md                               # 개발 가이드 (이 리포지토리 전용)
 ```
 
@@ -188,7 +189,31 @@ Q3: 지속적으로 변하나요? (위치/회전)
 
 <h2 id="hooks">검증 훅</h2>
 
-`.cs` 파일 편집 시 자동으로 실행되는 PostToolUse 훅.
+에이전트가 `.cs` 파일을 작성하거나 편집할 때마다 PostToolUse 훅이 내용을 검사하고 그 결과를 에이전트에 보고합니다.
+
+**Claude Code 플러그인** &mdash; 자동으로 등록됩니다. 플러그인은 Bash 검증기를 실행하므로 `bash`와 `jq`가 `PATH`에 있어야 합니다. Windows에서는 Git Bash와 `jq`(`winget install jqlang.jq`)가 필요합니다.
+
+**skills CLI 또는 git clone** &mdash; 훅을 직접 등록해야 합니다. Claude Code의 경우 `.claude/settings.json`에 다음 내용을 추가하세요.
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`jq`가 필요 없는 PowerShell 검증기를 사용하려면 command를 `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`로 설정하세요.
 
 | 카테고리 | 검사 항목 | 심각도 |
 |----------|-----------|--------|
@@ -203,9 +228,9 @@ Q3: 지속적으로 변하나요? (위치/회전)
 
 **Bash** (`validate-udonsharp.sh`)와 **PowerShell** (`validate-udonsharp.ps1`) 모두 지원합니다.
 
-Bash 검증기에는 `jq`가 필요합니다. `jq`를 사용할 수 없으면 입력을 변경하지
-않고 그대로 전달하며, 검증 성공으로 처리하지 않고 `VALIDATOR-WARNING:
-validation skipped (JQ_UNAVAILABLE)`을 출력합니다.
+검출 결과는 해당 편집에 대한 추가 컨텍스트로 에이전트에게 전달되며, 수동 실행 시에는 동일한 내용이 stderr로도 출력됩니다. 훅이 편집을 차단하지는 않습니다.
+
+Bash 검증기에는 `jq`가 필요합니다. `jq`를 사용할 수 없으면 `.cs` 파일 편집 시 `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`을 보고하며, 검증 성공으로 처리하지 않습니다.
 
 ---
 

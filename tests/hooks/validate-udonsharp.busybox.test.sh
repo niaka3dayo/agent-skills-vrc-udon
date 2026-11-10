@@ -48,10 +48,10 @@ def measure(line_count: int) -> float:
         [str(hook)], input=payload, text=True, capture_output=True, timeout=20, check=False
     )
     elapsed = time.monotonic() - started
-    if result.returncode != 0 or result.stdout != payload:
-        raise RuntimeError(
-            f"{line_count} lines: exit={result.returncode} stdout_exact={result.stdout == payload}"
-        )
+    if result.returncode != 0:
+        raise RuntimeError(f"{line_count} lines: exit={result.returncode}")
+    if result.stdout.strip() and "additionalContext" not in json.loads(result.stdout)["hookSpecificOutput"]:
+        raise RuntimeError(f"{line_count} lines printed something other than a report")
     if "VALIDATOR-WARNING" in result.stderr:
         raise RuntimeError(f"{line_count} lines: internal failure: {result.stderr}")
     return elapsed

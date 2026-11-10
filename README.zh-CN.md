@@ -117,6 +117,7 @@ skills/                                  # 所有技能
 templates/                               # AI 工具配置模板
   CLAUDE.md  AGENTS.md  GEMINI.md        # 通过安装器分发给用户
 .claude-plugin/marketplace.json         # Claude Code 插件注册
+hooks/hooks.json                        # Claude Code 插件钩子注册
 CLAUDE.md                               # 开发指南（仅限本仓库）
 ```
 
@@ -188,7 +189,31 @@ Q3: 是否持续变化？（位置/旋转）
 
 <h2 id="hooks">验证钩子</h2>
 
-在编辑 `.cs` 文件时自动运行的 PostToolUse 钩子。
+每当代理写入或编辑 `.cs` 文件时，PostToolUse 钩子都会检查其内容，并将检查结果反馈给代理。
+
+**Claude Code 插件** &mdash; 自动注册。插件运行的是 Bash 验证器，因此 `bash` 和 `jq` 必须位于 `PATH` 中。在 Windows 上需要 Git Bash 和 `jq`（`winget install jqlang.jq`）。
+
+**skills CLI 或 git clone** &mdash; 需自行注册钩子。对于 Claude Code，请将以下内容添加到 `.claude/settings.json`：
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+如需使用不依赖 `jq` 的 PowerShell 验证器，请将 command 设置为 `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`。
 
 | 类别 | 检查项 | 严重级别 |
 |------|--------|----------|
@@ -203,8 +228,9 @@ Q3: 是否持续变化？（位置/旋转）
 
 同时支持 **Bash**（`validate-udonsharp.sh`）和 **PowerShell**（`validate-udonsharp.ps1`）。
 
-Bash 验证器需要 `jq`。如果无法使用 `jq`，钩子会原样传递输入，并输出
-`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，而不会将其视为验证成功。
+检查结果会作为该次编辑的附加上下文传递给代理，手动运行时相同内容也会输出到 stderr。钩子不会阻止编辑。
+
+Bash 验证器需要 `jq`。如果无法使用 `jq`，编辑 `.cs` 文件时会报告 `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，而不会将其视为验证成功。
 
 ---
 

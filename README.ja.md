@@ -117,6 +117,7 @@ skills/                                  # すべてのスキル
 templates/                               # AIツール設定テンプレート
   CLAUDE.md  AGENTS.md  GEMINI.md        # インストーラー経由でユーザーに配布
 .claude-plugin/marketplace.json         # Claude Codeプラグイン登録
+hooks/hooks.json                        # Claude Codeプラグインのフック登録
 CLAUDE.md                               # 開発ガイド（このリポジトリ専用）
 ```
 
@@ -188,7 +189,31 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 <h2 id="hooks">バリデーションフック</h2>
 
-`.cs` ファイルを編集した際に自動実行される PostToolUse フックです。
+エージェントが `.cs` ファイルを書き込んだり編集したりするたびに、PostToolUse フックが内容を検査し、結果をエージェントに返します。
+
+**Claude Code プラグイン** &mdash; 自動で登録されます。プラグインは Bash 版の検証を実行するため、`bash` と `jq` が `PATH` にある必要があります。Windows では Git Bash と `jq`（`winget install jqlang.jq`）が必要です。
+
+**skills CLI または git clone** &mdash; フックは自分で登録します。Claude Code の場合は `.claude/settings.json` に次の内容を追加してください。
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+`jq` が不要な PowerShell 版を使う場合は、command を `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"` に変更します。
 
 | カテゴリ | チェック内容 | 重大度 |
 |----------|-------|----------|
@@ -203,9 +228,9 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 **Bash**（`validate-udonsharp.sh`）と **PowerShell**（`validate-udonsharp.ps1`）の両方に対応しています。
 
-Bash版の検証には `jq` が必要です。利用できない場合は入力を変更せずに通し、
-検証済みとは扱わず `VALIDATOR-WARNING: validation skipped
-(JQ_UNAVAILABLE)` を出力します。
+検出結果は、その編集に対する追加コンテキストとしてエージェントに届きます。手動で実行した場合のために、同じ内容を stderr にも出力します。フックが編集を止めることはありません。
+
+Bash版の検証には `jq` が必要です。利用できない場合は、`.cs` ファイルの編集に対して `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)` を報告し、検証済みとは扱いません。
 
 ---
 
