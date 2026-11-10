@@ -253,6 +253,7 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
     private const float DriftCheckPeriod = 10.0f; // seconds between checks
     private float _nextDriftCheck = 0f;
     private bool  _isPlaying      = false;
+    private bool  _pendingApply   = false; // synced state arrived before the video was ready
 
     // === Owner: commit current sync state ===
 
@@ -277,18 +278,18 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
         return _syncStartTime + (elapsed / 1000f) * _syncSpeed;
     }
 
-    private bool HasEnded()
-    {
-        float duration = _videoPlayer.GetDuration();
-        return duration > 0f && CalcExpectedPosition() >= duration;
-    }
-
     public void _ApplySyncedPosition()
     {
-        // Don't seek past the end of the video
-        if (HasEnded()) return;
+        float expected = CalcExpectedPosition();
+        float duration = _videoPlayer.GetDuration();
 
-        _videoPlayer.SetTime(CalcExpectedPosition());
+        // Don't seek past the end of the video
+        if (duration > 0f && expected >= duration)
+        {
+            return;
+        }
+
+        _videoPlayer.SetTime(expected);
     }
 
     // === Playback state — consumers must call these when playback state changes ===
@@ -338,26 +339,33 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
         ApplySyncedState();
     }
 
-    // State that arrived while the video was still loading is applied here.
+    // State that arrived while the video was still loading is applied here. The flag,
+    // not ownership, decides: this client may have become the owner in the meantime.
     public override void OnVideoReady()
     {
-        if (Networking.IsOwner(gameObject)) return;
+        if (!_pendingApply) return;
         ApplySyncedState();
     }
 
     private void ApplySyncedState()
     {
         // Loading the URL is section 3; nothing can be applied before the video is ready.
-        if (!_videoPlayer.IsReady) return;
+        _pendingApply = !_videoPlayer.IsReady;
+        if (_pendingApply) return;
 
-        // The video ended while this client was away: leave it stopped.
-        if (HasEnded())
+        // One calculation serves both the end check and the seek.
+        float expected = CalcExpectedPosition();
+        float duration = _videoPlayer.GetDuration();
+
+        // The synced state says the video has ended: stop instead of playing on.
+        if (duration > 0f && expected >= duration)
         {
             _isPlaying = false;
+            _videoPlayer.Stop();
             return;
         }
 
-        _ApplySyncedPosition();
+        _videoPlayer.SetTime(expected);
         _isPlaying = !_syncPaused;
         if (_syncPaused)
         {
