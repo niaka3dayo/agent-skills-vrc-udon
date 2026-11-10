@@ -43,12 +43,15 @@ function Invoke-HookProcess([string]$Payload) {
     $Process = New-Object System.Diagnostics.Process
     $Process.StartInfo = $StartInfo
     [void]$Process.Start()
-    # Write UTF-8 bytes without a BOM, as a host agent does. The StandardInput
-    # writer would use the console code page and, when that is UTF-8, add a BOM.
+    # Write the payload as UTF-8 bytes, as a host agent does; the StandardInput
+    # writer would encode it with the console code page. Under Windows
+    # PowerShell on a UTF-8 console, Process.Start has already sent a BOM at
+    # this point, which the hook drops. On any other code page the input has no
+    # BOM, and that is where a hook that decodes with the code page fails the
+    # non-ASCII path case.
     $PayloadBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($Payload)
     $Process.StandardInput.BaseStream.Write($PayloadBytes, 0, $PayloadBytes.Length)
-    $Process.StandardInput.BaseStream.Flush()
-    $Process.StandardInput.Close()
+    $Process.StandardInput.BaseStream.Close()
     # Read stderr concurrently: a hook that fills the stderr pipe would block
     # for as long as only stdout is being read.
     $StderrTask = $Process.StandardError.ReadToEndAsync()
