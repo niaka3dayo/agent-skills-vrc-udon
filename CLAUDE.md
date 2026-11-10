@@ -101,6 +101,8 @@ Those suites are static. To check what an agent does with the skills loaded, run
 | EditorConfig | File formatting matches .editorconfig rules (indent_size check disabled; see below) |
 | Version Sync | All five package version fields agree |
 
+One more job, Hook Scripts (Windows PowerShell 5.1), runs the PowerShell hook suite under Windows PowerShell 5.1 on a Windows runner. It is not a required check.
+
 ### EditorConfig Notes
 
 - **IndentSize check is intentionally disabled** in `.editorconfig-checker.json` (`Disable.IndentSize: true`).

@@ -43,8 +43,15 @@ function Invoke-HookProcess([string]$Payload) {
     $Process = New-Object System.Diagnostics.Process
     $Process.StartInfo = $StartInfo
     [void]$Process.Start()
-    $Process.StandardInput.Write($Payload)
-    $Process.StandardInput.Close()
+    # Write the payload as UTF-8 bytes, as a host agent does; the StandardInput
+    # writer would encode it with the console code page. Under Windows
+    # PowerShell on a UTF-8 console, Process.Start has already sent a BOM at
+    # this point, which the hook drops. On any other code page the input has no
+    # BOM, and that is where a hook that decodes with the code page fails the
+    # non-ASCII path case.
+    $PayloadBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($Payload)
+    $Process.StandardInput.BaseStream.Write($PayloadBytes, 0, $PayloadBytes.Length)
+    $Process.StandardInput.BaseStream.Close()
     # Read stderr concurrently: a hook that fills the stderr pipe would block
     # for as long as only stdout is being read.
     $StderrTask = $Process.StandardError.ReadToEndAsync()
@@ -487,6 +494,15 @@ try {
     $EventResult = Invoke-HookProcess $EventPayload
     Assert-Contains 'event name case still warns' $EventResult.Stderr $SyncBloatWarning
     Assert-StdoutReports 'report echoes the host event name' $EventResult 'AfterTool'
+
+    # A non-ASCII path arrives as UTF-8 whatever the console code page is.
+    $NonAsciiLeaf = ([string][char]0x65E5) + ([string][char]0x672C) + ([string][char]0x8A9E) + '.cs'
+    $NonAsciiPath = Join-Path $TempRoot $NonAsciiLeaf
+    [System.IO.File]::WriteAllText($NonAsciiPath, "using UdonSharp;`npublic class Sample : UdonSharpBehaviour`n{`n    [UdonSynced] private int[] values;`n}`n", (New-Object System.Text.UTF8Encoding($false)))
+    $NonAsciiPayload = '{"tool_input":{"file_path":"' + $NonAsciiPath.Replace('\', '\\') + '"}}'
+    $NonAsciiResult = Invoke-HookProcess $NonAsciiPayload
+    Assert-Contains 'non-ASCII path is validated' $NonAsciiResult.Stderr $SyncBloatWarning
+    Assert-StdoutReports 'non-ASCII path' $NonAsciiResult
 
     # Codex apply_patch sends the patch text instead of a path.
     $PatchAsyncPath = Join-Path $TempRoot 'patch-async.cs'
