@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke test for skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh
 # Covers the failure modes reported in Issue #165:
-#   Case A: jq absent  → must exit 0 and report the skipped validation
+#   Case A: jq absent  → must exit 0 and still validate the file
 #   Case B: jq present, file_path missing → must exit 0 cleanly (no abort)
 #   Case C: jq present, valid .cs with List<T> → existing WARNING on stderr (happy path)
 #   Cases D-H: synced array detection regressions from Issue #307
@@ -413,13 +413,13 @@ run_shared_parity_matrix() {
 }
 
 # ------------------------------------------------------------
-# Case A: jq absent → exit 0, the skipped validation is reported
+# Case A: jq absent → exit 0, the file is still validated
 # ------------------------------------------------------------
 NOJQ_BIN="$TMPROOT/nojq-bin"
 mkdir -p "$NOJQ_BIN"
 
 # Symlink standard tools the hook needs, but deliberately omit jq.
-for tool in bash cat grep sed sort uniq tr head awk dirname basename rm mkdir; do
+for tool in bash cat grep sed sort uniq tr head tail wc awk mktemp dirname basename rm mkdir; do
     src=""
     for dir in /bin /usr/bin /usr/local/bin; do
         if [ -x "$dir/$tool" ]; then
@@ -439,23 +439,24 @@ if [ "$jq_check" != "MISSING" ]; then
     exit 2
 fi
 
-CASE_A_INPUT='{"tool_input":{"file_path":"Foo.cs"}}'
-A_STDOUT=$(printf '%s' "$CASE_A_INPUT" | env -i PATH="$NOJQ_BIN" HOME="${HOME:-/tmp}" "$NOJQ_BIN/bash" "$HOOK" 2>"$TMPROOT/case_a.err")
+# The hook reads its input without jq (Issue #394), so the same edit must be
+# validated on a machine that has none, such as Git Bash on Windows.
+CASE_A_FILE="$TMPROOT/NoJq.cs"
+cat > "$CASE_A_FILE" <<'CSEOF'
+using UdonSharp;
+using System.Collections.Generic;
+public class NoJq : UdonSharpBehaviour
+{
+    private List<int> items = new List<int>();
+}
+CSEOF
+A_STDOUT=$(printf '%s' "{\"tool_input\":{\"file_path\":\"$CASE_A_FILE\"}}" | env -i PATH="$NOJQ_BIN" HOME="${HOME:-/tmp}" "$NOJQ_BIN/bash" "$HOOK" 2>"$TMPROOT/case_a.err")
 A_RC=$?
 
 assert_exit "A: jq absent → exit 0" 0 "$A_RC"
-# jq is the JSON writer too, so this one report is a fixed string.
-A_EXPECTED_STDOUT='{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)"}}'
-if [ "$A_STDOUT" = "$A_EXPECTED_STDOUT" ]; then
-    echo "PASS [A: jq absence reaches the agent] stdout is the fixed report"
-    PASS=$((PASS + 1))
-else
-    echo "FAIL [A: jq absence reaches the agent] unexpected stdout: $A_STDOUT"
-    FAIL=$((FAIL + 1))
-fi
+assert_contains "A: jq absent → the file is still validated" "$(cat "$TMPROOT/case_a.err")" 'Generic collections (List<T>'
+assert_stdout_reports "A: jq absent" "$A_STDOUT" "$TMPROOT/case_a.err"
 
-# Without jq the path cannot be parsed. An edit that names no .cs file must
-# stay silent, or every edit in a jq-less project would carry the notice.
 A2_STDOUT=$(printf '%s' '{"tool_input":{"file_path":"README.md"}}' | env -i PATH="$NOJQ_BIN" HOME="${HOME:-/tmp}" "$NOJQ_BIN/bash" "$HOOK" 2>"$TMPROOT/case_a2.err")
 A2_RC=$?
 assert_exit "A2: jq absent + non-.cs edit → exit 0" 0 "$A2_RC"
@@ -467,23 +468,53 @@ else
     FAIL=$((FAIL + 1))
 fi
 
-A_STDERR=$(cat "$TMPROOT/case_a.err")
-assert_contains "A: jq absence is explicit" "$A_STDERR" 'VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)'
-if [ "$(wc -l < "$TMPROOT/case_a.err" | tr -d '[:space:]')" = "1" ]; then
-    echo "PASS [A: operational warning] exactly one stderr line"
-    PASS=$((PASS + 1))
-else
-    echo "FAIL [A: operational warning] expected exactly one stderr line"
-    FAIL=$((FAIL + 1))
-fi
+# Input parsing. The path is read from tool_input only: the same key inside a
+# string value or in tool_response must not be taken for it, and JSON escapes
+# in the path are decoded.
+cp "$CASE_A_FILE" "$TMPROOT/解析 \"x\".cs"
+PARSE_PREFIX="{\"hook_event_name\":\"PostToolUse\",\"tool_input\":{\"content\":\"\\\\\\\"file_path\\\\\\\": \\\"$TMPROOT/README.md\\\" \\\\\\\\\",\"file_path\":\"$TMPROOT"
+for parse_case in \
+    "escaped quote and raw UTF-8|/解析 \\\"x\\\".cs\"},\"tool_response\":{\"filePath\":\"README.md\"}}|List<T>" \
+    "unicode escapes|/\\u89e3\\u6790 \\u0022x\\u0022.cs\"}}|List<T>" \
+    "escaped solidus|\\/NoJq.cs\"}}|List<T>" \
+    "path only in tool_response|/README.md\"},\"tool_response\":{\"filePath\":\"$CASE_A_FILE\"}}|"; do
+    IFS='|' read -r parse_label parse_tail parse_expected <<< "$parse_case"
+    PARSE_STDOUT=$(printf '%s' "$PARSE_PREFIX$parse_tail" | "$HOOK" 2>"$TMPROOT/parse.err")
+    assert_exit "input parsing: $parse_label → exit 0" 0 "$?"
+    if [ -n "$parse_expected" ]; then
+        assert_contains "input parsing: $parse_label" "$(cat "$TMPROOT/parse.err")" "$parse_expected"
+    else
+        assert_not_contains "input parsing: $parse_label" "$(cat "$TMPROOT/parse.err")" '[UdonSharp]'
+    fi
+    assert_stdout_reports "input parsing: $parse_label" "$PARSE_STDOUT" "$TMPROOT/parse.err"
+done
+
+# Codex apply_patch sends the patch text in tool_input.command instead of a
+# path. Each .cs file the patch names is validated and named in the report;
+# other files, and files that do not exist, add nothing.
+cat > "$TMPROOT/PatchAsync.cs" <<'CSEOF'
+using UdonSharp;
+public class PatchAsync : UdonSharpBehaviour
+{
+    private async void Run() { }
+}
+CSEOF
+PATCH_COMMAND="*** Begin Patch\\n*** Update File: NoJq.cs\\n@@\\n-a\\n+b \\\"q\\\"\\n*** Add File: Missing.cs\\n+x\\n*** Update File: README.md\\n*** Update File: Old.cs\\n*** Move to: PatchAsync.cs\\n*** End Patch\\n"
+PATCH_STDOUT=$(cd "$TMPROOT" && printf '%s' "{\"tool_name\":\"apply_patch\",\"tool_input\":{\"command\":\"$PATCH_COMMAND\"}}" | "$HOOK" 2>"$TMPROOT/patch.err")
+assert_exit "apply_patch → exit 0" 0 "$?"
+PATCH_STDERR=$(cat "$TMPROOT/patch.err")
+assert_contains "apply_patch names the file" "$PATCH_STDERR" '[UdonSharp] FILE: NoJq.cs'
+assert_contains "apply_patch validates the patched file" "$PATCH_STDERR" 'Generic collections (List<T>'
+assert_contains "apply_patch names a moved file" "$PATCH_STDERR" '[UdonSharp] FILE: PatchAsync.cs'
+assert_contains "apply_patch validates a second file" "$PATCH_STDERR" 'async/await not supported'
+assert_not_contains "apply_patch skips files with nothing to report" "$PATCH_STDERR" 'Missing.cs'
+assert_stdout_reports "apply_patch" "$PATCH_STDOUT" "$TMPROOT/patch.err"
 
 # ------------------------------------------------------------
 # Case B: jq present, file_path / filePath both missing → exit 0, no abort
 # ------------------------------------------------------------
 # Precondition: Cases B and C run against the unrestricted environment and
-# require jq to actually be installed. Without this guard, a runner that
-# happens to lack jq would silently fall through Case A's skip path
-# and stop testing what B/C claim to test.
+# use jq to read the hook's reply, so it has to be installed.
 if ! command -v jq >/dev/null 2>&1; then
     echo "ABORT: Cases B/C require jq in PATH (precondition not met)"
     exit 2
@@ -1031,7 +1062,8 @@ count=0
 if [ -f "\$count_file" ]; then count=\$(cat "\$count_file"); fi
 count=\$((count + 1))
 printf '%s' "\$count" > "\$count_file"
-if [ "\$count" -eq 3 ]; then exit 42; fi
+# awk runs: 1 input fields, 2 code mask, 3 base scan, 4 lambda scan.
+if [ "\$count" -eq 4 ]; then exit 42; fi
 exec '$REAL_AWK' "\$@"
 EOF
 chmod +x "$AWK_FAILURE_DIR/awk"

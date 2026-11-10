@@ -196,7 +196,7 @@ Q3: Continuous change? (position/rotation)
 
 A PostToolUse hook checks every `.cs` file the agent writes or edits and reports what it finds back to the agent.
 
-**Claude Code plugin** &mdash; registered automatically. The plugin runs the Bash validator, so `bash` and `jq` must be on `PATH`. On Windows that means Git Bash plus `jq` (`winget install jqlang.jq`).
+**Claude Code plugin** &mdash; registered automatically. The plugin runs the Bash validator, so `bash` must be on `PATH`. On Windows, Git Bash is enough; `jq` is not needed.
 
 **skills CLI or git clone** &mdash; register the hook yourself. For Claude Code, add this to `.claude/settings.json`:
 
@@ -218,7 +218,7 @@ A PostToolUse hook checks every `.cs` file the agent writes or edits and reports
 }
 ```
 
-To use the PowerShell validator, which does not need `jq`, set the command to `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`.
+To use the PowerShell validator, set the command to `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`.
 
 | Category | Check | Severity |
 |----------|-------|----------|
@@ -235,7 +235,9 @@ Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-u
 
 Findings reach the agent as additional context on the edit, and the same lines are printed to stderr for manual runs. The hook never blocks an edit.
 
-The Bash validator requires `jq`. If `jq` is unavailable, an edit to a `.cs` file reports `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`; the hook does not silently claim that validation succeeded.
+When a validator cannot run, for example because it cannot read the hook input or the file, it reports `VALIDATOR-WARNING: validation skipped (<reason>)`; the hook does not silently claim that validation succeeded.
+
+Codex edits files with `apply_patch`, which passes the patch text to the hook instead of a file path. Both validators accept that input and check each `.cs` file named in the patch.
 
 ---
 

@@ -3,7 +3,8 @@
 # Checks for common constraint violations in UdonSharp code.
 #
 # Usage: Called as a PostToolUse hook when a .cs file is written or edited
-# Input: JSON via stdin with tool_input.file_path
+# Input: JSON via stdin with tool_input.file_path, or a Codex apply_patch
+#        payload with the patch text in tool_input.command
 # Output: Diagnostics on stderr for a person, and the same lines on stdout as
 #         one JSON object (hookSpecificOutput.additionalContext) for the agent.
 #         Prints nothing when there is nothing to report. Always exits 0.
@@ -19,11 +20,23 @@ IFS= read -r -d '' input || true
 # from a hook that exits 0. It parses stdout as one JSON object and adds
 # additionalContext to the model's context, so diagnostics must go there to
 # be acted on. The event name is echoed back because hosts name it differently.
+hook_event=""
+
+json_escape() {
+    local text="$1" backslash='\'
+    text=${text//"$backslash"/$backslash$backslash}
+    text=${text//\"/$backslash\"}
+    text=${text//$'\n'/${backslash}n}
+    text=${text//$'\t'/${backslash}t}
+    text=${text//$'\r'/${backslash}r}
+    # The remaining control characters cannot be written raw in JSON, and the
+    # diagnostics never need them.
+    printf '%s' "$text" | LC_ALL=C tr -d '\000-\037'
+}
+
 report_to_agent() {
-    local context="$1" event
-    event=$(printf '%s' "$input" | jq -r '.hook_event_name // empty' 2>/dev/null) || event=""
-    jq -acn --arg event "${event:-PostToolUse}" --arg context "$context" \
-        '{hookSpecificOutput: {hookEventName: $event, additionalContext: $context}}' || true
+    printf '{"hookSpecificOutput":{"hookEventName":"%s","additionalContext":"%s"}}\n' \
+        "$(json_escape "${hook_event:-PostToolUse}")" "$(json_escape "$1")"
 }
 
 skip_validation() {
@@ -33,21 +46,177 @@ skip_validation() {
     exit 0
 }
 
-# Require jq for JSON parsing. Without this guard, jq absence under set -e
-# aborts every PostToolUse hook invocation with a "command not found" message
-# (Issue #165, Case A). The edited path cannot be parsed without jq, so the
-# notice is limited to payloads that mention a .cs path; otherwise every edit
-# in a project without jq would carry it.
-if ! command -v jq &>/dev/null; then
-    if [[ "$input" == *'.cs"'* ]]; then
-        printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)\n' >&2
-        printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)"}}'
-    fi
-    exit 0
+# Read the three fields the hook needs without jq, which Git Bash on Windows
+# does not ship (Issue #394). Splitting the payload on double quotes walks it
+# in linear time: a piece that ends in an odd number of backslashes ended at an
+# escaped quote, so the string continues. Each field is printed on its own
+# line in printf %b form: hook_event_name, tool_input.file_path (or filePath),
+# tool_input.command.
+if ! fields=$(printf '%s' "$input" | LC_ALL=C awk '
+    function hex_value(text,    position, value, digit) {
+        value = 0
+        for (position = 1; position <= 4; position++) {
+            digit = index("0123456789abcdef", tolower(substr(text, position, 1)))
+            if (digit == 0) return 65533
+            value = value * 16 + digit - 1
+        }
+        return value
+    }
+
+    function byte(value) {
+        return sprintf("\\0%03o", value)
+    }
+
+    function encode_code_point(code) {
+        if (code == 92) return "\\\\"
+        if (code >= 32 && code < 127) return sprintf("%c", code)
+        if (code < 128) return byte(code)
+        if (code < 2048) return byte(192 + int(code / 64)) byte(128 + code % 64)
+        if (code < 65536) {
+            return byte(224 + int(code / 4096)) byte(128 + int(code / 64) % 64) byte(128 + code % 64)
+        }
+        return byte(240 + int(code / 262144)) byte(128 + int(code / 4096) % 64) \
+            byte(128 + int(code / 64) % 64) byte(128 + code % 64)
+    }
+
+    # Turn the body of a JSON string into printf %b form. Splitting on the
+    # backslash leaves the escape character at the start of each later piece;
+    # an empty piece is the second backslash of an escaped backslash.
+    function decode(raw,    out, pieces, total, at, piece, escape, code, low) {
+        gsub(/\n/, "\\n", raw)
+        total = split(raw, pieces, "\\")
+        out = pieces[1]
+        for (at = 2; at <= total; at++) {
+            piece = pieces[at]
+            if (piece == "") {
+                at++
+                out = out "\\\\" pieces[at]
+                continue
+            }
+            escape = substr(piece, 1, 1)
+            if (escape == "u") {
+                code = hex_value(substr(piece, 2, 4))
+                piece = substr(piece, 6)
+                if (code >= 55296 && code <= 56319 && piece == "" && substr(pieces[at + 1], 1, 1) == "u") {
+                    low = hex_value(substr(pieces[at + 1], 2, 4))
+                    if (low >= 56320 && low <= 57343) {
+                        code = 65536 + (code - 55296) * 1024 + low - 56320
+                        at++
+                        piece = substr(pieces[at], 6)
+                    }
+                }
+                out = out encode_code_point(code) piece
+            } else if (escape == "\"" || escape == "/") {
+                out = out piece
+            } else {
+                out = out "\\" piece
+            }
+        }
+        return out
+    }
+
+    function wanted(    name) {
+        name = key[depth]
+        if (depth == 1) return name == "hook_event_name"
+        return depth == 2 && key[1] == "tool_input" && \
+            (name == "file_path" || name == "filePath" || name == "command")
+    }
+
+    function scan(text,    position, character) {
+        gsub(/[ \t\r\n]/, "", text)
+        for (position = 1; position <= length(text); position++) {
+            character = substr(text, position, 1)
+            if (character == "{" || character == "[") depth++
+            else if (character == "}" || character == "]") depth--
+        }
+        after_colon = (substr(text, length(text), 1) == ":")
+        return substr(text, 1, 1)
+    }
+
+    { payload = payload $0 "\n" }
+
+    END {
+        total_parts = split(payload, part, "\"")
+        outline = part[1]
+        gsub(/[ \t\r\n]/, "", outline)
+        if (total_parts <= 1 && outline == "") exit 0
+        if (substr(outline, 1, 1) != "{") exit 1
+
+        depth = 0
+        scan(part[1])
+        at_part = 2
+        while (at_part <= total_parts) {
+            keep = after_colon && wanted()
+            text = part[at_part]
+            escaped = 0
+            while (match(part[at_part], /\\+$/) && RLENGTH % 2 == 1) {
+                at_part++
+                if (at_part > total_parts) exit 1
+                escaped = 1
+                if (keep) text = text "\"" part[at_part]
+            }
+            at_part++
+            if (at_part > total_parts) exit 1
+            # scan() moves depth, so the string belongs to the level before it.
+            was_value = after_colon
+            level = depth
+            if (scan(part[at_part]) == ":" && !was_value) {
+                key[level] = escaped ? "" : text
+            } else if (keep) {
+                value[level, key[level]] = decode(text)
+            }
+            at_part++
+        }
+        if (depth != 0) exit 1
+
+        print value[1, "hook_event_name"]
+        print ((2, "file_path") in value) ? value[2, "file_path"] : value[2, "filePath"]
+        print value[2, "command"]
+    }
+'); then
+    skip_validation "JSON_PARSE_FAILED"
 fi
 
-if ! file_path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""' 2>/dev/null); then
-    skip_validation "JSON_PARSE_FAILED"
+event_field=""
+path_field=""
+command_field=""
+{
+    IFS= read -r event_field || true
+    IFS= read -r path_field || true
+    IFS= read -r command_field || true
+} <<< "$fields"
+hook_event=$(printf '%b' "$event_field")
+file_path=$(printf '%b' "$path_field")
+
+# Codex edits files with apply_patch, whose hook input carries the patch text
+# in tool_input.command instead of a path. Validate each .cs file the patch
+# adds, updates, or moves, and name the file in front of its findings.
+# shortcut: relative paths resolve against the hook working directory, which
+# Codex sets to the session directory; read the payload cwd if a host differs.
+if [[ -z "$file_path" && -n "$command_field" ]]; then
+    patch_paths=$(printf '%b\n' "$command_field" | tr -d '\r' | sed -n \
+        -e 's/^\*\*\* Add File: \(.*\.cs\)$/\1/p' \
+        -e 's/^\*\*\* Update File: \(.*\.cs\)$/\1/p' \
+        -e 's/^\*\*\* Move to: \(.*\.cs\)$/\1/p' | sort -u)
+    patch_report=""
+    while IFS= read -r patch_path; do
+        [[ -n "$patch_path" ]] || continue
+        patch_payload="{\"tool_input\":{\"file_path\":\"$(json_escape "$patch_path")\"}}"
+        patch_status=0
+        patch_stderr=$(printf '%s' "$patch_payload" | "$BASH" "${BASH_SOURCE[0]}" 2>&1 >/dev/null) || patch_status=$?
+        patch_findings=$(printf '%s\n' "$patch_stderr" | grep -F '[UdonSharp]' || true)
+        if [[ -z "$patch_findings" && "$patch_status" -ne 0 ]]; then
+            patch_findings="[UdonSharp] VALIDATOR-WARNING: validation skipped (PATCH_FILE_FAILED)"
+            patch_stderr="$patch_findings"
+        fi
+        [[ -n "$patch_findings" ]] || continue
+        printf '\n[UdonSharp] FILE: %s\n%s\n' "$patch_path" "$patch_stderr" >&2
+        patch_report+="[UdonSharp] FILE: $patch_path"$'\n'"$patch_findings"$'\n'
+    done <<< "$patch_paths"
+    if [[ -n "$patch_report" ]]; then
+        report_to_agent "${patch_report%$'\n'}"
+    fi
+    exit 0
 fi
 
 # Only process .cs files

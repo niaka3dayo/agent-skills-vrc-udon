@@ -5,7 +5,8 @@
 .DESCRIPTION
     Checks for common constraint violations in UdonSharp code.
     Called as a PostToolUse hook when a .cs file is written or edited.
-    Input: JSON via stdin with tool_input.file_path
+    Input: JSON via stdin with tool_input.file_path, or a Codex apply_patch
+    payload with the patch text in tool_input.command
     Output: Diagnostics on stderr for a person, and the same lines on stdout as
     one JSON object (hookSpecificOutput.additionalContext) for the agent.
     Prints nothing when there is nothing to report. Always exits 0.
@@ -19,6 +20,12 @@ $HookInput = [Console]::In.ReadToEnd()
 # from a hook that exits 0. It parses stdout as one JSON object and adds
 # additionalContext to the model's context, so diagnostics must go there to
 # be acted on. The event name is echoed back because hosts name it differently.
+function ConvertTo-AsciiJson($Value) {
+    $Json = $Value | ConvertTo-Json -Compress -Depth 3
+    # Escape non-ASCII so the text survives any console code page.
+    return [regex]::Replace($Json, '[^\x00-\x7F]', { param($Match) '\u{0:x4}' -f [int][char]$Match.Value })
+}
+
 function Write-AgentReport([string]$Context) {
     $EventName = 'PostToolUse'
     try {
@@ -29,15 +36,12 @@ function Write-AgentReport([string]$Context) {
     } catch {
         $EventName = 'PostToolUse'
     }
-    $Json = [ordered]@{
+    [Console]::Out.WriteLine((ConvertTo-AsciiJson ([ordered]@{
         hookSpecificOutput = [ordered]@{
             hookEventName = $EventName
             additionalContext = $Context
         }
-    } | ConvertTo-Json -Compress -Depth 3
-    # Escape non-ASCII so the reply survives any console code page.
-    $Json = [regex]::Replace($Json, '[^\x00-\x7F]', { param($Match) '\u{0:x4}' -f [int][char]$Match.Value })
-    [Console]::Out.WriteLine($Json)
+    })))
 }
 
 function Stop-Validation([string]$Code) {
@@ -59,6 +63,41 @@ try {
     }
 } catch {
     Stop-Validation 'JSON_PARSE_FAILED'
+}
+
+# Codex edits files with apply_patch, whose hook input carries the patch text
+# in tool_input.command instead of a path. Validate each .cs file the patch
+# adds, updates, or moves, and name the file in front of its findings.
+# shortcut: relative paths resolve against the hook working directory, which
+# Codex sets to the session directory; read the payload cwd if a host differs.
+if (-not $FilePath -and $JsonObj.tool_input.command -is [string]) {
+    $PatchPaths = @([regex]::Matches($JsonObj.tool_input.command, '(?m)^\*\*\* (?:Add File|Update File|Move to): (.*\.cs)\r?$') |
+        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    $PowerShellPath = (Get-Process -Id $PID).Path
+    $PatchReport = @()
+    foreach ($PatchPath in $PatchPaths) {
+        $ChildPayload = ConvertTo-AsciiJson @{ tool_input = @{ file_path = $PatchPath } }
+        # Windows PowerShell turns redirected native stderr into error records.
+        $ErrorActionPreference = "Continue"
+        $ChildReply = $ChildPayload | & $PowerShellPath -NoLogo -NoProfile -File $PSCommandPath 2>$null
+        $ErrorActionPreference = "Stop"
+        if (-not $ChildReply) {
+            if ($LASTEXITCODE -ne 0) {
+                $PatchReport += "[UdonSharp] FILE: $PatchPath"
+                $PatchReport += "[UdonSharp] VALIDATOR-WARNING: validation skipped (PATCH_FILE_FAILED)"
+            }
+            continue
+        }
+        $PatchReport += "[UdonSharp] FILE: $PatchPath"
+        $PatchReport += ([string]($ChildReply | ConvertFrom-Json).hookSpecificOutput.additionalContext) -split "`n"
+    }
+    if ($PatchReport.Count -gt 0) {
+        foreach ($Line in $PatchReport) {
+            [Console]::Error.WriteLine($Line)
+        }
+        Write-AgentReport ($PatchReport -join "`n")
+    }
+    exit 0
 }
 
 # Only process .cs files
@@ -955,15 +994,11 @@ if ($MaskedSource -match '\w+\s*\[\s*,') {
 
 # Output warnings
 if ($Warnings.Count -gt 0) {
-    $SavedErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    Write-Error ""
-    Write-Error "=== UdonSharp Validation Warnings ==="
-    foreach ($Warning in $Warnings) {
-        Write-Error $Warning
+    # Plain lines: Write-Error wraps each one in an error record, which
+    # Windows PowerShell prints as several decorated lines.
+    $Report = @("", "=== UdonSharp Validation Warnings ===") + $Warnings + @("===================================", "")
+    foreach ($Line in $Report) {
+        [Console]::Error.WriteLine($Line)
     }
-    Write-Error "==================================="
-    Write-Error ""
-    $ErrorActionPreference = $SavedErrorAction
     Write-AgentReport ($Warnings -join "`n")
 }

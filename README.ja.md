@@ -196,7 +196,7 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 エージェントが `.cs` ファイルを書き込んだり編集したりするたびに、PostToolUse フックが内容を検査し、結果をエージェントに返します。
 
-**Claude Code プラグイン** &mdash; 自動で登録されます。プラグインは Bash 版の検証を実行するため、`bash` と `jq` が `PATH` にある必要があります。Windows では Git Bash と `jq`（`winget install jqlang.jq`）が必要です。
+**Claude Code プラグイン** &mdash; 自動で登録されます。プラグインは Bash 版の検証を実行するため、`bash` が `PATH` にある必要があります。Windows では Git Bash があれば動作し、`jq` は不要です。
 
 **skills CLI または git clone** &mdash; フックは自分で登録します。Claude Code の場合は `.claude/settings.json` に次の内容を追加してください。
 
@@ -218,7 +218,7 @@ Q3: 継続的に変化しますか？（位置・回転など）
 }
 ```
 
-`jq` が不要な PowerShell 版を使う場合は、command を `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"` に変更します。
+PowerShell 版を使う場合は、command を `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"` に変更します。
 
 | カテゴリ | チェック内容 | 重大度 |
 |----------|-------|----------|
@@ -235,7 +235,9 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 検出結果は、その編集に対する追加コンテキストとしてエージェントに届きます。手動で実行した場合のために、同じ内容を stderr にも出力します。フックが編集を止めることはありません。
 
-Bash版の検証には `jq` が必要です。利用できない場合は、`.cs` ファイルの編集に対して `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)` を報告し、検証済みとは扱いません。
+フックの入力やファイルを読めないなど、検証を実行できなかった場合は `VALIDATOR-WARNING: validation skipped (<理由>)` を報告し、検証済みとは扱いません。
+
+Codex は `apply_patch` でファイルを編集し、フックにはファイルパスではなくパッチ本文を渡します。どちらの検証もこの入力を受け取り、パッチに含まれる `.cs` ファイルをそれぞれ検証します。
 
 ---
 

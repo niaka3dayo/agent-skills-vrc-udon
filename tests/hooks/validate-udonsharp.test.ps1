@@ -45,8 +45,11 @@ function Invoke-HookProcess([string]$Payload) {
     [void]$Process.Start()
     $Process.StandardInput.Write($Payload)
     $Process.StandardInput.Close()
+    # Read stderr concurrently: a hook that fills the stderr pipe would block
+    # for as long as only stdout is being read.
+    $StderrTask = $Process.StandardError.ReadToEndAsync()
     $Stdout = $Process.StandardOutput.ReadToEnd()
-    $Stderr = $Process.StandardError.ReadToEnd()
+    $Stderr = $StderrTask.Result
     $Process.WaitForExit()
 
     return [pscustomobject]@{
@@ -485,6 +488,20 @@ try {
     Assert-Contains 'event name case still warns' $EventResult.Stderr $SyncBloatWarning
     Assert-StdoutReports 'report echoes the host event name' $EventResult 'AfterTool'
 
+    # Codex apply_patch sends the patch text instead of a path.
+    $PatchAsyncPath = Join-Path $TempRoot 'patch-async.cs'
+    Set-Content -LiteralPath $PatchAsyncPath -Value "using UdonSharp;`npublic class PatchAsync : UdonSharpBehaviour`n{`n    private async void Run() { }`n}`n"
+    $PatchPayload = [ordered]@{
+        tool_name = 'apply_patch'
+        tool_input = @{ command = "*** Begin Patch`n*** Update File: $EventSourcePath`n@@`n-a`n+b`n*** Add File: missing.cs`n+x`n*** Update File: old.cs`n*** Move to: $PatchAsyncPath`n*** End Patch`n" }
+    } | ConvertTo-Json -Compress
+    $PatchResult = Invoke-HookProcess $PatchPayload
+    Assert-Contains 'apply_patch names the file' $PatchResult.Stderr "[UdonSharp] FILE: $EventSourcePath"
+    Assert-Contains 'apply_patch validates the patched file' $PatchResult.Stderr $SyncBloatWarning
+    Assert-Contains 'apply_patch names a moved file' $PatchResult.Stderr "[UdonSharp] FILE: $PatchAsyncPath"
+    Assert-Contains 'apply_patch validates a second file' $PatchResult.Stderr 'async/await not supported'
+    Assert-StdoutReports 'apply_patch' $PatchResult
+
     $MalformedPayload = '{"tool_input":'
     $MalformedResult = Invoke-HookProcess $MalformedPayload
     if ($MalformedResult.ExitCode -eq 0) {
@@ -706,7 +723,7 @@ public class Sample : UdonSharpBehaviour
     $UnicodeDeclarationCapPath = Join-Path $TempRoot 'declaration-cap-unicode.cs'
     $UnicodeDeclarationCapSource = 'using UdonSharp;' + [char]10 +
         'public class DeclarationCapUnicode : UdonSharpBehaviour' + [char]10 +
-        '{' + [char]10 + '    [UdonSynced]' + [char]10 + '    ' + ('界' * 88000) + [char]10
+        '{' + [char]10 + '    [UdonSynced]' + [char]10 + '    ' + ([string][char]0x754C * 88000) + [char]10
     [System.IO.File]::WriteAllText($UnicodeDeclarationCapPath, $UnicodeDeclarationCapSource, (New-Object System.Text.UTF8Encoding($false)))
     $UnicodeDeclarationCapPayload = @{ tool_input = @{ file_path = $UnicodeDeclarationCapPath } } | ConvertTo-Json -Compress
     $UnicodeDeclarationCapResult = Invoke-HookProcess $UnicodeDeclarationCapPayload
