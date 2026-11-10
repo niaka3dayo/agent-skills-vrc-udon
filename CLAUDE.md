@@ -68,6 +68,8 @@ Both `dev` and `main` are protected:
 | File | Purpose |
 |------|---------|
 | `package.json` | npm metadata, `files` array controls what gets published |
+| `.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json` | Claude Code marketplace entry and plugin manifest |
+| `hooks/hooks.json` | Registers the validator hook for Claude Code plugin installs |
 | `skills/*/SKILL.md` | Skill definitions with YAML frontmatter |
 | `skills/*/rules/*.md` | Constraint rules for AI code generation |
 | `templates/*.md` | AI tool config files distributed to end users |
