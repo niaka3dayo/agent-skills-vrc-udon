@@ -473,14 +473,15 @@ for path in "$RULE" "$NETWORKING_REF" "$API_REF" "$PATTERNS_REF" "$BANDWIDTH_REF
     forbid_regex "$path" 'cryptograph|unspoofable|unforgeable|server[- ]backed|cannot be spoofed|secure sender'
 done
 
-# CI keeps this exact smoke test under the Documentation Smoke Tests job.
+# CI keeps this smoke test under the Documentation Smoke Tests job, which runs
+# every tests/docs suite through tests/run.sh.
 DOCS_JOB="$(awk '
     /^  docs:$/ { in_docs = 1 }
     in_docs && /^  [a-zA-Z0-9_-]+:$/ && $1 != "docs:" { exit }
     in_docs { print }
 ' "$CI")"
 require_text <(printf '%s\n' "$DOCS_JOB") '    name: Documentation Smoke Tests'
-require_text <(printf '%s\n' "$DOCS_JOB") $'      - name: Check network event hardening and SDK coverage\n        run: bash tests/docs/network-event-hardening.test.sh'
+require_text <(printf '%s\n' "$DOCS_JOB") '        run: bash tests/run.sh tests/docs/'
 
 # The two local input handlers must reject non-owner callers before dispatch,
 # while the getter comments must keep the local-only/legacy-call boundary clear.

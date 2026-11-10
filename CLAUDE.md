@@ -27,6 +27,10 @@ templates/                       # AI tool config templates (distributed to user
 .github/
   workflows/                     # CI (lint, pack test, publish)
   ISSUE_TEMPLATE/                # Bug report, knowledge request
+tests/
+  run.sh                         # Local entry point: runs every suite CI runs
+  docs/                          # Documentation contract tests and fixtures
+  hooks/                         # Validator hook tests and fixtures
 package.json                     # npm package config
 ```
 
@@ -66,10 +70,15 @@ Both `dev` and `main` are protected:
 ## Testing
 
 ```bash
+# Run every suite CI runs. Needs bash, python3 and jq; on Windows run it inside WSL.
+npm test                        # same as: bash tests/run.sh
+bash tests/run.sh layers        # only suites whose path contains "layers"
+
 # Verify npm pack includes correct files
 npm pack --dry-run
-
 ```
+
+The BusyBox and PowerShell hook suites are skipped locally when `busybox` or `pwsh` is missing; CI always runs them.
 
 ## CI Checks
 

@@ -13,6 +13,9 @@
     "url": "https://github.com/niaka3dayo/agent-skills-vrc-udon/issues"
   },
   "type": "module",
+  "scripts": {
+    "test": "bash tests/run.sh"
+  },
   "files": [
     "skills/",
     "templates/",
