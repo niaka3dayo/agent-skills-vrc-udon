@@ -43,7 +43,11 @@ function Invoke-HookProcess([string]$Payload) {
     $Process = New-Object System.Diagnostics.Process
     $Process.StartInfo = $StartInfo
     [void]$Process.Start()
-    $Process.StandardInput.Write($Payload)
+    # Write UTF-8 bytes without a BOM, as a host agent does. The StandardInput
+    # writer would use the console code page and, when that is UTF-8, add a BOM.
+    $PayloadBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($Payload)
+    $Process.StandardInput.BaseStream.Write($PayloadBytes, 0, $PayloadBytes.Length)
+    $Process.StandardInput.BaseStream.Flush()
     $Process.StandardInput.Close()
     # Read stderr concurrently: a hook that fills the stderr pipe would block
     # for as long as only stdout is being read.
@@ -487,6 +491,15 @@ try {
     $EventResult = Invoke-HookProcess $EventPayload
     Assert-Contains 'event name case still warns' $EventResult.Stderr $SyncBloatWarning
     Assert-StdoutReports 'report echoes the host event name' $EventResult 'AfterTool'
+
+    # A non-ASCII path arrives as UTF-8 whatever the console code page is.
+    $NonAsciiLeaf = ([string][char]0x65E5) + ([string][char]0x672C) + ([string][char]0x8A9E) + '.cs'
+    $NonAsciiPath = Join-Path $TempRoot $NonAsciiLeaf
+    [System.IO.File]::WriteAllText($NonAsciiPath, "using UdonSharp;`npublic class Sample : UdonSharpBehaviour`n{`n    [UdonSynced] private int[] values;`n}`n", (New-Object System.Text.UTF8Encoding($false)))
+    $NonAsciiPayload = '{"tool_input":{"file_path":"' + $NonAsciiPath.Replace('\', '\\') + '"}}'
+    $NonAsciiResult = Invoke-HookProcess $NonAsciiPayload
+    Assert-Contains 'non-ASCII path is validated' $NonAsciiResult.Stderr $SyncBloatWarning
+    Assert-StdoutReports 'non-ASCII path' $NonAsciiResult
 
     # Codex apply_patch sends the patch text instead of a path.
     $PatchAsyncPath = Join-Path $TempRoot 'patch-async.cs'

@@ -14,7 +14,11 @@
 
 $ErrorActionPreference = "Stop"
 
-$HookInput = [Console]::In.ReadToEnd()
+# Host agents write the hook input as UTF-8. [Console]::In would decode it with
+# the console code page, which turns a non-ASCII path into a path that does not
+# exist, so the file would be skipped without a word.
+$StdinReader = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), (New-Object System.Text.UTF8Encoding($false)))
+$HookInput = $StdinReader.ReadToEnd()
 
 # A host agent (Claude Code, Gemini CLI, Codex) never shows the model stderr
 # from a hook that exits 0. It parses stdout as one JSON object and adds
