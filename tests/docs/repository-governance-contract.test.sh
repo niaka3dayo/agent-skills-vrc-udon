@@ -83,4 +83,9 @@ for block in "$RELEASE_LABEL" "$SKILLS_LABEL"; do
     fi
 done
 
+# The docs job hands the suite list to tests/run.sh, and tests/run.sh takes it
+# from a glob. Together they keep a new suite from being left out of CI.
+require_text "$ROOT_DIR/.github/workflows/ci.yml" 'run: bash tests/run.sh tests/docs/'
+require_text "$ROOT_DIR/tests/run.sh" 'for suite in tests/docs/*.test.sh tests/hooks/*.test.sh; do'
+
 echo 'PASS: repository governance contracts'

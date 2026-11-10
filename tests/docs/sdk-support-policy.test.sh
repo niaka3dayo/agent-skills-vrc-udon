@@ -224,9 +224,9 @@ require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networki
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'historical migration context, not an active-support cutoff'
 forbid_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'not as active support routes'
 
-# This contract must be part of the required Documentation Smoke Tests job.
+# This contract must be part of the required Documentation Smoke Tests job,
+# which runs every tests/docs suite through tests/run.sh.
 CI="$ROOT_DIR/.github/workflows/ci.yml"
-require_text "$CI" 'Check SDK active support policy'
-require_text "$CI" 'bash tests/docs/sdk-support-policy.test.sh'
+require_text "$CI" 'bash tests/run.sh tests/docs/'
 
 echo "PASS: SDK active support policy contract"

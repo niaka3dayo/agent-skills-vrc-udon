@@ -433,7 +433,11 @@ for step in steps:
         continue
     for command in parsed.get("run", []):
         command = scalar(command)
-        if command == "bash tests/docs/layers-reference-contract.test.sh":
+        # tests/run.sh runs every tests/docs/*.test.sh, this contract included.
+        if command in (
+            "bash tests/docs/layers-reference-contract.test.sh",
+            "bash tests/run.sh tests/docs/",
+        ):
             count += 1
 
 print(0 if job_disabled or job_non_gating else count)

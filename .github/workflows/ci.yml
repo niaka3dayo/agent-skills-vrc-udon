@@ -63,44 +63,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
-      - name: Check build validation reference coverage
-        run: bash tests/docs/build-validation-reference.test.sh
-
-      - name: Check assembly definitions reference coverage
-        run: bash tests/docs/assembly-definitions-reference.test.sh
-
-      - name: Check network event hardening and SDK coverage
-        run: bash tests/docs/network-event-hardening.test.sh
-
-      - name: Check SDK active support policy
-        run: bash tests/docs/sdk-support-policy.test.sh
-
-      - name: Check Udon event receiver reference
-        run: bash tests/docs/udon-event-receiver-reference.test.sh
-
-      - name: Check community contributor acknowledgements
-        run: bash tests/docs/community-contributors.test.sh
-
-      - name: Check repository governance contracts
-        run: bash tests/docs/repository-governance-contract.test.sh
-
-      - name: Check Skill metadata routing contract
-        run: bash tests/docs/skill-routing-contract.test.sh
-
-      - name: Check layers runtime exception and evidence boundary
-        run: bash tests/docs/layers-reference-contract.test.sh
-
-      - name: Check runtime public field serialization guidance
-        run: bash tests/docs/runtime-public-field-serialization-reference.test.sh
-
-      - name: Check Editor-evaluated field initializer boundary
-        run: bash tests/docs/field-initializer-context-reference.test.sh
-
-      - name: Check VRCUrl.Empty field initializer boundary
-        run: bash tests/docs/vrcurl-empty-initializer-reference.test.sh
-
-      - name: Check synced array callback and VRCUrl[] guidance
-        run: bash tests/docs/synced-array-callback-reference.test.sh
+      # tests/run.sh runs every tests/docs/*.test.sh, so a new suite cannot be
+      # left out of CI by forgetting to list it here.
+      - name: Run documentation contract tests
+        run: bash tests/run.sh tests/docs/
 
   markdown:
     name: Markdown Links

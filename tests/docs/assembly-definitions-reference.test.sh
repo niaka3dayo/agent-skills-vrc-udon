@@ -82,7 +82,7 @@ require_any_text "$CHEATSHEET" "simple world scripts" "world scripts"
 require_any_text "$CHEATSHEET" "package/asmdef" "U# Assembly Definition"
 require_text "$CHEATSHEET" "Auto Referenced"
 
-# CI docs job runs this smoke test.
-require_text "$CI" "assembly-definitions-reference.test.sh"
+# The CI docs job runs every tests/docs suite through tests/run.sh.
+require_text "$CI" "bash tests/run.sh tests/docs/"
 
 echo "PASS: assembly-definitions reference coverage smoke test"
