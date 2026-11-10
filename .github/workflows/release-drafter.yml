@@ -3,19 +3,18 @@ name: Release Drafter
 on:
   push:
     branches: [main]
-  pull_request:
-    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   update-release-draft:
     runs-on: ubuntu-latest
     permissions:
+      # Create and update the draft release
       contents: write
-      pull-requests: write
+      # Read merged PRs for the notes; write is only needed for the autolabeler, which is not configured
+      pull-requests: read
     steps:
       - uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7  # v6
         env:

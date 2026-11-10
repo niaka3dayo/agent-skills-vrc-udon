@@ -1,0 +1,72 @@
+name: SDK Watch
+
+# Scheduled workflows run only from the default branch (dev).
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-sdk:
+    name: Check latest stable VRChat SDK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Compare latest stable SDK with the active target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # releases/latest skips prereleases, so betas such as 3.10.6-beta.4 never match here.
+          LATEST=$(gh api repos/vrchat/packages/releases/latest --jq '.tag_name')
+          if [[ ! "$LATEST" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Unexpected latest SDK tag from vrchat/packages"
+            exit 1
+          fi
+
+          ACTIVE=$(sed -nE 's/^\*\*Active support \/ last verified\*\*: SDK ([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' \
+            skills/unity-vrc-udon-sharp/SKILL.md | head -n 1)
+          if [[ -z "$ACTIVE" ]]; then
+            echo "::error::Could not read the active SDK target from skills/unity-vrc-udon-sharp/SKILL.md"
+            exit 1
+          fi
+
+          echo "Active target: $ACTIVE"
+          echo "Latest stable: $LATEST"
+
+          NEWEST=$(printf '%s\n%s\n' "$ACTIVE" "$LATEST" | sort -V | tail -n 1)
+          if [[ "$LATEST" == "$ACTIVE" || "$NEWEST" != "$LATEST" ]]; then
+            echo "Active target is up to date."
+            exit 0
+          fi
+
+          TITLE="SDK $LATEST released: verify and move the active target"
+          # A failed lookup fails the job instead of risking a duplicate Issue.
+          TITLES=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --limit 100 \
+            --search "\"$TITLE\" in:title" --json title --jq '.[].title')
+          if grep -Fxq -- "$TITLE" <<<"$TITLES"; then
+            echo "Issue already exists: $TITLE"
+            exit 0
+          fi
+
+          BODY=$(cat <<EOF
+          A newer stable VRChat SDK was detected.
+
+          - Active target (skills/unity-vrc-udon-sharp/SKILL.md): $ACTIVE
+          - Latest stable release: $LATEST
+          - Release: https://github.com/vrchat/packages/releases/tag/$LATEST
+          - Release notes: https://creators.vrchat.com/releases/
+
+          Follow the maintainer procedure in .claude/skills/unity-vrc-skills-renovator/SKILL.md and run the coverage audit in .claude/audit/README.md before moving the active target.
+          EOF
+          )
+
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --label "type: sdk-update" --body "$BODY"

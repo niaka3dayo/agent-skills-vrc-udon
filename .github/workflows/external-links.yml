@@ -1,0 +1,37 @@
+name: VRChat Docs Links
+
+# Weekly check of the VRChat hosts that the required "Markdown Links" job excludes.
+# Not a required check. Scheduled workflows run only from the default branch (dev).
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vrchat-links:
+    name: VRChat documentation links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      # With --include and no --exclude, lychee checks only the included URLs.
+      # 403 and 429 are accepted because these hosts block or rate-limit bots;
+      # only real rot (404, 410, DNS or connection failures) fails the job.
+      - name: Check VRChat documentation links
+        uses: lycheeverse/lychee-action@8646ba30535128ac92d33dfc9133794bfdd9b411  # v2
+        with:
+          args: >-
+            --include "^https://creators\.vrchat\.com"
+            --include "^https://udonsharp\.docs\.vrchat\.com"
+            --include "^https://ask\.vrchat\.com"
+            --include "^https://feedback\.vrchat\.com"
+            --include "^https://wiki\.vrchat\.com"
+            --accept "100..=103,200..=299,403,429"
+            --max-concurrency 4
+            --timeout 30
+            --no-progress
+            "**/*.md"
+          fail: true
