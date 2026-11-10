@@ -10,23 +10,32 @@ skills/                          # Skill content (distributed to users)
   unity-vrc-udon-sharp/          # UdonSharp constraints, networking, templates
   unity-vrc-world-sdk-3/         # World SDK components, optimization
 .claude/
-  rules/
+  rules/                         # Loaded automatically in this repository
     doc-sync.md                  # Documentation sync rule (repo maintenance)
+    evidence-gate.md             # Evidence order before changing a verified runtime claim
   hooks/
     doc-sync-reminder.sh         # PostToolUse hook: reminds about doc updates
-  skills/
-    unity-vrc-skills-renovator/  # Meta-skill for maintaining skills (dev only, not distributed)
+  skills/                        # Maintainer-only skills (not distributed)
+    unity-vrc-skills-renovator/  # Meta-skill for maintaining the distributed skills
+    release/                     # Release procedure and its scripts
   audit/                         # SDK coverage-audit tooling + ledger (maintainer-only, not distributed)
     README.md                    # How to run the SDK-bump diff audit
     sdk-coverage-ledger.md       # Decision ledger (candidates, verdicts, skips)
     scripts/                     # census / diff / refine pipeline
+evals/                           # Behavioural evals for `claude plugin eval` (see evals/README.md)
 templates/                       # AI tool config templates (distributed to users)
   CLAUDE.md                      # Claude Code project instructions
   AGENTS.md                      # Codex CLI / generic agent instructions
   GEMINI.md                      # Gemini CLI instructions
+hooks/
+  hooks.json                     # Claude Code plugin hook registration (runs validate-udonsharp.sh)
 .github/
   workflows/                     # CI (lint, pack test, publish)
   ISSUE_TEMPLATE/                # Bug report, knowledge request
+tests/
+  run.sh                         # Local entry point: runs every suite CI runs
+  docs/                          # Documentation contract tests and fixtures
+  hooks/                         # Validator hook tests and fixtures
 package.json                     # npm package config
 ```
 
@@ -59,6 +68,8 @@ Both `dev` and `main` are protected:
 | File | Purpose |
 |------|---------|
 | `package.json` | npm metadata, `files` array controls what gets published |
+| `.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json` | Claude Code marketplace entry and plugin manifest |
+| `hooks/hooks.json` | Registers the validator hook for Claude Code plugin installs |
 | `skills/*/SKILL.md` | Skill definitions with YAML frontmatter |
 | `skills/*/rules/*.md` | Constraint rules for AI code generation |
 | `templates/*.md` | AI tool config files distributed to end users |
@@ -66,10 +77,17 @@ Both `dev` and `main` are protected:
 ## Testing
 
 ```bash
+# Run every suite CI runs. Needs bash, python3 and jq; on Windows run it inside WSL.
+npm test                        # same as: bash tests/run.sh
+bash tests/run.sh layers        # only suites whose path contains "layers"
+
 # Verify npm pack includes correct files
 npm pack --dry-run
-
 ```
+
+The BusyBox and PowerShell hook suites are skipped locally when `busybox` or `pwsh` is missing; CI always runs them.
+
+Those suites are static. To check what an agent does with the skills loaded, run the evals in [`evals/README.md`](evals/README.md) before and after a change to a `SKILL.md`, a description, or a rule. They cost real usage, so they are not part of CI.
 
 ## CI Checks
 
@@ -92,184 +110,15 @@ npm pack --dry-run
   to automatically apply formatting rules from `.editorconfig`.
 - **Per-line exceptions**: Use `// editorconfig-checker-disable-line` for intentional deviations.
 
-## Release Guide
+## Releases
 
-### Overview
+Follow the `release` skill ([`.claude/skills/release/SKILL.md`](.claude/skills/release/SKILL.md)) step by step. Do not improvise a release. These rules hold whatever else happens:
 
-```
-main ──sync PR──> dev (when the ancestry check fails)
-dev ──version-bump PR──> dev ──release PR──> main ──Release Drafter draft──> publish ──> npm
-```
-
-GitHub Release notes are drafted by Release Drafter, and GitHub Releases are the canonical release history. `CHANGELOG.md` is a historical archive through v1.2.0; later releases are not backfilled. **Version numbers must be bumped manually on `dev` before opening the release PR** (see Step 2 below). `publish.yml` does run `npm version "$VERSION" --no-git-tag-version` in the CI runner as a safety net, but those edits are not committed back, so the git tree's source-of-truth must be kept current by hand.
-
-### Step-by-step
-
-1. **Synchronize `main` into `dev` when needed**
-   - Fetch both remote branches and verify that `dev` contains the current `main` history:
-
-     ```bash
-     set -e
-     git fetch origin
-
-     if ! git merge-base --is-ancestor origin/main origin/dev; then
-       SYNC_BRANCH="chore/sync-main-into-dev-$(date +%Y%m%d%H%M%S)"
-       git switch --create "$SYNC_BRANCH" origin/dev
-       git merge --no-ff origin/main -m "chore: sync main into dev before release"
-       git push -u origin "$SYNC_BRANCH"
-
-       SYNC_PR=$(gh pr create --base dev --head "$SYNC_BRANCH" \
-         --title "chore: sync main into dev before release" \
-         --body "Merge the current main history into dev before the next release.")
-
-       REQUIRED_CHECKS=(
-         "Symlink Integrity"
-         "Hook Scripts"
-         "Documentation Smoke Tests"
-         "Markdown Links"
-         "npm Pack Test"
-         "EditorConfig"
-         "Version Sync"
-       )
-       for ((attempt = 1; attempt <= 30; attempt++)); do
-         REGISTERED_CHECKS=""
-         if REGISTERED_CHECKS=$(gh pr view "$SYNC_PR" --json statusCheckRollup \
-           --jq '.statusCheckRollup[] | (.name // .context)' 2>/dev/null); then
-           :
-         fi
-
-         MISSING_CHECKS=()
-         for REQUIRED_CHECK in "${REQUIRED_CHECKS[@]}"; do
-           if ! grep -Fqx -- "$REQUIRED_CHECK" <<<"$REGISTERED_CHECKS"; then
-             MISSING_CHECKS+=("$REQUIRED_CHECK")
-           fi
-         done
-         if (( ${#MISSING_CHECKS[@]} == 0 )); then
-           break
-         fi
-         if (( attempt == 30 )); then
-           printf 'ERROR: timed out waiting for required checks to register. Missing checks:\n' >&2
-           printf '  - %s\n' "${MISSING_CHECKS[@]}" >&2
-           exit 1
-         fi
-         sleep 10
-       done
-
-       gh pr checks "$SYNC_PR" --required --watch
-       gh pr merge "$SYNC_PR" --merge --delete-branch
-
-       git fetch origin
-       git merge-base --is-ancestor origin/main origin/dev
-     fi
-     ```
-
-   - The sync PR must pass all seven required checks: Symlink Integrity, Hook Scripts,
-     Documentation Smoke Tests, Markdown Links, npm Pack Test, EditorConfig, and Version Sync.
-     Do not continue until the final ancestry check succeeds.
-
-2. **Bump version fields on `dev`**
-   - Decide the target version vX.Y.Z (consult labels on merged PRs since the last release — see "Version resolution" below).
-   - Branch off `dev`, run the bump, open a PR back to `dev`:
-
-     ```bash
-     set -e
-     git checkout dev && git pull
-     git checkout -b chore/release-vX.Y.Z
-
-     # OLD: read from local package.json. If your local is stale, prefer:
-     #   OLD=$(npm view agent-skills-vrc-udon version)
-     OLD=$(node -p "require('./package.json').version")
-     NEW=X.Y.Z
-
-     # 5 fields must move together — Version Sync CI verifies parity.
-     # The SKILL.md sed is anchored to the 4-space-indented frontmatter line
-     # so body-text occurrences (e.g. SDK version mentions) are not rewritten.
-     sed -i "s/\"version\": \"$OLD\"/\"version\": \"$NEW\"/" package.json .claude-plugin/marketplace.json
-     sed -i "s/^    version: \"$OLD\"$/    version: \"$NEW\"/" \
-       skills/unity-vrc-udon-sharp/SKILL.md \
-       skills/unity-vrc-world-sdk-3/SKILL.md \
-       .claude/skills/unity-vrc-skills-renovator/SKILL.md
-
-     # Sanity check before commit — only the 5 expected fields should diff.
-     git diff --stat
-
-     git commit -am "chore(version): bump to vX.Y.Z"
-     git push -u origin chore/release-vX.Y.Z
-     gh pr create --base dev --label "release: maintenance" \
-       --title "chore(version): bump to vX.Y.Z" \
-       --body "Pre-release version bump for Step 3 of the release flow."
-     ```
-
-   - Wait for all seven required CI checks to pass. Version Sync verifies all 5 fields agree on `vX.Y.Z`. Merge the bump PR into `dev` (squash is fine here — single-purpose commit). CodeRabbit review is optional on this PR — it's mechanical and Version Sync is the substantive check.
-
-3. **Create a release PR from `dev` to `main`**
-
-   ```bash
-   gh pr create --base main --head dev \
-     --title "Release vX.Y.Z" \
-     --body "Merge dev into main for release"
-   ```
-
-   - Title must include the version that matches `package.json#version` on `dev` after Step 2.
-   - Wait for CI to pass. CodeRabbit approval is **not required for release PRs** (per repo convention — release PRs are mechanical merges of already-reviewed commits).
-
-4. **Merge the release PR**
-   - Merge (do NOT squash — preserve commit history so Release Drafter sees each underlying PR commit).
-   - This triggers Release Drafter to update the draft release on `main`.
-
-5. **Publish the GitHub Release draft**
-
-   ```bash
-   # List draft releases
-   gh release list --exclude-drafts=false
-
-   # Always rewrite the auto-generated notes before publishing:
-   #   - Remove the "Release vX.Y.Z (#N)" self-reference line
-   #   - Replace bare PR titles with user-facing prose
-   #   - Use a bilingual structure: English release notes first, then a Japanese
-   #     version of the same user-facing content below it.
-   #   - Add a contributor acknowledgement section when any bundled PR closed an
-   #     externally-reported Issue. Name the Issue number and reporter explicitly.
-   #     Keep the acknowledgement respectful and mirror the reporter's language
-   #     when possible.
-   gh release edit vX.Y.Z --notes "$(cat <<'NOTES'
-   ## What's New in vX.Y.Z
-   ...
-
-   ## vX.Y.Z の変更点
-   ...
-   NOTES
-   )"
-
-   # Publish (this triggers publish.yml → npm publish)
-   gh release edit vX.Y.Z --draft=false
-   ```
-
-   - The `published` event triggers `publish.yml`.
-   - `publish.yml` reads the tag, runs `npm version "$VERSION" --allow-same-version` (no-op if Step 2 was done correctly), syncs to SKILL.md / marketplace.json again as a safety net, and runs `npm publish --provenance`.
-   - Uses the `npm-publish` environment (requires `NPM_TOKEN` secret).
-   - All published releases and their tags are kept permanently. Never delete releases or tags — published versions may be referenced by tag (e.g. `git clone --branch vX.Y.Z`), and deleting tags breaks reproducibility for users pinning a version (see Issue #290).
-
-### Version resolution (label-driven)
-
-When deciding the target version in Step 2, count the labels on PRs merged into `dev` since the last release:
-
-| Label | Bump |
-|-------|------|
-| `release: breaking` | major |
-| `release: feature` | minor |
-| `release: fix` | patch |
-| `release: docs` | patch |
-| `release: maintenance` | patch |
-
-The highest bump wins. If no label matches, default to **patch**. Release Drafter independently resolves the same labels for the draft body, so as long as the manual bump in Step 2 matches Release Drafter's resolution, the draft and `package.json` will agree.
-
-### What NOT to do
-
-- Do NOT skip Step 2 (the manual version bump). `publish.yml`'s runner-side mutation does **not** commit back, so a missed bump leaves the git tree frozen. The Version Sync CI check trivially passes when all 5 fields agree on the wrong value — this drifted for 5 release cycles before being caught (PR #169).
-- Do NOT create tags manually (Release Drafter creates them when the release is published).
-- Do NOT push directly to `dev` or `main` (branch protection blocks it; use the PR flows above).
-- Do NOT merge feature branches directly to `main` (always go through `dev`).
+- Bump the five version fields on `dev` before opening the release PR (`.claude/skills/release/scripts/bump-version.sh`). `publish.yml` changes them only inside the CI runner and does not commit them back.
+- Merge the release PR with a merge commit, never squash, so that Release Drafter sees each underlying PR.
+- Do not create tags by hand. Release Drafter creates the tag when the release is published.
+- Never delete a release or a tag. Users pin versions by tag (Issue #290).
+- GitHub Release notes are drafted by Release Drafter, and GitHub Releases are the canonical release history. `CHANGELOG.md` is a historical archive through v1.2.0; later releases are not backfilled.
 
 ## SDK Verification
 
@@ -290,6 +139,8 @@ When modifying skill content in `skills/`:
 - Update SDK version tables if adding new API coverage
 - Run the validate-udonsharp hook against any `.cs` code examples
 - Keep `templates/` in sync if skills table or rules paths change
+- After adding, renaming, or removing a `##` section in a reference, run `python3 tests/docs/reference-toc.py --write` to refresh its table of contents
+- The active SDK target is declared once per skill, in the `## SDK Versions` section of each `SKILL.md`. Other files under `skills/` link to it instead of repeating the number
 
 ### Documentation Sync
 

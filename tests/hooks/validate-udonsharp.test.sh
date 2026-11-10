@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Smoke test for skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh
 # Covers the failure modes reported in Issue #165:
-#   Case A: jq absent  → must exit 0 with stdout = input passthrough
+#   Case A: jq absent  → must exit 0 and still validate the file
 #   Case B: jq present, file_path missing → must exit 0 cleanly (no abort)
 #   Case C: jq present, valid .cs with List<T> → existing WARNING on stderr (happy path)
 #   Cases D-H: synced array detection regressions from Issue #307
@@ -65,6 +65,36 @@ run_hook() {
     RUN_HOOK_INPUT="{\"tool_input\":{\"file_path\":\"$file_path\"}}"
     RUN_HOOK_STDOUT=$(printf '%s' "$RUN_HOOK_INPUT" | "$HOOK" 2>"$stderr_path")
     RUN_HOOK_STATUS=$?
+}
+
+# Output contract. A host agent never shows the model stderr from a hook that
+# exits 0, so the hook repeats its [UdonSharp] lines on stdout as one JSON
+# object (hookSpecificOutput.additionalContext). stderr stays readable for a
+# person running the script by hand. A run with nothing to report prints
+# nothing on stdout.
+stdout_reports() {
+    local stdout="$1" stderr_path="$2" expected_event="${3:-PostToolUse}" expected context event
+    expected="$(grep -F '[UdonSharp]' "$stderr_path" || true)"
+    if [ -z "$expected" ]; then
+        [ -z "$stdout" ]
+        return
+    fi
+    [ "$(printf '%s\n' "$stdout" | wc -l | tr -d '[:space:]')" = "1" ] || return 1
+    context="$(printf '%s' "$stdout" | jq -er '.hookSpecificOutput.additionalContext')" || return 1
+    event="$(printf '%s' "$stdout" | jq -er '.hookSpecificOutput.hookEventName')" || return 1
+    [ "$context" = "$expected" ] && [ "$event" = "$expected_event" ]
+}
+
+assert_stdout_reports() {
+    local label="$1" stdout="$2" stderr_path="$3" expected_event="${4:-PostToolUse}"
+    if stdout_reports "$stdout" "$stderr_path" "$expected_event"; then
+        echo "PASS [$label] stdout reports exactly the stderr diagnostics"
+        PASS=$((PASS + 1))
+    else
+        echo "FAIL [$label] stdout does not report the stderr diagnostics"
+        echo "  stdout (truncated): $(printf '%s' "$stdout" | head -c 300)"
+        FAIL=$((FAIL + 1))
+    fi
 }
 
 materialize_fixture() {
@@ -264,8 +294,8 @@ run_shared_parity_matrix() {
             FAIL=$((FAIL + 1))
             continue
         fi
-        if [ "$RUN_HOOK_STDOUT" != "$RUN_HOOK_INPUT" ]; then
-            echo "FAIL [shared case $case_id] stdout did not preserve hook input"
+        if ! stdout_reports "$RUN_HOOK_STDOUT" "$stderr_path"; then
+            echo "FAIL [shared case $case_id] stdout does not report the stderr diagnostics"
             FAIL=$((FAIL + 1))
             continue
         fi
@@ -342,8 +372,8 @@ run_shared_parity_matrix() {
             FAIL=$((FAIL + 1))
             continue
         fi
-        if [ "$RUN_HOOK_STDOUT" != "$RUN_HOOK_INPUT" ]; then
-            echo "FAIL [template case $template_name] stdout did not preserve hook input"
+        if ! stdout_reports "$RUN_HOOK_STDOUT" "$template_stderr"; then
+            echo "FAIL [template case $template_name] stdout does not report the stderr diagnostics"
             FAIL=$((FAIL + 1))
             continue
         fi
@@ -383,13 +413,13 @@ run_shared_parity_matrix() {
 }
 
 # ------------------------------------------------------------
-# Case A: jq absent → exit 0, stdout = input passthrough
+# Case A: jq absent → exit 0, the file is still validated
 # ------------------------------------------------------------
 NOJQ_BIN="$TMPROOT/nojq-bin"
 mkdir -p "$NOJQ_BIN"
 
 # Symlink standard tools the hook needs, but deliberately omit jq.
-for tool in bash cat grep sed sort uniq tr head awk dirname basename rm mkdir; do
+for tool in bash cat grep sed sort uniq tr head tail wc awk mktemp dirname basename rm mkdir; do
     src=""
     for dir in /bin /usr/bin /usr/local/bin; do
         if [ -x "$dir/$tool" ]; then
@@ -409,30 +439,82 @@ if [ "$jq_check" != "MISSING" ]; then
     exit 2
 fi
 
-CASE_A_INPUT='{"tool_input":{"file_path":"Foo.cs"}}'
-A_STDOUT=$(printf '%s' "$CASE_A_INPUT" | env -i PATH="$NOJQ_BIN" HOME="${HOME:-/tmp}" "$NOJQ_BIN/bash" "$HOOK" 2>"$TMPROOT/case_a.err")
+# The hook reads its input without jq (Issue #394), so the same edit must be
+# validated on a machine that has none, such as Git Bash on Windows.
+CASE_A_FILE="$TMPROOT/NoJq.cs"
+cat > "$CASE_A_FILE" <<'CSEOF'
+using UdonSharp;
+using System.Collections.Generic;
+public class NoJq : UdonSharpBehaviour
+{
+    private List<int> items = new List<int>();
+}
+CSEOF
+A_STDOUT=$(printf '%s' "{\"tool_input\":{\"file_path\":\"$CASE_A_FILE\"}}" | env -i PATH="$NOJQ_BIN" HOME="${HOME:-/tmp}" "$NOJQ_BIN/bash" "$HOOK" 2>"$TMPROOT/case_a.err")
 A_RC=$?
 
 assert_exit "A: jq absent → exit 0" 0 "$A_RC"
-assert_contains "A: stdout passes input through" "$A_STDOUT" '"file_path":"Foo.cs"'
+assert_contains "A: jq absent → the file is still validated" "$(cat "$TMPROOT/case_a.err")" 'Generic collections (List<T>'
+assert_stdout_reports "A: jq absent" "$A_STDOUT" "$TMPROOT/case_a.err"
 
-A_STDERR=$(cat "$TMPROOT/case_a.err")
-assert_contains "A: jq absence is explicit" "$A_STDERR" 'VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)'
-if [ "$(wc -l < "$TMPROOT/case_a.err" | tr -d '[:space:]')" = "1" ]; then
-    echo "PASS [A: operational warning] exactly one stderr line"
+A2_STDOUT=$(printf '%s' '{"tool_input":{"file_path":"README.md"}}' | env -i PATH="$NOJQ_BIN" HOME="${HOME:-/tmp}" "$NOJQ_BIN/bash" "$HOOK" 2>"$TMPROOT/case_a2.err")
+A2_RC=$?
+assert_exit "A2: jq absent + non-.cs edit → exit 0" 0 "$A2_RC"
+if [ -z "$A2_STDOUT" ] && [ ! -s "$TMPROOT/case_a2.err" ]; then
+    echo "PASS [A2: jq absent + non-.cs edit] hook stays silent"
     PASS=$((PASS + 1))
 else
-    echo "FAIL [A: operational warning] expected exactly one stderr line"
+    echo "FAIL [A2: jq absent + non-.cs edit] hook was not silent"
     FAIL=$((FAIL + 1))
 fi
+
+# Input parsing. The path is read from tool_input only: the same key inside a
+# string value or in tool_response must not be taken for it, and JSON escapes
+# in the path are decoded.
+cp "$CASE_A_FILE" "$TMPROOT/解析 \"x\".cs"
+PARSE_PREFIX="{\"hook_event_name\":\"PostToolUse\",\"tool_input\":{\"content\":\"\\\\\\\"file_path\\\\\\\": \\\"$TMPROOT/README.md\\\" \\\\\\\\\",\"file_path\":\"$TMPROOT"
+for parse_case in \
+    "escaped quote and raw UTF-8|/解析 \\\"x\\\".cs\"},\"tool_response\":{\"filePath\":\"README.md\"}}|List<T>" \
+    "unicode escapes|/\\u89e3\\u6790 \\u0022x\\u0022.cs\"}}|List<T>" \
+    "escaped solidus|\\/NoJq.cs\"}}|List<T>" \
+    "path only in tool_response|/README.md\"},\"tool_response\":{\"filePath\":\"$CASE_A_FILE\"}}|"; do
+    IFS='|' read -r parse_label parse_tail parse_expected <<< "$parse_case"
+    PARSE_STDOUT=$(printf '%s' "$PARSE_PREFIX$parse_tail" | "$HOOK" 2>"$TMPROOT/parse.err")
+    assert_exit "input parsing: $parse_label → exit 0" 0 "$?"
+    if [ -n "$parse_expected" ]; then
+        assert_contains "input parsing: $parse_label" "$(cat "$TMPROOT/parse.err")" "$parse_expected"
+    else
+        assert_not_contains "input parsing: $parse_label" "$(cat "$TMPROOT/parse.err")" '[UdonSharp]'
+    fi
+    assert_stdout_reports "input parsing: $parse_label" "$PARSE_STDOUT" "$TMPROOT/parse.err"
+done
+
+# Codex apply_patch sends the patch text in tool_input.command instead of a
+# path. Each .cs file the patch names is validated and named in the report;
+# other files, and files that do not exist, add nothing.
+cat > "$TMPROOT/PatchAsync.cs" <<'CSEOF'
+using UdonSharp;
+public class PatchAsync : UdonSharpBehaviour
+{
+    private async void Run() { }
+}
+CSEOF
+PATCH_COMMAND="*** Begin Patch\\n*** Update File: NoJq.cs\\n@@\\n-a\\n+b \\\"q\\\"\\n*** Add File: Missing.cs\\n+x\\n*** Update File: README.md\\n*** Update File: Old.cs\\n*** Move to: PatchAsync.cs\\n*** End Patch\\n"
+PATCH_STDOUT=$(cd "$TMPROOT" && printf '%s' "{\"tool_name\":\"apply_patch\",\"tool_input\":{\"command\":\"$PATCH_COMMAND\"}}" | "$HOOK" 2>"$TMPROOT/patch.err")
+assert_exit "apply_patch → exit 0" 0 "$?"
+PATCH_STDERR=$(cat "$TMPROOT/patch.err")
+assert_contains "apply_patch names the file" "$PATCH_STDERR" '[UdonSharp] FILE: NoJq.cs'
+assert_contains "apply_patch validates the patched file" "$PATCH_STDERR" 'Generic collections (List<T>'
+assert_contains "apply_patch names a moved file" "$PATCH_STDERR" '[UdonSharp] FILE: PatchAsync.cs'
+assert_contains "apply_patch validates a second file" "$PATCH_STDERR" 'async/await not supported'
+assert_not_contains "apply_patch skips files with nothing to report" "$PATCH_STDERR" 'Missing.cs'
+assert_stdout_reports "apply_patch" "$PATCH_STDOUT" "$TMPROOT/patch.err"
 
 # ------------------------------------------------------------
 # Case B: jq present, file_path / filePath both missing → exit 0, no abort
 # ------------------------------------------------------------
 # Precondition: Cases B and C run against the unrestricted environment and
-# require jq to actually be installed. Without this guard, a runner that
-# happens to lack jq would silently fall through Case A's new passthrough
-# and stop testing what B/C claim to test.
+# use jq to read the hook's reply, so it has to be installed.
 if ! command -v jq >/dev/null 2>&1; then
     echo "ABORT: Cases B/C require jq in PATH (precondition not met)"
     exit 2
@@ -443,14 +525,20 @@ B_STDOUT=$(printf '%s' "$CASE_B_INPUT" | "$HOOK" 2>"$TMPROOT/case_b.err")
 B_RC=$?
 
 assert_exit "B: jq present + no file_path → exit 0" 0 "$B_RC"
-assert_contains "B: stdout passes input through" "$B_STDOUT" '"tool_input":{}'
+if [ -z "$B_STDOUT" ] && [ ! -s "$TMPROOT/case_b.err" ]; then
+    echo "PASS [B: nothing to report] hook stays silent"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL [B: nothing to report] hook was not silent"
+    FAIL=$((FAIL + 1))
+fi
 
 MALFORMED_INPUT='{"tool_input":'
 MALFORMED_STDOUT=$(printf '%s' "$MALFORMED_INPUT" | "$HOOK" 2>"$TMPROOT/malformed.err")
 MALFORMED_RC=$?
 assert_exit "B2: malformed JSON → exit 0" 0 "$MALFORMED_RC"
-assert_contains "B2: malformed JSON passes input through" "$MALFORMED_STDOUT" "$MALFORMED_INPUT"
 assert_contains "B2: parse failure is explicit" "$(cat "$TMPROOT/malformed.err")" 'VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)'
+assert_stdout_reports "B2: malformed JSON" "$MALFORMED_STDOUT" "$TMPROOT/malformed.err"
 
 # ------------------------------------------------------------
 # Case C: jq present, valid .cs with List<T> → expected WARNING on stderr (happy path)
@@ -471,12 +559,19 @@ C_STDERR=$(cat "$TMPROOT/case_c.err")
 
 assert_exit "C: happy path → exit 0" 0 "$C_RC"
 assert_contains "C: List<T> WARNING fires" "$C_STDERR" 'Generic collections (List<T>'
+assert_stdout_reports "C: warning reaches the agent" "$C_STDOUT" "$TMPROOT/case_c.err"
+
+# The report names the event the host sent, so a host that calls the same
+# moment by another name (Gemini CLI: AfterTool) receives its own event name.
+CASE_C_EVENT_INPUT="{\"hook_event_name\":\"AfterTool\",\"tool_input\":{\"file_path\":\"$CASE_C_FILE\"}}"
+C_EVENT_STDOUT=$(printf '%s' "$CASE_C_EVENT_INPUT" | "$HOOK" 2>"$TMPROOT/case_c_event.err")
+assert_stdout_reports "C: report echoes the host event name" "$C_EVENT_STDOUT" "$TMPROOT/case_c_event.err" AfterTool
 
 BAD_TMPDIR="$TMPROOT/does-not-exist"
 TMPFAIL_STDOUT=$(printf '%s' "$CASE_C_INPUT" | TMPDIR="$BAD_TMPDIR" "$HOOK" 2>"$TMPROOT/tmpfail.err")
 TMPFAIL_RC=$?
 assert_exit "C2: temp creation failure → exit 0" 0 "$TMPFAIL_RC"
-assert_contains "C2: temp failure passes input through" "$TMPFAIL_STDOUT" "$CASE_C_FILE"
+assert_stdout_reports "C2: temp failure" "$TMPFAIL_STDOUT" "$TMPROOT/tmpfail.err"
 assert_contains "C2: temp failure is explicit" "$(cat "$TMPROOT/tmpfail.err")" 'VALIDATOR-WARNING: validation skipped (TEMP_CREATE_FAILED)'
 if [ "$(wc -l < "$TMPROOT/tmpfail.err" | tr -d '[:space:]')" = "1" ]; then
     echo "PASS [C2: operational warning] exactly one stderr line"
@@ -786,8 +881,8 @@ def measure(run_length: int) -> float:
     elapsed = time.monotonic() - started
     if result.returncode != 0:
         raise RuntimeError(f"{run_length} dollars exited {result.returncode}")
-    if result.stdout.strip() != payload:
-        raise RuntimeError(f"{run_length} dollars did not preserve stdout")
+    if result.stdout.strip() and "additionalContext" not in json.loads(result.stdout)["hookSpecificOutput"]:
+        raise RuntimeError(f"{run_length} dollars printed something other than a report")
     if "VALIDATOR-WARNING" in result.stderr:
         raise RuntimeError(f"{run_length} dollars triggered an internal failure")
     return elapsed
@@ -818,13 +913,7 @@ DECLARATION_CAP_FILE="$TMPROOT/declaration-cap.cs"
 } > "$DECLARATION_CAP_FILE"
 run_hook "$DECLARATION_CAP_FILE" "$TMPROOT/declaration-cap.err"
 assert_exit "declaration cap fails open" 0 "$RUN_HOOK_STATUS"
-if [ "$RUN_HOOK_STDOUT" = "$RUN_HOOK_INPUT" ]; then
-    echo "PASS [declaration cap] stdout preserves hook input"
-    PASS=$((PASS + 1))
-else
-    echo "FAIL [declaration cap] stdout did not preserve hook input"
-    FAIL=$((FAIL + 1))
-fi
+assert_stdout_reports "declaration cap" "$RUN_HOOK_STDOUT" "$TMPROOT/declaration-cap.err"
 if grep -Fxq '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)' "$TMPROOT/declaration-cap.err" &&
     [ "$(wc -l < "$TMPROOT/declaration-cap.err" | tr -d '[:space:]')" = "1" ]; then
     echo "PASS [declaration cap] exactly one operational warning"
@@ -858,7 +947,7 @@ for cap_locale in C C.UTF-8; do
     cap_stdout=$(printf '%s' "$UNICODE_CAP_INPUT" | LC_ALL="$cap_locale" "$HOOK" 2>"$cap_stderr")
     cap_status=$?
     assert_exit "unicode declaration cap ($cap_locale) fails open" 0 "$cap_status"
-    if [ "$cap_stdout" = "$UNICODE_CAP_INPUT" ] &&
+    if stdout_reports "$cap_stdout" "$cap_stderr" &&
         [ "$(cat "$cap_stderr")" = '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)' ]; then
         echo "PASS [unicode declaration cap $cap_locale] UTF-8 byte limit is stable"
         PASS=$((PASS + 1))
@@ -903,8 +992,8 @@ def measure(line_count: int) -> float:
     elapsed = time.monotonic() - started
     if result.returncode != 0:
         raise RuntimeError(f"{line_count} lines exited {result.returncode}")
-    if result.stdout.strip() != payload:
-        raise RuntimeError(f"{line_count} lines did not preserve stdout")
+    if result.stdout.strip() and "additionalContext" not in json.loads(result.stdout)["hookSpecificOutput"]:
+        raise RuntimeError(f"{line_count} lines printed something other than a report")
     if "VALIDATOR-WARNING" in result.stderr:
         raise RuntimeError(f"{line_count} lines triggered an internal failure")
     return elapsed
@@ -928,10 +1017,10 @@ else
 fi
 
 # ------------------------------------------------------------
-# Process contracts: exact passthrough bytes and explicit lambda-scan failure
+# Process contracts: silence when nothing is reported, explicit lambda-scan failure
 # ------------------------------------------------------------
-BYTE_PASSTHROUGH_LOG="$TMPROOT/byte-passthrough.log"
-if python3 - "$HOOK" >"$BYTE_PASSTHROUGH_LOG" 2>&1 <<'PY'
+QUIET_STDOUT_LOG="$TMPROOT/quiet-stdout.log"
+if python3 - "$HOOK" >"$QUIET_STDOUT_LOG" 2>&1 <<'PY'
 import subprocess
 import sys
 
@@ -946,18 +1035,20 @@ for label, payload in (
     result = subprocess.run([hook], input=payload, capture_output=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"{label}: exit={result.returncode}")
-    if result.stdout != payload:
+    # The host parses any stdout as the hook's JSON reply, so an edit with
+    # nothing to report must not echo the input or print a stray newline.
+    if result.stdout != b"" or result.stderr != b"":
         raise RuntimeError(
-            f"{label}: stdout mismatch input={payload!r} output={result.stdout!r}"
+            f"{label}: expected silence, stdout={result.stdout!r} stderr={result.stderr!r}"
         )
-print("exact passthrough bytes: 4/4")
+print("no output when nothing is reported: 4/4")
 PY
 then
-    echo "PASS [byte passthrough] $(cat "$BYTE_PASSTHROUGH_LOG")"
+    echo "PASS [quiet stdout] $(cat "$QUIET_STDOUT_LOG")"
     PASS=$((PASS + 1))
 else
-    echo "FAIL [byte passthrough]"
-    sed 's/^/  /' "$BYTE_PASSTHROUGH_LOG"
+    echo "FAIL [quiet stdout]"
+    sed 's/^/  /' "$QUIET_STDOUT_LOG"
     FAIL=$((FAIL + 1))
 fi
 
@@ -971,7 +1062,8 @@ count=0
 if [ -f "\$count_file" ]; then count=\$(cat "\$count_file"); fi
 count=\$((count + 1))
 printf '%s' "\$count" > "\$count_file"
-if [ "\$count" -eq 3 ]; then exit 42; fi
+# awk runs: 1 input fields, 2 code mask, 3 base scan, 4 lambda scan.
+if [ "\$count" -eq 4 ]; then exit 42; fi
 exec '$REAL_AWK' "\$@"
 EOF
 chmod +x "$AWK_FAILURE_DIR/awk"
@@ -988,13 +1080,7 @@ printf '%s' "$LAMBDA_FAILURE_INPUT" | PATH="$AWK_FAILURE_DIR:$PATH" "$HOOK" \
     >"$TMPROOT/lambda-scan-failure.out" 2>"$TMPROOT/lambda-scan-failure.err"
 LAMBDA_FAILURE_RC=$?
 assert_exit "lambda scanner failure fails open" 0 "$LAMBDA_FAILURE_RC"
-if cmp -s <(printf '%s' "$LAMBDA_FAILURE_INPUT") "$TMPROOT/lambda-scan-failure.out"; then
-    echo "PASS [lambda scanner failure] stdout is byte-exact"
-    PASS=$((PASS + 1))
-else
-    echo "FAIL [lambda scanner failure] stdout changed"
-    FAIL=$((FAIL + 1))
-fi
+assert_stdout_reports "lambda scanner failure" "$(cat "$TMPROOT/lambda-scan-failure.out")" "$TMPROOT/lambda-scan-failure.err"
 if [ "$(cat "$TMPROOT/lambda-scan-failure.err")" = \
     '[UdonSharp] VALIDATOR-WARNING: validation skipped (LAMBDA_SCAN_FAILED)' ]; then
     echo "PASS [lambda scanner failure] exactly one operational warning"

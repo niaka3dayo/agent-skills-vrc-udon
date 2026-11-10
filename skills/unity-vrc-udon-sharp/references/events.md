@@ -2,9 +2,32 @@
 
 Complete reference of all events available in UdonSharp. Override these methods to respond to events.
 
-**Active support / last verified**: SDK 3.10.6
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+## Table of Contents
+
+- [Important: override vs Non-override](#important-override-vs-non-override)
+- [Update Events](#update-events)
+- [Input Events](#input-events)
+- [Interact Event](#interact-event)
+- [Pickup Events](#pickup-events)
+- [Player Events](#player-events)
+- [Persistence Events (SDK 3.7.4+)](#persistence-events-sdk-374)
+- [VRChat Dynamics Events (SDK 3.10.0+)](#vrchat-dynamics-events-sdk-3100)
+- [Player Trigger/Collision Events](#player-triggercollision-events)
+- [Drone Events](#drone-events)
+- [Networking Events](#networking-events)
+- [Station Events](#station-events)
+- [Video Player Events](#video-player-events)
+- [String/Image Loading Events](#stringimage-loading-events)
+- [MIDI Events](#midi-events)
+- [Object Pool Events](#object-pool-events)
+- [Settings & Rendering Events](#settings--rendering-events)
+- [VRC Economy Events](#vrc-economy-events)
+- [Standard Unity Events](#standard-unity-events)
+- [Event Execution Order](#event-execution-order)
+- [Best Practices](#best-practices)
+- [See Also](#see-also)
 
 ## Important: override vs Non-override
 

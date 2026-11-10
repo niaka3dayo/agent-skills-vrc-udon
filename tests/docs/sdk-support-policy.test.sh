@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CORPUS_FIXTURE="$ROOT_DIR/tests/docs/fixtures/sdk-support-policy-corpus.json"
 
 fail() {
     echo "ERROR: $*" >&2
@@ -39,31 +38,50 @@ README_FILES=(
     "$ROOT_DIR/README.ko.md"
 )
 
-# Keep the tracked literal census and its classifications alongside the
-# contract. The fixture deliberately excludes this test file's negative
-# examples and immutable CHANGELOG entries from the stale-declaration scan.
-[ -f "$CORPUS_FIXTURE" ] || fail "missing SDK support-policy corpus census: $CORPUS_FIXTURE"
-python3 - "$CORPUS_FIXTURE" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-scan = data["scan"]
-files = scan["files"]
-assert scan["literal"] == "3.7.1"
-assert scan["occurrences"] == sum(item["occurrences"] for item in files) == 61
-assert scan["files_with_literal"] == len(files) == 28
-assert sum(data["classification_counts"].values()) == scan["occurrences"]
-stale = data["active_support_declarations"]["stale_active_declaration_scan"]
-assert stale["matches"] == []
-assert stale["result"] == "no stale active-support declarations"
-assert {item["path"] for item in data["test_contracts"]} == {
-    "tests/docs/sdk-support-policy.test.sh",
-    "tests/docs/community-contributors.test.sh",
-    "tests/docs/network-event-hardening.test.sh",
+# The active SDK target is declared once per skill, in the bold line of each
+# SKILL.md. Everything below reads it from there, so an SDK bump needs no edit
+# to this test, and a second declaration cannot disagree with the first.
+UDON_SKILL="$ROOT_DIR/skills/unity-vrc-udon-sharp/SKILL.md"
+WORLD_SKILL="$ROOT_DIR/skills/unity-vrc-world-sdk-3/SKILL.md"
+active_target() {
+    sed -nE 's/^\*\*Active support \/ last verified\*\*: SDK ([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' "$1"
 }
-PY
+ACTIVE="$(active_target "$UDON_SKILL")"
+[[ "$ACTIVE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+    || fail "$UDON_SKILL must declare exactly one active SDK target"
+[ "$(active_target "$WORLD_SKILL")" = "$ACTIVE" ] \
+    || fail "the two skills declare different active SDK targets"
+for path in "$UDON_SKILL" "$WORLD_SKILL"; do
+    grep -Fxq '## SDK Versions' "$path" \
+        || fail "$path needs the '## SDK Versions' heading that other files link to"
+done
+
+# No other file under skills/ declares or restates the active target. Each copy
+# was one more edit per SDK bump, and the copies drifted: 14 files kept an old
+# historical range and persistence.md kept a second one.
+SKILL_DOCS=('skills/*.md' ':!skills/*/SKILL.md')
+REDECLARED="$(git -C "$ROOT_DIR" grep -n -F 'Active support / last verified' -- "${SKILL_DOCS[@]}" || true)"
+[ -z "$REDECLARED" ] || fail "the active SDK target is declared outside SKILL.md:\n$REDECLARED"
+RESTATED_PATTERN='(^|[^[:alnum:]])active( and verified| verified)?( SDK)?( support)? target[^.;|]{0,30}[0-9]+\.[0-9]+\.[0-9]+'
+RESTATED="$(git -C "$ROOT_DIR" grep -n -i -E "$RESTATED_PATTERN" -- "${SKILL_DOCS[@]}" || true)"
+[ -z "$RESTATED" ] || fail "the active SDK number is restated outside SKILL.md:\n$RESTATED"
+for restated in \
+    'on the active SDK target (3.10.6)' \
+    'the active verified target is SDK 3.10.6' \
+    '(introduced in SDK 3.7.4; active target 3.10.6)' \
+    'Use the active SDK target, 3.10.6; for historical migration'; do
+    grep -Eiq "$RESTATED_PATTERN" <<<"$restated" \
+        || fail "restatement guard missed: $restated"
+done
+for allowed in \
+    '`IsActive`, `GlobalWeight`, `SmoothingFactor`, source methods (SDK 3.10.6+)' \
+    'Prefer over helper objects on the active SDK target' \
+    'introduced in SDK 3.10.4'; do
+    if grep -Eiq "$RESTATED_PATTERN" <<<"$allowed"; then
+        fail "restatement guard rejected an allowed line: $allowed"
+    fi
+done
+echo "PASS: active SDK target is declared once per skill ($ACTIVE)"
 
 # Re-run the stale declaration scan against the live tracked corpus. The
 # changelog and this test's negative fixtures intentionally retain old release
@@ -74,6 +92,12 @@ STALE_ACTIVE_DECLARATION_PATTERN='(^|[^[:alnum:]])(Supported SDK Versions|SDK Co
 STALE_ACTIVE_SCAN_PATTERN="$STALE_ACTIVE_DECLARATION_PATTERN|this skill.?s coverage range|this skill targets SDK[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+\+|VRChat_SDK-[0-9]+\.[0-9]+\.[0-9]+--[0-9]+\.[0-9]+\.[0-9]+"
 STALE_ACTIVE_SCAN="$(git -C "$ROOT_DIR" grep -n -E "$STALE_ACTIVE_SCAN_PATTERN" -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' || true)"
 [ -z "$STALE_ACTIVE_SCAN" ] || fail "stale active-support declaration found:\n$STALE_ACTIVE_SCAN"
+
+# Every copy of the historical range must name the same upper bound. The copies
+# drifted once: 14 files still read 3.7.1-3.10.4 after 3.10.5 became historical.
+HISTORICAL_RANGES="$(git -C "$ROOT_DIR" grep -ohE '3\.7\.1-[0-9]+\.[0-9]+\.[0-9]+' -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' | sort -u)"
+[ "$(grep -c . <<<"$HISTORICAL_RANGES")" -eq 1 ] \
+    || fail "historical SDK range literals disagree: $(tr '\n' ' ' <<<"$HISTORICAL_RANGES")"
 
 # A future SDK is not an active support target until this repository verifies
 # it. Reject the easy-to-miss "3.10.5 or newer" routing form while preserving
@@ -111,7 +135,7 @@ echo "PASS: unverified future SDK auto-support mutation rejected"
 # distinguish it from historical feature-introduction entries. This wording is
 # deliberately English in the canonical README so future translations can be
 # checked against the same policy without treating VRChat's own policy as ours.
-require_text "$ROOT_DIR/README.md" '**Active support / last verified**: VRChat SDK 3.10.6'
+require_text "$ROOT_DIR/README.md" "**Active support / last verified**: VRChat SDK $ACTIVE"
 require_text "$ROOT_DIR/README.md" 'From v4.0.0 onward, the support policy is latest stable SDK only; the support target moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically.'
 require_text "$ROOT_DIR/README.md" 'historical feature-introduction notes'
 require_text "$ROOT_DIR/README.md" "not a statement about VRChat's own SDK policy"
@@ -121,8 +145,8 @@ forbid_text "$ROOT_DIR/README.md" 'SDK coverage (3.7.1 - 3.10.4)'
 # All translations carry the same current target and must not advertise the old
 # range in their badge or accuracy note.
 for path in "${README_FILES[@]}"; do
-    require_text "$path" '3.10.6'
-    require_text "$path" 'VRChat_SDK-3.10.6-'
+    require_text "$path" "$ACTIVE"
+    require_text "$path" "VRChat_SDK-$ACTIVE-"
 done
 
 # Translations must carry the same stable-only policy and verification gate,
@@ -142,8 +166,7 @@ done
 for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/SKILL.md" \
     "$ROOT_DIR/skills/unity-vrc-world-sdk-3/SKILL.md"; do
-    require_text "$path" 'Active support / last verified'
-    require_text "$path" 'SDK 3.10.6'
+    require_text "$path" "SDK $ACTIVE"
     require_text "$path" 'historical'
     forbid_regex "$path" '(Supported SDK Versions|SDK Coverage|Covered versions)'
 done
@@ -156,71 +179,44 @@ for path in \
     require_text "$path" 'not supported or validation targets'
 done
 
-# Reference headers are active-support declarations, not feature-introduction
-# history. Keep the historical baseline in body text where it explains an API.
-for path in \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/api.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/constraints.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/dynamics.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/events.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/image-loading-vram.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/networking.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/persistence.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/sdk-migration.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/testing.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/troubleshooting.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading-advanced.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading.md" \
-    "$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/components.md"; do
-    require_text "$path" 'Active support / last verified'
-    require_text "$path" '3.10.6'
-done
-
-for path in \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" \
-    "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md"; do
-    require_text "$path" '**Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.'
-done
-
+# Rules keep their historical labels as labels, never as a coverage claim.
 for path in \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md" \
     "$ROOT_DIR/skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md"; do
-    require_text "$path" 'Active support / last verified'
-    require_text "$path" '3.10.6'
     forbid_regex "$path" 'SDK Coverage.*3\.7\.1'
 done
 
 # Distributed agent templates and maintainer guidance must teach the same
 # active-vs-historical boundary.
 for path in "$ROOT_DIR/templates/AGENTS.md" "$ROOT_DIR/templates/CLAUDE.md" "$ROOT_DIR/templates/GEMINI.md"; do
-    require_text "$path" 'active: 3.10.6'
+    # Templates are copied into user projects and outlive SDK bumps, so they
+    # name no SDK version and point at the declaration in each SKILL.md.
+    require_text "$path" 'SDK Versions'
     require_text "$path" 'historical'
-    forbid_regex "$path" 'SDK \(3\.7\.1.{0,8}3\.10\.4\)'
+    forbid_regex "$path" '(^|[^0-9.])3\.[0-9]+\.[0-9]+'
+    forbid_regex "$path" 'SDK[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+'
 done
 
-require_text "$ROOT_DIR/CONTRIBUTING.md" '**Active and verified target**: SDK 3.10.6'
+require_text "$ROOT_DIR/CONTRIBUTING.md" "**Active and verified target**: SDK $ACTIVE"
 require_text "$ROOT_DIR/CONTRIBUTING.md" 'historical migration information only'
-require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" '**Active support / last verified**: SDK 3.10.6'
+require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" 'The active SDK target is declared once per skill'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/update-checklist.md" 'active-versus-historical boundary'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md" 'active and verified target'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" '**Active support / last verified**: SDK 3.10.6'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" 'SDK 3\.10\.4\+|SDK 3\.10\.4 or newer'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween (introduced in SDK 3.10.4)'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/CHEATSHEET.md" '## VRCTween \(SDK 3\.10\.4\+\)|on SDK 3\.10\.4\+'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'Solution on the active SDK target (3.10.6)'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'Solution on the active SDK target'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-utilities.md" 'routeable SDK 3\.10\.4\+|on SDK 3\.10\.4\+'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/web-loading-advanced.md" 'Historical migration guidance only: SDK 3.7.1 introduced the available surface'
-require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'remains the recommended choice on the active SDK target, SDK 3.10.6'
+require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'remains the recommended choice on the active SDK target.'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'valid alternative for small, capacity-limited worlds'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'valid for single-player preview or debugging'
 require_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'historical migration context, not an active-support cutoff'
 forbid_text "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/patterns-networking.md" 'not as active support routes'
 
-# This contract must be part of the required Documentation Smoke Tests job.
+# This contract must be part of the required Documentation Smoke Tests job,
+# which runs every tests/docs suite through tests/run.sh.
 CI="$ROOT_DIR/.github/workflows/ci.yml"
-require_text "$CI" 'Check SDK active support policy'
-require_text "$CI" 'bash tests/docs/sdk-support-policy.test.sh'
+require_text "$CI" 'bash tests/run.sh tests/docs/'
 
 echo "PASS: SDK active support policy contract"

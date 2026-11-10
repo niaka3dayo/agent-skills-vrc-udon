@@ -1,10 +1,21 @@
 # Web Loading (String / Image Download)
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 Since `System.Net` is unavailable in UdonSharp, VRChat-specific APIs must be used to retrieve data from the web.
+
+## Table of Contents
+
+- [SDK 3.10.4 event receiver arguments](#sdk-3104-event-receiver-arguments)
+- [Overview](#overview)
+- [Common Constraints](#common-constraints)
+- [VRCStringDownloader](#vrcstringdownloader)
+- [VRCImageDownloader](#vrcimagedownloader)
+- [VRCJson (JSON Parsing of Downloaded Strings)](#vrcjson-json-parsing-of-downloaded-strings)
+- [Design Patterns](#design-patterns)
+- [Troubleshooting](#troubleshooting)
+- [Reference Links](#reference-links)
+- [See Also](#see-also)
 
 ## SDK 3.10.4 event receiver arguments
 

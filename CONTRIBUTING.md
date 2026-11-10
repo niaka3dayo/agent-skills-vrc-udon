@@ -98,45 +98,12 @@ Maintainer tooling and the decision ledger for this audit live under
 
 ### Evidence gate for conflicting runtime observations
 
-Do not replace a documented runtime observation with official wording after a
-history-free review. Before changing a verified runtime, observed behavior, or
-official difference, reviewers and maintainers must:
-
-1. Inspect `git blame` and `git log` for the claim and the surrounding edits.
-2. Read every related Issue/PR, the upstream report, and the reproduction evidence
-   before deciding that the claim is stale. Read the two evidence histories
-   separately:
-   - For user-layer names, read Issue [#286](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/286),
-     PR [#287](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/287),
-     the maintainer follow-up, the upstream report
-     [vrchat-community/creator-docs#303](https://github.com/vrchat-community/creator-docs/issues/303),
-     and its docs correction [creator-docs#319](https://github.com/vrchat-community/creator-docs/pull/319).
-     Issue #286 and PR #287 record collision retention, but the attached
-     layer-dump directly observes names only: its `LayerMask.LayerToName(0..31)`
-     output does not measure collision pairs or the matrix.
-     Use a separate collision reproduction for collision claims.
-   - For built-in collision behavior, read Issue [#288](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/288)
-     and PR [#294](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/294).
-     #288 records that the then-current `layers.md` intentionally preserved
-     VRChat-specific collision-matrix behavior without factual errors; #294
-     records that the Environment/Pickup/PickupNoEnvironment facts and the
-     default matrix were intentionally retained. Do not replace these claims
-     from official docs alone: changes require independent runtime/SDK evidence
-     for that target and a recorded observation scope.
-3. Rank evidence in this order: a reproducible runtime observation from the
-   same target version, shipped SDK/source, then official docs. Official docs
-   still describe intended behavior, but official docs alone must not erase a
-   reproducible difference.
-4. Record the verified boundary. Do not generalize beyond the verified observation.
-
-Issue #286 and PR #287 record that, for layers 22-31, custom layer names are
-overwritten by the live client to `user0`-`user9` while the collision matrix is
-retained. The official docs were corrected to match in creator-docs#319, so
-older official wording is no longer an official difference to preserve; change
-this only on new runtime evidence. Do not use #286 to alter a built-in layer
-collision claim or mix built-in layer collision behavior into this user-layer
-observation. A name dump is not collision evidence; a built-in collision
-change still needs an independent runtime/SDK reproduction for that target.
+A documented runtime observation is not replaced by official wording after a history-free review.
+Before a maintainer changes a verified runtime observation, an observed behavior, or a recorded
+difference from the official documentation, they follow the gate in
+[`.claude/rules/evidence-gate.md`](.claude/rules/evidence-gate.md): read the history of the claim and
+the related Issues and upstream reports, and prefer a reproducible runtime observation from the same
+target version over shipped SDK/source, and that over official docs.
 
 ## What to Report
 
@@ -144,7 +111,7 @@ change still needs an independent runtime/SDK reproduction for that target.
 - **Outdated information**: SDK updates that make existing rules inaccurate
 - **Missing patterns**: Common UdonSharp patterns not covered by the skills
 - **Broken hooks**: Validation hooks that produce false positives/negatives
-- **Install issues**: Problems with `npx skills add niaka3dayo/agent-skills-vrc-udon` or `claude plugin add niaka3dayo/agent-skills-vrc-udon`.
+- **Install issues**: Problems with `npx skills add niaka3dayo/agent-skills-vrc-udon` or `claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon`.
 
 ## How to Report
 
@@ -176,7 +143,7 @@ When reporting issues, please specify the SDK version.
 
 **Active and verified target**: SDK 3.10.6.
 
-References to SDK 3.7.1-3.10.4 are historical migration information only; they are not supported or validation targets for either distributed Skill. This support boundary applies to both distributed Skills and is not a statement about VRChat's own SDK policy.
+References to SDK 3.7.1-3.10.5 are historical migration information only; they are not supported or validation targets for either distributed Skill. This support boundary applies to both distributed Skills and is not a statement about VRChat's own SDK policy.
 
 From v4.0.0 onward, the policy is latest stable SDK only. Support moves to a new stable release only after this repository verifies it; a new stable release is not supported automatically.
 

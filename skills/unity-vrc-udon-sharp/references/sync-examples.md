@@ -5,6 +5,16 @@ Refer to the Decision Tree in `../rules/udonsharp-sync-selection.md` for pattern
 
 ---
 
+## Table of Contents
+
+- [Pattern 1: No Sync (Local Only)](#pattern-1-no-sync-local-only)
+- [Pattern 2: Events Only (No Synced Variables)](#pattern-2-events-only-no-synced-variables)
+- [Pattern 3: Synced Variables (Late Joiner Support)](#pattern-3-synced-variables-late-joiner-support)
+- [Pattern 4: Managing Multiple Values with FieldChangeCallback](#pattern-4-managing-multiple-values-with-fieldchangecallback)
+- [Pattern Comparison Table](#pattern-comparison-table)
+- [Data Budget Reference (Per-Pattern Reference Values)](#data-budget-reference-per-pattern-reference-values)
+- [See Also](#see-also)
+
 ## Pattern 1: No Sync (Local Only)
 
 **Criteria**: Operations that do not affect other players. No `[UdonSynced]` required.

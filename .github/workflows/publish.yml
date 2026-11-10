@@ -17,20 +17,27 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
-          node-version: "22"
+          # Node 24 bundles npm 11; trusted publishing (OIDC) needs npm >= 11.5.1.
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
+
+      - name: Validate release tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tag is not vX.Y.Z or X.Y.Z"
+            exit 1
+          fi
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
 
       - name: Set version from release tag
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
           npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "Publishing version: $VERSION"
 
       - name: Sync version to SKILL.md and marketplace.json
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
           # Update SKILL.md frontmatter versions
           for f in skills/unity-vrc-udon-sharp/SKILL.md skills/unity-vrc-world-sdk-3/SKILL.md .claude/skills/unity-vrc-skills-renovator/SKILL.md; do
             sed -i "s/version: \"[0-9]*\.[0-9]*\.[0-9]*\"/version: \"$VERSION\"/" "$f"
@@ -40,11 +47,11 @@ jobs:
             const fs = require('fs');
             const p = '.claude-plugin/marketplace.json';
             const d = JSON.parse(fs.readFileSync(p, 'utf8'));
-            d.metadata.version = '$VERSION';
+            d.metadata.version = process.env.VERSION;
             fs.writeFileSync(p, JSON.stringify(d, null, 2) + '\n');
           "
 
+      # Authenticates through npm trusted publishing (OIDC, needs id-token: write);
+      # provenance is generated automatically for a public package from a public repo.
       - name: Publish
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

@@ -1,0 +1,7 @@
+---
+type: llm
+---
+
+PASS only if this holds: the code in the reply does not use generic collections such as List<T>, Dictionary<K,V>, HashSet<T>, Queue<T>, or Stack<T>. Naming it in prose or in a code comment to say it is unavailable is fine. Only an actual use in the code fails.
+
+FAIL otherwise.

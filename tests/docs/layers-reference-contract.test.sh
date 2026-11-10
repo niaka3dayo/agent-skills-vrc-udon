@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LAYERS_REF="$ROOT_DIR/skills/unity-vrc-world-sdk-3/references/layers.md"
 CONTRIBUTING="$ROOT_DIR/CONTRIBUTING.md"
+EVIDENCE_GATE="$ROOT_DIR/.claude/rules/evidence-gate.md"
 RENOVATOR_CHECKLIST="$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/update-checklist.md"
 CI="$ROOT_DIR/.github/workflows/ci.yml"
 
@@ -46,6 +47,7 @@ PY
 
 require_file "$LAYERS_REF"
 require_file "$CONTRIBUTING"
+require_file "$EVIDENCE_GATE"
 require_file "$RENOVATOR_CHECKLIST"
 
 count_exact_line() {
@@ -433,7 +435,11 @@ for step in steps:
         continue
     for command in parsed.get("run", []):
         command = scalar(command)
-        if command == "bash tests/docs/layers-reference-contract.test.sh":
+        # tests/run.sh runs every tests/docs/*.test.sh, this contract included.
+        if command in (
+            "bash tests/docs/layers-reference-contract.test.sh",
+            "bash tests/run.sh tests/docs/",
+        ):
             count += 1
 
 print(0 if job_disabled or job_non_gating else count)
@@ -784,9 +790,9 @@ for behavior in \
     require_text "$LAYERS_REF" "$behavior"
 done
 
-# The maintenance gate must be visible both to reviewers and to the
-# renovator workflow. Check each required evidence source separately.
-for path in "$CONTRIBUTING" "$RENOVATOR_CHECKLIST"; do
+# The maintenance gate lives in one rule file that this repository loads
+# automatically. Check each required evidence source separately.
+for path in "$EVIDENCE_GATE"; do
     require_text "$path" "git blame"
     require_text "$path" "git log"
     require_text "$path" "related Issue/PR"
@@ -818,17 +824,22 @@ for path in "$CONTRIBUTING" "$RENOVATOR_CHECKLIST"; do
 done
 
 require_evidence_order \
-    "$CONTRIBUTING" \
-    "CONTRIBUTING.md" \
-    "### Evidence gate for conflicting runtime observations" \
-    "## What to Report" \
+    "$EVIDENCE_GATE" \
+    "evidence-gate.md" \
+    "## Evidence gate for conflicting runtime observations" \
+    "## Where this applies" \
     "Rank evidence in this order: a reproducible runtime observation from the same target version, shipped SDK/source, then official docs."
-require_evidence_order \
-    "$RENOVATOR_CHECKLIST" \
-    "update-checklist.md" \
-    "## Evidence Gate Before Revising Existing Claims" \
-    "## Phase 2: Information Gathering" \
-    "Rank evidence as reproducible runtime observation, shipped SDK/source, then official docs."
+
+# Reviewers and the renovator workflow reach the gate through a link, so
+# neither keeps a second copy that could drift from it.
+require_text "$CONTRIBUTING" ".claude/rules/evidence-gate.md"
+require_text "$RENOVATOR_CHECKLIST" "rules/evidence-gate.md"
+for path in "$CONTRIBUTING" "$RENOVATOR_CHECKLIST"; do
+    if grep -Fq "git blame" "$path"; then
+        echo "ERROR: $path repeats the evidence gate instead of linking to it" >&2
+        exit 1
+    fi
+done
 
 # #286 is evidence for user-layer behavior only; it must not be attached to
 # the built-in collision section.

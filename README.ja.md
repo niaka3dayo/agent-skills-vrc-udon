@@ -59,7 +59,7 @@
 
 <h2 id="install">インストール</h2>
 
-> **フォーク・クローンからの移行をお考えの方へ** &mdash; v1.0.0 以降、このプロジェクトは **npm パッケージ** として配布されています。リポジトリをフォークやクローンする必要はなくなりました。VRChat の Unity プロジェクト内で、以下のいずれかのインストールコマンドを実行するだけで使用できます。以前にこのリポジトリをクローンしていた場合は、クローンしたディレクトリを削除して npm ベースのインストールに切り替えていただけます。
+> **フォーク・クローンからの移行をお考えの方へ** &mdash; このリポジトリをフォークやクローンする必要はなくなりました。VRChat の Unity プロジェクト内で、以下のいずれかのインストールコマンドを実行してください。以前にクローンしていた場合は、切り替えたあとでそのディレクトリを削除して構いません。
 
 ### 方法 1: skills CLI（推奨）
 
@@ -67,13 +67,15 @@
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-[skills.sh](https://skills.sh) エコシステムを使用して、プロジェクトにスキルをインストールします。
+[skills.sh](https://skills.sh) エコシステムを使用して、プロジェクトにスキルをインストールします。skills CLI の実行には Node.js 22.20 以降が必要です。
 
 ### 方法 2: Claude Code プラグイン
 
 ```bash
-claude plugin add niaka3dayo/agent-skills-vrc-udon
+claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
+
+Claude Code 2.1.292 より前のバージョンでは、先に `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` を実行し、続けて `claude plugin install vrc-udon-skills@agent-skills-vrc-udon` を実行してください。
 
 ### 方法 3: git clone
 
@@ -86,8 +88,11 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 公開済みの全バージョンは npm と git タグの両方に恒久的に残ります。削除されることはありません。
 
 ```bash
-# npm（v1.0.0 以降の任意の公開バージョン）
-npm install agent-skills-vrc-udon@2.3.0
+# skills CLI（git タグを指定）
+npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
+
+# npm（v1.0.0 以降の任意の公開バージョン）。スキルは node_modules/agent-skills-vrc-udon/skills/ に配置されます
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git タグ
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -115,8 +120,9 @@ skills/                                  # すべてのスキル
   unity-vrc-world-sdk-3/                # VRC World SDKスキル
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（8ファイル）
 templates/                               # AIツール設定テンプレート
-  CLAUDE.md  AGENTS.md  GEMINI.md        # インストーラー経由でユーザーに配布
+  CLAUDE.md  AGENTS.md  GEMINI.md        # プロジェクト指示のひな形（手動でコピー）
 .claude-plugin/marketplace.json         # Claude Codeプラグイン登録
+hooks/hooks.json                        # Claude Codeプラグインのフック登録
 CLAUDE.md                               # 開発ガイド（このリポジトリ専用）
 ```
 
@@ -188,7 +194,31 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 <h2 id="hooks">バリデーションフック</h2>
 
-`.cs` ファイルを編集した際に自動実行される PostToolUse フックです。
+エージェントが `.cs` ファイルを書き込んだり編集したりするたびに、PostToolUse フックが内容を検査し、結果をエージェントに返します。
+
+**Claude Code プラグイン** &mdash; 自動で登録されます。プラグインは Bash 版の検証を実行するため、`bash` が `PATH` にある必要があります。Windows では Git Bash があれば動作し、`jq` は不要です。
+
+**skills CLI または git clone** &mdash; フックは自分で登録します。Claude Code の場合は `.claude/settings.json` に次の内容を追加してください。
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+PowerShell 版を使う場合は、command を `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"` に変更します。
 
 | カテゴリ | チェック内容 | 重大度 |
 |----------|-------|----------|
@@ -203,9 +233,11 @@ Q3: 継続的に変化しますか？（位置・回転など）
 
 **Bash**（`validate-udonsharp.sh`）と **PowerShell**（`validate-udonsharp.ps1`）の両方に対応しています。
 
-Bash版の検証には `jq` が必要です。利用できない場合は入力を変更せずに通し、
-検証済みとは扱わず `VALIDATOR-WARNING: validation skipped
-(JQ_UNAVAILABLE)` を出力します。
+検出結果は、その編集に対する追加コンテキストとしてエージェントに届きます。手動で実行した場合のために、同じ内容を stderr にも出力します。フックが編集を止めることはありません。
+
+フックの入力やファイルを読めないなど、検証を実行できなかった場合は `VALIDATOR-WARNING: validation skipped (<理由>)` を報告し、検証済みとは扱いません。
+
+Codex は `apply_patch` でファイルを編集し、フックにはファイルパスではなくパッチ本文を渡します。どちらの検証もこの入力を受け取り、パッチに含まれる `.cs` ファイルをそれぞれ検証します。
 
 ---
 

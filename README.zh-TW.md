@@ -59,7 +59,7 @@
 
 <h2 id="install">安裝</h2>
 
-> **從 fork/clone 遷移？** — 自 v1.0.0 起，本專案以 **npm 套件** 形式發布。您不再需要 fork 或 clone 此儲存庫。只需在您的 VRChat Unity 專案中執行以下任一安裝指令即可。如果您先前曾 clone 此儲存庫，可以安全地刪除該目錄並改用 npm 安裝方式。
+> **從 fork/clone 遷移？** — 您不再需要 fork 或 clone 此儲存庫。只需在您的 VRChat Unity 專案中執行以下任一安裝指令即可。如果您先前曾 clone 此儲存庫，切換後可以刪除該目錄。
 
 ### 方法 1：skills CLI（推薦）
 
@@ -67,13 +67,15 @@
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-此方法使用 [skills.sh](https://skills.sh) 生態系統將技能安裝至您的專案。
+此方法使用 [skills.sh](https://skills.sh) 生態系統將技能安裝至您的專案。skills CLI 需要 Node.js 22.20 或更新版本。
 
 ### 方法 2：Claude Code 外掛
 
 ```bash
-claude plugin add niaka3dayo/agent-skills-vrc-udon
+claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
+
+在早於 2.1.292 的 Claude Code 版本中，請先執行 `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon`，再執行 `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`。
 
 ### 方法 3：git clone
 
@@ -86,8 +88,11 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 所有已發布的版本都會永久保留在 npm 和 git 標籤中，不會被刪除。
 
 ```bash
-# npm（v1.0.0 及以後的任意已發布版本）
-npm install agent-skills-vrc-udon@2.3.0
+# skills CLI（指定 git 標籤）
+npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
+
+# npm（v1.0.0 及以後的任意已發布版本）；技能位於 node_modules/agent-skills-vrc-udon/skills/
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git 標籤
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -115,8 +120,9 @@ skills/                                  # 所有技能
   unity-vrc-world-sdk-3/                # VRC World SDK 技能
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（8 個檔案）
 templates/                               # AI 工具設定範本
-  CLAUDE.md  AGENTS.md  GEMINI.md        # 透過安裝程式分發給使用者
+  CLAUDE.md  AGENTS.md  GEMINI.md        # 專案指示範本（手動複製）
 .claude-plugin/marketplace.json         # Claude Code 外掛註冊
+hooks/hooks.json                        # Claude Code 外掛掛鉤註冊
 CLAUDE.md                               # 開發指南（僅限本儲存庫）
 ```
 
@@ -188,7 +194,31 @@ Q3: 是否持續變化？（位置/旋轉）
 
 <h2 id="hooks">驗證掛鉤</h2>
 
-PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
+每當代理寫入或編輯 `.cs` 檔案時，PostToolUse 掛鉤都會檢查其內容，並將檢查結果回饋給代理。
+
+**Claude Code 外掛** &mdash; 自動註冊。外掛執行的是 Bash 驗證器，因此 `bash` 必須位於 `PATH` 中。在 Windows 上只需 Git Bash 即可，無需 `jq`。
+
+**skills CLI 或 git clone** &mdash; 需自行註冊掛鉤。若使用 Claude Code，請將以下內容加入 `.claude/settings.json`：
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+若要使用 PowerShell 驗證器，請將 command 設定為 `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`。
 
 | 類別 | 檢查項目 | 嚴重程度 |
 |------|----------|----------|
@@ -203,8 +233,11 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 同時支援 **Bash**（`validate-udonsharp.sh`）與 **PowerShell**（`validate-udonsharp.ps1`）。
 
-Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入，並輸出
-`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，不會將其視為驗證成功。
+檢查結果會作為該次編輯的附加脈絡傳遞給代理，手動執行時相同內容也會輸出至 stderr。掛鉤不會阻擋編輯。
+
+當驗證器無法執行（例如無法讀取掛鉤輸入或檔案）時，會回報 `VALIDATOR-WARNING: validation skipped (<原因>)`，不會將其視為驗證成功。
+
+Codex 使用 `apply_patch` 編輯檔案，傳給掛鉤的是修補內容而不是檔案路徑。兩個驗證器都支援這種輸入，並逐一檢查修補中涉及的 `.cs` 檔案。
 
 ---
 

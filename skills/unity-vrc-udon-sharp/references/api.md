@@ -2,9 +2,29 @@
 
 Complete reference of VRChat-specific classes, methods, and types available in UdonSharp.
 
-**Active support / last verified**: SDK 3.10.6
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+## Table of Contents
+
+- [VRCPlayerApi](#vrcplayerapi)
+- [Networking Class](#networking-class)
+- [NetworkCalling Class (SDK 3.8.1+)](#networkcalling-class-sdk-381)
+- [VRC_Pickup](#vrc_pickup)
+- [VRCStation](#vrcstation)
+- [VRCObjectPool](#vrcobjectpool)
+- [VRCObjectSync](#vrcobjectsync)
+- [VRCUrl / VRCStringDownloader / VRCImageDownloader](#vrcurl--vrcstringdownloader--vrcimagedownloader)
+- [Enumerations](#enumerations)
+- [Synced Variable Types and Sizes](#synced-variable-types-and-sizes)
+- [SerializationResult](#serializationresult)
+- [DataList and DataDictionary](#datalist-and-datadictionary)
+- [PlayerData API (SDK 3.7.4+)](#playerdata-api-sdk-374)
+- [VRCQualitySettings — writable settings (SDK 3.10.5)](#vrcqualitysettings--writable-settings-sdk-3105)
+- [VRCCameraSettings API (SDK 3.8.1+; CullingMask and GetCurrentCamera added in 3.9.0)](#vrccamerasettings-api-sdk-381-cullingmask-and-getcurrentcamera-added-in-390)
+- [VRChat Dynamics API (SDK 3.10.0+)](#vrchat-dynamics-api-sdk-3100)
+- [VRCDroneApi](#vrcdroneapi)
+- [VRC Camera Dolly API (SDK 3.9.0+)](#vrc-camera-dolly-api-sdk-390)
+- [See Also](#see-also)
 
 ## VRCPlayerApi
 

@@ -1,11 +1,20 @@
 # VRChat Dynamics for Worlds Reference
 
-Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0; the active verified target is SDK 3.10.6.
+Comprehensive guide to PhysBones, Contacts, and VRC Constraints in VRChat worlds. Dynamics were introduced in SDK 3.10.0.
 
-**Active support / last verified**: SDK 3.10.6
-**Historical feature introduction**: SDK 3.10.0
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
-SDK 3.10.0-3.10.5 entries are historical feature context only, not active support or validation targets for this Skill.
+## Table of Contents
+
+- [Overview](#overview)
+- [Contacts](#contacts)
+- [PhysBones](#physbones)
+- [VRC Constraints](#vrc-constraints)
+- [VRC Constraints Udon API](#vrc-constraints-udon-api)
+- [Common Patterns](#common-patterns)
+- [Important Notes](#important-notes)
+- [Best Practices](#best-practices)
+- [See Also](#see-also)
 
 ## Overview
 
@@ -554,6 +563,8 @@ Per-axis "Affects" toggles are Inspector/C# settings only; the 3.10.6 Udon wrapp
 | `ClearSources()` | `void` | Removes every source |
 
 These members are new in SDK 3.10.6. The SDK 3.10.4 and 3.10.5 Udon wrappers expose source access only through the `Sources` list. Do not generate `GetSourceCount()` or `SetSourceWeight()`: neither exists in SDK 3.10.4, 3.10.5, or 3.10.6. On 3.10.6, VRChat recommends these methods over editing `Sources` directly from Udon; direct list edits have reliability issues and stay exposed only for backward compatibility.
+
+After `SetSource`, `AddSource`, `RemoveSource`, `SetSources`, or `ClearSources`, call `ApplyConfigurationChanges()` once, as for any other constraint property changed from a script.
 
 #### VRCConstraintSource Struct
 

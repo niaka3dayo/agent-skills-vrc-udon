@@ -1,10 +1,8 @@
-# UdonSharp Compile Constraints (Always Loaded)
+# UdonSharp Compile Constraints
 
 UdonSharp compiles C# to Udon Assembly. Code that executes in the Udon runtime must adhere to these constraints, which differ from standard C#. Unity/Editor-side field initializer evaluation has the narrow exception described below.
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+SDK version labels in this rule mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 > For detailed examples, SDK version availability, and compiler behavior explanations,
 > see `references/constraints.md`.
@@ -52,7 +50,7 @@ and keep built-in event signatures unchanged. See
 
 ## Available Features (historical baseline: SDK 3.7.1)
 
-The version labels in this section are historical feature-introduction markers; use SDK 3.10.6 for current generation and validation.
+The version labels in this section are historical feature-introduction markers; use the active SDK target for current generation and validation.
 
 | Feature | Notes |
 |---------|-------|

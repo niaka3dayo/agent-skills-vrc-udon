@@ -1,24 +1,22 @@
 ---
 name: unity-vrc-world-sdk-3
 description: >
-    VRChat World SDK 3 guide for scene and Inspector setup, component placement,
-    optimization, and upload. Use for VRChat world scene configuration,
-    VRC SDK components, layers, baked lighting, Quest/Android performance,
-    Dynamics for Worlds, Build Panel warning triage, validation, and upload.
-    Covers WorldQualitySettings, VRC_SceneDescriptor, VRC_Pickup, VRC_Station, VRC_Mirror,
-    VRC_ObjectSync, VRC_CameraDolly, spawn points, collision matrices,
-    PhysBone and Contact component placement, Box Contacts,
-    Global Avatar PhysBone Colliders, and VRCPhysBoneCollider component setup.
-    Active support / last verified: SDK 3.10.6. Triggers on: VRChat world scene, VRC SDK, scene setup,
-    component placement, VRCBillboard, VRCPlacementZone, Quest support, light baking,
-    SDK validation, Build Panel warning, Auto Fix, or red/yellow/white warnings.
-    Do not use for UdonSharp C# or VRCTween calls; use
-    unity-vrc-udon-sharp for runtime scripting.
-    UdonSharp package, asmdef, and Version Defines work also belongs to that skill.
+    Scene, component, and upload guidance for VRChat World SDK 3. Active support /
+    last verified: SDK 3.10.6. VRChat changes Unity behaviour in ways the editor does not show
+    (reserved layers, runtime layer names, Android limits, Build Panel validation), so load
+    this skill before setting up or reviewing a VRChat world scene, even for one component.
+    Covers VRC SDK component placement and Inspector setup (VRC_SceneDescriptor, VRC_Pickup,
+    VRC_Station, VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, VRCBillboard, VRCPlacementZone,
+    spawn points), layers and collision matrices, baked lighting, Quest/Android performance,
+    WorldQualitySettings, Dynamics for Worlds (PhysBone and Contact component placement,
+    Box Contacts, Global Avatar PhysBone Colliders, VRCPhysBoneCollider component setup),
+    audio/video, SDK validation, Build Panel warning triage (Auto Fix, red/yellow/white
+    warnings), and upload. Do not use for UdonSharp C# or VRCTween calls; use
+    unity-vrc-udon-sharp for runtime scripting, asmdef, and Version Defines work.
 license: MIT
 metadata:
     author: niaka3dayo
-    version: "4.2.1"
+    version: "4.3.0"
     tags: vrchat, world-sdk, scene-setup, optimization, components, upload, sdk-validation, build-panel
 ---
 
@@ -38,25 +36,6 @@ metadata:
 | [World Upload](#world-upload)              | Upload workflow            | `references/upload.md`          |
 | [Troubleshooting](#troubleshooting)        | Problem solving            | `references/troubleshooting.md` |
 | [Cheatsheet](CHEATSHEET.md)               | Quick reference            | `CHEATSHEET.md`                 |
-
----
-
-## Method Migration
-
-The following public methods were renamed because an unprefixed, parameterless
-public UdonSharp method remains callable through legacy network dispatch:
-
-| Before | After |
-|---|---|
-| `ForceDropPickup` | `_ForceDropPickup` |
-| `IsHeld` | `_IsHeld` |
-| `IsOccupied` | `_IsOccupied` |
-| `StopSound` | `_StopSound` |
-| `SlowUpdate` | `_SlowUpdate` |
-
-Update Inspector event strings, `SendCustomEvent*` calls, delayed events and
-`nameof(...)` expressions, and cross-behaviour calls. Compatibility aliases are
-not provided because an old unprefixed alias would restore the same legacy network exposure.
 
 ---
 
@@ -145,27 +124,11 @@ Quest required? → Yes
 
 **Active support / last verified**: SDK 3.10.6
 
-From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.6.
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically.
 
-The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.5 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.6 unless a reference explicitly marks a historical migration case.
+Guidance targets the active SDK unless a reference marks a historical migration case. Other SDK versions named in this Skill record when a feature was introduced; they are not active support or validation targets. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
 
-| SDK    | New Features                                                                   | Status         |
-| ------ | ------------------------------------------------------------------------------ | -------------- |
-| 3.7.1  | StringBuilder, Regex, System.Random                                            | Historical     |
-| 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | Historical     |
-| 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | Historical     |
-| 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | Historical     |
-| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings | Historical |
-| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) | Historical |
-| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | Historical     |
-| 3.10.1 | Bug fixes and stability improvements                                           | Historical     |
-| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | Historical     |
-| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | Historical     |
-| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Historical |
-| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Historical |
-| 3.10.6 | VRCBillboard, VRCVelocityTracker, VRCPlacementZone, Interact Outline Renderers; constraint source methods and UdonSharp compiler fixes → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Active / Last verified |
-
-Use SDK 3.10.6 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
+Feature introductions by SDK version are in [CHEATSHEET.md](CHEATSHEET.md#sdk-version-features), and the Components table below lists the SDK that introduced each component. Verify version-sensitive APIs against the matching release notes before migrating a project.
 
 ---
 
@@ -462,6 +425,23 @@ For C# scripting, network sync, and UdonSharp event implementation, use the `uni
 
 ---
 
+## Method Migration
+
+The following public methods were renamed because an unprefixed, parameterless
+public UdonSharp method remains callable through legacy network dispatch:
+
+| Before | After |
+|---|---|
+| `ForceDropPickup` | `_ForceDropPickup` |
+| `IsHeld` | `_IsHeld` |
+| `IsOccupied` | `_IsOccupied` |
+| `StopSound` | `_StopSound` |
+| `SlowUpdate` | `_SlowUpdate` |
+
+Update Inspector event strings, `SendCustomEvent*` calls, delayed events and
+`nameof(...)` expressions, and cross-behaviour calls. Compatibility aliases are
+not provided because an old unprefixed alias would restore the same legacy network exposure.
+
 ## Templates (`assets/templates/`)
 
 Starter templates for common SDK component patterns. Repository checks cover static checks; import them into the target SDK project, compile, and run Build & Test before use. Adjust Inspector fields and extend the event stubs for your world.
@@ -473,14 +453,14 @@ Starter templates for common SDK component patterns. Repository checks cover sta
 
 ## References
 
-| File                            | Content                                                                                          | Approx. Lines |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
-| `references/components.md`      | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) | 950+          |
-| `references/layers.md`          | Layers & collision                                                                               | 230+          |
-| `references/performance.md`     | Performance optimization                                                                         | 700+          |
-| `references/lighting.md`        | Lighting settings                                                                                | 400+          |
-| `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
-| `references/build-validation.md` | SDK 3.10.6 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
-| `references/upload.md`          | Upload procedure                                                                                 | 300+          |
-| `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
-| `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |
+| File | Content |
+|------|---------|
+| `references/components.md` | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) |
+| `references/layers.md` | Layers & collision |
+| `references/performance.md` | Performance optimization |
+| `references/lighting.md` | Lighting settings |
+| `references/audio-video.md` | Audio & video |
+| `references/build-validation.md` | SDK 3.10.6 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects |
+| `references/upload.md` | Upload procedure |
+| `references/troubleshooting.md` | Troubleshooting guide |
+| `CHEATSHEET.md` | Quick reference |

@@ -1,5 +1,17 @@
 # VRChat Layers and Collision Reference
 
+## Table of Contents
+
+- [Overview](#overview)
+- [VRChat Reserved Layers (0-21)](#vrchat-reserved-layers-0-21)
+- [User Layers (22-31)](#user-layers-22-31)
+- [Layer Behavior Notes](#layer-behavior-notes)
+- [Collision Matrix](#collision-matrix)
+- [Layer Masks in Udon](#layer-masks-in-udon)
+- [Layer Best Practices](#layer-best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Quick Reference](#quick-reference)
+
 ## Overview
 
 VRChat uses Unity's layer system to organize GameObjects, control collisions, and perform selective rendering. When you create a project with the VRChat SDK, layers are automatically configured.

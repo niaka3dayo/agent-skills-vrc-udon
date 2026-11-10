@@ -45,14 +45,55 @@ function Invoke-HookProcess([string]$Payload) {
     [void]$Process.Start()
     $Process.StandardInput.Write($Payload)
     $Process.StandardInput.Close()
+    # Read stderr concurrently: a hook that fills the stderr pipe would block
+    # for as long as only stdout is being read.
+    $StderrTask = $Process.StandardError.ReadToEndAsync()
     $Stdout = $Process.StandardOutput.ReadToEnd()
-    $Stderr = $Process.StandardError.ReadToEnd()
+    $Stderr = $StderrTask.Result
     $Process.WaitForExit()
 
     return [pscustomobject]@{
         ExitCode = $Process.ExitCode
         Stdout = $Stdout
         Stderr = $Stderr
+    }
+}
+
+# Output contract. A host agent never shows the model stderr from a hook that
+# exits 0, so the hook repeats its [UdonSharp] lines on stdout as one JSON
+# object (hookSpecificOutput.additionalContext). A run with nothing to report
+# prints nothing on stdout. PowerShell decorates stderr records, so each
+# reported line is matched as a substring of stderr rather than line by line.
+function Test-StdoutReports($HookResult, [string]$ExpectedEvent = 'PostToolUse') {
+    $ExpectedCount = [regex]::Matches($HookResult.Stderr, [regex]::Escape('[UdonSharp]')).Count
+    if ($ExpectedCount -eq 0) {
+        return $HookResult.Stdout -ceq ''
+    }
+    try {
+        $Reply = $HookResult.Stdout | ConvertFrom-Json
+    } catch {
+        return $false
+    }
+    $Lines = @([string]$Reply.hookSpecificOutput.additionalContext -split "`n")
+    if ($Lines.Count -ne $ExpectedCount -or $Reply.hookSpecificOutput.hookEventName -cne $ExpectedEvent) {
+        return $false
+    }
+    foreach ($Line in $Lines) {
+        if (-not $Line.StartsWith('[UdonSharp]') -or -not $HookResult.Stderr.Contains($Line)) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Assert-StdoutReports([string]$Label, $HookResult, [string]$ExpectedEvent = 'PostToolUse') {
+    if (Test-StdoutReports $HookResult $ExpectedEvent) {
+        Write-Output "PASS [$Label] stdout reports exactly the stderr diagnostics"
+        $script:Passed++
+    } else {
+        Write-Output "FAIL [$Label] stdout does not report the stderr diagnostics"
+        Write-Output "  stdout: $($HookResult.Stdout)"
+        $script:Failed++
     }
 }
 
@@ -268,8 +309,8 @@ function Invoke-SharedParityMatrix {
             $script:Failed++
             continue
         }
-        if ($HookResult.Stdout -cne $Payload) {
-            Write-Output "FAIL [shared case $CaseId] stdout did not preserve hook input"
+        if (-not (Test-StdoutReports $HookResult)) {
+            Write-Output "FAIL [shared case $CaseId] stdout does not report the stderr diagnostics"
             $script:Failed++
             continue
         }
@@ -352,8 +393,8 @@ function Invoke-SharedParityMatrix {
             $script:Failed++
             continue
         }
-        if ($HookResult.Stdout -cne $Payload) {
-            Write-Output "FAIL [template case $TemplateName] stdout did not preserve hook input"
+        if (-not (Test-StdoutReports $HookResult)) {
+            Write-Output "FAIL [template case $TemplateName] stdout does not report the stderr diagnostics"
             $script:Failed++
             continue
         }
@@ -401,13 +442,15 @@ try {
         @{ Label = 'two LF'; Value = '{"tool_input":{}}' + "`n`n" },
         @{ Label = 'CRLF'; Value = '{"tool_input":{}}' + "`r`n" }
     )
+    # The host parses any stdout as the hook's JSON reply, so an edit with
+    # nothing to report must not echo the input or print a stray newline.
     foreach ($BytePayload in $BytePayloads) {
         $ByteResult = Invoke-HookProcess $BytePayload.Value
-        if ($ByteResult.ExitCode -eq 0 -and $ByteResult.Stdout -ceq $BytePayload.Value) {
-            Write-Output "PASS [byte passthrough $($BytePayload.Label)] stdout is exact"
+        if ($ByteResult.ExitCode -eq 0 -and $ByteResult.Stdout -ceq '' -and $ByteResult.Stderr -ceq '') {
+            Write-Output "PASS [quiet stdout $($BytePayload.Label)] no output when nothing is reported"
             $script:Passed++
         } else {
-            Write-Output "FAIL [byte passthrough $($BytePayload.Label)] stdout changed"
+            Write-Output "FAIL [quiet stdout $($BytePayload.Label)] hook was not silent"
             $script:Failed++
         }
     }
@@ -434,15 +477,30 @@ try {
         $Source = "using UdonSharp;$($Case.NewLine)public class Sample : UdonSharpBehaviour$($Case.NewLine){$($Case.NewLine)    $($Case.Declaration)$($Case.NewLine)}"
         $CaseOutput = Invoke-Hook $Source $Case.LeafName
         Assert-Contains $Case.Label $CaseOutput $SyncBloatWarning
-        if ($Case.LeafName) {
-            Assert-Contains 'literal path input JSON passthrough' $CaseOutput 'Bracket[1].cs'
-        }
     }
 
-    $MissingPathPayload = '{"tool_input":{}}'
-    $MissingPathResult = Invoke-HookProcess $MissingPathPayload
-    $MissingPathOutput = $MissingPathResult.Stdout + $MissingPathResult.Stderr
-    Assert-Contains 'missing path input JSON passthrough' $MissingPathOutput '"tool_input":{}'
+    # The report names the event the host sent, so a host that calls the same
+    # moment by another name (Gemini CLI: AfterTool) receives its own event name.
+    $EventSourcePath = Join-Path $TempRoot 'event-name.cs'
+    Set-Content -LiteralPath $EventSourcePath -Value "using UdonSharp;`npublic class Sample : UdonSharpBehaviour`n{`n    [UdonSynced] private int[] values;`n}`n"
+    $EventPayload = [ordered]@{ hook_event_name = 'AfterTool'; tool_input = @{ file_path = $EventSourcePath } } | ConvertTo-Json -Compress
+    $EventResult = Invoke-HookProcess $EventPayload
+    Assert-Contains 'event name case still warns' $EventResult.Stderr $SyncBloatWarning
+    Assert-StdoutReports 'report echoes the host event name' $EventResult 'AfterTool'
+
+    # Codex apply_patch sends the patch text instead of a path.
+    $PatchAsyncPath = Join-Path $TempRoot 'patch-async.cs'
+    Set-Content -LiteralPath $PatchAsyncPath -Value "using UdonSharp;`npublic class PatchAsync : UdonSharpBehaviour`n{`n    private async void Run() { }`n}`n"
+    $PatchPayload = [ordered]@{
+        tool_name = 'apply_patch'
+        tool_input = @{ command = "*** Begin Patch`n*** Update File: $EventSourcePath`n@@`n-a`n+b`n*** Add File: missing.cs`n+x`n*** Update File: old.cs`n*** Move to: $PatchAsyncPath`n*** End Patch`n" }
+    } | ConvertTo-Json -Compress
+    $PatchResult = Invoke-HookProcess $PatchPayload
+    Assert-Contains 'apply_patch names the file' $PatchResult.Stderr "[UdonSharp] FILE: $EventSourcePath"
+    Assert-Contains 'apply_patch validates the patched file' $PatchResult.Stderr $SyncBloatWarning
+    Assert-Contains 'apply_patch names a moved file' $PatchResult.Stderr "[UdonSharp] FILE: $PatchAsyncPath"
+    Assert-Contains 'apply_patch validates a second file' $PatchResult.Stderr 'async/await not supported'
+    Assert-StdoutReports 'apply_patch' $PatchResult
 
     $MalformedPayload = '{"tool_input":'
     $MalformedResult = Invoke-HookProcess $MalformedPayload
@@ -453,13 +511,8 @@ try {
         Write-Output "FAIL [malformed input JSON] exit=$($MalformedResult.ExitCode)"
         $script:Failed++
     }
-    if ($MalformedResult.Stdout -ceq $MalformedPayload) {
-        Write-Output 'PASS [malformed input JSON] stdout passes input through'
-        $script:Passed++
-    } else {
-        Write-Output 'FAIL [malformed input JSON] stdout changed the input'
-        $script:Failed++
-    }
+    Assert-Contains 'malformed input JSON is explicit' $MalformedResult.Stderr 'VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)'
+    Assert-StdoutReports 'malformed input JSON' $MalformedResult
     $ExpectedOperationalWarning = '[UdonSharp] VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)'
     if ($MalformedResult.Stderr.TrimEnd("`r", "`n") -eq $ExpectedOperationalWarning -and
         ($MalformedResult.Stderr -split "`n").Count -eq 2) {
@@ -657,9 +710,9 @@ public class Sample : UdonSharpBehaviour
     $DeclarationCapResult = Invoke-HookProcess $DeclarationCapPayload
     $DeclarationCapWarning = '[UdonSharp] VALIDATOR-WARNING: validation skipped (ATTRIBUTE_SCAN_FAILED)'
     if ($DeclarationCapResult.ExitCode -eq 0 -and
-        $DeclarationCapResult.Stdout -ceq $DeclarationCapPayload -and
+        (Test-StdoutReports $DeclarationCapResult) -and
         $DeclarationCapResult.Stderr.TrimEnd("`r", "`n") -eq $DeclarationCapWarning) {
-        Write-Output 'PASS [declaration cap] fails open with input preserved and one operational warning'
+        Write-Output 'PASS [declaration cap] fails open with one reported operational warning'
         $script:Passed++
     } else {
         Write-Output 'FAIL [declaration cap] fail-open contract mismatch'
@@ -670,12 +723,12 @@ public class Sample : UdonSharpBehaviour
     $UnicodeDeclarationCapPath = Join-Path $TempRoot 'declaration-cap-unicode.cs'
     $UnicodeDeclarationCapSource = 'using UdonSharp;' + [char]10 +
         'public class DeclarationCapUnicode : UdonSharpBehaviour' + [char]10 +
-        '{' + [char]10 + '    [UdonSynced]' + [char]10 + '    ' + ('界' * 88000) + [char]10
+        '{' + [char]10 + '    [UdonSynced]' + [char]10 + '    ' + ([string][char]0x754C * 88000) + [char]10
     [System.IO.File]::WriteAllText($UnicodeDeclarationCapPath, $UnicodeDeclarationCapSource, (New-Object System.Text.UTF8Encoding($false)))
     $UnicodeDeclarationCapPayload = @{ tool_input = @{ file_path = $UnicodeDeclarationCapPath } } | ConvertTo-Json -Compress
     $UnicodeDeclarationCapResult = Invoke-HookProcess $UnicodeDeclarationCapPayload
     if ($UnicodeDeclarationCapResult.ExitCode -eq 0 -and
-        $UnicodeDeclarationCapResult.Stdout -ceq $UnicodeDeclarationCapPayload -and
+        (Test-StdoutReports $UnicodeDeclarationCapResult) -and
         $UnicodeDeclarationCapResult.Stderr.TrimEnd("`r", "`n") -eq $DeclarationCapWarning) {
         Write-Output 'PASS [unicode declaration cap] UTF-8 byte limit matches Bash contract'
         $script:Passed++

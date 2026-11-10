@@ -2,13 +2,40 @@
 
 Step-by-step guide for upgrading UdonSharp worlds across major SDK versions.
 
-**Historical migration coverage**: SDK 3.7.x through 3.10.5
-**Active support / last verified**: SDK 3.10.6
+The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions). Every other
+version below is historical: it records when a feature arrived or what an upgrade
+requires, and is not a support or validation target for this Skill. This is the
+Skill's boundary, not a claim about VRChat's own SDK policy.
 
-Use SDK 3.10.6 when publishing. The version markers below preserve feature
-availability and migration facts; SDK 3.7.1-3.10.5 are not support or validation
-targets for this Skill. This is the Skill's boundary, not a claim about VRChat's
-own SDK policy.
+## Table of Contents
+
+- [Version summary](#version-summary)
+- [Version markers](#version-markers)
+- [SDK 3.10.6 migration](#sdk-3106-migration)
+- [SDK 3.10.5 migration](#sdk-3105-migration)
+- [SDK 3.10.4 receiver migration](#sdk-3104-receiver-migration)
+- [SDK 3.7.x to 3.8.x](#sdk-37x-to-38x)
+- [SDK 3.8.x to 3.9.x](#sdk-38x-to-39x)
+- [SDK 3.9.x to 3.10.x](#sdk-39x-to-310x)
+- [See Also](#see-also)
+
+## Version summary
+
+| SDK Version | Key Features |
+|---|---|
+| 3.7.1 | Added `StringBuilder`, `RegularExpressions`, `System.Random` |
+| 3.7.4 | Added **Persistence API** (PlayerData/PlayerObject) |
+| 3.7.6 | Multi-platform Build & Publish (PC + Android simultaneously) |
+| 3.8.0 | PhysBone dependency sorting, Drone API (VRCDroneInteractable) |
+| 3.8.1 | **`[NetworkCallable]`** attribute, parameterized network events, `NetworkCalling.CallingPlayer`/`.InNetworkCall`, `NetworkEventTarget.Others`/`.Self` |
+| 3.9.0 | Camera Dolly API, Auto Hold pickup simplification |
+| 3.10.0 | **VRChat Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
+| 3.10.1 | Bug fixes and stability improvements |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, DataList/DataDictionary custom capacity, `DataDictionary.EnsureCapacity`, `UdonSharpBehaviour` implements `IUdonEventReceiver` and accepts direct receiver `this` |
+| 3.10.5 | WorldQualitySettings, writable VRCQualitySettings, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager validation |
+| 3.10.6 | `VRCBillboard`, `VRCVelocityTracker`, `VRCPlacementZone`, constraint source methods and `SmoothingFactor`, Interact Outline Renderers, UdonSharp enum-comparison and named-argument fixes |
 
 ## Version markers
 
@@ -69,7 +96,7 @@ Do not generate code for them from preview announcements.
 ## SDK 3.10.4 receiver migration
 
 `UdonSharpBehaviour` directly implements `IUdonEventReceiver` starting with SDK 3.10.4. The active Skill examples therefore pass `this` directly and keep the receiver argument.
-The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an active 3.10.6 example.
+The cast below is historical migration syntax for SDK 3.10.3 and earlier; do not copy it into an example for the active target.
 
 ```csharp
 using VRC.SDK3.StringLoading;

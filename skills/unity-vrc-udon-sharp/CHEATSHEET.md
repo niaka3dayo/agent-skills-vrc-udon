@@ -1,8 +1,6 @@
 # UdonSharp Cheatsheet
 
-**Active support / last verified**: SDK 3.10.6
-
-SDK 3.7.1-3.10.4 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
+SDK version labels below mark when a feature was introduced. The active target and the support policy are in [SKILL.md](SKILL.md#sdk-versions).
 
 ## Features Blocked in Udon Runtime
 
@@ -226,7 +224,7 @@ public void _DoLoop() {
 }
 ```
 
-For cancelable timers on the active SDK target (3.10.6), use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
+For cancelable timers on the active SDK target, use `VRCTween.DelayedCall`. The helper-`GameObject` workaround below is historical migration guidance for unsupported older projects only.
 
 ---
 
@@ -255,7 +253,7 @@ void OnDestroy() {
 | Need | Use | Notes |
 |------|-----|-------|
 | Smooth transform/UI/audio changes | `TweenPosition`, `TweenScale`, `TweenFade`, `TweenPitch` | Returns `VRCTweenHandle` |
-| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target (3.10.6) |
+| Cancelable delayed event | `VRCTween.DelayedCall(this, nameof(Method), seconds)` | Prefer over helper objects on the active SDK target |
 | Delayed active toggle | `VRCTween.DelayedSetActive(target, active, seconds)` | Use for local visibility/state toggles |
 | Cleanup | `handle.Kill()` / `gameObject.KillAllTweens()` | Kill stored handles and long/infinite tweens |
 | High-frequency retargeting | `ChangeEndValue`, `SetDuration`, `SetEase`, `Restart` | Reuse a handle instead of kill/recreate in hot paths |

@@ -2,6 +2,16 @@
 
 Cross-class call overhead, partial class pattern, update handler, PostLateUpdate, spatial query optimization, animator hash caching, and platform detection.
 
+## Table of Contents
+
+- [Performance Patterns](#performance-patterns)
+- [Performance Optimization Patterns](#performance-optimization-patterns)
+- [Rate Limit Resolver](#rate-limit-resolver)
+- [Event Dispatch & Cross-Behaviour Call Cost Tiers](#event-dispatch--cross-behaviour-call-cost-tiers)
+- [GameObject Reference Cost Tiers](#gameobject-reference-cost-tiers)
+- [Array Filtering — `Array.FindAll` Alternative](#array-filtering--arrayfindall-alternative)
+- [See Also](#see-also)
+
 ## Performance Patterns
 
 ### Cross-Class Call Overhead

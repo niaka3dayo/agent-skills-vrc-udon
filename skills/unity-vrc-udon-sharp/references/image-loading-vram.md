@@ -1,12 +1,23 @@
 # Image Loading — VRAM & Memory Management
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 Extended memory management guide for `VRCImageDownloader`. Covers GPU memory lifecycle,
 safe texture cleanup, double-buffer fade, stock vs. streaming mode, mipmap bias control,
 and multi-instance staggering. For the base API reference see [web-loading.md](web-loading.md).
+
+## Table of Contents
+
+- [Overview](#overview)
+- [VRAM Accumulation Mechanism](#vram-accumulation-mechanism)
+- [`Dispose()` vs `Destroy()` — Critical Distinction](#dispose-vs-destroy--critical-distinction)
+- [Double-Buffer Fade Pattern](#double-buffer-fade-pattern)
+- [Stock Mode vs Streaming Mode](#stock-mode-vs-streaming-mode)
+- [Distance-Based Mipmap Bias Control](#distance-based-mipmap-bias-control)
+- [Multi-Instance Delay Staggering](#multi-instance-delay-staggering)
+- [Anti-Patterns](#anti-patterns)
+- [Troubleshooting](#troubleshooting)
+- [See Also](#see-also)
 
 ## Overview
 

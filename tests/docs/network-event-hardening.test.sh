@@ -134,19 +134,20 @@ if [ "$LOCAL_COMMENT_COUNT" -ne 5 ]; then
     exit 1
 fi
 
-# Bash validator prerequisites and fail-open behavior are user-visible in every
-# packaged entrypoint, including translated READMEs.
+# The validator's fail-open behavior is user-visible in every packaged
+# entrypoint, including translated READMEs. The validators stopped needing jq
+# in Issue #394, so the old prerequisite must not come back.
 for path in "$UDON_DIR/SKILL.md" "$README_EN" "$README_JA" "$README_KO" \
     "$README_ZH_CN" "$README_ZH_TW"; do
-    require_text "$path" '`jq`'
     require_text "$path" 'VALIDATOR-WARNING'
-    require_text "$path" 'JQ_UNAVAILABLE'
+    if grep -Fq 'JQ_UNAVAILABLE' "$path"; then
+        echo "ERROR: $path still documents the removed jq prerequisite" >&2
+        exit 1
+    fi
 done
 
 # Current support declarations must agree on the sole active SDK 3.10.6 target.
 require_text "$CONTRIBUTING" "**Active and verified target**: SDK 3.10.6"
-require_text "$CONSTRAINTS_RULE" "**Active support / last verified**: SDK 3.10.6"
-require_text "$RULE" "**Active support / last verified**: SDK 3.10.6"
 
 # Historical, version-specific evidence must not be rewritten as current coverage.
 require_text "$API_REF" "observed in the SDK 3.10.3 Udon wrapper symbols"
@@ -473,14 +474,15 @@ for path in "$RULE" "$NETWORKING_REF" "$API_REF" "$PATTERNS_REF" "$BANDWIDTH_REF
     forbid_regex "$path" 'cryptograph|unspoofable|unforgeable|server[- ]backed|cannot be spoofed|secure sender'
 done
 
-# CI keeps this exact smoke test under the Documentation Smoke Tests job.
+# CI keeps this smoke test under the Documentation Smoke Tests job, which runs
+# every tests/docs suite through tests/run.sh.
 DOCS_JOB="$(awk '
     /^  docs:$/ { in_docs = 1 }
     in_docs && /^  [a-zA-Z0-9_-]+:$/ && $1 != "docs:" { exit }
     in_docs { print }
 ' "$CI")"
 require_text <(printf '%s\n' "$DOCS_JOB") '    name: Documentation Smoke Tests'
-require_text <(printf '%s\n' "$DOCS_JOB") $'      - name: Check network event hardening and SDK coverage\n        run: bash tests/docs/network-event-hardening.test.sh'
+require_text <(printf '%s\n' "$DOCS_JOB") '        run: bash tests/run.sh tests/docs/'
 
 # The two local input handlers must reject non-owner callers before dispatch,
 # while the getter comments must keep the local-only/legacy-call boundary clear.

@@ -10,7 +10,7 @@ body:
       options:
         - unity-vrc-udon-sharp
         - unity-vrc-world-sdk-3
-        - NPX Installer
+        - Installation (skills CLI / Claude Code plugin)
         - Other
     validations:
       required: true

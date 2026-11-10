@@ -2,15 +2,31 @@
 
 Comprehensive guide to networking and synchronization in UdonSharp.
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 > **Warning**: Networking in Udon is a work in progress and can be fragile. Keep implementations simple and test thoroughly with multiple players.
 >
 > **Best Practice**: "The key to sync is NOT to sync." Minimize synced data and use local calculation where possible.
 >
 > **SDK 3.8.1+ New Feature**: The `[NetworkCallable]` attribute enables **network events with parameters**. See [Network Events with Parameters](#network-events-with-parameters-sdk-381) for details.
+
+## Table of Contents
+
+- [Sync Methods (BehaviourSyncMode)](#sync-methods-behavioursyncmode)
+- [VRC_ObjectSync Warning](#vrc_objectsync-warning)
+- [Late Joiner Considerations](#late-joiner-considerations)
+- [Optimization Tips](#optimization-tips)
+- [Core Concepts](#core-concepts)
+- [Synced Variables](#synced-variables)
+- [Network Events](#network-events)
+- [Network Event Hardening and Sender Authorization](#network-event-hardening-and-sender-authorization)
+- [Network Events with Parameters (SDK 3.8.1+)](#network-events-with-parameters-sdk-381)
+- [Data Limits](#data-limits)
+- [Object Pooling](#object-pooling)
+- [Player Events](#player-events)
+- [Common Patterns](#common-patterns)
+- [Owner-Centric Architecture Migration](#owner-centric-architecture-migration)
+- [See Also](#see-also)
 
 ## Sync Methods (BehaviourSyncMode)
 
@@ -547,7 +563,7 @@ public override void OnOwnershipTransferred(VRCPlayerApi player)
 - **On remote clients:** the new ownership becomes visible after VRChat propagates the change. Each remote client's `OnOwnershipTransferred` fires when the propagation arrives.
 - **No client-side arbitration:** when two clients call `SetOwner` simultaneously, both succeed locally and may write synced variables; VRChat resolves the durable owner by network arrival order. The loser's write is overwritten when the winner's serialization arrives. This is by design — see [networking-antipatterns.md §1](networking-antipatterns.md#1-ownership-race-condition) for the recommended `IsOwner`-guarded pattern, and [§"Ownership Arbitration with OnOwnershipRequest"](#ownership-arbitration-with-onownershiprequest) below for owner-side protection during critical actions.
 
-> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; the active target (SDK 3.10.6) is locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
+> *Footnote: Pre-2021.2.2 SDKs treated `SetOwner` as asynchronous on the calling client; the active target is locally immediate. Source: [Ownership Transfer Events](https://creators.vrchat.com/worlds/udon/networking/ownership/#transfer-events-diagram).*
 
 ### Owner Leave and Ownership Cascade
 

@@ -26,9 +26,14 @@ forbid_text() {
     fi
 }
 
-require_text "$SECURITY" '| 3.x     | Yes       |'
-require_text "$SECURITY" '| 2.x and older | No  |'
-forbid_text "$SECURITY" '| 2.x     | Yes       |'
+# SECURITY.md names no release line, so the table cannot go stale at the next
+# major version (it still read "3.x" after v4.0.0 shipped).
+require_text "$SECURITY" '| Latest release | Yes |'
+require_text "$SECURITY" '| Earlier releases | No |'
+if grep -Eq '^\|[[:space:]]*v?[0-9]+\.([0-9]+|x)' "$SECURITY"; then
+    echo "ERROR: $SECURITY pins a numbered release line; describe the policy instead" >&2
+    exit 1
+fi
 
 CANONICAL='GitHub Releases are the canonical release history'
 ARCHIVE='historical archive through v1.2.0'
@@ -77,5 +82,10 @@ for block in "$RELEASE_LABEL" "$SKILLS_LABEL"; do
         exit 1
     fi
 done
+
+# The docs job hands the suite list to tests/run.sh, and tests/run.sh takes it
+# from a glob. Together they keep a new suite from being left out of CI.
+require_text "$ROOT_DIR/.github/workflows/ci.yml" 'run: bash tests/run.sh tests/docs/'
+require_text "$ROOT_DIR/tests/run.sh" 'for suite in tests/docs/*.test.sh tests/hooks/*.test.sh; do'
 
 echo 'PASS: repository governance contracts'

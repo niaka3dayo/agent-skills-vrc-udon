@@ -5,14 +5,13 @@
   },
   "metadata": {
     "description": "AI Agent Skills for VRChat UdonSharp world development",
-    "version": "4.2.1"
+    "version": "4.3.0"
   },
   "plugins": [
     {
       "name": "vrc-udon-skills",
       "description": "VRChat UdonSharp skills, rules, and validation hooks for correct code generation",
       "source": "./",
-      "strict": false,
       "skills": [
         "./skills/unity-vrc-udon-sharp",
         "./skills/unity-vrc-world-sdk-3"

@@ -2,6 +2,21 @@
 
 Initialization, interaction, player detection, timer, audio, pickup, animation, UI, and teleportation patterns for VRChat world development.
 
+## Table of Contents
+
+- [Initialization Patterns](#initialization-patterns)
+- [Interaction Patterns](#interaction-patterns)
+- [Player Detection](#player-detection)
+- [Timer Patterns](#timer-patterns)
+- [Audio Patterns](#audio-patterns)
+- [Pickup Patterns](#pickup-patterns)
+- [Animation Patterns](#animation-patterns)
+- [UI Patterns](#ui-patterns)
+- [Teleportation](#teleportation)
+- [Lazy Initialization Guard](#lazy-initialization-guard)
+- [VRC+ Detection — Reading `isVRCPlus` (SDK 3.10.3+)](#vrc-detection--reading-isvrcplus-sdk-3103)
+- [See Also](#see-also)
+
 ## Initialization Patterns
 
 In VRChat worlds, gimmicks are often **placed in an inactive state** (for performance optimization, conditional display, etc.). Since `Start()` is not called when the GameObject is inactive, initialization requires careful handling.

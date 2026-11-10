@@ -2,6 +2,15 @@
 
 Bandwidth throttling, request serialization patterns, bit packing, data size optimization, owner-centric architecture, and network debugging.
 
+## Table of Contents
+
+- [Network Bandwidth and Throttling](#network-bandwidth-and-throttling)
+- [Data Size Optimization](#data-size-optimization)
+- [Synced Data Size — Application Examples](#synced-data-size--application-examples)
+- [Debugging Network Issues](#debugging-network-issues)
+- [Owner-Centric Architecture (Recommended Design)](#owner-centric-architecture-recommended-design)
+- [See Also](#see-also)
+
 ## Network Bandwidth and Throttling
 
 ### Bandwidth Limits

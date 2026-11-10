@@ -59,7 +59,7 @@ This repository provides AI coding agents with the knowledge to generate correct
 
 <h2 id="install">Install</h2>
 
-> **Migrating from fork/clone?** &mdash; Since v1.0.0, this project is distributed as an **npm package**. You no longer need to fork or clone the repository. Simply run one of the install commands below inside your VRChat Unity project. If you previously cloned this repo, you can safely delete the cloned directory and switch to the npm-based install.
+> **Migrating from fork/clone?** &mdash; You no longer need to fork or clone this repository. Run one of the install commands below inside your VRChat Unity project. If you cloned this repo earlier, you can delete the cloned directory after switching.
 
 ### Method 1: skills CLI (recommended)
 
@@ -67,13 +67,15 @@ This repository provides AI coding agents with the knowledge to generate correct
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project.
+This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project. The skills CLI requires Node.js 22.20 or later.
 
 ### Method 2: Claude Code plugin
 
 ```bash
-claude plugin add niaka3dayo/agent-skills-vrc-udon
+claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
+
+On Claude Code older than 2.1.292, run `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` first, then `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`.
 
 ### Method 3: git clone
 
@@ -86,8 +88,11 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 All published versions remain permanently available on npm and as git tags — nothing is ever removed.
 
 ```bash
-# npm (any published version, v1.0.0 and later)
-npm install agent-skills-vrc-udon@2.3.0
+# skills CLI, pinned to a git tag
+npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
+
+# npm (any published version, v1.0.0 and later); the skills are in node_modules/agent-skills-vrc-udon/skills/
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git tag
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -115,8 +120,9 @@ skills/                                  # All skills
   unity-vrc-world-sdk-3/                # VRC World SDK skill
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (8 files)
 templates/                               # AI tool config templates
-  CLAUDE.md  AGENTS.md  GEMINI.md        # Distributed to users via installer
+  CLAUDE.md  AGENTS.md  GEMINI.md        # Starter project instructions (copy manually)
 .claude-plugin/marketplace.json         # Claude Code plugin registration
+hooks/hooks.json                        # Claude Code plugin hook registration
 CLAUDE.md                               # Development guide (this repo only)
 ```
 
@@ -188,7 +194,31 @@ Q3: Continuous change? (position/rotation)
 
 <h2 id="hooks">Validation Hooks</h2>
 
-PostToolUse hooks that auto-run when `.cs` files are edited.
+A PostToolUse hook checks every `.cs` file the agent writes or edits and reports what it finds back to the agent.
+
+**Claude Code plugin** &mdash; registered automatically. The plugin runs the Bash validator, so `bash` must be on `PATH`. On Windows, Git Bash is enough; `jq` is not needed.
+
+**skills CLI or git clone** &mdash; register the hook yourself. For Claude Code, add this to `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+To use the PowerShell validator, set the command to `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`.
 
 | Category | Check | Severity |
 |----------|-------|----------|
@@ -203,9 +233,11 @@ PostToolUse hooks that auto-run when `.cs` files are edited.
 
 Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-udonsharp.ps1`).
 
-The Bash validator requires `jq`. If `jq` is unavailable, it passes the input
-through unchanged and emits `VALIDATOR-WARNING: validation skipped
-(JQ_UNAVAILABLE)`; it does not silently claim that validation succeeded.
+Findings reach the agent as additional context on the edit, and the same lines are printed to stderr for manual runs. The hook never blocks an edit.
+
+When a validator cannot run, for example because it cannot read the hook input or the file, it reports `VALIDATOR-WARNING: validation skipped (<reason>)`; the hook does not silently claim that validation succeeded.
+
+Codex edits files with `apply_patch`, which passes the patch text to the hook instead of a file path. Both validators accept that input and check each `.cs` file named in the patch.
 
 ---
 

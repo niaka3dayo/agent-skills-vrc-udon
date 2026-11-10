@@ -3,13 +3,26 @@
 Complete reference of C# features and their availability in UdonSharp, including SDK version availability,
 compiler behavior details, and annotated code examples.
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 > For the quick-reference checklist and code generation rules, see `rules/udonsharp-constraints.md`.
 
 ---
+
+## Table of Contents
+
+- [Compiler Behavior Overview](#compiler-behavior-overview)
+- [Supported Features](#supported-features)
+- [Features Unsupported in Udon Runtime](#features-unsupported-in-udon-runtime)
+- [Behavioral Differences from Standard C](#behavioral-differences-from-standard-c)
+- [GetComponent and SDK Version Notes](#getcomponent-and-sdk-version-notes)
+- [uGUI Button Event Registration](#ugui-button-event-registration)
+- [Unity Callback Override Rules](#unity-callback-override-rules)
+- [VRChat-Specific Types](#vrchat-specific-types)
+- [Known Limitations and Caveats](#known-limitations-and-caveats)
+- [Quick Validation Checklist](#quick-validation-checklist)
+- [Advanced Constraint Workarounds](#advanced-constraint-workarounds)
+- [See Also](#see-also)
 
 ## Compiler Behavior Overview
 
