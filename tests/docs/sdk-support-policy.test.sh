@@ -194,6 +194,7 @@ for path in "$ROOT_DIR/templates/AGENTS.md" "$ROOT_DIR/templates/CLAUDE.md" "$RO
     require_text "$path" 'SDK Versions'
     require_text "$path" 'historical'
     forbid_regex "$path" '(^|[^0-9.])3\.[0-9]+\.[0-9]+'
+    forbid_regex "$path" 'SDK[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+'
 done
 
 require_text "$ROOT_DIR/CONTRIBUTING.md" "**Active and verified target**: SDK $ACTIVE"
