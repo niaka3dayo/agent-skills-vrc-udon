@@ -67,7 +67,7 @@
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-此方法使用 [skills.sh](https://skills.sh) 生態系統將技能安裝至您的專案。
+此方法使用 [skills.sh](https://skills.sh) 生態系統將技能安裝至您的專案。skills CLI 需要 Node.js 22.20 或更新版本。
 
 ### 方法 2：Claude Code 外掛
 
@@ -75,7 +75,7 @@ npx skills add niaka3dayo/agent-skills-vrc-udon
 claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
 
-在早於 2.1.275 的 Claude Code 版本中，請先執行 `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon`，再執行 `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`。
+在早於 2.1.292 的 Claude Code 版本中，請先執行 `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon`，再執行 `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`。
 
 ### 方法 3：git clone
 
@@ -91,9 +91,8 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 # skills CLI（指定 git 標籤）
 npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
 
-# npm（v1.0.0 及以後的任意已發布版本），接著將技能同步至代理目錄
-npm install agent-skills-vrc-udon@2.3.0
-npx skills experimental_sync
+# npm（v1.0.0 及以後的任意已發布版本）；技能位於 node_modules/agent-skills-vrc-udon/skills/
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git 標籤
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git

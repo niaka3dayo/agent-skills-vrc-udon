@@ -67,7 +67,7 @@
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-[skills.sh](https://skills.sh) エコシステムを使用して、プロジェクトにスキルをインストールします。
+[skills.sh](https://skills.sh) エコシステムを使用して、プロジェクトにスキルをインストールします。skills CLI の実行には Node.js 22.20 以降が必要です。
 
 ### 方法 2: Claude Code プラグイン
 
@@ -75,7 +75,7 @@ npx skills add niaka3dayo/agent-skills-vrc-udon
 claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
 
-Claude Code 2.1.275 より前のバージョンでは、先に `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` を実行し、続けて `claude plugin install vrc-udon-skills@agent-skills-vrc-udon` を実行してください。
+Claude Code 2.1.292 より前のバージョンでは、先に `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` を実行し、続けて `claude plugin install vrc-udon-skills@agent-skills-vrc-udon` を実行してください。
 
 ### 方法 3: git clone
 
@@ -91,9 +91,8 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 # skills CLI（git タグを指定）
 npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
 
-# npm（v1.0.0 以降の任意の公開バージョン）で取得し、スキルをエージェント用ディレクトリへ同期
-npm install agent-skills-vrc-udon@2.3.0
-npx skills experimental_sync
+# npm（v1.0.0 以降の任意の公開バージョン）。スキルは node_modules/agent-skills-vrc-udon/skills/ に配置されます
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git タグ
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git

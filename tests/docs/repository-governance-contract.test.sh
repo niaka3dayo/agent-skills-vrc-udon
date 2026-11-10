@@ -30,7 +30,7 @@ forbid_text() {
 # major version (it still read "3.x" after v4.0.0 shipped).
 require_text "$SECURITY" '| Latest release | Yes |'
 require_text "$SECURITY" '| Earlier releases | No |'
-if grep -Eq '^\|[[:space:]]*[0-9]+\.x' "$SECURITY"; then
+if grep -Eq '^\|[[:space:]]*v?[0-9]+\.([0-9]+|x)' "$SECURITY"; then
     echo "ERROR: $SECURITY pins a numbered release line; describe the policy instead" >&2
     exit 1
 fi

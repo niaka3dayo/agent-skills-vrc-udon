@@ -67,7 +67,7 @@ This repository provides AI coding agents with the knowledge to generate correct
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project.
+This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project. The skills CLI requires Node.js 22.20 or later.
 
 ### Method 2: Claude Code plugin
 
@@ -75,7 +75,7 @@ This uses the [skills.sh](https://skills.sh) ecosystem to install skills into yo
 claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
 
-On Claude Code older than 2.1.275, run `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` first, then `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`.
+On Claude Code older than 2.1.292, run `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` first, then `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`.
 
 ### Method 3: git clone
 
@@ -91,9 +91,8 @@ All published versions remain permanently available on npm and as git tags — n
 # skills CLI, pinned to a git tag
 npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
 
-# npm (any published version, v1.0.0 and later), then sync the skills into your agent directories
-npm install agent-skills-vrc-udon@2.3.0
-npx skills experimental_sync
+# npm (any published version, v1.0.0 and later); the skills are in node_modules/agent-skills-vrc-udon/skills/
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git tag
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
