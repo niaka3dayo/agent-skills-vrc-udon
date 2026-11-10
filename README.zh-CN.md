@@ -59,7 +59,7 @@
 
 <h2 id="install">安装</h2>
 
-> **从 fork/clone 迁移？** &mdash; 自 v1.0.0 起，本项目以 **npm 包** 的形式分发。你不再需要 fork 或 clone 仓库，只需在你的 VRChat Unity 项目中执行以下任一安装命令即可。如果你之前 clone 过本仓库，可以放心删除该目录并切换到 npm 安装方式。
+> **从 fork/clone 迁移？** &mdash; 你不再需要 fork 或 clone 本仓库，只需在你的 VRChat Unity 项目中执行以下任一安装命令即可。如果你之前 clone 过本仓库，切换后可以删除该目录。
 
 ### 方式一：skills CLI（推荐）
 
@@ -72,8 +72,10 @@ npx skills add niaka3dayo/agent-skills-vrc-udon
 ### 方式二：Claude Code 插件
 
 ```bash
-claude plugin add niaka3dayo/agent-skills-vrc-udon
+claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
+
+在早于 2.1.275 的 Claude Code 版本中，请先执行 `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon`，再执行 `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`。
 
 ### 方式三：git clone
 
@@ -86,8 +88,12 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 所有已发布的版本都会永久保留在 npm 和 git 标签中，不会被删除。
 
 ```bash
-# npm（v1.0.0 及以后的任意已发布版本）
+# skills CLI（指定 git 标签）
+npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
+
+# npm（v1.0.0 及以后的任意已发布版本），然后将技能同步到代理目录
 npm install agent-skills-vrc-udon@2.3.0
+npx skills experimental_sync
 
 # git 标签
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -115,7 +121,7 @@ skills/                                  # 所有技能
   unity-vrc-world-sdk-3/                # VRC World SDK 技能
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/（8 个文件）
 templates/                               # AI 工具配置模板
-  CLAUDE.md  AGENTS.md  GEMINI.md        # 通过安装器分发给用户
+  CLAUDE.md  AGENTS.md  GEMINI.md        # 项目指令模板（手动复制）
 .claude-plugin/marketplace.json         # Claude Code 插件注册
 CLAUDE.md                               # 开发指南（仅限本仓库）
 ```

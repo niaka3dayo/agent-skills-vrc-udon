@@ -75,6 +75,12 @@ STALE_ACTIVE_SCAN_PATTERN="$STALE_ACTIVE_DECLARATION_PATTERN|this skill.?s cover
 STALE_ACTIVE_SCAN="$(git -C "$ROOT_DIR" grep -n -E "$STALE_ACTIVE_SCAN_PATTERN" -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' || true)"
 [ -z "$STALE_ACTIVE_SCAN" ] || fail "stale active-support declaration found:\n$STALE_ACTIVE_SCAN"
 
+# Every copy of the historical range must name the same upper bound. The copies
+# drifted once: 14 files still read 3.7.1-3.10.4 after 3.10.5 became historical.
+HISTORICAL_RANGES="$(git -C "$ROOT_DIR" grep -ohE '3\.7\.1-3\.10\.[0-9]+' -- '*.md' ':!CHANGELOG.md' ':!tests/docs/*' | sort -u)"
+[ "$(grep -c . <<<"$HISTORICAL_RANGES")" -eq 1 ] \
+    || fail "historical SDK range literals disagree: $(tr '\n' ' ' <<<"$HISTORICAL_RANGES")"
+
 # A future SDK is not an active support target until this repository verifies
 # it. Reject the easy-to-miss "3.10.5 or newer" routing form while preserving
 # historical feature-introduction notes such as "SDK 3.8.1+".

@@ -28,7 +28,7 @@
 
 - name: "type: installer"
   color: "e4e669"
-  description: "NPX installer related"
+  description: "Installation and distribution"
 
 # --- Skill ---
 - name: "skill: udon-sharp"

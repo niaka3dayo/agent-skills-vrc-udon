@@ -2,7 +2,7 @@
 
 **Active support / last verified**: SDK 3.10.6
 
-SDK 3.7.1-3.10.4 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
+SDK 3.7.1-3.10.5 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
 
 ---
 
