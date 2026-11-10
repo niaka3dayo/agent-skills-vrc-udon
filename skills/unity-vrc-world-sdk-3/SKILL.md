@@ -1,20 +1,18 @@
 ---
 name: unity-vrc-world-sdk-3
 description: >
-    VRChat World SDK 3 guide for scene and Inspector setup, component placement,
-    optimization, and upload. Use for VRChat world scene configuration,
-    VRC SDK components, layers, baked lighting, Quest/Android performance,
-    Dynamics for Worlds, Build Panel warning triage, validation, and upload.
-    Covers WorldQualitySettings, VRC_SceneDescriptor, VRC_Pickup, VRC_Station, VRC_Mirror,
-    VRC_ObjectSync, VRC_CameraDolly, spawn points, collision matrices,
-    PhysBone and Contact component placement, Box Contacts,
-    Global Avatar PhysBone Colliders, and VRCPhysBoneCollider component setup.
-    Active support / last verified: SDK 3.10.6. Triggers on: VRChat world scene, VRC SDK, scene setup,
-    component placement, VRCBillboard, VRCPlacementZone, Quest support, light baking,
-    SDK validation, Build Panel warning, Auto Fix, or red/yellow/white warnings.
-    Do not use for UdonSharp C# or VRCTween calls; use
-    unity-vrc-udon-sharp for runtime scripting.
-    UdonSharp package, asmdef, and Version Defines work also belongs to that skill.
+    Scene, component, and upload guidance for VRChat World SDK 3. Active support /
+    last verified: SDK 3.10.6. VRChat changes Unity behaviour in ways the editor does not show
+    (reserved layers, runtime layer names, Android limits, Build Panel validation), so load
+    this skill before setting up or reviewing a VRChat world scene, even for one component.
+    Covers VRC SDK component placement and Inspector setup (VRC_SceneDescriptor, VRC_Pickup,
+    VRC_Station, VRC_Mirror, VRC_ObjectSync, VRC_CameraDolly, VRCBillboard, VRCPlacementZone,
+    spawn points), layers and collision matrices, baked lighting, Quest/Android performance,
+    WorldQualitySettings, Dynamics for Worlds (PhysBone and Contact component placement,
+    Box Contacts, Global Avatar PhysBone Colliders, VRCPhysBoneCollider component setup),
+    audio/video, SDK validation, Build Panel warning triage (Auto Fix, red/yellow/white
+    warnings), and upload. Do not use for UdonSharp C# or VRCTween calls; use
+    unity-vrc-udon-sharp for runtime scripting, asmdef, and Version Defines work.
 license: MIT
 metadata:
     author: niaka3dayo
@@ -38,25 +36,6 @@ metadata:
 | [World Upload](#world-upload)              | Upload workflow            | `references/upload.md`          |
 | [Troubleshooting](#troubleshooting)        | Problem solving            | `references/troubleshooting.md` |
 | [Cheatsheet](CHEATSHEET.md)               | Quick reference            | `CHEATSHEET.md`                 |
-
----
-
-## Method Migration
-
-The following public methods were renamed because an unprefixed, parameterless
-public UdonSharp method remains callable through legacy network dispatch:
-
-| Before | After |
-|---|---|
-| `ForceDropPickup` | `_ForceDropPickup` |
-| `IsHeld` | `_IsHeld` |
-| `IsOccupied` | `_IsOccupied` |
-| `StopSound` | `_StopSound` |
-| `SlowUpdate` | `_SlowUpdate` |
-
-Update Inspector event strings, `SendCustomEvent*` calls, delayed events and
-`nameof(...)` expressions, and cross-behaviour calls. Compatibility aliases are
-not provided because an old unprefixed alias would restore the same legacy network exposure.
 
 ---
 
@@ -445,6 +424,23 @@ Identify the symptom category and jump to the reference section:
 For C# scripting, network sync, and UdonSharp event implementation, use the `unity-vrc-udon-sharp` skill.
 
 ---
+
+## Method Migration
+
+The following public methods were renamed because an unprefixed, parameterless
+public UdonSharp method remains callable through legacy network dispatch:
+
+| Before | After |
+|---|---|
+| `ForceDropPickup` | `_ForceDropPickup` |
+| `IsHeld` | `_IsHeld` |
+| `IsOccupied` | `_IsOccupied` |
+| `StopSound` | `_StopSound` |
+| `SlowUpdate` | `_SlowUpdate` |
+
+Update Inspector event strings, `SendCustomEvent*` calls, delayed events and
+`nameof(...)` expressions, and cross-behaviour calls. Compatibility aliases are
+not provided because an old unprefixed alias would restore the same legacy network exposure.
 
 ## Templates (`assets/templates/`)
 

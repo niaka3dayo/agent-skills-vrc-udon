@@ -1,4 +1,4 @@
-# UdonSharp Compile Constraints (Always Loaded)
+# UdonSharp Compile Constraints
 
 UdonSharp compiles C# to Udon Assembly. Code that executes in the Udon runtime must adhere to these constraints, which differ from standard C#. Unity/Editor-side field initializer evaluation has the narrow exception described below.
 

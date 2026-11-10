@@ -564,6 +564,8 @@ Per-axis "Affects" toggles are Inspector/C# settings only; the 3.10.6 Udon wrapp
 
 These members are new in SDK 3.10.6. The SDK 3.10.4 and 3.10.5 Udon wrappers expose source access only through the `Sources` list. Do not generate `GetSourceCount()` or `SetSourceWeight()`: neither exists in SDK 3.10.4, 3.10.5, or 3.10.6. On 3.10.6, VRChat recommends these methods over editing `Sources` directly from Udon; direct list edits have reliability issues and stay exposed only for backward compatibility.
 
+After `SetSource`, `AddSource`, `RemoveSource`, `SetSources`, or `ClearSources`, call `ApplyConfigurationChanges()` once, as for any other constraint property changed from a script.
+
 #### VRCConstraintSource Struct
 
 `VRCConstraintSource` (namespace `VRC.Dynamics`) is a value-type struct with the properties `SourceTransform`, `Weight`, `ParentPositionOffset`, and `ParentRotationOffset`. Construct it with `new VRCConstraintSource(transform, weight)` or `new VRCConstraintSource(transform, weight, positionOffset, rotationOffset)`. A value returned by `GetSource()` is a copy: edit the copy, then write it back with `SetSource()`.
