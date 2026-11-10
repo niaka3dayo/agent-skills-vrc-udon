@@ -99,7 +99,9 @@ Always rewrite the notes before publishing:
 
 The `published` event triggers `publish.yml`, which validates the tag, runs `npm version "$VERSION" --allow-same-version` (a no-op when Step 2 was done), syncs `SKILL.md` and `marketplace.json` again as a safety net, and runs `npm publish`. It authenticates with npm trusted publishing (OIDC) instead of a stored token, runs in the `npm-publish` environment, and npm adds provenance automatically.
 
-If the Publish step fails with an authentication error (`ENEEDAUTH`, `E401`, or `E404` on `PUT`), check the trusted publisher on npmjs.com (package Settings, Trusted Publisher). Every field is case-sensitive and npm does not validate them on save: user `niaka3dayo`, repository `agent-skills-vrc-udon`, workflow filename `publish.yml`, environment `npm-publish`, and `npm publish` allowed (not only `npm stage publish`). Also confirm the job still has `id-token: write` and the workflow still uses Node 24 or later (npm 11.5.1 or later).
+If the Publish step fails with an authentication error (`ENEEDAUTH`, `E401`, or `E404` on `PUT`), check the trusted publisher on npmjs.com (package Settings, Trusted Publisher). Every field is case-sensitive and npm does not validate them on save: user `niaka3dayo`, repository `agent-skills-vrc-udon`, workflow filename `publish.yml`, environment `npm-publish`, and `npm publish` allowed (not only `npm stage publish`). Also confirm the job still has `id-token: write` and the workflow still uses Node 24 or later (npm 11.5.1 or later). After correcting the configuration, re-run the failed Publish job from the Actions tab; do not create a second release.
+
+A newly created trusted publisher expires unless the first publish succeeds within two days, so create or recreate one right before a release, not in advance.
 
 Afterwards, `npm view agent-skills-vrc-udon version` should return the new version.
 
