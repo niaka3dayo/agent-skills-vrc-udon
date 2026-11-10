@@ -13,3 +13,6 @@ state/
 # only its README.md is tracked so the convention is discoverable on clone.
 unity-project-for-sdk-search/*
 !unity-project-for-sdk-search/README.md
+
+# Local plugin eval reports (see evals/README.md)
+evals/results/

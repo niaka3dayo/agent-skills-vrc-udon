@@ -1,0 +1,7 @@
+{
+  "name": "vrc-udon-skills",
+  "description": "VRChat UdonSharp skills, rules, and validation hooks for correct code generation",
+  "author": {
+    "name": "niaka3dayo"
+  }
+}
