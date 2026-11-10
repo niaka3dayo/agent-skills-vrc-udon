@@ -9,7 +9,8 @@
 set -euo pipefail
 
 NEW="${1:-}"
-if [[ ! "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+# SemVer numeric parts: no leading zeros.
+if [[ ! "$NEW" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     echo "usage: bump-version.sh X.Y.Z" >&2
     exit 2
 fi
@@ -23,8 +24,9 @@ fi
 
 # If the local checkout is stale, compare with: npm view agent-skills-vrc-udon version
 OLD="$(node -p "require('./package.json').version")"
-if [ "$OLD" = "$NEW" ]; then
-    echo "ERROR: package.json is already at $NEW" >&2
+NEWEST="$(printf '%s\n' "$OLD" "$NEW" | sort -V | tail -n 1)"
+if [ "$OLD" = "$NEW" ] || [ "$NEWEST" != "$NEW" ]; then
+    echo "ERROR: $NEW is not newer than the current version $OLD" >&2
     exit 1
 fi
 

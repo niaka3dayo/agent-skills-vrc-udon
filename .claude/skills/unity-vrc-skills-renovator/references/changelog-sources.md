@@ -91,13 +91,13 @@ the same history is the "SDK Version Features" table in `skills/unity-vrc-world-
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ 1. WebSearch: "VRChat SDK {year} releases changelog"     │
-│    → Identify the latest version number                  │
+│ 1. gh api repos/vrchat/packages/releases/latest          │
+│    → The latest stable version (betas are skipped)       │
 └──────────────────────────┬──────────────────────────────┘
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 2. WebSearch: "VRChat SDK Release 3.{new version}"       │
-│    → Get release note summary                            │
+│ 2. Release notes for each version up to that one         │
+│    creators.vrchat.com/releases/ (WebSearch if blocked)  │
 └──────────────────────────┬──────────────────────────────┘
                            ▼
 ┌─────────────────────────────────────────────────────────┐

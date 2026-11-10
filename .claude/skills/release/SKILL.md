@@ -30,9 +30,10 @@ The script fetches both branches and checks that `dev` contains the current `mai
 
 ## Step 2: Bump the version fields on `dev`
 
-Decide the target version vX.Y.Z from the labels on the PRs merged into `dev` since the last release (see [Version resolution](#version-resolution-label-driven)). Then:
+Decide the target version vX.Y.Z from the labels on the PRs merged into `dev` since the last release (see [Version resolution](#version-resolution-label-driven)). From this point until the release PR is merged, merge nothing else into `dev`. If another PR does land, resolve the version again before continuing. Then:
 
 ```bash
+set -e   # stop at the first failing command
 git checkout dev && git pull
 git checkout -b chore/release-vX.Y.Z
 
