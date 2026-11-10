@@ -196,7 +196,7 @@ Q3: 是否持续变化？（位置/旋转）
 
 每当代理写入或编辑 `.cs` 文件时，PostToolUse 钩子都会检查其内容，并将检查结果反馈给代理。
 
-**Claude Code 插件** &mdash; 自动注册。插件运行的是 Bash 验证器，因此 `bash` 和 `jq` 必须位于 `PATH` 中。在 Windows 上需要 Git Bash 和 `jq`（`winget install jqlang.jq`）。
+**Claude Code 插件** &mdash; 自动注册。插件运行的是 Bash 验证器，因此 `bash` 必须位于 `PATH` 中。在 Windows 上只需 Git Bash 即可，无需 `jq`。
 
 **skills CLI 或 git clone** &mdash; 需自行注册钩子。对于 Claude Code，请将以下内容添加到 `.claude/settings.json`：
 
@@ -218,7 +218,7 @@ Q3: 是否持续变化？（位置/旋转）
 }
 ```
 
-如需使用不依赖 `jq` 的 PowerShell 验证器，请将 command 设置为 `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`。
+如需使用 PowerShell 验证器，请将 command 设置为 `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`。
 
 | 类别 | 检查项 | 严重级别 |
 |------|--------|----------|
@@ -235,7 +235,9 @@ Q3: 是否持续变化？（位置/旋转）
 
 检查结果会作为该次编辑的附加上下文传递给代理，手动运行时相同内容也会输出到 stderr。钩子不会阻止编辑。
 
-Bash 验证器需要 `jq`。如果无法使用 `jq`，编辑 `.cs` 文件时会报告 `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，而不会将其视为验证成功。
+当验证器无法执行（例如无法读取钩子输入或文件）时，会报告 `VALIDATOR-WARNING: validation skipped (<原因>)`，而不会将其视为验证成功。
+
+Codex 使用 `apply_patch` 编辑文件，传给钩子的是补丁内容而不是文件路径。两个验证器都支持这种输入，并逐一检查补丁中涉及的 `.cs` 文件。
 
 ---
 

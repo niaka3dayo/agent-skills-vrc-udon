@@ -316,9 +316,9 @@ against the Rules either way. The Claude Code plugin registers the Bash
 validator automatically; other installs must register one in the agent's hook
 settings (see the repository README).
 
-The Bash validator requires `jq`. If it is unavailable, the hook reports
-`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)` on `.cs` edits instead
-of silently reporting successful validation.
+A validator that cannot run reports
+`VALIDATOR-WARNING: validation skipped (<reason>)` on the edit instead of
+silently reporting successful validation.
 
 ## Quick Reference
 
