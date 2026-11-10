@@ -57,6 +57,26 @@ jobs:
         shell: pwsh
         run: ./tests/hooks/validate-udonsharp.test.ps1
 
+  # Windows PowerShell 5.1 ships with Windows and is what a user without
+  # PowerShell 7 runs the validator with. Not a required check.
+  hooks-windows-powershell:
+    name: Hook Scripts (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    steps:
+      # The fixtures are LF files; the suite builds its own CRLF variants.
+      - name: Keep LF line endings on checkout
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Smoke test validate-udonsharp.ps1
+        shell: powershell
+        run: |
+          if ($PSVersionTable.PSVersion.Major -ne 5) {
+            throw "Expected Windows PowerShell 5.1, got $($PSVersionTable.PSVersion)"
+          }
+          ./tests/hooks/validate-udonsharp.test.ps1
+
   docs:
     name: Documentation Smoke Tests
     runs-on: ubuntu-latest
