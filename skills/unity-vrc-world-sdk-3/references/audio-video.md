@@ -13,6 +13,8 @@ Complete guide for audio and video configuration.
 - [Video Player Setup](#video-player-setup)
 - [Optimization](#optimization)
 - [Troubleshooting](#troubleshooting)
+- [Quick Reference](#quick-reference)
+- [See Also](#see-also)
 
 ---
 

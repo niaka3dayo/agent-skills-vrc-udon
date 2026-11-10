@@ -2,6 +2,24 @@
 
 Guide to editor scripts, custom inspectors, and working with the UdonSharp proxy system.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Preprocessor Directives](#preprocessor-directives)
+- [Proxy System](#proxy-system)
+- [Adding Components](#adding-components)
+- [Custom Inspectors](#custom-inspectors)
+- [Scene Handles and Gizmos](#scene-handles-and-gizmos)
+- [Editor Windows](#editor-windows)
+- [Editor-Only Setup Components (IEditorOnly)](#editor-only-setup-components-ieditoronly)
+- [Build Pipeline Callbacks](#build-pipeline-callbacks)
+- [Property Drawers](#property-drawers)
+- [DefaultExecutionOrder](#defaultexecutionorder)
+- [Best Practices](#best-practices)
+- [Common Issues](#common-issues)
+- [See Also](#see-also)
+- [UdonSharpProgramAsset Auto-Generation](#udonsharpprogramasset-auto-generation)
+
 ## Overview
 
 UdonSharp uses a **proxy system**: each C# `UdonSharpBehaviour` component is paired with a hidden backing `UdonBehaviour` that runs the compiled program. In UdonSharp 1.x the C# component holds the saved data in Edit Mode, so editor scripts edit it like any other component (see [Proxy System](#proxy-system)).

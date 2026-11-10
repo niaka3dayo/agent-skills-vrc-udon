@@ -145,8 +145,6 @@ done
 
 # Current support declarations must agree on the sole active SDK 3.10.6 target.
 require_text "$CONTRIBUTING" "**Active and verified target**: SDK 3.10.6"
-require_text "$CONSTRAINTS_RULE" "**Active support / last verified**: SDK 3.10.6"
-require_text "$RULE" "**Active support / last verified**: SDK 3.10.6"
 
 # Historical, version-specific evidence must not be rewritten as current coverage.
 require_text "$API_REF" "observed in the SDK 3.10.3 Udon wrapper symbols"

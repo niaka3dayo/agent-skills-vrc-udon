@@ -1,10 +1,18 @@
 # VRCTween Patterns (introduced in SDK 3.10.4)
 
-**Active support / last verified**: SDK 3.10.6
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 This reference describes the active SDK target. The 3.10.4 marker records when VRCTween was introduced; it is not an automatic support promise for later SDKs.
 
-Route animation and cancelable-delay questions here for the active SDK target, SDK 3.10.6.
+Route animation and cancelable-delay questions here for the active SDK target.
+
+## Table of Contents
+
+- [When to Use VRCTween](#when-to-use-vrctween)
+- [Cancelable Delays](#cancelable-delays)
+- [Cleanup Rules](#cleanup-rules)
+- [Local-Only Networking Rule](#local-only-networking-rule)
+- [High-Frequency Reuse](#high-frequency-reuse)
 
 ## When to Use VRCTween
 
@@ -69,7 +77,7 @@ public class TweenedDoor : UdonSharpBehaviour
 
 ## Cancelable Delays
 
-Prefer `VRCTween.DelayedCall` over `SendCustomEventDelayedSeconds` helper-`GameObject` cancellation workarounds on the active SDK target, SDK 3.10.6:
+Prefer `VRCTween.DelayedCall` over `SendCustomEventDelayedSeconds` helper-`GameObject` cancellation workarounds on the active SDK target:
 
 ```csharp
 private VRCTweenHandle _timer;

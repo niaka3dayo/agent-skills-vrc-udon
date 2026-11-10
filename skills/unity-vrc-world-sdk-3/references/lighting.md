@@ -10,6 +10,11 @@ Lighting settings and optimization guide for VRChat worlds.
 - [Reflection Probes](#reflection-probes)
 - [Quest Optimization](#quest-optimization)
 - [Common Issues](#common-issues)
+- [Shader Global Variables](#shader-global-variables)
+- [Quick Reference](#quick-reference)
+- [Quest Bake Parameter Reference](#quest-bake-parameter-reference)
+- [Lighting Workflow Summary: PC vs Quest](#lighting-workflow-summary-pc-vs-quest)
+- [See Also](#see-also)
 
 ---
 

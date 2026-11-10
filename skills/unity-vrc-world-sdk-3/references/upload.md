@@ -13,6 +13,9 @@ Complete upload procedure and best practices.
 - [Capacity Settings](#capacity-settings)
 - [Post-Upload](#post-upload)
 - [Troubleshooting](#troubleshooting)
+- [Platform-Specific Upload](#platform-specific-upload)
+- [Quick Reference](#quick-reference)
+- [See Also](#see-also)
 
 ---
 

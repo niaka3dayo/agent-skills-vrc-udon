@@ -1,5 +1,16 @@
 # UdonSharp Assembly Definitions and VPM Package Workflows
 
+## Table of Contents
+
+- [Beginner-Friendly Default](#beginner-friendly-default)
+- [Two Different Assembly Assets](#two-different-assembly-assets)
+- [UdonSharpBehaviour Under an `.asmdef`](#udonsharpbehaviour-under-an-asmdef)
+- [Assembly Version Defines (SDK 3.10.5)](#assembly-version-defines-sdk-3105)
+- [VPM Package Layout Is a Design Choice](#vpm-package-layout-is-a-design-choice)
+- [Auto Referenced Tradeoff](#auto-referenced-tradeoff)
+- [Runtime/Editor Separation Checklist](#runtimeeditor-separation-checklist)
+- [Primary Evidence](#primary-evidence)
+
 ## Beginner-Friendly Default
 
 For ordinary, world-only, simple one-off UdonSharp scripts, **do not add an asmdef by default**. Keep the script under `Assets/` without a Unity assembly definition unless there is a concrete package, compile-boundary, or editor/runtime separation need. This keeps the script in Unity's default `Assembly-CSharp` path and avoids extra UdonSharp assembly wiring for beginners.

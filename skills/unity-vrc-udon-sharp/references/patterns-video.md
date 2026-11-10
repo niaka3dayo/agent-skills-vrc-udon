@@ -3,6 +3,17 @@
 State machine, server-time sync, late-joiner handling, AVPro texture stabilization,
 error retry with fallback, synced playlist management, and platform-specific URL selection.
 
+## Table of Contents
+
+- [1. Video Player State Machine](#1-video-player-state-machine)
+- [2. Server-Time Playback Position Sync](#2-server-time-playback-position-sync)
+- [3. Late Joiner Video Sync](#3-late-joiner-video-sync)
+- [4. AVPro Texture Blit Buffering](#4-avpro-texture-blit-buffering)
+- [5. Video Error Retry with Player Fallback](#5-video-error-retry-with-player-fallback)
+- [6. Synced Playlist / Queue Management](#6-synced-playlist--queue-management)
+- [7. Platform-Specific URL Selection](#7-platform-specific-url-selection)
+- [See Also](#see-also)
+
 ## 1. Video Player State Machine
 
 ### State Definitions
