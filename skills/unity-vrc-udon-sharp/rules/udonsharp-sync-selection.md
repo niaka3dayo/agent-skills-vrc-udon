@@ -1,4 +1,4 @@
-# Sync Pattern Selection (Always Loaded)
+# Sync Pattern Selection
 
 Always consult before generating code. A decision framework for WHAT to sync and WHEN to sync.
 See `../references/sync-examples.md` for practical patterns and code examples.

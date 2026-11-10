@@ -189,9 +189,12 @@ done
 # Distributed agent templates and maintainer guidance must teach the same
 # active-vs-historical boundary.
 for path in "$ROOT_DIR/templates/AGENTS.md" "$ROOT_DIR/templates/CLAUDE.md" "$ROOT_DIR/templates/GEMINI.md"; do
-    require_text "$path" "active: $ACTIVE"
+    # Templates are copied into user projects and outlive SDK bumps, so they
+    # name no SDK version and point at the declaration in each SKILL.md.
+    require_text "$path" 'SDK Versions'
     require_text "$path" 'historical'
-    forbid_regex "$path" 'SDK \(3\.7\.1.{0,8}3\.10\.4\)'
+    forbid_regex "$path" '(^|[^0-9.])3\.[0-9]+\.[0-9]+'
+    forbid_regex "$path" 'SDK[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+'
 done
 
 require_text "$ROOT_DIR/CONTRIBUTING.md" "**Active and verified target**: SDK $ACTIVE"

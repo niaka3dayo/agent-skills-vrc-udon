@@ -1,4 +1,4 @@
-# UdonSharp Networking Rules (Always Loaded)
+# UdonSharp Networking Rules
 
 Core networking rules and constraints. See `../references/networking.md` for detailed patterns.
 

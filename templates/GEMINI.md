@@ -1,45 +1,30 @@
 # UdonSharp / VRChat World Development
 
-Agent Skills for VRChat world development using UdonSharp (C# → Udon Assembly).
-**UdonSharp has significant constraints compared to standard C#. Always read the Rules before generating code.**
+This project uses the VRChat UdonSharp agent skills (C# → Udon Assembly).
+**UdonSharp has significant constraints compared to standard C#. Load the `unity-vrc-udon-sharp` skill and read its rules before generating code.**
 
 ## Rules (Required Reading)
 
-Read the following Rules before writing any UdonSharp code:
+Before writing any UdonSharp code, read the three rule sheets in the `rules/` directory of the `unity-vrc-udon-sharp` skill, next to its `SKILL.md`:
 
-- **`skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md`** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
-- **`skills/unity-vrc-udon-sharp/rules/udonsharp-networking.md`** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
-- **`skills/unity-vrc-udon-sharp/rules/udonsharp-sync-selection.md`** — Sync Pattern Decision Tree, Data Budget, Minimization
+- **`udonsharp-constraints.md`** — Blocked Features, Code Generation Rules, Attributes, Syncable Types
+- **`udonsharp-networking.md`** — Ownership, Sync Modes, RequestSerialization, NetworkCallable
+- **`udonsharp-sync-selection.md`** — Sync Pattern Decision Tree, Data Budget, Minimization
 
 Networking rule: a parameterless `public` method without a leading `_` is a legacy network entry. Prefix local-only/custom public methods with `_`, expose only intentional entries with `[NetworkCallable]`, confirm `NetworkCalling.InNetworkCall` before reading `NetworkCalling.CallingPlayer`, authorize the caller separately from receiver ownership, and never use instance master as a security or access-control boundary.
 
 ## Skills
 
-| Skill | Purpose | Path |
-|-------|---------|------|
-| `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates | `skills/unity-vrc-udon-sharp/SKILL.md` |
-| `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization | `skills/unity-vrc-world-sdk-3/SKILL.md` |
+| Skill | Purpose |
+|-------|---------|
+| `unity-vrc-udon-sharp` | UdonSharp coding, networking, events, templates |
+| `unity-vrc-world-sdk-3` | VRC component placement, layer configuration, world optimization |
 
-## SDK (active: 3.10.6)
+## SDK
 
-**Active support / last verified**: SDK 3.10.6
+Each skill declares its active and verified SDK target in the `SDK Versions` section of its `SKILL.md`. From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after the skills repository verifies it. A new stable release is not supported automatically.
 
-From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.6.
-
-The table below keeps historical feature-introduction notes for migration. SDK 3.7.1-3.10.5 entries are not supported or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
-
-| Version | Key Features |
-|---------|--------------|
-| 3.7.1 | StringBuilder, Regex, System.Random |
-| 3.7.4 | Persistence API (PlayerData/PlayerObject) |
-| 3.8.1 | `[NetworkCallable]` network events with parameters |
-| 3.10.0 | VRChat Dynamics for Worlds (PhysBones, Contacts) |
-| 3.10.1 | Bug fixes and stability improvements |
-| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
-| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
-| 3.10.4 | VRCTween, Box Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs |
-| 3.10.5 | WorldQualitySettings, writable VRCQualitySettings, Assembly Version Defines, Pickup Outline Renderers, Pipeline Manager validation |
-| 3.10.6 | VRCBillboard, VRCVelocityTracker, VRCPlacementZone, constraint source methods and Smoothing Factor, Interact Outline Renderers, UdonSharp enum-comparison and named-argument fixes |
+Other SDK versions named in the skills are historical feature-introduction notes. They are not supported or validation targets. This is the skills' support boundary, not a statement about VRChat's own SDK policy.
 
 ## Docs Reference
 
@@ -55,7 +40,7 @@ Use web search to reference official documentation and community resources:
 
 ## Context Preservation
 
-For complex synced systems, ownership-sensitive multi-file refactors, or work resumed after context compaction/handoff, consider the lightweight guide at `skills/unity-vrc-udon-sharp/references/context-preservation.md`.
+For complex synced systems, ownership-sensitive multi-file refactors, or work resumed after context compaction/handoff, consider the lightweight guide at `references/context-preservation.md` in the `unity-vrc-udon-sharp` skill.
 Use it to preserve task-specific source of truth, sync strategy, ownership, late-joiner, owner-left, and validation decisions.
 Skip it for small mechanical edits.
 Keep secrets, private data, and raw transcripts out of any note.
