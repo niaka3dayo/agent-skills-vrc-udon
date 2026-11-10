@@ -12,6 +12,11 @@ public class RuntimeNoneNetworkEventDecoys : UdonSharpBehaviour
     public override void Interact()
     {
         syncedTarget.SendCustomNetworkEvent(NetworkEventTarget.All, "Play");
+        syncedTarget. SendCustomNetworkEvent(NetworkEventTarget.All, "Play");
+        syncedTarget
+            .SendCustomNetworkEvent(NetworkEventTarget.All, "Play");
+        syncedTarget.
+            SendCustomNetworkEvent(NetworkEventTarget.All, "Play");
         SendCustomEvent(nameof(_Local));
     }
 

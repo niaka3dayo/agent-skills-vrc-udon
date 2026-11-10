@@ -6,7 +6,7 @@ public class RuntimeNoneSelfNetworkEvent : UdonSharpBehaviour
 {
     public override void Interact()
     {
-        this.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(Play));
+        this . SendCustomNetworkEvent(NetworkEventTarget.All, nameof(Play));
     }
 
     public void Play()

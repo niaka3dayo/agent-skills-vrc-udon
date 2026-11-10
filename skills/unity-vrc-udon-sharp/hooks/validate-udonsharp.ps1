@@ -996,7 +996,7 @@ if ($HasNoVariableSync -and $SyncedCount -gt 0) {
 
 # A None-mode behaviour cannot receive network events, and the compiler does
 # not report it (Issue #383). A call on another behaviour is not flagged.
-if ($HasNoneSync -and $MaskedSource -match '(?<![\w])NetworkCallable(Attribute)?\s*[\],(]|(?<![.\w])(this\s*\.\s*)?SendCustomNetworkEvent\s*\(') {
+if ($HasNoneSync -and $MaskedSource -match '(?<![\w])NetworkCallable(Attribute)?\s*[\],(]|(?<!\.\s*)(?<!\w)(this\s*\.\s*)?SendCustomNetworkEvent\s*\(') {
     $Warnings += "[UdonSharp] WARNING: BehaviourSyncMode.None cannot receive network events, but this file declares [NetworkCallable] or calls SendCustomNetworkEvent on itself. The event is never delivered. Use Manual or Continuous, or send the event to a synced behaviour."
 }
 

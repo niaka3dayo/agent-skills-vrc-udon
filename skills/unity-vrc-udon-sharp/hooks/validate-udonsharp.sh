@@ -1167,7 +1167,13 @@ fi
 
 # A None-mode behaviour cannot receive network events, and the compiler does
 # not report it (Issue #383). A call on another behaviour is not flagged.
-if [[ "$has_none_sync" -eq 1 ]] && grep -qE '(^|[^[:alnum:]_])NetworkCallable(Attribute)?[[:space:]]*[],(]|(^|[^.[:alnum:]_])(this[[:space:]]*[.][[:space:]]*)?SendCustomNetworkEvent[[:space:]]*[(]' "$masked_file"; then
+# Whitespace and line breaks around a dot are removed first, so that
+# "target. SendCustomNetworkEvent(" still reads as a call on another receiver.
+if [[ "$has_none_sync" -eq 1 ]] && {
+    grep -qE '(^|[^[:alnum:]_])NetworkCallable(Attribute)?[[:space:]]*[],(]' "$masked_file" ||
+    sed 's/[[:space:]]*[.][[:space:]]*/./g' "$flat_file" |
+        grep -qE '(^|[^.[:alnum:]_])(this[.])?SendCustomNetworkEvent[[:space:]]*[(]'
+}; then
     warnings+=("[UdonSharp] WARNING: BehaviourSyncMode.None cannot receive network events, but this file declares [NetworkCallable] or calls SendCustomNetworkEvent on itself. The event is never delivered. Use Manual or Continuous, or send the event to a synced behaviour.")
 fi
 
