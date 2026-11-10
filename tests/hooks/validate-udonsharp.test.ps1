@@ -489,13 +489,17 @@ try {
     Assert-StdoutReports 'report echoes the host event name' $EventResult 'AfterTool'
 
     # Codex apply_patch sends the patch text instead of a path.
+    $PatchAsyncPath = Join-Path $TempRoot 'patch-async.cs'
+    Set-Content -LiteralPath $PatchAsyncPath -Value "using UdonSharp;`npublic class PatchAsync : UdonSharpBehaviour`n{`n    private async void Run() { }`n}`n"
     $PatchPayload = [ordered]@{
         tool_name = 'apply_patch'
-        tool_input = @{ command = "*** Begin Patch`n*** Update File: $EventSourcePath`n@@`n-a`n+b`n*** Add File: missing.cs`n+x`n*** End Patch`n" }
+        tool_input = @{ command = "*** Begin Patch`n*** Update File: $EventSourcePath`n@@`n-a`n+b`n*** Add File: missing.cs`n+x`n*** Update File: old.cs`n*** Move to: $PatchAsyncPath`n*** End Patch`n" }
     } | ConvertTo-Json -Compress
     $PatchResult = Invoke-HookProcess $PatchPayload
     Assert-Contains 'apply_patch names the file' $PatchResult.Stderr "[UdonSharp] FILE: $EventSourcePath"
     Assert-Contains 'apply_patch validates the patched file' $PatchResult.Stderr $SyncBloatWarning
+    Assert-Contains 'apply_patch names a moved file' $PatchResult.Stderr "[UdonSharp] FILE: $PatchAsyncPath"
+    Assert-Contains 'apply_patch validates a second file' $PatchResult.Stderr 'async/await not supported'
     Assert-StdoutReports 'apply_patch' $PatchResult
 
     $MalformedPayload = '{"tool_input":'

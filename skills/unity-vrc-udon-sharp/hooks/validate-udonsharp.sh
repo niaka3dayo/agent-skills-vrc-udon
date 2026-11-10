@@ -202,10 +202,15 @@ if [[ -z "$file_path" && -n "$command_field" ]]; then
     while IFS= read -r patch_path; do
         [[ -n "$patch_path" ]] || continue
         patch_payload="{\"tool_input\":{\"file_path\":\"$(json_escape "$patch_path")\"}}"
-        patch_stderr=$(printf '%s' "$patch_payload" | "$BASH" "${BASH_SOURCE[0]}" 2>&1 >/dev/null) || true
+        patch_status=0
+        patch_stderr=$(printf '%s' "$patch_payload" | "$BASH" "${BASH_SOURCE[0]}" 2>&1 >/dev/null) || patch_status=$?
         patch_findings=$(printf '%s\n' "$patch_stderr" | grep -F '[UdonSharp]' || true)
+        if [[ -z "$patch_findings" && "$patch_status" -ne 0 ]]; then
+            patch_findings="[UdonSharp] VALIDATOR-WARNING: validation skipped (PATCH_FILE_FAILED)"
+            patch_stderr="$patch_findings"
+        fi
         [[ -n "$patch_findings" ]] || continue
-        printf '\n[UdonSharp] FILE: %s%s\n' "$patch_path" "$patch_stderr" >&2
+        printf '\n[UdonSharp] FILE: %s\n%s\n' "$patch_path" "$patch_stderr" >&2
         patch_report+="[UdonSharp] FILE: $patch_path"$'\n'"$patch_findings"$'\n'
     done <<< "$patch_paths"
     if [[ -n "$patch_report" ]]; then

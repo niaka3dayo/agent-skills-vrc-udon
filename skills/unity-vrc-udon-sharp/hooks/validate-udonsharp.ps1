@@ -82,6 +82,10 @@ if (-not $FilePath -and $JsonObj.tool_input.command -is [string]) {
         $ChildReply = $ChildPayload | & $PowerShellPath -NoLogo -NoProfile -File $PSCommandPath 2>$null
         $ErrorActionPreference = "Stop"
         if (-not $ChildReply) {
+            if ($LASTEXITCODE -ne 0) {
+                $PatchReport += "[UdonSharp] FILE: $PatchPath"
+                $PatchReport += "[UdonSharp] VALIDATOR-WARNING: validation skipped (PATCH_FILE_FAILED)"
+            }
             continue
         }
         $PatchReport += "[UdonSharp] FILE: $PatchPath"

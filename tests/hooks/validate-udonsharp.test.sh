@@ -483,6 +483,8 @@ for parse_case in \
     assert_exit "input parsing: $parse_label → exit 0" 0 "$?"
     if [ -n "$parse_expected" ]; then
         assert_contains "input parsing: $parse_label" "$(cat "$TMPROOT/parse.err")" "$parse_expected"
+    else
+        assert_not_contains "input parsing: $parse_label" "$(cat "$TMPROOT/parse.err")" '[UdonSharp]'
     fi
     assert_stdout_reports "input parsing: $parse_label" "$PARSE_STDOUT" "$TMPROOT/parse.err"
 done
@@ -490,12 +492,21 @@ done
 # Codex apply_patch sends the patch text in tool_input.command instead of a
 # path. Each .cs file the patch names is validated and named in the report;
 # other files, and files that do not exist, add nothing.
-PATCH_COMMAND="*** Begin Patch\\n*** Update File: NoJq.cs\\n@@\\n-a\\n+b \\\"q\\\"\\n*** Add File: Missing.cs\\n+x\\n*** Update File: README.md\\n*** End Patch\\n"
+cat > "$TMPROOT/PatchAsync.cs" <<'CSEOF'
+using UdonSharp;
+public class PatchAsync : UdonSharpBehaviour
+{
+    private async void Run() { }
+}
+CSEOF
+PATCH_COMMAND="*** Begin Patch\\n*** Update File: NoJq.cs\\n@@\\n-a\\n+b \\\"q\\\"\\n*** Add File: Missing.cs\\n+x\\n*** Update File: README.md\\n*** Update File: Old.cs\\n*** Move to: PatchAsync.cs\\n*** End Patch\\n"
 PATCH_STDOUT=$(cd "$TMPROOT" && printf '%s' "{\"tool_name\":\"apply_patch\",\"tool_input\":{\"command\":\"$PATCH_COMMAND\"}}" | "$HOOK" 2>"$TMPROOT/patch.err")
 assert_exit "apply_patch → exit 0" 0 "$?"
 PATCH_STDERR=$(cat "$TMPROOT/patch.err")
 assert_contains "apply_patch names the file" "$PATCH_STDERR" '[UdonSharp] FILE: NoJq.cs'
 assert_contains "apply_patch validates the patched file" "$PATCH_STDERR" 'Generic collections (List<T>'
+assert_contains "apply_patch names a moved file" "$PATCH_STDERR" '[UdonSharp] FILE: PatchAsync.cs'
+assert_contains "apply_patch validates a second file" "$PATCH_STDERR" 'async/await not supported'
 assert_not_contains "apply_patch skips files with nothing to report" "$PATCH_STDERR" 'Missing.cs'
 assert_stdout_reports "apply_patch" "$PATCH_STDOUT" "$TMPROOT/patch.err"
 
