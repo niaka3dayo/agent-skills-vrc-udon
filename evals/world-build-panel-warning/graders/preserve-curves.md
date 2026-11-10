@@ -2,4 +2,6 @@
 type: llm
 ---
 
-The answer explains how to keep the existing tuning: enable the option to use the AudioSource volume curve and/or set Gain and Far so the existing rolloff and loudness are preserved.
+PASS only if this holds: The answer explains how to keep the existing tuning, and it gives both parts: enable Use AudioSource Volume Curve so the tuned rolloff is used, and set Gain to 0 dB (or say how to keep the original loudness).
+
+FAIL otherwise.

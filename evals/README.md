@@ -2,6 +2,8 @@
 
 Every suite under `tests/` is static: it checks what the files say. These cases check what an agent does with the skills loaded. Each case sends one request a world creator might write and grades the reply. Run them before and after restructuring a skill, and when the active SDK target moves.
 
+Requires Claude Code 2.1.269 or later (`claude --version`).
+
 ```bash
 # From the repository root. Runs each case with and without the plugin and reports the difference.
 claude plugin eval . --no-publish --model claude-sonnet-5-5 --judge-model claude-sonnet-5-5 --runs 1 --concurrency 6
@@ -25,6 +27,6 @@ claude plugin eval . --no-publish --judge-model claude-sonnet-5-5 --tag world
 
 ## Adding a case
 
-Copy a case directory. `prompt.md` holds the request. Each file in `graders/` is one check. Prefer a `regex` grader when a correct answer must contain or must avoid a specific token, and use an `llm` grader for behaviour that has no fixed spelling. Ask for the answer in the reply rather than in a file: writing files needs `--allow-tools Write`, and the checks here read the final message.
+Copy a case directory. `prompt.md` holds the request. Each file in `graders/` is one check. Prefer a `regex` grader when a correct answer must contain a specific token, and use an `llm` grader, written as an explicit PASS condition, for behaviour that has no fixed spelling. A "must not use" `regex` should match the shape of a use, such as `new List<`, because a good answer often names the blocked API to say it is unavailable. Ask for the answer in the reply rather than in a file: writing files needs `--allow-tools Write`, and the checks here read the final message.
 
 The most useful cases cover facts a model does not already know: recent SDK additions, and behaviour that differs between the Unity editor and the VRChat client.

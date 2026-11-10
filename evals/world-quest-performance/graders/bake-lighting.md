@@ -2,4 +2,6 @@
 type: llm
 ---
 
-The answer says to replace the realtime shadowed lights with baked lighting (lightmaps and light probes) for Quest.
+PASS only if this holds: The answer recommends baked lighting (lightmaps and light probes) in place of the realtime shadowed lights on Quest. It may keep a realtime light only if it ties that to measuring on the device.
+
+FAIL otherwise.
