@@ -36,12 +36,13 @@ sed -i "s/^    version: \"$OLD\"$/    version: \"$NEW\"/" \
     skills/unity-vrc-world-sdk-3/SKILL.md \
     .claude/skills/unity-vrc-skills-renovator/SKILL.md
 
-EXPECTED="1	1	.claude-plugin/marketplace.json
-1	1	.claude/skills/unity-vrc-skills-renovator/SKILL.md
-1	1	package.json
-1	1	skills/unity-vrc-udon-sharp/SKILL.md
-1	1	skills/unity-vrc-world-sdk-3/SKILL.md"
-ACTUAL="$(git diff --numstat | sort -k3)"
+EXPECTED="$(printf '1\t1\t%s\n' \
+    .claude-plugin/marketplace.json \
+    .claude/skills/unity-vrc-skills-renovator/SKILL.md \
+    package.json \
+    skills/unity-vrc-udon-sharp/SKILL.md \
+    skills/unity-vrc-world-sdk-3/SKILL.md | LC_ALL=C sort)"
+ACTUAL="$(git diff --numstat | LC_ALL=C sort)"
 if [ "$ACTUAL" != "$EXPECTED" ]; then
     echo "ERROR: expected exactly one changed line in each of the five version files, got:" >&2
     git diff --stat >&2
