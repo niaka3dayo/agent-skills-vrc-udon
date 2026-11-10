@@ -230,6 +230,7 @@ Q3: 是否持續變化？（位置/旋轉）
 | 同步膨脹 | 每個 behaviour 超過 6 個同步變數 | WARNING |
 | 同步膨脹 | `int[]`/`float[]` 同步（建議使用更小的型別） | WARNING |
 | 設定不符 | `NoVariableSync` 模式下使用 `[UdonSynced]` 欄位 | ERROR |
+| 設定不符 | `None` 模式下使用 `[NetworkCallable]`，或對自身呼叫 `SendCustomNetworkEvent`（事件不會送達） | WARNING |
 
 同時支援 **Bash**（`validate-udonsharp.sh`）與 **PowerShell**（`validate-udonsharp.ps1`）。
 

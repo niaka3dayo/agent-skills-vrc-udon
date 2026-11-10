@@ -824,7 +824,7 @@ if ! sync_stats=$(LC_ALL=C awk '
 
     function reset_pending() {
         pending_synced = 0
-        pending_no_variable_sync = 0
+        pending_sync_mode = 0
         clear_declaration()
     }
 
@@ -858,8 +858,8 @@ if ! sync_stats=$(LC_ALL=C awk '
         if ((target == "" || target == "type") && name == "UdonBehaviourSyncMode") {
             gsub(/global::/, "", arguments)
             gsub(/UdonSharp[.]/, "", arguments)
-            if (arguments == "BehaviourSyncMode.NoVariableSync") {
-                pending_no_variable_sync = 1
+            if (arguments == "BehaviourSyncMode.NoVariableSync" || arguments == "BehaviourSyncMode.None") {
+                pending_sync_mode = arguments
             }
         }
     }
@@ -985,8 +985,9 @@ if ! sync_stats=$(LC_ALL=C awk '
         }
         declaration = normalize_space(declaration)
 
-        if (pending_no_variable_sync && is_class(declaration)) {
-            has_no_variable_sync = 1
+        if (pending_sync_mode != "" && pending_sync_mode != 0 && is_class(declaration)) {
+            if (pending_sync_mode == "BehaviourSyncMode.None") has_none_sync = 1
+            else has_no_variable_sync = 1
             reset_pending()
             return
         }
@@ -1023,7 +1024,7 @@ if ! sync_stats=$(LC_ALL=C awk '
     }
 
     function consume_declaration_fragment(text, start,    boundary) {
-        if (!(pending_synced || pending_no_variable_sync)) return start
+        if (!(pending_synced || pending_sync_mode)) return start
         boundary = declaration_boundary(text, start)
         if (boundary > 0) append_declaration(substr(text, start, boundary - start + 1))
         else append_declaration(substr(text, start))
@@ -1076,7 +1077,7 @@ if ! sync_stats=$(LC_ALL=C awk '
 
             while (position <= length(text) && substr(text, position, 1) ~ /[ \t]/) position++
             if (position > length(text)) return
-            if ((pending_synced || pending_no_variable_sync) && declaration_chunk_count > 0) {
+            if ((pending_synced || pending_sync_mode) && declaration_chunk_count > 0) {
                 position = consume_declaration_fragment(text, position)
                 continue
             }
@@ -1085,7 +1086,7 @@ if ! sync_stats=$(LC_ALL=C awk '
                 position++
                 continue
             }
-            if (pending_synced || pending_no_variable_sync) {
+            if (pending_synced || pending_sync_mode) {
                 position = consume_declaration_fragment(text, position)
                 continue
             }
@@ -1110,12 +1111,12 @@ if ! sync_stats=$(LC_ALL=C awk '
 
     END {
         if (scan_failed) exit 2
-        printf "%d|%d|%d\n", synced_count, has_no_variable_sync, has_large_synced_array
+        printf "%d|%d|%d|%d\n", synced_count, has_no_variable_sync, has_large_synced_array, has_none_sync
     }
 ' "$masked_file"); then
     skip_validation "ATTRIBUTE_SCAN_FAILED"
 fi
-IFS='|' read -r synced_count has_no_variable_sync has_large_synced_array <<< "$sync_stats"
+IFS='|' read -r synced_count has_no_variable_sync has_large_synced_array has_none_sync <<< "$sync_stats"
 
 # Networking issues
 if [[ "$synced_count" -gt 0 ]]; then
@@ -1162,6 +1163,12 @@ fi
 # NoVariableSync + [UdonSynced] conflict
 if [[ "$has_no_variable_sync" -eq 1 && "$synced_count" -gt 0 ]]; then
     warnings+=("[UdonSharp] ERROR: NoVariableSync mode but [UdonSynced] variables found. Remove [UdonSynced] or change sync mode.")
+fi
+
+# A None-mode behaviour cannot receive network events, and the compiler does
+# not report it (Issue #383). A call on another behaviour is not flagged.
+if [[ "$has_none_sync" -eq 1 ]] && grep -qE '(^|[^[:alnum:]_])NetworkCallable(Attribute)?[[:space:]]*[],(]|(^|[^.[:alnum:]_])(this[[:space:]]*[.][[:space:]]*)?SendCustomNetworkEvent[[:space:]]*[(]' "$masked_file"; then
+    warnings+=("[UdonSharp] WARNING: BehaviourSyncMode.None cannot receive network events, but this file declares [NetworkCallable] or calls SendCustomNetworkEvent on itself. The event is never delivered. Use Manual or Continuous, or send the event to a synced behaviour.")
 fi
 
 # Multi-dimensional arrays (T[,])

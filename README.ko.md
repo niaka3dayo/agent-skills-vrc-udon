@@ -230,6 +230,7 @@ PowerShell 검증기를 사용하려면 command를 `pwsh -NoProfile -File "$CLAU
 | 동기화 비대화 | Behaviour당 동기화 변수 6개 이상 | WARNING |
 | 동기화 비대화 | `int[]`/`float[]` 동기화 (더 작은 타입 권장) | WARNING |
 | 설정 불일치 | `NoVariableSync` 모드에서 `[UdonSynced]` 필드 사용 | ERROR |
+| 설정 불일치 | `None` 모드에서 `[NetworkCallable]` 사용 또는 자기 자신에 대한 `SendCustomNetworkEvent` 호출(이벤트가 전달되지 않음) | WARNING |
 
 **Bash** (`validate-udonsharp.sh`)와 **PowerShell** (`validate-udonsharp.ps1`) 모두 지원합니다.
 

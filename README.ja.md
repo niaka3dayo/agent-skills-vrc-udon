@@ -230,6 +230,7 @@ PowerShell 版を使う場合は、command を `pwsh -NoProfile -File "$CLAUDE_P
 | 同期の肥大化 | ビヘイビアあたり6つ以上の同期変数 | WARNING |
 | 同期の肥大化 | `int[]`/`float[]` 同期（より小さい型を推奨） | WARNING |
 | 設定の不整合 | `NoVariableSync` モードと `[UdonSynced]` フィールドの併用 | ERROR |
+| 設定の不整合 | `None` モードでの `[NetworkCallable]`、または自分自身への `SendCustomNetworkEvent`（イベントは届きません） | WARNING |
 
 **Bash**（`validate-udonsharp.sh`）と **PowerShell**（`validate-udonsharp.ps1`）の両方に対応しています。
 
