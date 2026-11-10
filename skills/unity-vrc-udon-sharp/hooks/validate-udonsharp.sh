@@ -2,49 +2,65 @@
 # UdonSharp Code Validation Hook (Linux/macOS)
 # Checks for common constraint violations in UdonSharp code.
 #
-# Usage: Called as PostToolUse hook when editing .cs files
+# Usage: Called as a PostToolUse hook when a .cs file is written or edited
 # Input: JSON via stdin with tool_input.file_path
-# Output: Warnings to stderr, original input to stdout
+# Output: Diagnostics on stderr for a person, and the same lines on stdout as
+#         one JSON object (hookSpecificOutput.additionalContext) for the agent.
+#         Prints nothing when there is nothing to report. Always exits 0.
 
 set -e
 
-# JSON cannot contain a raw NUL byte. Reading to a NUL delimiter therefore
-# preserves every valid input byte, including any trailing LF/CRLF sequence.
+# JSON cannot contain a raw NUL byte, so reading to a NUL delimiter takes the
+# whole payload.
 input=''
 IFS= read -r -d '' input || true
 
+# A host agent (Claude Code, Gemini CLI, Codex) never shows the model stderr
+# from a hook that exits 0. It parses stdout as one JSON object and adds
+# additionalContext to the model's context, so diagnostics must go there to
+# be acted on. The event name is echoed back because hosts name it differently.
+report_to_agent() {
+    local context="$1" event
+    event=$(printf '%s' "$input" | jq -r '.hook_event_name // empty' 2>/dev/null) || event=""
+    jq -acn --arg event "${event:-PostToolUse}" --arg context "$context" \
+        '{hookSpecificOutput: {hookEventName: $event, additionalContext: $context}}' || true
+}
+
+skip_validation() {
+    local message="[UdonSharp] VALIDATOR-WARNING: validation skipped ($1)"
+    printf '%s\n' "$message" >&2
+    report_to_agent "$message"
+    exit 0
+}
+
 # Require jq for JSON parsing. Without this guard, jq absence under set -e
-# aborts every PostToolUse hook invocation on .cs edits with a "command not
-# found" message, breaking validation silently for users on minimal Linux
-# images and macOS without Homebrew jq (Issue #165, Case A). Pass input
-# through so the original edit still propagates downstream.
+# aborts every PostToolUse hook invocation with a "command not found" message
+# (Issue #165, Case A). The edited path cannot be parsed without jq, so the
+# notice is limited to payloads that mention a .cs path; otherwise every edit
+# in a project without jq would carry it.
 if ! command -v jq &>/dev/null; then
-    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)\n' >&2
-    printf '%s' "$input"
+    if [[ "$input" == *'.cs"'* ]]; then
+        printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)\n' >&2
+        printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"[UdonSharp] VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)"}}'
+    fi
     exit 0
 fi
 
 if ! file_path=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // ""' 2>/dev/null); then
-    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (JSON_PARSE_FAILED)\n' >&2
-    printf '%s' "$input"
-    exit 0
+    skip_validation "JSON_PARSE_FAILED"
 fi
 
 # Only process .cs files
 if [[ ! "$file_path" =~ \.cs$ ]]; then
-    printf '%s' "$input"
     exit 0
 fi
 
 # Check if file exists
 if [[ ! -f "$file_path" ]]; then
-    printf '%s' "$input"
     exit 0
 fi
 if [[ ! -r "$file_path" ]]; then
-    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (SOURCE_READ_FAILED)\n' >&2
-    printf '%s' "$input"
-    exit 0
+    skip_validation "SOURCE_READ_FAILED"
 fi
 
 # Build a code-only view of the source. Comments and literal text become spaces,
@@ -52,12 +68,6 @@ fi
 # CR/LF positions and byte length are preserved.
 masked_file=""
 flat_file=""
-skip_validation() {
-    local code="$1"
-    printf '[UdonSharp] VALIDATOR-WARNING: validation skipped (%s)\n' "$code" >&2
-    printf '%s' "$input"
-    exit 0
-}
 
 if ! masked_file=$(mktemp 2>/dev/null); then
     skip_validation "TEMP_CREATE_FAILED"
@@ -445,7 +455,6 @@ LC_ALL=C awk '
     }
 ' "$flat_file" || base_scan_status=$?
 if [[ "$base_scan_status" -eq 1 ]]; then
-    printf '%s' "$input"
     exit 0
 fi
 if [[ "$base_scan_status" -ne 0 ]]; then
@@ -1000,7 +1009,5 @@ if [[ ${#warnings[@]} -gt 0 ]]; then
     done
     echo "===================================" >&2
     echo "" >&2
+    report_to_agent "$(printf '%s\n' "${warnings[@]}")"
 fi
-
-# Always output original input to allow the edit to proceed
-printf '%s' "$input"

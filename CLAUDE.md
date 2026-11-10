@@ -24,6 +24,8 @@ templates/                       # AI tool config templates (distributed to user
   CLAUDE.md                      # Claude Code project instructions
   AGENTS.md                      # Codex CLI / generic agent instructions
   GEMINI.md                      # Gemini CLI instructions
+hooks/
+  hooks.json                     # Claude Code plugin hook registration (runs validate-udonsharp.sh)
 .github/
   workflows/                     # CI (lint, pack test, publish)
   ISSUE_TEMPLATE/                # Bug report, knowledge request

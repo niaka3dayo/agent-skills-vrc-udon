@@ -341,9 +341,17 @@ Use SDK 3.10.6 for publishing. Check the matching release notes before relying o
 | `validate-udonsharp.ps1` | Windows (PowerShell) | PostToolUse constraint validation |
 | `validate-udonsharp.sh` | Linux/macOS (Bash) | PostToolUse constraint validation |
 
-The Bash validator requires `jq`. If it is unavailable, the hook passes its
-input through unchanged and emits `VALIDATOR-WARNING: validation skipped
-(JQ_UNAVAILABLE)` instead of silently reporting successful validation.
+When a validator is registered, its findings arrive as additional context after
+a `.cs` edit, one line each, prefixed `[UdonSharp]`. Treat them as review input
+for the code just written; the edit is never blocked. A clean edit produces no
+output, so silence does not prove that a validator ran: check generated code
+against the Rules either way. The Claude Code plugin registers the Bash
+validator automatically; other installs must register one in the agent's hook
+settings (see the repository README).
+
+The Bash validator requires `jq`. If it is unavailable, the hook reports
+`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)` on `.cs` edits instead
+of silently reporting successful validation.
 
 ## Quick Reference
 

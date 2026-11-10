@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -122,6 +122,7 @@ skills/                                  # 所有技能
 templates/                               # AI 工具設定範本
   CLAUDE.md  AGENTS.md  GEMINI.md        # 專案指示範本（手動複製）
 .claude-plugin/marketplace.json         # Claude Code 外掛註冊
+hooks/hooks.json                        # Claude Code 外掛掛鉤註冊
 CLAUDE.md                               # 開發指南（僅限本儲存庫）
 ```
 
@@ -193,7 +194,31 @@ Q3: 是否持續變化？（位置/旋轉）
 
 <h2 id="hooks">驗證掛鉤</h2>
 
-PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
+每當代理寫入或編輯 `.cs` 檔案時，PostToolUse 掛鉤都會檢查其內容，並將檢查結果回饋給代理。
+
+**Claude Code 外掛** &mdash; 自動註冊。外掛執行的是 Bash 驗證器，因此 `bash` 與 `jq` 必須位於 `PATH` 中。在 Windows 上需要 Git Bash 與 `jq`（`winget install jqlang.jq`）。
+
+**skills CLI 或 git clone** &mdash; 需自行註冊掛鉤。若使用 Claude Code，請將以下內容加入 `.claude/settings.json`：
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+若要使用不需要 `jq` 的 PowerShell 驗證器，請將 command 設定為 `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`。
 
 | 類別 | 檢查項目 | 嚴重程度 |
 |------|----------|----------|
@@ -208,8 +233,9 @@ PostToolUse 掛鉤會在 `.cs` 檔案被編輯時自動執行。
 
 同時支援 **Bash**（`validate-udonsharp.sh`）與 **PowerShell**（`validate-udonsharp.ps1`）。
 
-Bash 驗證器需要 `jq`。若無法使用 `jq`，掛鉤會原樣傳遞輸入，並輸出
-`VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，不會將其視為驗證成功。
+檢查結果會作為該次編輯的附加脈絡傳遞給代理，手動執行時相同內容也會輸出至 stderr。掛鉤不會阻擋編輯。
+
+Bash 驗證器需要 `jq`。若無法使用 `jq`，編輯 `.cs` 檔案時會回報 `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`，不會將其視為驗證成功。
 
 ---
 

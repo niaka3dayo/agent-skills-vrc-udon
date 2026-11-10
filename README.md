@@ -122,6 +122,7 @@ skills/                                  # All skills
 templates/                               # AI tool config templates
   CLAUDE.md  AGENTS.md  GEMINI.md        # Starter project instructions (copy manually)
 .claude-plugin/marketplace.json         # Claude Code plugin registration
+hooks/hooks.json                        # Claude Code plugin hook registration
 CLAUDE.md                               # Development guide (this repo only)
 ```
 
@@ -193,7 +194,31 @@ Q3: Continuous change? (position/rotation)
 
 <h2 id="hooks">Validation Hooks</h2>
 
-PostToolUse hooks that auto-run when `.cs` files are edited.
+A PostToolUse hook checks every `.cs` file the agent writes or edits and reports what it finds back to the agent.
+
+**Claude Code plugin** &mdash; registered automatically. The plugin runs the Bash validator, so `bash` and `jq` must be on `PATH`. On Windows that means Git Bash plus `jq` (`winget install jqlang.jq`).
+
+**skills CLI or git clone** &mdash; register the hook yourself. For Claude Code, add this to `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+To use the PowerShell validator, which does not need `jq`, set the command to `pwsh -NoProfile -File "$CLAUDE_PROJECT_DIR/.claude/skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1"`.
 
 | Category | Check | Severity |
 |----------|-------|----------|
@@ -208,9 +233,9 @@ PostToolUse hooks that auto-run when `.cs` files are edited.
 
 Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-udonsharp.ps1`).
 
-The Bash validator requires `jq`. If `jq` is unavailable, it passes the input
-through unchanged and emits `VALIDATOR-WARNING: validation skipped
-(JQ_UNAVAILABLE)`; it does not silently claim that validation succeeded.
+Findings reach the agent as additional context on the edit, and the same lines are printed to stderr for manual runs. The hook never blocks an edit.
+
+The Bash validator requires `jq`. If `jq` is unavailable, an edit to a `.cs` file reports `VALIDATOR-WARNING: validation skipped (JQ_UNAVAILABLE)`; the hook does not silently claim that validation succeeded.
 
 ---
 

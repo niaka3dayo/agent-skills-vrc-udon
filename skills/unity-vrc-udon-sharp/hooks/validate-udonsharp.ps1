@@ -4,24 +4,46 @@
     UdonSharp Code Validation Hook.
 .DESCRIPTION
     Checks for common constraint violations in UdonSharp code.
-    Called as PostToolUse hook when editing .cs files.
+    Called as a PostToolUse hook when a .cs file is written or edited.
     Input: JSON via stdin with tool_input.file_path
-    Output: Warnings to stderr, original input to stdout
+    Output: Diagnostics on stderr for a person, and the same lines on stdout as
+    one JSON object (hookSpecificOutput.additionalContext) for the agent.
+    Prints nothing when there is nothing to report. Always exits 0.
 #>
 
 $ErrorActionPreference = "Stop"
 
-# Read and write the hook payload without PowerShell pipeline newline
-# normalization. This keeps the documented passthrough contract byte-exact.
 $HookInput = [Console]::In.ReadToEnd()
 
-function Write-HookInput {
-    [Console]::Out.Write($HookInput)
+# A host agent (Claude Code, Gemini CLI, Codex) never shows the model stderr
+# from a hook that exits 0. It parses stdout as one JSON object and adds
+# additionalContext to the model's context, so diagnostics must go there to
+# be acted on. The event name is echoed back because hosts name it differently.
+function Write-AgentReport([string]$Context) {
+    $EventName = 'PostToolUse'
+    try {
+        $Parsed = $HookInput | ConvertFrom-Json
+        if ($Parsed.hook_event_name) {
+            $EventName = [string]$Parsed.hook_event_name
+        }
+    } catch {
+        $EventName = 'PostToolUse'
+    }
+    $Json = [ordered]@{
+        hookSpecificOutput = [ordered]@{
+            hookEventName = $EventName
+            additionalContext = $Context
+        }
+    } | ConvertTo-Json -Compress -Depth 3
+    # Escape non-ASCII so the reply survives any console code page.
+    $Json = [regex]::Replace($Json, '[^\x00-\x7F]', { param($Match) '\u{0:x4}' -f [int][char]$Match.Value })
+    [Console]::Out.WriteLine($Json)
 }
 
 function Stop-Validation([string]$Code) {
-    [Console]::Error.WriteLine("[UdonSharp] VALIDATOR-WARNING: validation skipped ($Code)")
-    Write-HookInput
+    $Message = "[UdonSharp] VALIDATOR-WARNING: validation skipped ($Code)"
+    [Console]::Error.WriteLine($Message)
+    Write-AgentReport $Message
     exit 0
 }
 
@@ -41,13 +63,11 @@ try {
 
 # Only process .cs files
 if ($FilePath -notmatch '\.cs$') {
-    Write-HookInput
     exit 0
 }
 
 # Check if file exists
 if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
-    Write-HookInput
     exit 0
 }
 
@@ -407,7 +427,6 @@ $FlatSource = $MaskedSource -replace '[\r\n]', ' '
 # Check if this is structurally an UdonSharp behaviour. External project base
 # types are intentionally not resolved by this per-file hook.
 if (-not (Test-UdonSharpBehaviourSource $FlatSource)) {
-    Write-HookInput
     exit 0
 }
 
@@ -946,7 +965,5 @@ if ($Warnings.Count -gt 0) {
     Write-Error "==================================="
     Write-Error ""
     $ErrorActionPreference = $SavedErrorAction
+    Write-AgentReport ($Warnings -join "`n")
 }
-
-# Always output original input to allow the edit to proceed
-Write-HookInput
