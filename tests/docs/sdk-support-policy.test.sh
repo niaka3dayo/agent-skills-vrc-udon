@@ -199,7 +199,7 @@ done
 
 require_text "$ROOT_DIR/CONTRIBUTING.md" "**Active and verified target**: SDK $ACTIVE"
 require_text "$ROOT_DIR/CONTRIBUTING.md" 'historical migration information only'
-require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" "**Active support / last verified**: SDK $ACTIVE"
+require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/skill-structure.md" 'The active SDK target is declared once per skill'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/update-checklist.md" 'active-versus-historical boundary'
 require_text "$ROOT_DIR/.claude/skills/unity-vrc-skills-renovator/references/changelog-sources.md" 'active and verified target'
 forbid_regex "$ROOT_DIR/skills/unity-vrc-udon-sharp/references/vrctween.md" 'SDK 3\.10\.4\+|SDK 3\.10\.4 or newer'
