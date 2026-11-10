@@ -2,9 +2,7 @@
 
 Core networking rules and constraints. See `../references/networking.md` for detailed patterns.
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.5 are not supported or validation targets for this Skill.
+SDK version labels in this rule mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 ## Ownership Model
 

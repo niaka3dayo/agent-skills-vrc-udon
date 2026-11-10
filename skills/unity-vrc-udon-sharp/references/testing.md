@@ -2,9 +2,7 @@
 
 Practical guide for testing and debugging UdonSharp worlds in VRChat.
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.5 are not supported or validation targets for this Skill.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 ## Table of Contents
 
@@ -13,6 +11,7 @@ Older version numbers in this reference record feature introductions or migratio
 - [Multi-Client Testing](#multi-client-testing)
 - [Debug.Log Usage](#debuglog-usage)
 - [Testing Checklist](#testing-checklist)
+- [See Also](#see-also)
 
 ---
 

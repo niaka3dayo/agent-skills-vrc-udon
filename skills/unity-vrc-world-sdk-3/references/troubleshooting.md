@@ -12,6 +12,9 @@ Common problems encountered during world development and their solutions.
 - [Networking Issues](#networking-issues)
 - [Quest/Android Issues](#questandroid-issues)
 - [Investigation Steps](#investigation-steps)
+- [Editor / Runtime Discrepancy](#editor--runtime-discrepancy)
+- [Quick Reference: Error → Solution](#quick-reference-error--solution)
+- [Resources](#resources)
 
 ---
 

@@ -145,27 +145,11 @@ Quest required? → Yes
 
 **Active support / last verified**: SDK 3.10.6
 
-From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically. Current last verified target: 3.10.6.
+From v4.0.0 onward, the policy is latest stable SDK only; support moves to a new stable release only after this repository verifies it. A new stable release is not supported automatically.
 
-The table below keeps feature-introduction history for migration reference. SDK 3.7.1-3.10.5 entries are historical information only; they are not active support or validation targets for this Skill. This is the Skill's support boundary, not a statement about VRChat's own SDK policy. Primary generated examples target SDK 3.10.6 unless a reference explicitly marks a historical migration case.
+Guidance targets the active SDK unless a reference marks a historical migration case. Other SDK versions named in this Skill record when a feature was introduced; they are not active support or validation targets. This is the Skill's support boundary, not a statement about VRChat's own SDK policy.
 
-| SDK    | New Features                                                                   | Status         |
-| ------ | ------------------------------------------------------------------------------ | -------------- |
-| 3.7.1  | StringBuilder, Regex, System.Random                                            | Historical     |
-| 3.7.4  | **Persistence API** (PlayerData/PlayerObject)                                  | Historical     |
-| 3.7.6  | **Multi-platform Build & Publish** (simultaneous PC + Android builds)          | Historical     |
-| 3.8.0  | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API          | Historical     |
-| 3.8.1  | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings | Historical |
-| 3.9.0  | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) | Historical |
-| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints)                 | Historical     |
-| 3.10.1 | Bug fixes and stability improvements                                           | Historical     |
-| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals                   | Historical     |
-| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix         | Historical     |
-| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs | Historical |
-| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Historical |
-| 3.10.6 | VRCBillboard, VRCVelocityTracker, VRCPlacementZone, Interact Outline Renderers; constraint source methods and UdonSharp compiler fixes → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) | Active / Last verified |
-
-Use SDK 3.10.6 for publishing and verify version-sensitive APIs against the matching release notes before migrating a project.
+Feature introductions by SDK version are in [CHEATSHEET.md](CHEATSHEET.md#sdk-version-features), and the Components table below lists the SDK that introduced each component. Verify version-sensitive APIs against the matching release notes before migrating a project.
 
 ---
 

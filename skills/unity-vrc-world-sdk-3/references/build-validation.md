@@ -4,6 +4,15 @@ SDK-backed catalog for world Build Panel alerts. Use this when a creator asks
 about VRChat SDK validation, red/yellow/white warnings, Build Panel alerts,
 "Auto Fix", or a warning message shown before Build & Test / Build & Upload.
 
+## Table of Contents
+
+- [Scope and evidence](#scope-and-evidence)
+- [Response policy](#response-policy)
+- [Quick severity guide](#quick-severity-guide)
+- [SDK 3.10.6 world alert catalog](#sdk-3106-world-alert-catalog)
+- [Special handling notes](#special-handling-notes)
+- [Extraction commands used](#extraction-commands-used)
+
 ## Scope and evidence
 
 - **Last verified SDK**: VRChat Worlds SDK `3.10.6` and Base SDK `3.10.6`.

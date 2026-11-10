@@ -301,6 +301,8 @@ When modifying skill content in `skills/`:
 - Update SDK version tables if adding new API coverage
 - Run the validate-udonsharp hook against any `.cs` code examples
 - Keep `templates/` in sync if skills table or rules paths change
+- After adding, renaming, or removing a `##` section in a reference, run `python3 tests/docs/reference-toc.py --write` to refresh its table of contents
+- The active SDK target is declared once per skill, in the `## SDK Versions` section of each `SKILL.md`. Other files under `skills/` link to it instead of repeating the number
 
 ### Documentation Sync
 

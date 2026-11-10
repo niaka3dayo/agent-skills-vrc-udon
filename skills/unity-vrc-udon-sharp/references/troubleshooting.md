@@ -2,9 +2,7 @@
 
 Common errors, causes, and solutions for VRChat UdonSharp development.
 
-**Active support / last verified**: SDK 3.10.6
-
-Older version numbers in this reference record feature introductions or migration facts only; SDK 3.7.1-3.10.5 are not supported or validation targets for this Skill.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
 
 ## Table of Contents
 
@@ -18,6 +16,11 @@ Older version numbers in this reference record feature introductions or migratio
 - [Editor Issues](#editor-issues)
 - [Performance Issues](#performance-issues)
 - [Common Pitfalls](#common-pitfalls)
+- [Debugging Techniques](#debugging-techniques)
+- [Quick Reference: Error -> Solution](#quick-reference-error---solution)
+- [Resources](#resources)
+- [Investigation Steps for Unknown Errors](#investigation-steps-for-unknown-errors)
+- [See Also](#see-also-1)
 
 ---
 

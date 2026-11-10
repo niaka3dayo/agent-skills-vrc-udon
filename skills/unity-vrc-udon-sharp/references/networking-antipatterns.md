@@ -2,6 +2,12 @@
 
 Common networking mistakes that cause silent failures or data loss, plus advanced techniques for packed sync, rate limiting, dual-copy variables, batching, and congestion retry.
 
+## Table of Contents
+
+- [Networking Anti-Patterns](#networking-anti-patterns)
+- [Advanced Networking Patterns](#advanced-networking-patterns)
+- [See Also](#see-also)
+
 ## Networking Anti-Patterns
 
 Common mistakes in UdonSharp networking that cause silent failures, data loss, or undefined behavior. Each pattern includes the problem, a wrong implementation, and the correct fix.
@@ -64,7 +70,7 @@ public class CapturePoint : UdonSharpBehaviour
 
 **When `OnOwnershipRequest` fits.** If the *current owner* needs to reject ownership transfers during a critical action (turn-based logic, mid-transaction state), use `OnOwnershipRequest`. That is a different problem class — owner-side protection — not arbitration among concurrent requesters. See [networking.md §"Ownership Arbitration with OnOwnershipRequest"](networking.md#ownership-arbitration-with-onownershiprequest).
 
-> *Footnote: Pre-2021.2.2 SDKs were asynchronous; the active target (SDK 3.10.6) has the locally-immediate behavior.*
+> *Footnote: Pre-2021.2.2 SDKs were asynchronous; the active target has the locally-immediate behavior.*
 
 ---
 

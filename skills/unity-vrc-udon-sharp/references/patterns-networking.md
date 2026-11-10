@@ -2,8 +2,20 @@
 
 Object pooling, synced game state management, NetworkCallable patterns, persistence, dynamics interactions, and delayed event debouncing.
 
-**Active support / last verified**: SDK 3.10.6
-**Historical version notes**: Older version numbers record feature introductions or migration facts only; they are not supported or validation targets.
+SDK version labels in this reference mark when a feature was introduced. The active target and the support policy are in [SKILL.md](../SKILL.md#sdk-versions).
+
+## Table of Contents
+
+- [Object Pooling](#object-pooling)
+- [Master-Managed Player Object Pool](#master-managed-player-object-pool)
+- [NetworkCallable Patterns (SDK 3.8.1+)](#networkcallable-patterns-sdk-381)
+- [Persistence Patterns (SDK 3.7.4+)](#persistence-patterns-sdk-374)
+- [Dynamics Patterns (SDK 3.10.0+)](#dynamics-patterns-sdk-3100)
+- [Synced Game State Management](#synced-game-state-management)
+- [Distant-Room Pseudo-Multi-Room Pattern](#distant-room-pseudo-multi-room-pattern)
+- [Delayed Event Debounce](#delayed-event-debounce)
+- [String Join for Array Sync](#string-join-for-array-sync)
+- [See Also](#see-also-1)
 
 ## Object Pooling
 
@@ -619,7 +631,7 @@ Reuse a single local room model to render the illusion of multiple rooms by sepa
 - Some level of voice isolation between rooms is desired (a side effect of physical separation)
 - Players in the same room must visibly share the same space; players in different rooms must not collide
 
-The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target, SDK 3.10.6. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
+The recommended `VRCPlayerObject` tier was introduced in SDK 3.7.4 and remains the recommended choice on the active SDK target. The fixed-size synced-array tier remains a valid alternative for small, capacity-limited worlds, while the local-only tier is valid for single-player preview or debugging. The 3.7.4 version note is historical migration context, not an active-support cutoff.
 
 ### Architecture (state vs presentation split)
 

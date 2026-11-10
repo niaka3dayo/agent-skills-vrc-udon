@@ -1,8 +1,6 @@
 # VRC World SDK 3 Cheatsheet
 
-**Active support / last verified**: SDK 3.10.6
-
-SDK 3.7.1-3.10.5 labels below are historical feature-introduction notes only; they are not supported or validation targets for this Skill.
+SDK version labels below mark when a feature was introduced. The active target and the support policy are in [SKILL.md](SKILL.md#sdk-versions).
 
 ---
 
@@ -417,14 +415,20 @@ site:github.com/vrchat-community "issue keyword"
 ## SDK Version Features
 
 | SDK | Key Features |
-|-----|-------------|
-| 3.7.4 | Persistence API |
-| 3.8.1 | [NetworkCallable] |
-| 3.9.0 | Camera Dolly, Auto Hold |
-| 3.10.0 | Dynamics (PhysBones, Contacts) |
-| 3.10.4 | Box-shaped Contact Sender/Receiver authoring updates |
-| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation |
-| 3.10.6 | VRCBillboard, VRCVelocityTracker, VRCPlacementZone, Interact Outline Renderers |
+|---|---|
+| 3.7.1 | StringBuilder, Regex, System.Random |
+| 3.7.4 | **Persistence API** (PlayerData/PlayerObject) |
+| 3.7.6 | **Multi-platform Build & Publish** (simultaneous PC + Android builds) |
+| 3.8.0 | PhysBone dependency sorting, **Force Kinematic On Remote**, Drone API |
+| 3.8.1 | **[NetworkCallable]** events with parameters, `Others`/`Self` targets, VRCCameraSettings |
+| 3.9.0 | **Camera Dolly API**, Auto Hold simplification, VRCCameraSettings additions (CullingMask, GetCurrentCamera) |
+| 3.10.0 | **Dynamics for Worlds** (PhysBones, Contacts, VRC Constraints) |
+| 3.10.1 | Bug fixes and stability improvements |
+| 3.10.2 | EventTiming extensions, PhysBones fixes, shader time globals |
+| 3.10.3 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
+| 3.10.4 | VRCTween, Box-shaped Contacts, Global Avatar PhysBone Colliders, world `VRCPhysBoneCollider` Udon access, Data Container capacity APIs |
+| 3.10.5 | WorldQualitySettings, Pickup Outline Renderers, Pipeline Manager validation; writable VRCQualitySettings and Assembly Version Defines → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) |
+| 3.10.6 | VRCBillboard, VRCVelocityTracker, VRCPlacementZone, Interact Outline Renderers; constraint source methods and UdonSharp compiler fixes → [UdonSharp Skill](../unity-vrc-udon-sharp/SKILL.md) |
 
 ---
 
@@ -434,7 +438,7 @@ site:github.com/vrchat-community "issue keyword"
 |-------|------|
 | Performance targets, Quest optimization checklist | [references/performance.md](references/performance.md) |
 | Lightmap settings, Quest bake parameter reference | [references/lighting.md](references/lighting.md) |
-| Full active SDK 3.10.6 world component reference | [references/components.md](references/components.md) |
+| Full world component reference for the active SDK target | [references/components.md](references/components.md) |
 | VRChat layer system, collision, and selective rendering reference | [references/layers.md](references/layers.md) |
 | Audio and video configuration, voice settings, Steam Audio, and video players | [references/audio-video.md](references/audio-video.md) |
 | SDK Build Panel validation alert catalog, Auto Fix side effects, red/yellow/white warning responses | [references/build-validation.md](references/build-validation.md) |

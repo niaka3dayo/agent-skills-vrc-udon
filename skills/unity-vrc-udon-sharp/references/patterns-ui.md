@@ -5,6 +5,22 @@ dynamic player list, scroll input abstraction, lookup-table localization, toggle
 settings persistence via PlayerObject, listener-based menu event system, finger-based touch
 interaction for canvas UI, and modular app architecture with plugin lifecycle.
 
+## Table of Contents
+
+- [1. Immobilize Guard Pattern](#1-immobilize-guard-pattern)
+- [2. Avatar-Scale-Aware UI](#2-avatar-scale-aware-ui)
+- [3. FOV-Responsive UI Positioning](#3-fov-responsive-ui-positioning)
+- [4. Platform-Adaptive UI Layout](#4-platform-adaptive-ui-layout)
+- [5. Dynamic Player List UI](#5-dynamic-player-list-ui)
+- [6. ScrollRect VR/Desktop Input Abstraction](#6-scrollrect-vrdesktop-input-abstraction)
+- [7. Lookup-Table Localization](#7-lookup-table-localization)
+- [8. Toggle Switch with Animator Bridge](#8-toggle-switch-with-animator-bridge)
+- [9. UI Settings Persistence via PlayerObject](#9-ui-settings-persistence-via-playerobject)
+- [10. Listener-Based Menu Event System](#10-listener-based-menu-event-system)
+- [11. Finger-Based Touch Interaction for Canvas UI](#11-finger-based-touch-interaction-for-canvas-ui)
+- [12. Modular App Architecture (Plugin Lifecycle)](#12-modular-app-architecture-plugin-lifecycle)
+- [See Also](#see-also)
+
 ## 1. Immobilize Guard Pattern
 
 When the local player interacts with dropdown menus or scroll views, accidental movement

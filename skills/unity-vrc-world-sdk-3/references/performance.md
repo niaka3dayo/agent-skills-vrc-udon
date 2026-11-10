@@ -1,5 +1,26 @@
 # VRChat World Performance Optimization
 
+## Table of Contents
+
+- [Project-defined criteria](#project-defined-criteria)
+- [Optimization Workflow](#optimization-workflow)
+- [Key Performance Factors](#key-performance-factors)
+- [Lighting Optimization](#lighting-optimization)
+- [Shader Optimization](#shader-optimization)
+- [Mesh and Geometry](#mesh-and-geometry)
+- [Occlusion Culling](#occlusion-culling)
+- [Audio Optimization](#audio-optimization)
+- [Script Optimization](#script-optimization)
+- [Platform-Specific Optimization](#platform-specific-optimization)
+- [Profiling Tools](#profiling-tools)
+- [Common Performance Issues](#common-performance-issues)
+- [Quick Optimization Checklist](#quick-optimization-checklist)
+- [Quest/Android Content Limitations](#questandroid-content-limitations)
+- [Quest/Android Optimization Techniques](#questandroid-optimization-techniques)
+- [Quest Compatibility Pre-Upload Checklist](#quest-compatibility-pre-upload-checklist)
+- [World Performance Rating](#world-performance-rating)
+- [See Also](#see-also)
+
 ## Project-defined criteria
 
 VRChat does not publish one fixed FPS upload threshold for worlds. Define a
