@@ -277,18 +277,18 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
         return _syncStartTime + (elapsed / 1000f) * _syncSpeed;
     }
 
+    private bool HasEnded()
+    {
+        float duration = _videoPlayer.GetDuration();
+        return duration > 0f && CalcExpectedPosition() >= duration;
+    }
+
     public void _ApplySyncedPosition()
     {
-        float expected = CalcExpectedPosition();
-        float duration = _videoPlayer.GetDuration();
-
         // Don't seek past the end of the video
-        if (duration > 0f && expected >= duration)
-        {
-            return;
-        }
+        if (HasEnded()) return;
 
-        _videoPlayer.SetTime(expected);
+        _videoPlayer.SetTime(CalcExpectedPosition());
     }
 
     // === Playback state — consumers must call these when playback state changes ===
@@ -335,8 +335,27 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
+        ApplySyncedState();
+    }
+
+    // State that arrived while the video was still loading is applied here.
+    public override void OnVideoReady()
+    {
+        if (Networking.IsOwner(gameObject)) return;
+        ApplySyncedState();
+    }
+
+    private void ApplySyncedState()
+    {
         // Loading the URL is section 3; nothing can be applied before the video is ready.
         if (!_videoPlayer.IsReady) return;
+
+        // The video ended while this client was away: leave it stopped.
+        if (HasEnded())
+        {
+            _isPlaying = false;
+            return;
+        }
 
         _ApplySyncedPosition();
         _isPlaying = !_syncPaused;
@@ -382,6 +401,11 @@ video player**. Always wait for `OnVideoReady` to seek.
 | Same URL already loaded | Skip `PlayURL`; go straight to seek |
 | Synced state is paused | Load with `LoadURL`, seek to `syncStartTime` with no elapsed term, and call `Pause()` instead of `Play()` |
 
+The example below is the receiving side only. A synced field belongs to the behaviour that
+declares it, so declaring `_syncPaused` here does not receive what another behaviour commits.
+Put this logic in the same behaviour as the owner code from section 2, so that both use one set
+of synced fields.
+
 > **Not measured**: whether a player that was loaded with `LoadURL` and never played shows the
 > frame at the paused offset depends on the video player component. This pattern guarantees the
 > position after resume; check the still frame in your own world if it matters.
@@ -402,6 +426,8 @@ public class LateJoinerVideoSync : UdonSharpBehaviour
 {
     [SerializeField] private BaseVRCVideoPlayer _videoPlayer;
 
+    // The same synced fields that the owner commits in section 2. This example shows
+    // only the receiving side and never writes them.
     [UdonSynced] private VRCUrl _syncUrl       = new VRCUrl("");
     [UdonSynced] private int    _syncClockTime = 0;
     [UdonSynced] private float  _syncStartTime = 0f;
