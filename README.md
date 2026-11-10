@@ -230,6 +230,7 @@ To use the PowerShell validator, set the command to `pwsh -NoProfile -File "$CLA
 | Sync Bloat | 6+ synced variables per behaviour | WARNING |
 | Sync Bloat | `int[]`/`float[]` sync (recommend smaller types) | WARNING |
 | Config Mismatch | `NoVariableSync` mode with `[UdonSynced]` fields | ERROR |
+| Config Mismatch | `None` mode with `[NetworkCallable]` or a `SendCustomNetworkEvent` call on itself (the event is never delivered) | WARNING |
 
 Supports both **Bash** (`validate-udonsharp.sh`) and **PowerShell** (`validate-udonsharp.ps1`).
 

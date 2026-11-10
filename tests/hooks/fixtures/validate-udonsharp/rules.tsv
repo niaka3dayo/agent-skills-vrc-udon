@@ -16,4 +16,5 @@ SYSTEM_IO_NET	System.Net/System.IO not available
 SYNC_COUNT	synced variables detected (target: <5
 SYNC_ARRAY	Synced int[]/float[] detected
 SYNC_MODE_CONFLICT	NoVariableSync mode but [UdonSynced] variables found
+SYNC_MODE_NONE_NETWORK_EVENT	BehaviourSyncMode.None cannot receive network events
 MULTIDIM_ARRAY	Multi-dimensional arrays (T[,]) not supported

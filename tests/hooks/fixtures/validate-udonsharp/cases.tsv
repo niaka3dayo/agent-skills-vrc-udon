@@ -14,6 +14,14 @@ mask-boundaries-lf	runtime-mask-boundaries.cs	LF	SYNC_MODE_CONFLICT
 mask-boundaries-crlf	runtime-mask-boundaries.cs	CRLF	SYNC_MODE_CONFLICT
 sync-conflict-lf	runtime-sync-conflict.cs	LF	SYNC_MODE_CONFLICT
 sync-conflict-crlf	runtime-sync-conflict.cs	CRLF	SYNC_MODE_CONFLICT
+none-network-callable-lf	runtime-none-network-callable.cs	LF	SYNC_MODE_NONE_NETWORK_EVENT
+none-network-callable-crlf	runtime-none-network-callable.cs	CRLF	SYNC_MODE_NONE_NETWORK_EVENT
+none-self-network-event-lf	runtime-none-self-network-event.cs	LF	SYNC_MODE_NONE_NETWORK_EVENT
+none-self-network-event-crlf	runtime-none-self-network-event.cs	CRLF	SYNC_MODE_NONE_NETWORK_EVENT
+none-network-event-decoys-lf	runtime-none-network-event-decoys.cs	LF	-
+none-network-event-decoys-crlf	runtime-none-network-event-decoys.cs	CRLF	-
+manual-network-callable-lf	runtime-manual-network-callable.cs	LF	-
+manual-network-callable-crlf	runtime-manual-network-callable.cs	CRLF	-
 real-calls-lf	runtime-real-calls.cs	LF	-
 real-calls-crlf	runtime-real-calls.cs	CRLF	-
 split-lambda-lines-lf	runtime-split-lambda-lines.cs	LF	LAMBDA
