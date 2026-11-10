@@ -61,7 +61,22 @@ Glob: skills/unity-vrc-world-sdk-3/**/*
 
 ### Phase 2: Information Gathering
 
-Execute the following search queries in parallel to collect the latest information:
+Start from primary sources. Web searches fill gaps; they do not replace these:
+
+```text
+# Latest stable SDK (the weekly SDK Watch workflow opens an Issue from the same call)
+gh api repos/vrchat/packages/releases/latest --jq '.tag_name'
+
+# Official release notes for each version between the active target and the latest
+https://creators.vrchat.com/releases/
+
+# What the SDK binary actually exposes to Udon, diffed against skill coverage
+.claude/audit/README.md
+```
+
+Before changing an existing claim, follow `.claude/rules/evidence-gate.md`.
+
+Then execute the following search queries in parallel to collect the remaining information:
 
 ```text
 # Required searches (parallel execution recommended)
@@ -108,7 +123,7 @@ Classify collected information by the **3 pillars** and **target skills**:
 | 4 | references/events.md | New events |
 | 5 | references/api.md | New APIs |
 | 6 | CHEATSHEET.md | Quick reference update |
-| 7 | references/patterns.md | New feature usage patterns |
+| 7 | references/patterns-*.md | New feature usage patterns |
 | 8 | references/troubleshooting.md | Troubleshooting |
 
 ### Phase 5: Update unity-vrc-world-sdk-3
@@ -135,7 +150,7 @@ When major new features are added:
 
 When the Knowledge layer (references/*.md) changes, always sync the Rules layer and Enforcement layer as well.
 
-#### 7a. Rules Layer — Auto-loaded Rules (skills/unity-vrc-udon-sharp/rules/)
+#### 7a. Rules Layer — Rule Sheets (skills/unity-vrc-udon-sharp/rules/)
 
 ```text
 Read: skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md
@@ -170,10 +185,8 @@ Read: skills/unity-vrc-udon-sharp/hooks/validate-udonsharp.ps1
 #### 7c. Enforcement Layer — Templates (assets/templates/)
 
 ```text
-Read: skills/unity-vrc-udon-sharp/assets/templates/BasicInteraction.cs
-Read: skills/unity-vrc-udon-sharp/assets/templates/SyncedObject.cs
-Read: skills/unity-vrc-udon-sharp/assets/templates/PlayerSettings.cs
-Read: skills/unity-vrc-udon-sharp/assets/templates/CustomInspector.cs
+Glob: skills/unity-vrc-udon-sharp/assets/templates/*.cs
+Read: the templates that use the changed API or pattern
 → Remove deprecated patterns and reflect new best practices
 ```
 
@@ -185,10 +198,17 @@ Read: skills/unity-vrc-udon-sharp/assets/templates/CustomInspector.cs
 
 ### Phase 8: Validation
 
-1. Unify SDK version references across all files
-2. Verify cross-reference links between both skills
-3. Check code sample syntax
-4. **3-layer consistency check**: Verify that Knowledge / Rules / Enforcement reflect the same facts
+1. Move the active SDK target in one place per skill: the bold line in the `## SDK Versions` section of
+   each `SKILL.md`, and the frontmatter description. Add the version row to
+   `references/sdk-migration.md`, the World SDK `CHEATSHEET.md`, and the five READMEs. No other file
+   under `skills/` repeats the number
+2. Run `bash tests/run.sh` (Linux, macOS, or WSL). It covers the support-policy contract, the
+   reference tables of contents, and heading links between both skills
+3. Run `python3 tests/docs/reference-toc.py --write` after adding, renaming, or removing a `##` section
+4. Check code sample syntax, and run the hook tests when a constraint changed
+5. Run the evals in `evals/README.md` before and after a change to a `SKILL.md`, a description, or a
+   rule, and add a case for a fact a model would not know without the skill
+6. **3-layer consistency check**: Verify that Knowledge / Rules / Enforcement reflect the same facts
    - Constraint lists are consistent across all 3 layers
    - Limit values (synced variable count, string length, etc.) are consistent across all 3 layers
    - Templates do not use blocked features

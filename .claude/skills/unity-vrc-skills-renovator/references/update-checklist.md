@@ -4,7 +4,7 @@
 
 - [ ] Check the active and verified SDK target for each skill
   ```text
-  Active support / last verified: SDK 3.10.6
+  **Active support / last verified**: SDK X.Y.Z
   ```
 - [ ] Keep older version numbers only as historical migration information
 - [ ] Confirm the active-versus-historical boundary is explicit and does not attribute the cutoff to VRChat
@@ -23,46 +23,10 @@
 
 ## Evidence Gate Before Revising Existing Claims
 
-Use this gate whenever a change would alter a verified runtime observation,
-observed behavior, or official difference. Do not restore official wording
-from a history-free review.
-
-- [ ] Inspect `git blame` and `git log` for the claim and surrounding edits.
-- [ ] Read every related Issue/PR and read the two evidence histories separately.
-- [ ] For user-layer names, read Issue #286, PR #287, the maintainer follow-up,
-      the upstream report `vrchat-community/creator-docs#303`, and its docs
-      correction `creator-docs#319`.
-      Issue #286 and PR #287 record collision retention, but the attached
-      layer-dump directly observes names only: its `LayerMask.LayerToName(0..31)`
-      output does not measure collision pairs or the matrix.
-      Use a separate collision reproduction for collision claims.
-- [ ] For built-in collision behavior, read Issue [#288](https://github.com/niaka3dayo/agent-skills-vrc-udon/issues/288)
-      and PR [#294](https://github.com/niaka3dayo/agent-skills-vrc-udon/pull/294).
-      #288 records that the then-current `layers.md` intentionally preserved
-      VRChat-specific collision-matrix behavior without factual errors; #294
-      records that the Environment/Pickup/PickupNoEnvironment facts and the
-      default matrix were intentionally retained.
-- [ ] Check the reproduction evidence for the same target version.
-- [ ] Rank evidence as reproducible runtime observation, shipped SDK/source,
-      then official docs.
-- [ ] Preserve an intentional official difference when official docs alone
-      conflict with reproducible runtime evidence.
-- [ ] Do not generalize beyond the verified observation.
-- [ ] Keep the #286 user-layer verification separate from any built-in layer
-      collision claim; do not alter built-in layer collision descriptions from
-      this evidence.
-- [ ] Do not replace the current VRChat-specific behavior table or default
-      collision matrix from official docs alone; changes require independent runtime/SDK evidence
-      for that target and a recorded observation scope.
-
-For user-layer names, #286 and #287 record custom layer names being
-overwritten by the live client to `user0`-`user9`, while the collision matrix
-is retained; creator-docs#319 corrected the official wording to match. The
-layer-dump is name evidence only; before changing a collision boundary, run a
-separate collision reproduction for the same target.
-
-See [`CONTRIBUTING.md`](../../../../CONTRIBUTING.md) for the reviewer-facing
-evidence policy.
+Before a change alters a verified runtime observation, an observed behavior, or a recorded
+difference from the official documentation, follow
+[`.claude/rules/evidence-gate.md`](../../../rules/evidence-gate.md). It is loaded automatically in
+this repository. Read it again whenever a claim about layers or collision is involved.
 
 ## Phase 2: Information Gathering
 
@@ -162,7 +126,7 @@ Classify collected information:
 ### Priority 6: CHEATSHEET.md
 - [ ] Update quick reference
 
-### Priority 7: patterns.md
+### Priority 7: patterns-*.md
 - [ ] Add patterns for new features
 
 ### Priority 8: troubleshooting.md
@@ -212,7 +176,7 @@ Classify collected information:
 
 Sync the Rules layer and Enforcement layer with Knowledge layer changes.
 
-### 7a. Rules Layer — Update Auto-Loaded Rules (rules/)
+### 7a. Rules Layer — Update the Rule Sheets (rules/)
 
 - [ ] Compare `skills/unity-vrc-udon-sharp/rules/udonsharp-constraints.md` with Knowledge layer
   ```text

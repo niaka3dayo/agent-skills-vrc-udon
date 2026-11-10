@@ -39,7 +39,8 @@ Official information sources and access methods for VRChat SDK (UdonSharp + Worl
 
 | Repository | URL | Content |
 |-----------|-----|---------|
-| UdonSharp Releases | `github.com/MerlinVR/UdonSharp/releases` | Release history |
+| SDK Packages | `github.com/vrchat/packages/releases` | Stable and beta SDK releases; `releases/latest` is the newest stable one |
+| UdonSharp | `github.com/vrchat-community/UdonSharp` | UdonSharp source and documentation (ships inside the Worlds SDK) |
 | Creator Companion | `github.com/vrchat-community/creator-companion` | VCC related |
 
 ## Version History Tracking
@@ -56,18 +57,9 @@ minor: Bug fixes, small changes
 
 ### Key Milestones
 
-| Version | Date | Key Changes |
-|---------|------|-------------|
-| 3.7.1 | 2024 | StringBuilder, Regex, System.Random |
-| 3.7.4 | 2024 | Persistence API |
-| 3.7.6 | 2024 | Multi-platform Build & Publish |
-| 3.8.0 | 2025 | PhysBone dependency sorting, Force Kinematic On Remote |
-| 3.8.1 | 2025 | NetworkCallable, events with parameters, Others/Self targets |
-| 3.9.0 | 2025 | Camera Dolly API, Auto Hold simplification |
-| 3.10.0 | 2025 | Dynamics for Worlds |
-| 3.10.1 | 2025 | Bug fixes and stability improvements |
-| 3.10.2 | 2026 | EventTiming extensions, PhysBones fixes, shader time globals |
-| 3.10.3 | 2026 | `VRCPlayerApi.isVRCPlus`, VRCRaycast (avatar), Mirror render-order fix |
+The version-by-version feature table is kept in one place:
+`skills/unity-vrc-udon-sharp/references/sdk-migration.md` ("Version summary"). The World SDK view of
+the same history is the "SDK Version Features" table in `skills/unity-vrc-world-sdk-3/CHEATSHEET.md`.
 
 ### Checkpoints for Next Update
 
@@ -77,10 +69,11 @@ minor: Bug fixes, small changes
    unity-vrc-world-sdk-3/SKILL.md "Active support / last verified" line
    ```
 
-2. **Check for new versions on the official releases page**
+2. **Check for new versions**
    ```
-   WebSearch: "VRChat SDK Releases"
+   gh api repos/vrchat/packages/releases/latest --jq '.tag_name'
    ```
+   The weekly SDK Watch workflow runs the same call and opens a `type: sdk-update` Issue.
 
 3. **Check release notes for the version gap**
    ```

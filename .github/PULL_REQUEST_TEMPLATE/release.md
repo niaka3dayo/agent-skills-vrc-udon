@@ -1,7 +1,8 @@
 # Release PR Template
 
 > Open a release PR with this template by appending `?template=release.md` to the new-PR URL,
-> or by editing the body after creation. See `CLAUDE.md` "Release Guide" for the full flow.
+> or by editing the body after creation. See the `release` skill
+> (`.claude/skills/release/SKILL.md`) for the full flow.
 
 ## Pre-flight checklist (Steps 1 and 2 must be done BEFORE this PR is opened)
 
