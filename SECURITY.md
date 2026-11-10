@@ -18,5 +18,7 @@ Published packages include [npm provenance attestation](https://docs.npmjs.com/g
 
 | Version | Supported |
 |---------|-----------|
-| 3.x     | Yes       |
-| 2.x and older | No  |
+| Latest release | Yes |
+| Earlier releases | No |
+
+Fixes ship in a new release. Earlier releases stay available on npm and as git tags but are not patched.

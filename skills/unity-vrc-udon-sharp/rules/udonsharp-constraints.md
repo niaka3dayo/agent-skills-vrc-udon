@@ -4,7 +4,7 @@ UdonSharp compiles C# to Udon Assembly. Code that executes in the Udon runtime m
 
 **Active support / last verified**: SDK 3.10.6
 
-Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.4 are not supported or validation targets for this Skill.
+Older version numbers in this rule record feature introductions or migration facts only; SDK 3.7.1-3.10.5 are not supported or validation targets for this Skill.
 
 > For detailed examples, SDK version availability, and compiler behavior explanations,
 > see `references/constraints.md`.

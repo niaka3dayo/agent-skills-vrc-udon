@@ -59,7 +59,7 @@ This repository provides AI coding agents with the knowledge to generate correct
 
 <h2 id="install">Install</h2>
 
-> **Migrating from fork/clone?** &mdash; Since v1.0.0, this project is distributed as an **npm package**. You no longer need to fork or clone the repository. Simply run one of the install commands below inside your VRChat Unity project. If you previously cloned this repo, you can safely delete the cloned directory and switch to the npm-based install.
+> **Migrating from fork/clone?** &mdash; You no longer need to fork or clone this repository. Run one of the install commands below inside your VRChat Unity project. If you cloned this repo earlier, you can delete the cloned directory after switching.
 
 ### Method 1: skills CLI (recommended)
 
@@ -67,13 +67,15 @@ This repository provides AI coding agents with the knowledge to generate correct
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project.
+This uses the [skills.sh](https://skills.sh) ecosystem to install skills into your project. The skills CLI requires Node.js 22.20 or later.
 
 ### Method 2: Claude Code plugin
 
 ```bash
-claude plugin add niaka3dayo/agent-skills-vrc-udon
+claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
+
+On Claude Code older than 2.1.292, run `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon` first, then `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`.
 
 ### Method 3: git clone
 
@@ -86,8 +88,11 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 All published versions remain permanently available on npm and as git tags — nothing is ever removed.
 
 ```bash
-# npm (any published version, v1.0.0 and later)
-npm install agent-skills-vrc-udon@2.3.0
+# skills CLI, pinned to a git tag
+npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
+
+# npm (any published version, v1.0.0 and later); the skills are in node_modules/agent-skills-vrc-udon/skills/
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git tag
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -115,7 +120,7 @@ skills/                                  # All skills
   unity-vrc-world-sdk-3/                # VRC World SDK skill
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (8 files)
 templates/                               # AI tool config templates
-  CLAUDE.md  AGENTS.md  GEMINI.md        # Distributed to users via installer
+  CLAUDE.md  AGENTS.md  GEMINI.md        # Starter project instructions (copy manually)
 .claude-plugin/marketplace.json         # Claude Code plugin registration
 CLAUDE.md                               # Development guide (this repo only)
 ```

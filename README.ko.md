@@ -59,7 +59,7 @@
 
 <h2 id="install">설치</h2>
 
-> **fork/clone에서 마이그레이션하시나요?** — v1.0.0부터 이 프로젝트는 **npm 패키지**로 배포됩니다. 더 이상 리포지토리를 fork하거나 clone할 필요가 없습니다. VRChat Unity 프로젝트 내에서 아래 설치 명령 중 하나를 실행하세요. 이전에 이 리포지토리를 clone한 경우, clone된 디렉터리를 삭제하고 npm 기반 설치로 전환해도 안전합니다.
+> **fork/clone에서 마이그레이션하시나요?** — 이 리포지토리를 더 이상 fork하거나 clone할 필요가 없습니다. VRChat Unity 프로젝트 내에서 아래 설치 명령 중 하나를 실행하세요. 이전에 clone한 경우, 전환한 뒤 해당 디렉터리를 삭제해도 됩니다.
 
 ### 방법 1: skills CLI (권장)
 
@@ -67,13 +67,15 @@
 npx skills add niaka3dayo/agent-skills-vrc-udon
 ```
 
-[skills.sh](https://skills.sh) 생태계를 사용하여 프로젝트에 스킬을 설치합니다.
+[skills.sh](https://skills.sh) 생태계를 사용하여 프로젝트에 스킬을 설치합니다. skills CLI를 실행하려면 Node.js 22.20 이상이 필요합니다.
 
 ### 방법 2: Claude Code 플러그인
 
 ```bash
-claude plugin add niaka3dayo/agent-skills-vrc-udon
+claude plugin install vrc-udon-skills --marketplace niaka3dayo/agent-skills-vrc-udon
 ```
+
+Claude Code 2.1.292 이전 버전에서는 먼저 `claude plugin marketplace add niaka3dayo/agent-skills-vrc-udon`을 실행한 다음 `claude plugin install vrc-udon-skills@agent-skills-vrc-udon`을 실행하세요.
 
 ### 방법 3: git clone
 
@@ -86,8 +88,11 @@ git clone https://github.com/niaka3dayo/agent-skills-vrc-udon.git
 공개된 모든 버전은 npm과 git 태그 양쪽에 영구적으로 남습니다. 삭제되지 않습니다.
 
 ```bash
-# npm (v1.0.0 이상의 모든 공개 버전)
-npm install agent-skills-vrc-udon@2.3.0
+# skills CLI (git 태그 지정)
+npx skills add https://github.com/niaka3dayo/agent-skills-vrc-udon/tree/v2.3.0
+
+# npm (v1.0.0 이상의 모든 공개 버전). 스킬은 node_modules/agent-skills-vrc-udon/skills/에 위치합니다
+npm install --save-exact agent-skills-vrc-udon@2.3.0
 
 # git 태그
 git clone --branch v2.3.0 https://github.com/niaka3dayo/agent-skills-vrc-udon.git
@@ -115,7 +120,7 @@ skills/                                  # 모든 스킬
   unity-vrc-world-sdk-3/                # VRC World SDK 스킬
     SKILL.md, LICENSE.txt, CHEATSHEET.md, references/ (8개 파일)
 templates/                               # AI 도구 설정 템플릿
-  CLAUDE.md  AGENTS.md  GEMINI.md        # 인스톨러를 통해 사용자에게 배포
+  CLAUDE.md  AGENTS.md  GEMINI.md        # 프로젝트 지침 템플릿 (수동으로 복사)
 .claude-plugin/marketplace.json         # Claude Code 플러그인 등록
 CLAUDE.md                               # 개발 가이드 (이 리포지토리 전용)
 ```

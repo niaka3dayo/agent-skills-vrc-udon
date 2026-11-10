@@ -473,14 +473,14 @@ Starter templates for common SDK component patterns. Repository checks cover sta
 
 ## References
 
-| File                            | Content                                                                                          | Approx. Lines |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- | ------------- |
-| `references/components.md`      | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) | 950+          |
-| `references/layers.md`          | Layers & collision                                                                               | 230+          |
-| `references/performance.md`     | Performance optimization                                                                         | 700+          |
-| `references/lighting.md`        | Lighting settings                                                                                | 400+          |
-| `references/audio-video.md`     | Audio & video                                                                                    | 600+          |
-| `references/build-validation.md` | SDK 3.10.6 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects | 180+       |
-| `references/upload.md`          | Upload procedure                                                                                 | 300+          |
-| `references/troubleshooting.md` | Troubleshooting guide                                                                            | 500+          |
-| `CHEATSHEET.md`                 | Quick reference                                                                                  | 200+          |
+| File | Content |
+|------|---------|
+| `references/components.md` | All component details, component whitelist, Dynamics for Worlds, editor-only exclusion (EditorOnly tag / IEditorOnly) |
+| `references/layers.md` | Layers & collision |
+| `references/performance.md` | Performance optimization |
+| `references/lighting.md` | Lighting settings |
+| `references/audio-video.md` | Audio & video |
+| `references/build-validation.md` | SDK 3.10.6 Build Panel red/yellow/white validation alert catalog, safe fixes, Auto Fix side effects |
+| `references/upload.md` | Upload procedure |
+| `references/troubleshooting.md` | Troubleshooting guide |
+| `CHEATSHEET.md` | Quick reference |
