@@ -47,6 +47,7 @@ costs less bandwidth than `int`, and is sufficient for up to 255 distinct states
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components.Video; // VideoError
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
@@ -183,13 +184,20 @@ started the video (using server clock), and every client recomputes the current 
 independently:
 
 ```text
-currentPosition = syncStartTime
-                + (Networking.GetServerTimeInMilliseconds() - syncClockTime) / 1000f
-                * syncSpeed
+playing: currentPosition = syncStartTime
+                         + (Networking.GetServerTimeInMilliseconds() - syncClockTime) / 1000f
+                         * syncSpeed
+paused:  currentPosition = syncStartTime
 ```
 
 This formula is drift-resistant: a late joiner receives the same `syncClockTime` /
 `syncStartTime` pair and arrives at the same position regardless of when they joined.
+
+The elapsed term applies only while the video plays. The owner commits on pause and on
+resume, together with the playback offset at that moment, so `syncStartTime` holds the paused
+position for as long as the pause lasts. Without the synced paused flag, a client that joins or
+receives a deserialization during a pause seeks to a position that keeps advancing with real
+time.
 
 ### Synced Variable Layout
 
@@ -199,6 +207,7 @@ This formula is drift-resistant: a late joiner receives the same `syncClockTime`
 | `syncClockTime` | `int` | Server timestamp (ms) captured when sync was committed |
 | `syncStartTime` | `float` | Playback offset (seconds) at the moment the sync was committed |
 | `syncSpeed` | `float` | Playback rate (1.0 = normal, 0.5 = half-speed) |
+| `syncPaused` | `bool` | `true` while paused; clients then use `syncStartTime` as the position |
 
 > **Wrap note**: `Networking.GetServerTimeInMilliseconds()` returns a signed 32-bit `int`, so the
 > value wraps from `int.MaxValue` to `int.MinValue` and is often negative. Keep the subtraction in
@@ -238,11 +247,13 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
     [UdonSynced] private int      _syncClockTime = 0;   // server ms at commit
     [UdonSynced] private float    _syncStartTime = 0f;  // playback offset at commit
     [UdonSynced] private float    _syncSpeed     = 1f;
+    [UdonSynced] private bool     _syncPaused    = false; // no elapsed time is added while true
 
     private const float DriftThreshold   = 1.0f;  // seconds before corrective seek
     private const float DriftCheckPeriod = 10.0f; // seconds between checks
     private float _nextDriftCheck = 0f;
     private bool  _isPlaying      = false;
+    private bool  _pendingApply   = false; // synced state arrived before the video was ready
 
     // === Owner: commit current sync state ===
 
@@ -260,6 +271,9 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 
     private float CalcExpectedPosition()
     {
+        // While paused, the committed offset is the position; time does not advance.
+        if (_syncPaused) return _syncStartTime;
+
         int elapsed = Networking.GetServerTimeInMilliseconds() - _syncClockTime;
         return _syncStartTime + (elapsed / 1000f) * _syncSpeed;
     }
@@ -279,16 +293,27 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
     }
 
     // === Playback state — consumers must call these when playback state changes ===
-    // Note: drift correction is suppressed while paused to avoid spurious seeks.
+    // On the owner they commit the paused flag together with the offset at that
+    // moment. Drift correction is suppressed while paused to avoid spurious seeks.
 
     public void _OnPlay()
     {
         _isPlaying = true;
+        CommitPaused(false);
     }
 
     public void _OnPause()
     {
         _isPlaying = false;
+        CommitPaused(true);
+    }
+
+    private void CommitPaused(bool paused)
+    {
+        if (!Networking.IsOwner(gameObject)) return;
+
+        _syncPaused = paused;
+        _UpdateSyncedPosition(); // one serialization carries the flag, clock, and offset
     }
 
     // === Drift check (called from Update) ===
@@ -311,7 +336,45 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 
     public override void OnDeserialization()
     {
-        _ApplySyncedPosition();
+        ApplySyncedState();
+    }
+
+    // State that arrived while the video was still loading is applied here. The flag,
+    // not ownership, decides: this client may have become the owner in the meantime.
+    public override void OnVideoReady()
+    {
+        if (!_pendingApply) return;
+        ApplySyncedState();
+    }
+
+    private void ApplySyncedState()
+    {
+        // Loading the URL is section 3; nothing can be applied before the video is ready.
+        _pendingApply = !_videoPlayer.IsReady;
+        if (_pendingApply) return;
+
+        // One calculation serves both the end check and the seek.
+        float expected = CalcExpectedPosition();
+        float duration = _videoPlayer.GetDuration();
+
+        // The synced state says the video has ended: stop instead of playing on.
+        if (duration > 0f && expected >= duration)
+        {
+            _isPlaying = false;
+            _videoPlayer.Stop();
+            return;
+        }
+
+        _videoPlayer.SetTime(expected);
+        _isPlaying = !_syncPaused;
+        if (_syncPaused)
+        {
+            _videoPlayer.Pause();
+        }
+        else
+        {
+            _videoPlayer.Play();
+        }
     }
 }
 ```
@@ -325,11 +388,13 @@ public class PlaybackTimeSynchronizer : UdonSharpBehaviour
 ```text
 OnDeserialization
   → URL in synced state?
-      → PlayURL(syncUrl)
+      → syncPaused?  YES → LoadURL(syncUrl)   (load without starting playback)
+                     NO  → PlayURL(syncUrl)
           → OnVideoReady
-              → CalcExpectedPosition()
-                  → elapsed > duration?  YES → stay Idle (video ended)
-                                         NO  → SetTime(expected) → Play
+              → syncPaused?  YES → SetTime(syncStartTime) → Pause
+                             NO  → CalcExpectedPosition()
+                                     → elapsed > duration?  YES → stay Idle (video ended)
+                                                            NO  → SetTime(expected) → Play
 ```
 
 The critical constraint: **seek before `OnVideoReady` is silently ignored by the
@@ -342,6 +407,16 @@ video player**. Always wait for `OnVideoReady` to seek.
 | Video has already ended (`elapsed >= duration`) | Set state to `Idle`, do not call `Play()` |
 | Duration is 0 (live stream) | Skip the elapsed check; always play from current position |
 | Same URL already loaded | Skip `PlayURL`; go straight to seek |
+| Synced state is paused | Load with `LoadURL`, seek to `syncStartTime` with no elapsed term, and call `Pause()` instead of `Play()` |
+
+The example below is the receiving side only. A synced field belongs to the behaviour that
+declares it, so declaring `_syncPaused` here does not receive what another behaviour commits.
+Put this logic in the same behaviour as the owner code from section 2, so that both use one set
+of synced fields.
+
+> **Not measured**: whether a player that was loaded with `LoadURL` and never played shows the
+> frame at the paused offset depends on the video player component. This pattern guarantees the
+> position after resume; check the still frame in your own world if it matters.
 
 ### Code Example
 
@@ -349,6 +424,7 @@ video player**. Always wait for `OnVideoReady` to seek.
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components.Video; // VideoError
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
@@ -358,9 +434,12 @@ public class LateJoinerVideoSync : UdonSharpBehaviour
 {
     [SerializeField] private BaseVRCVideoPlayer _videoPlayer;
 
+    // The same synced fields that the owner commits in section 2. This example shows
+    // only the receiving side and never writes them.
     [UdonSynced] private VRCUrl _syncUrl       = new VRCUrl("");
     [UdonSynced] private int    _syncClockTime = 0;
     [UdonSynced] private float  _syncStartTime = 0f;
+    [UdonSynced] private bool   _syncPaused    = false;
 
     private bool   _pendingSeek = false;
     private VRCUrl _currentUrl;
@@ -380,7 +459,14 @@ public class LateJoinerVideoSync : UdonSharpBehaviour
         _pendingSeek = true;
         _currentUrl  = _syncUrl;
         // In production, route through UrlLoadScheduler (see Rate Limit Resolver pattern)
-        _videoPlayer.PlayURL(_syncUrl);
+        if (_syncPaused)
+        {
+            _videoPlayer.LoadURL(_syncUrl); // load only; a paused video must not start
+        }
+        else
+        {
+            _videoPlayer.PlayURL(_syncUrl);
+        }
         // Seek is deferred to OnVideoReady
     }
 
@@ -393,6 +479,14 @@ public class LateJoinerVideoSync : UdonSharpBehaviour
 
     private void ApplySync()
     {
+        // Paused: the committed offset is the position, however long the pause lasts.
+        if (_syncPaused)
+        {
+            _videoPlayer.SetTime(_syncStartTime);
+            _videoPlayer.Pause();
+            return;
+        }
+
         float elapsed  = (Networking.GetServerTimeInMilliseconds() - _syncClockTime) / 1000f;
         float expected = _syncStartTime + elapsed;
         float duration = _videoPlayer.GetDuration();
@@ -535,6 +629,7 @@ OnVideoError
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.SDK3.Components.Video; // VideoError
 using VRC.SDK3.Video.Components;
 using VRC.SDK3.Video.Components.AVPro;
 using VRC.SDK3.Video.Components.Base;
