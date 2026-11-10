@@ -1,7 +1,7 @@
 ---
-type: regex
-match: not_contains
-pattern: 'PlayerPrefs\.\w+\s*\(|using\s+System\.IO|\bFile\.\w+\s*\('
+type: llm
 ---
 
-PlayerPrefs and file IO do not persist data in VRChat worlds.
+PASS only if this holds: the code in the reply does not use PlayerPrefs or file IO (System.IO, File). Naming it in prose or in a code comment to say it is unavailable is fine. Only an actual use in the code fails.
+
+FAIL otherwise.

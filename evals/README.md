@@ -27,6 +27,6 @@ claude plugin eval . --no-publish --judge-model claude-sonnet-5-5 --tag world
 
 ## Adding a case
 
-Copy a case directory. `prompt.md` holds the request. Each file in `graders/` is one check. Prefer a `regex` grader when a correct answer must contain a specific token, and use an `llm` grader, written as an explicit PASS condition, for behaviour that has no fixed spelling. A "must not use" `regex` should match the shape of a use, such as `new List<`, because a good answer often names the blocked API to say it is unavailable. Ask for the answer in the reply rather than in a file: writing files needs `--allow-tools Write`, and the checks here read the final message.
+Copy a case directory. `prompt.md` holds the request. Each file in `graders/` is one check. Use a `regex` grader when a correct answer must contain a specific token. Use an `llm` grader, written as an explicit PASS condition, for behaviour that has no fixed spelling and for every "must not use" check: a good answer often names the blocked API to say it is unavailable, and a regex over the whole reply cannot tell that from a use. Ask for the answer in the reply rather than in a file: writing files needs `--allow-tools Write`, and the checks here read the final message.
 
 The most useful cases cover facts a model does not already know: recent SDK additions, and behaviour that differs between the Unity editor and the VRChat client.

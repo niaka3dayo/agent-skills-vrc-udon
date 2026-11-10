@@ -1,7 +1,7 @@
 ---
-type: regex
-match: not_contains
-pattern: '\btry\s*\{|\bcatch\s*[({]'
+type: llm
 ---
 
-Exception handling does not compile in Udon.
+PASS only if this holds: the code in the reply does not use try/catch or any other exception handling. Naming it in prose or in a code comment to say it is unavailable is fine. Only an actual use in the code fails.
+
+FAIL otherwise.
