@@ -99,7 +99,7 @@ If `[HideInInspector]` is intentional, comment the persistence reason next to th
 | UdonSharpBehaviour-to-UdonSharpBehaviour inheritance | Supported | 3.0+ | Can inherit from custom UdonSharpBehaviours |
 | Abstract classes | Supported | 3.0+ | |
 | Virtual methods | Supported | 3.0+ | For polymorphism |
-| Static methods | Supported | 1.0+ | On an `UdonSharpBehaviour` or on a plain `static` class; `const` fields also work. Static fields are blocked (see Language Features below) |
+| Static methods | Supported | — | Added in UdonSharp 1.0. On an `UdonSharpBehaviour` or on a plain `static` class; `const` fields also work. Static fields are blocked (see Language Features below) |
 | Partial classes | Supported | 3.0+ | Split class across files |
 | `typeof()` | Supported | 3.0+ | |
 
@@ -168,7 +168,7 @@ if (dict.ContainsKey("key1"))
 | Anonymous types | Blocked | — | Define explicit types |
 | Lambda expressions | Blocked in Udon runtime | — | Use named methods; Editor-evaluated initializers may use them during initial value generation |
 | Local functions | Blocked | — | Use private methods |
-| Static fields (non-`const`) | Blocked | — | Use instance fields, pass the value as a parameter, or use `const`; see below |
+| Static fields (non-`const`, including `static readonly` and static auto-properties) | Blocked | — | Use instance fields, pass the value as a parameter, or use `const`; see below |
 | Pattern matching | Blocked | — | Use traditional `if`/`switch` |
 
 **Static Members:**
@@ -183,8 +183,11 @@ class that does not inherit from it, and another behaviour can call them.
 
 Verified on SDK 3.10.6 (UdonSharp compile and a one-player ClientSim run): a static method on the
 same behaviour, on another behaviour, and on a plain static class, a `const` on that class, and
-the compile error for a `private static int` field. Not checked: `static readonly` fields, static
-properties, and the live client.
+the compile error for a `private static int` field. A `private static readonly int` field fails
+with the same error, and so does a static auto-property (`public static int Counter { get; set; }`),
+whose compiler-generated backing field is reported at `(1,1)` with no file name. A static property
+with no backing field (`public static int Answer => 42;`) compiles. Not checked: running a static
+property, and the live client.
 
 **Method Overloading and Event Entry Points:**
 
