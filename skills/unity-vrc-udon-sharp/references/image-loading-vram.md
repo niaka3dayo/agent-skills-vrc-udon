@@ -729,12 +729,15 @@ public class MipmapBiasController : UdonSharpBehaviour
     [Tooltip("Object scale factor — larger objects need a higher sharpDistance")]
     [SerializeField] private float objectScaleFactor = 1.0f;
 
-    private static readonly int MipmapBiasId = Shader.PropertyToID("_MipmapBias");
+    private int _mipmapBiasId;
 
     private Material _material;
 
     void Start()
     {
+        // UdonSharp rejects static fields, so the property ID is cached per instance
+        _mipmapBiasId = VRCShader.PropertyToID("_MipmapBias");
+
         if (displayRenderer != null)
         {
             // Instance the material so we do not affect other renderers sharing it
@@ -768,7 +771,7 @@ public class MipmapBiasController : UdonSharpBehaviour
             : 0f;
 
         float bias = Mathf.Clamp(rawBias, minBias, maxBias);
-        _material.SetFloat(MipmapBiasId, bias);
+        _material.SetFloat(_mipmapBiasId, bias);
     }
 }
 ```
