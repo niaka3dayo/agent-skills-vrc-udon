@@ -29,6 +29,7 @@ the SDK). See [assembly-definitions.md](../references/assembly-definitions.md).
 | LINQ (`.Where`, `.Select`, etc.) in Udon runtime code | Manual for loops |
 | Lambda expressions in Udon runtime code | Named methods |
 | Local functions | private methods |
+| `static` fields (non-`const`) | Instance fields, parameters, or `const`; `static` methods are supported |
 | Pattern matching | Traditional `if`/`switch` |
 | Anonymous types | Explicit type definitions |
 | `System.IO`, `System.Net` | `VRCStringDownloader`, `VRCImageDownloader` |
